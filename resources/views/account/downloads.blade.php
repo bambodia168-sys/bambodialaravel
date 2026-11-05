@@ -31,6 +31,6 @@
       @empty<tr><td class="empty-cell" colspan="6">No verified product versions have been granted to this account.</td></tr>@endforelse
       </tbody></table></div><x-pagination :paginator="$entitlements"/>
   </section>
-  <p class="hint">Products do not become downloadable by entering a URL or by selecting another user's public ID. No checkout or payment acceptance is active.</p>
+  <p class="hint">Downloads additionally require a current clean antivirus scan, independent distribution rights review and intact SHA-256 file content. An old/missing scan blocks previously approved releases until rescreened. No checkout or payment acceptance is active.</p>
 </div>
 @endsection

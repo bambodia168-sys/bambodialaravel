@@ -2,7 +2,7 @@
 @section('title','Digital File Vault')
 @section('content')
 <div class="page-intro"><div class="eyebrow">Marketplace · Secure Fulfillment</div><h1>Digital File Vault</h1>
-  <p>Inspect immutable source archives and verify release metadata before approval. Only approved, intact versions can be granted to customers.</p></div>
+  <p>Fail-closed release governance: scan original bytes with ClamAV, inspect the screened file, review ownership evidence, then approve. A missing, failed, outdated or infected scan blocks customer access.</p></div>
 @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
 @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
 <section class="panel">
@@ -25,19 +25,49 @@
           <td class="mono">{{ $version->version }}</td>
           <td>{{ $version->uploader?->name }}</td>
           <td>{{ strtoupper($version->file_type) }} · {{ number_format($version->byte_size / 1048576,2) }} MiB</td>
-          <td><span class="role-pill">{{ ucfirst($version->status) }}</span></td>
+          <td><span class="role-pill">{{ ucfirst($version->status) }}</span>
+            <div class="text-muted">AV: {{ ucfirst($version->malware_scan_status) }}</div>
+            <div class="text-muted">Rights: {{ ucfirst($version->rights_review_status) }}</div></td>
           <td><button class="btn subtle compact" type="button" data-modal-open="vault-{{ $version->id }}"><x-icon name="settings" size="15"/> Configure</button>
             <dialog class="config-dialog wide-dialog" id="vault-{{ $version->id }}">
               <h2>{{ $version->product?->title }}</h2><p>Release {{ $version->version }} · {{ $version->original_filename }}</p>
               <p><strong>Uploader:</strong> {{ $version->uploader?->name }}</p>
               <p><strong>SHA-256:</strong> <span class="mono hash-line">{{ $version->sha256 }}</span></p>
               <p><strong>Declared rights:</strong> {{ $version->rights_attested_at?->format('d M Y H:i') }}</p>
+              <p><strong>Distribution provenance:</strong> {{ $version->rights_evidence ?: 'Missing (legacy file: creator must submit evidence)' }}</p>
+              @if($version->rights_source_url)
+                <a class="btn subtle compact" href="{{ $version->rights_source_url }}" target="_blank" rel="noopener noreferrer">Open creator-supplied rights reference</a>
+              @endif
+              <p><strong>Rights review:</strong> {{ ucfirst($version->rights_review_status) }} · {{ $version->rights_review_note ?? 'Not reviewed' }}</p>
+              <p><strong>Malware screening:</strong> {{ ucfirst($version->malware_scan_status) }} · {{ $version->malware_scan_engine ?? 'Scanner unavailable' }}</p>
+              <p><strong>Scan date:</strong> {{ $version->malware_scanned_at?->format('d M Y H:i') ?? 'Not screened' }}</p>
+              <p><strong>Scan note:</strong> {{ $version->malware_scan_note ?? 'No reliable verdict yet' }}</p>
+              @if(in_array($version->status,['pending','approved'],true))
+                <form method="post" action="{{ route('dashboard.vault.scan',$version) }}">
+                  @csrf
+                  <p class="hint">Runs actual ClamAV on the original private file. Missing scanner, old signatures or a failed scan cannot authorize download. Large files may take time to inspect.</p>
+                  <button class="btn subtle" type="submit"><x-icon name="shield" size="16"/> Run antivirus screening</button>
+                </form>
+              @endif
+              @if(in_array($version->status,['pending','approved'],true) && $version->inspected_at!==null)
+                <form method="post" action="{{ route('dashboard.vault.rights',$version) }}">
+                  @csrf
+                  <h3>Independent distribution rights review</h3>
+                  <label for="rights-note-{{ $version->id }}">Actual evidence checked and specific limitations (required)</label>
+                  <textarea name="rights_review_note" id="rights-note-{{ $version->id }}" minlength="30" maxlength="2000" rows="4" required>{{ $version->rights_review_note }}</textarea>
+                  <label class="check-label"><input type="checkbox" name="confirm_rights" value="1"> I examined the release and its source rights independently of the uploading account.</label>
+                  <div class="dialog-actions">
+                    <button class="btn subtle" type="submit" name="decision" value="rejected">Reject rights claim</button>
+                    <button class="btn primary" type="submit" name="decision" value="verified">Record rights review</button>
+                  </div>
+                </form>
+              @endif
               <h3>Release notes</h3><p class="review-text">{{ $version->release_notes }}</p>
               @if($version->review_note)<p><strong>Review note:</strong> {{ $version->review_note }}</p>@endif
               @if(in_array($version->status,['pending','approved'],true))
                 <form method="post" action="{{ route('dashboard.vault.inspect',$version) }}">
                   @csrf
-                  <p class="hint">Inspect the original safely and verify that you have permission to publish its contents. Downloading an original is logged.</p>
+                  <p class="hint">Requires a current clean antivirus result. Use an isolated review workstation. File inspection is logged.</p>
                   <button class="btn subtle" type="submit"><x-icon name="download" size="16"/> Inspect original source file</button>
                 </form>
               @endif
@@ -46,7 +76,7 @@
                   @csrf @method('PATCH')
                   <label for="vault-note-{{ $version->id }}">Reviewer note (required if rejecting)</label>
                   <textarea id="vault-note-{{ $version->id }}" name="review_note" maxlength="2000" rows="3"></textarea>
-                  <label class="check-label"><input type="checkbox" name="confirm_review" value="1"> I inspected the release, confirmed its source rights and authorize it for controlled download access.</label>
+                  <label class="check-label"><input type="checkbox" name="confirm_review" value="1"> I confirm the stored binary matches the screened SHA-256, the ClamAV verdict is current, and distribution rights have an independent recorded review.</label>
                   <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn subtle" type="submit" name="decision" value="rejected">Reject</button><button class="btn primary" type="submit" name="decision" value="approved">Approve release</button></div>
                 </form>
               @elseif($version->status === 'approved')
