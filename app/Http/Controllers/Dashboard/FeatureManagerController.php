@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\FeatureFlag;
+use App\Models\AuditEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -27,6 +28,9 @@ class FeatureManagerController extends Controller
         abort_unless(array_key_exists($feature->key, FeatureFlag::AVAILABLE), 404);
         $data = $request->validate(['enabled' => ['required', 'boolean']]);
         $feature->update(['enabled' => (bool) $data['enabled']]);
+        if ($feature->wasChanged('enabled')) {
+            AuditEvent::record('feature.flag.changed', $request->user(), $request);
+        }
 
         return back()->with('status', FeatureFlag::AVAILABLE[$feature->key]['label'].' updated.');
     }

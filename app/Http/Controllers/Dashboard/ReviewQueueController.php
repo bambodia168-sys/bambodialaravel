@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceListing;
+use App\Models\AuditEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -27,6 +28,7 @@ class ReviewQueueController extends Controller
         abort_unless($listing->status === 'pending', 409, 'This listing is no longer pending.');
 
         $listing->update(['status' => $data['decision']]);
+        AuditEvent::record('listing.review.'.$data['decision'], $request->user(), $request);
 
         return back()->with('status', 'Listing marked as '.$data['decision'].'.');
     }

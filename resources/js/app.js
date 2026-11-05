@@ -15,6 +15,19 @@ document.addEventListener('click', (event) => {
         root.dataset.theme = next;
     }
 
+    const copyButton = event.target.closest('[data-copy-target]');
+    if (copyButton) {
+        const source = document.getElementById(copyButton.dataset.copyTarget);
+        const secret = source?.textContent?.trim();
+        if (secret && navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(secret)
+                .then(() => { copyButton.textContent = 'Copied'; })
+                .catch(() => { copyButton.textContent = 'Select and copy manually'; });
+        } else {
+            copyButton.textContent = 'Select and copy manually';
+        }
+    }
+
     const modalOpen = event.target.closest('[data-modal-open]');
     if (modalOpen) {
         const dialog = document.getElementById(modalOpen.dataset.modalOpen);

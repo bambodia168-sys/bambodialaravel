@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\AuditEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -36,6 +37,9 @@ class UserManagerController extends Controller
         }
 
         $user->update(['role' => $data['role']]);
+        if ($user->wasChanged('role')) {
+            AuditEvent::record('user.role.changed', $request->user(), $request);
+        }
 
         return back()->with('status', 'User role updated.');
     }

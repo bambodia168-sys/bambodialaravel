@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Policy;
+use App\Models\AuditEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -49,6 +50,9 @@ class PolicyManagerController extends Controller
             $data['reviewed_by'] = $request->user()->id;
         }
         $policy->update($data);
+        if ($data['status'] === 'published') {
+            AuditEvent::record('policy.published', $request->user(), $request);
+        }
 
         return back()->with('status', 'Policy saved.');
     }

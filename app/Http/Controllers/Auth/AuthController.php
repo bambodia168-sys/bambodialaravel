@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\AuditEvent;
 use App\Models\FeatureFlag;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
@@ -31,10 +32,12 @@ class AuthController extends Controller
         ]);
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+            AuditEvent::record('auth.login.failed', null, $request);
             throw ValidationException::withMessages(['email' => __('auth.failed')]);
         }
 
         $request->session()->regenerate();
+        AuditEvent::record('auth.login.success', $request->user(), $request);
 
         return redirect()->intended($this->destination($request->user()));
     }
@@ -69,6 +72,7 @@ class AuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
+        AuditEvent::record('auth.logout', $request->user(), $request);
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

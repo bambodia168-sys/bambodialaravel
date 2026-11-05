@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\DeveloperController;
+use App\Http\Controllers\SecurityDashboardController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Creator\ListingController as CreatorListingController;
 use App\Http\Controllers\Dashboard\DashboardController;
@@ -40,6 +42,13 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::middleware('role:super_admin')->group(function (): void {
+        Route::get('/developer', [DeveloperController::class, 'index'])->name('developer.index');
+        Route::get('/developer/docs', [DeveloperController::class, 'documentation'])->name('developer.docs');
+        Route::post('/developer/tokens', [DeveloperController::class, 'store'])->name('developer.store')->middleware('throttle:5,1');
+        Route::delete('/developer/tokens/{token}', [DeveloperController::class, 'revoke'])->name('developer.revoke')->middleware('throttle:10,1');
+        Route::get('/security-dashboard', [SecurityDashboardController::class, 'index'])->name('security.index');
+    });
     Route::get('/contact', fn () => redirect()->route('support'))->name('contact');
     Route::get('/support-center', [SupportController::class, 'index'])->name('support');
     Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1');

@@ -195,3 +195,17 @@ svg{flex-shrink:0}
 .language-form select{appearance:none;background:var(--surface-2);color:var(--text);border:1px solid var(--line);padding:9px 11px;border-radius:10px;font-size:12px;font-weight:750;min-width:62px;max-width:100px}
 .auth-locale{display:flex;justify-content:center;margin-top:14px}
 @media(max-width:760px){.language-form select{max-width:82px}.nav-actions{gap:4px}}
+
+/* Developer credentials and security audit */
+.toolbar-actions{display:flex;flex-wrap:wrap;align-items:center;gap:9px}
+.issued-token{border-color:var(--accent)}
+.token-secret{display:flex;gap:12px;align-items:center;padding:20px 24px}
+.token-secret code{display:block;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;overflow-wrap:anywhere;word-break:break-all;padding:13px 15px;flex:1;font-size:13px}
+.issued-token>.hint{margin:0;padding:0 24px 22px}
+.scope-options{display:grid;gap:9px;margin-top:18px;padding:14px;border:1px solid var(--line);border-radius:12px}
+.scope-options legend{padding:0 5px;font-weight:700;font-size:13px}
+.scope-options label{display:flex;gap:10px;align-items:center!important;margin:0!important}
+.api-docs-body{padding:26px;line-height:1.8;font-size:14px}
+.api-docs-body h3{font-size:19px;font-weight:800;margin:23px 0 8px}
+.api-docs-body pre{white-space:pre-wrap;word-break:break-all;padding:19px;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;font-size:13px}
+@media(max-width:640px){.token-secret{align-items:stretch;flex-direction:column}.token-secret .btn{align-self:start}}
