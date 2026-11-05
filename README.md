@@ -40,3 +40,10 @@ Administrators can change actual homepage text, homepage search/category visibil
 Authenticated freelance contracts now support itemized milestones, frozen offer digests, client and freelancer acknowledgements, original private ZIP/PPTX/PDF deliverables, revision requests, completion confirmations and reported disputes. The compliance and privacy modules add versioned published policies, voluntary reading receipts and restricted data-subject request handling.
 
 No real-money transfers, escrow, payouts, automatic erasure or verified legal e-signatures are claimed. See docs/contract-workflows.md for the complete acceptance criteria.
+
+
+## Frontend and account expansion
+
+The homepage now displays approved marketplace listings, category data and open job briefs. Marketplace and job search support real filters and sorting. Every authenticated role can keep private Saved Listings and Saved Jobs collections. Creators can publish an optional professional portfolio profile and are discoverable in a searchable creator directory. Account and Creator Studio dashboards show actual per-user activity and notifications. See docs/frontend-workspaces.md for privacy, routing and release acceptance.
+
+No payments, refunds, escrow or financial transactions have been enabled.

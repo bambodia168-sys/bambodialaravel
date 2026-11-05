@@ -117,3 +117,8 @@ Only settings with implemented code paths should appear in the UI. Editor config
 ## Contract, milestone and compliance implementation
 
 See contract-workflows.md for the actual owner-scoped contract states, verified account acknowledgments, private deliverable files, restricted dispute review, immutable published policy revisions, voluntary receipts, privacy request processing and independent release gates. Real payments, escrow, provider verification, legal signatures and automatic erasure remain disabled.
+
+
+## Frontend and Account Workspaces
+
+The homepage, market filters, private Saved Listings and Saved Jobs, opt-in creator portfolios, public directory and account activity dashboards now use real Laravel database records. See frontend-workspaces.md for privacy controls, routing and acceptance criteria. Bookmarks do not imply entitlements or contracts. All payment services remain disabled.

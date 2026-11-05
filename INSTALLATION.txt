@@ -68,3 +68,8 @@ CONTRACT AND COMPLIANCE HOSTING ACCEPTANCE
 Test the full client draft, itemized milestone, offer, freelancer assent, private file delivery, review, revision, mutual completion and dispute process using independent accounts. Verify unrelated accounts cannot view contract drafts, messages or files. Check the private storage document root, uploaded PDF/ZIP/PPTX constraints and SHA-256 integrity. Test a legally reviewed policy publication, voluntary reading receipt, and private personal-data request response. Verify the Super Admin compliance register reflects actual records.
 
 These actions do not verify signatures, transfer funds, perform escrow, automatically delete user data or constitute independent legal compliance acceptance. Do not use a fresh installer to upgrade an existing populated customer database.
+
+
+FRONTEND AND ACCOUNT ACCEPTANCE
+
+Verify the public homepage and marketplace search list only real approved items. Test creator profile opt-in and withdrawal, saved listings/jobs ownership isolation, unpublishing/closing saved items, all user-role account dashboards, and real category/price/budget sorts. Confirm the user cannot access another account's bookmarks or private profile. Independently test iPhone, Android, tablet, keyboard accessibility and aaPanel/cPanel upgrades; CI is not sufficient proof of production acceptance. Keep payment processing disabled and never run the fresh installer on a populated production database.
