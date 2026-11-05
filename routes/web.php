@@ -271,3 +271,34 @@ Route::middleware('auth')->group(function (): void {
 });
 
 Route::get('/{content}', [ContentController::class, 'show'])->where('content', '[0-9]{9}_[a-z0-9-]+')->name('content.show');
+
+
+// Localized counterparts of the existing web routes keep legacy URLs valid.
+// Use literal prefixes (rather than a {locale} route parameter) so existing
+// controller method arguments, model bindings and signed download IDs remain
+// unchanged. Route names are unique and preserve the original authorization,
+// throttling and parameter constraints.
+$unprefixedWebRoutes = Route::getRoutes()->getRoutes();
+foreach (\App\Http\Middleware\SetLocale::SUPPORTED as $languageCode) {
+    foreach ($unprefixedWebRoutes as $originalRoute) {
+        $name = $originalRoute->getName();
+        if ($name === null || str_starts_with($name, 'localized.')) {
+            continue;
+        }
+        $action = $originalRoute->getAction('uses');
+        if ($action === null) {
+            continue;
+        }
+        $methods = array_values(array_diff($originalRoute->methods(), ['HEAD']));
+        $path = trim($originalRoute->uri(), '/');
+        $localizedRoute = Route::match(
+            $methods,
+            '/'.$languageCode.($path === '' ? '' : '/'.$path),
+            $action
+        )->middleware($originalRoute->gatherMiddleware())
+            ->name('localized.'.$languageCode.'.'.$name);
+        foreach ($originalRoute->wheres as $parameter => $constraint) {
+            $localizedRoute->where($parameter, $constraint);
+        }
+    }
+}
