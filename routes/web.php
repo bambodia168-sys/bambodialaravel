@@ -163,13 +163,15 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/account', [AccountController::class, 'index'])->name('account');
     Route::patch('/account', [AccountController::class, 'update'])->name('account.update');
     Route::get('/studio', [AccountController::class, 'studio'])->name('studio');
-    Route::get('/creator', fn () => redirect(
-        auth()->user()->isCreator()
-            ? '/studio?='.auth()->user()->public_id
-            : (in_array(auth()->user()->role, ['customer', 'subscriber'], true)
+    Route::get('/creator', function (\Illuminate\Http\Request $request) {
+        $user = $request->user();
+
+        return $user->isCreator()
+            ? app(AccountController::class)->studio($request)
+            : redirect(in_array($user->role, ['customer', 'subscriber'], true)
                 ? route('creator.apply')
-                : '/account?='.auth()->user()->public_id)
-    ))->name('creator');
+                : '/account?='.$user->public_id);
+    })->name('creator');
     Route::get('/creator/apply', [CreatorApplicationController::class, 'show'])->name('creator.apply');
     Route::post('/creator/apply', [CreatorApplicationController::class, 'submit'])->name('creator.apply.store')->middleware('throttle:3,1');
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
