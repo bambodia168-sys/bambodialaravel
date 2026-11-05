@@ -36,4 +36,21 @@ $creator=\App\Models\User::query()->create([
     'description'=>str_repeat('Realistic approved job for browser smoke checks. ',3),
     'category'=>'development','budget'=>'240.00','currency'=>'USD','status'=>'published',
 ]);
-echo "Public browser fixtures seeded in an isolated test database.\n";
+$admin=\App\Models\User::query()->create([
+    'name'=>'Browser QA Admin','email'=>'browser.admin@example.test',
+    'password'=>'BrowserOnlyPassword123!','role'=>'super_admin',
+]);
+$terms=\App\Models\Policy::query()->create([
+    'title'=>'Browser QA Terms of Service',
+    'category'=>'terms','status'=>'published','jurisdiction'=>'Test environment',
+    'body'=>str_repeat('A test-only published policy used to exercise required registration acceptance. ',3),
+    'reviewed_by'=>$admin->id,'reviewed_at'=>now(),
+]);
+\App\Models\PolicyPublication::query()->create([
+    'policy_id'=>$terms->id,'revision'=>1,
+    'title'=>$terms->title,'category'=>'terms','jurisdiction'=>'Test environment',
+    'body_snapshot'=>$terms->body,
+    'sha256'=>\App\Models\PolicyPublication::digestFor($terms),
+    'published_by'=>$admin->id,'created_at'=>now(),
+]);
+echo "Public browser fixtures, including test-only published Terms, seeded in an isolated test database.\n";

@@ -11,7 +11,7 @@ const devices = [
   {name:'iphone-emulation',viewport:{width:390,height:844},mobile:true},
   {name:'android-emulation',viewport:{width:412,height:915},mobile:true},
 ];
-const paths = ['/', '/search', '/jobs', '/creators', '/login'];
+const paths = ['/', '/search', '/jobs', '/creators', '/login', '/register', '/forgot-password'];
 const browser = await chromium.launch({headless:true});
 let checks=0;
 try {
@@ -46,12 +46,48 @@ try {
         if(!(await page.getByText('Browser QA Published Service').first().isVisible()))
           throw new Error(device.name+' marketplace missing published service');
       }
+      if(['/login','/register','/forgot-password'].includes(path)){
+        if(await page.locator('.auth-brand').count())
+          throw new Error(device.name+' '+path+' unexpectedly renders brand outside auth modal');
+        if(!(await page.locator('.auth-tools .auth-home-tool svg').isVisible()))
+          throw new Error(device.name+' '+path+' missing Home SVG');
+        if(!(await page.locator('.auth-tools [data-theme-toggle]').isVisible()))
+          throw new Error(device.name+' '+path+' missing theme control');
+        if(!(await page.locator('.auth-tools .language-menu .locale-flag').isVisible()))
+          throw new Error(device.name+' '+path+' missing language SVG flag');
+      }
+      if(path==='/register'){
+        if(!(await page.locator('input[name="terms_accepted"][required]').isVisible()))
+          throw new Error(device.name+' registration Terms checkbox is missing');
+        if(!(await page.getByText('Terms of Service').first().isVisible()))
+          throw new Error(device.name+' registration has no published Terms');
+      }
       if(path==='/creators'){
         if(!(await page.getByText('Original full-stack Laravel consulting').first().isVisible()))
           throw new Error(device.name+' missing opt-in creator');
       }
     }
     if(device.name==='desktop'){
+      await page.goto(origin+'/register',{waitUntil:'networkidle'});
+      const colors=await page.evaluate(()=>({
+        primary:getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+        secondary:getComputedStyle(document.documentElement).getPropertyValue('--secondary').trim(),
+      }));
+      if(!['#c2410c','#fb923c'].includes(colors.primary) || !['#1d4ed8','#93c5fd'].includes(colors.secondary))
+        throw new Error('Expected orange/blue platform colors: '+JSON.stringify(colors));
+      const language=page.locator('.auth-tools .language-menu');
+      await language.locator('summary').click();
+      const flags=language.locator('.language-options .locale-flag');
+      if(await flags.count()!==8)
+        throw new Error('Expected 8 supported locale SVG flags');
+      await language.locator('button[name="locale"][value="km"]').click();
+      await page.waitForLoadState('networkidle');
+      if(!(await page.locator('.auth-tools .language-menu summary').getByText('ខ្មែរ').isVisible()))
+        throw new Error('Locale POST did not persist selected Khmer locale');
+      await page.locator('.auth-tools [data-theme-toggle]').click();
+      if(!['dark','light'].includes(await page.locator('html').getAttribute('data-theme')))
+        throw new Error('Theme did not toggle');
+      checks+=4;
       await page.goto(origin+'/login',{waitUntil:'networkidle'});
       await page.locator('input[name="email"]').fill('browser.client@example.test');
       await page.locator('input[name="password"]').fill('BrowserOnlyPassword123!');
