@@ -23,7 +23,9 @@
   <div class="hero-quick-actions">
     <a href="{{ route('jobs') }}"><x-icon name="briefcase" size="17"/> Find approved jobs</a>
     <a href="{{ route('creators.index') }}"><x-icon name="users" size="17"/> Explore creators</a>
-    @auth<a href="{{ route('account.saved-listings') }}"><x-icon name="star" size="17"/> My saved listings</a>@endauth
+    @auth<a href="{{ route('account.saved-listings') }}"><x-icon name="star" size="17"/> My saved listings</a>
+      <a href="{{ route('account.saved-jobs') }}"><x-icon name="briefcase" size="17"/> My saved jobs</a>
+    @endauth
   </div>
 </section>
 
@@ -79,7 +81,20 @@
             <span>{{ $job->client?->name }}</span>
             <strong>{{ $job->budget===null?'Budget on request':'USD '.number_format((float)$job->budget,2) }}</strong>
           </div>
-          <a href="{{ $job->publicUrl() }}" class="btn subtle compact">View opportunity</a>
+          <div class="marketplace-card-actions">
+            <a href="{{ $job->publicUrl() }}" class="btn subtle compact">View opportunity</a>
+            @auth
+              @if(in_array((int)$job->id,$savedJobIds,true))
+                <form method="post" action="{{ route('saved-jobs.destroy',$job) }}">@csrf @method('DELETE')
+                  <button type="submit" class="btn subtle compact"><x-icon name="star" size="15"/> Saved</button>
+                </form>
+              @else
+                <form method="post" action="{{ route('saved-jobs.store',$job) }}">@csrf
+                  <button type="submit" class="btn subtle compact"><x-icon name="star" size="15"/> Save</button>
+                </form>
+              @endif
+            @endauth
+          </div>
         </article>
       @endforeach
     </div>

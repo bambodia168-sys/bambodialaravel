@@ -351,3 +351,7 @@ svg{flex-shrink:0}
   .account-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
   .account-metric{padding:14px;min-height:112px}
 }
+
+/* Job board card action alignment */
+.marketplace-job-card .marketplace-card-actions{margin-top:auto}
+.marketplace-job-card .marketplace-card-actions .btn{margin:0}

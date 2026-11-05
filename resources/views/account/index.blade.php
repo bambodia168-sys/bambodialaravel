@@ -7,12 +7,14 @@
   @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
   @php
     $accountMetricRoutes=[
-        'saved'=>'account.saved-listings','unread'=>'account.notifications','contracts'=>'contracts.index',
+        'saved'=>'account.saved-listings','saved_jobs'=>'account.saved-jobs',
+        'unread'=>'account.notifications','contracts'=>'contracts.index',
         'jobs'=>'jobs.mine','proposals'=>'jobs.applied','listings'=>'studio.listings',
         'client_inquiries'=>'studio.inquiries',
     ];
     $accountMetricLabels=[
-        'saved'=>'Saved Listings','unread'=>'Unread Updates','contracts'=>'Open Agreements',
+        'saved'=>'Saved Listings','saved_jobs'=>'Saved Jobs',
+        'unread'=>'Unread Updates','contracts'=>'Open Agreements',
         'jobs'=>'My Job Posts','proposals'=>'Job Proposals','listings'=>'Creator Listings',
         'client_inquiries'=>'Open Client Inquiries',
     ];
@@ -40,7 +42,7 @@
       <button class="btn primary" type="submit">Save changes</button>
     </form>
   </section>
-  <div class="studio-actions"><a class="btn subtle" href="{{ route('account.saved-listings') }}"><x-icon name="star" size="16"/> Saved Listings</a><a class="btn subtle" href="{{ route('creators.index') }}"><x-icon name="users" size="16"/> Browse Creators</a><a class="btn subtle" href="{{ route('account.notifications') }}"><x-icon name="mail" size="16"/> Notification Center</a><a class="btn subtle" href="{{ route('account.policy-receipts') }}"><x-icon name="book" size="16"/> Policy Receipts</a><a class="btn subtle" href="{{ route('privacy.index') }}"><x-icon name="shield" size="16"/> Privacy Requests</a><a class="btn subtle" href="{{ route('contracts.index') }}"><x-icon name="file" size="16"/> My Contracts</a><a class="btn primary" href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
+  <div class="studio-actions"><a class="btn subtle" href="{{ route('account.saved-listings') }}"><x-icon name="star" size="16"/> Saved Listings</a><a class="btn subtle" href="{{ route('account.saved-jobs') }}"><x-icon name="briefcase" size="16"/> Saved Jobs</a><a class="btn subtle" href="{{ route('creators.index') }}"><x-icon name="users" size="16"/> Browse Creators</a><a class="btn subtle" href="{{ route('account.notifications') }}"><x-icon name="mail" size="16"/> Notification Center</a><a class="btn subtle" href="{{ route('account.policy-receipts') }}"><x-icon name="book" size="16"/> Policy Receipts</a><a class="btn subtle" href="{{ route('privacy.index') }}"><x-icon name="shield" size="16"/> Privacy Requests</a><a class="btn subtle" href="{{ route('contracts.index') }}"><x-icon name="file" size="16"/> My Contracts</a><a class="btn primary" href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
   @if(in_array($user->role,['customer','subscriber','super_admin'],true))<a class="btn subtle" href="{{ route('jobs.mine') }}">My Job Posts</a>@endif
   @if(in_array($user->role,['customer','subscriber'],true))<a class="btn subtle" href="{{ route('account.inquiries') }}">My Service Requests</a>@endif
   @if($user->isCreator())<a class="btn subtle" href="{{ route('studio.inquiries') }}">Creator Inquiries</a>@endif

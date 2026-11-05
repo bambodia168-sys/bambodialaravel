@@ -2,8 +2,29 @@
 @section('title',$job->title)
 @section('content')
 <div class="container inner-page listing-detail">
+ <nav class="marketplace-breadcrumb" aria-label="Breadcrumb">
+ <a href="{{ route('home') }}">Home</a><x-icon name="chevron-right" size="14"/>
+ <a href="{{ route('jobs') }}">Jobs</a><x-icon name="chevron-right" size="14"/>
+ <span>{{ $job->public_id }}</span></nav>
  <div class="eyebrow">Freelance job · {{ $job->public_id }}</div><h1>{{ $job->title }}</h1>
  <p class="text-muted">Published by {{ $job->client?->name }} · {{ ucfirst($job->category) }}</p>
+ @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
+ <div class="marketplace-detail-actions">
+ @auth
+   @if($isSaved)
+     <form method="post" action="{{ route('saved-jobs.destroy',$job) }}">@csrf @method('DELETE')
+       <button class="btn subtle" type="submit"><x-icon name="star" size="16"/> Saved — remove from list</button>
+     </form>
+   @else
+     <form method="post" action="{{ route('saved-jobs.store',$job) }}">@csrf
+       <button class="btn primary" type="submit"><x-icon name="star" size="16"/> Save job</button>
+     </form>
+   @endif
+   <a class="btn subtle" href="{{ route('account.saved-jobs') }}">My saved jobs</a>
+ @else
+   <a class="btn subtle" href="{{ route('login') }}">Sign in to save this job</a>
+ @endauth
+ </div>
  <section class="panel"><div class="panel-head"><h2>Job brief</h2><span class="role-pill">Open</span></div>
  <div class="listing-body">{!! nl2br(e($job->description)) !!}</div>
  <div class="listing-body"><strong>Estimated client budget:</strong> {{ $job->budget===null?'Not specified':'$'.number_format((float)$job->budget,2).' USD' }}</div></section>
@@ -11,7 +32,6 @@
    @if(auth()->user()->role==='freelancer')
      <section class="panel"><div class="panel-head"><h2>Submit a proposal</h2></div>
      <div class="onboarding-content">
-     @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
      @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
      @if($applied)<p>You already submitted a proposal for this job. <a href="{{ route('jobs.applied') }}">View its current status</a>.</p>
      @else

@@ -12,6 +12,7 @@
 <a class="btn primary" href="{{ route('studio.products.index') }}"><x-icon name="package" size="17"/> Product Manager &amp; Releases</a>
 <a class="btn subtle" href="{{ route('contracts.index') }}"><x-icon name="file" size="17"/> My Contracts</a>
 <a class="btn subtle" href="{{ route('account.saved-listings') }}"><x-icon name="star" size="17"/> Saved Listings</a>
+<a class="btn subtle" href="{{ route('account.saved-jobs') }}"><x-icon name="briefcase" size="17"/> Saved Jobs</a>
 <a class="btn subtle" href="{{ route('studio.media.index') }}"><x-icon name="image" size="17"/> Media Library</a>
 <a class="btn subtle" href="{{ route('resume.edit') }}"><x-icon name="file" size="17"/> Resume Builder</a>
 @if(auth()->user()->role==='freelancer')<a class="btn subtle" href="{{ route('jobs.applied') }}"><x-icon name="briefcase" size="17"/> My Job Proposals</a>@endif
