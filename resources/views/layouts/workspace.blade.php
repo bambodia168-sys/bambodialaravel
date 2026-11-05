@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="{{ app()->getLocale() }}">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>@yield('title','Workspace') · Bambodia</title>
+  <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
+  @vite(['resources/css/app.css','resources/js/app.js'])
+</head>
+@php
+  $workspace = trim($__env->yieldContent('workspace', 'account'));
+  $workspace = in_array($workspace, ['admin','account','creator','developer'], true) ? $workspace : 'account';
+  $user = auth()->user();
+  $currentName = preg_replace('/^localized\.(?:en|zh|km|ko|ja|th|vi|de)\./', '', request()->route()?->getName() ?? '');
+  $workspaceTitles = ['admin'=>'Administration','account'=>'My Account','creator'=>'Creator Studio','developer'=>'Developer Workspace'];
+  $workspaceDescription = [
+    'admin'=>'Platform operations and management',
+    'account'=>'Personal account and activity',
+    'creator'=>'Creative work and customer delivery',
+    'developer'=>'Integrations and API security',
+  ];
+  $groups = [];
+
+  if ($workspace === 'admin') {
+    $groups[] = ['heading'=>'Overview','items'=>[
+      ['route'=>'dashboard','label'=>'Dashboard overview','icon'=>'layout-dashboard'],
+    ]];
+    if ($user->role === 'super_admin') {
+      $groups[] = ['heading'=>'Access & Security','items'=>[
+        ['route'=>'dashboard.users','label'=>'User Manager','icon'=>'users'],
+        ['route'=>'security.index','label'=>'Security Center','icon'=>'shield-check'],
+        ['route'=>'dashboard.features','label'=>'Feature Manager','icon'=>'sliders-horizontal'],
+        ['route'=>'dashboard.entitlements.index','label'=>'Download Entitlements','icon'=>'key-round'],
+        ['route'=>'dashboard.compliance.index','label'=>'Compliance Register','icon'=>'clipboard-check'],
+        ['route'=>'dashboard.privacy.index','label'=>'Privacy Requests','icon'=>'user-round-check'],
+      ]];
+    }
+    if (in_array($user->role,['super_admin','admin'],true)) {
+      $groups[] = ['heading'=>'Appearance & Content','items'=>[
+        ['route'=>'dashboard.appearance','label'=>'Appearance','icon'=>'palette'],
+        ['route'=>'dashboard.system-settings','label'=>'System Settings','icon'=>'settings'],
+        ['route'=>'dashboard.pages','label'=>'Page Manager','icon'=>'file-text'],
+        ['route'=>'dashboard.posts','label'=>'Post Manager','icon'=>'newspaper'],
+        ['route'=>'dashboard.policies','label'=>'Policy Center','icon'=>'scale'],
+      ]];
+      $groups[] = ['heading'=>'Marketplace Management','items'=>[
+        ['route'=>'dashboard.products.index','label'=>'Digital Products','icon'=>'package'],
+        ['route'=>'dashboard.jobs.index','label'=>'Job Manager','icon'=>'briefcase'],
+        ['route'=>'dashboard.contracts.index','label'=>'Contracts','icon'=>'file-check'],
+        ['route'=>'dashboard.contracts.disputes','label'=>'Contract Disputes','icon'=>'alert'],
+        ['route'=>'dashboard.categories.index','label'=>'Categories','icon'=>'layers'],
+        ['route'=>'dashboard.marketplace.index','label'=>'Projects','icon'=>'folders','params'=>['type'=>'project']],
+        ['route'=>'dashboard.marketplace.index','label'=>'Freelance','icon'=>'user-check','params'=>['type'=>'freelance']],
+        ['route'=>'dashboard.marketplace.index','label'=>'Services','icon'=>'wrench','params'=>['type'=>'service']],
+        ['route'=>'dashboard.inquiries.index','label'=>'Service Inquiries','icon'=>'message'],
+      ]];
+      $groups[] = ['heading'=>'Assets & Communication','items'=>[
+        ['route'=>'dashboard.media.index','label'=>'Media Library','icon'=>'image'],
+        ['route'=>'dashboard.vault.index','label'=>'Digital File Vault','icon'=>'archive'],
+        ['route'=>'dashboard.licenses.index','label'=>'License Manager','icon'=>'scroll-text'],
+        ['route'=>'dashboard.creator-applications','label'=>'Creator Applications','icon'=>'user-round-check'],
+        ['route'=>'dashboard.reviews','label'=>'Review Queue','icon'=>'clipboard-check'],
+        ['route'=>'dashboard.notifications.index','label'=>'Notification Analytics','icon'=>'bell'],
+      ]];
+    }
+    $groups[] = ['heading'=>'Assistance','items'=>[
+      ['route'=>'dashboard.support','label'=>'Support Center','icon'=>'life-buoy'],
+    ]];
+  } elseif ($workspace === 'creator') {
+    $groups = [
+      ['heading'=>'Creator Overview','items'=>[
+        ['route'=>'creator','label'=>'Studio Overview','icon'=>'layout-dashboard'],
+        ['route'=>'studio.profile.edit','label'=>'Public Creator Profile','icon'=>'user-round-check'],
+        ['route'=>'studio.listings','label'=>'Listings & Services','icon'=>'folders'],
+      ]],
+      ['heading'=>'Products & Resources','items'=>[
+        ['route'=>'studio.products.index','label'=>'Product Releases','icon'=>'package'],
+        ['route'=>'studio.media.index','label'=>'Media Library','icon'=>'image'],
+      ]],
+      ['heading'=>'Client Work','items'=>[
+        ['route'=>'studio.inquiries','label'=>'Client Inquiries','icon'=>'message'],
+        ['route'=>'contracts.index','label'=>'Contracts','icon'=>'file-check'],
+        ['route'=>'resume.edit','label'=>'Resume Builder','icon'=>'file-text'],
+      ]],
+      ['heading'=>'Saved & Shared','items'=>[
+        ['route'=>'jobs.applied','label'=>'My Proposals','icon'=>'send','roles'=>['freelancer']],
+        ['route'=>'account.saved-listings','label'=>'Saved Listings','icon'=>'star'],
+        ['route'=>'account.saved-jobs','label'=>'Saved Jobs','icon'=>'bookmark'],
+      ]],
+    ];
+  } elseif ($workspace === 'developer') {
+    $groups = [
+      ['heading'=>'Developer Overview','items'=>[
+        ['route'=>'developer.index','label'=>'API Credentials','icon'=>'key-round'],
+        ['route'=>'developer.docs','label'=>'API Documentation','icon'=>'book-open'],
+      ]],
+      ['heading'=>'Operational Tools','items'=>[
+        ['route'=>'security.index','label'=>'Security Center','icon'=>'shield-check'],
+        ['route'=>'dashboard.features','label'=>'Feature Manager','icon'=>'sliders-horizontal'],
+        ['route'=>'dashboard','label'=>'Admin Overview','icon'=>'layout-dashboard'],
+      ]],
+    ];
+  } else {
+    $groups = [
+      ['heading'=>'Your Account','items'=>[
+        ['route'=>'account','label'=>'Account Overview','icon'=>'layout-dashboard'],
+        ['route'=>'account.notifications','label'=>'Notifications','icon'=>'bell'],
+        ['route'=>'account.downloads','label'=>'My Downloads','icon'=>'download'],
+        ['route'=>'account.saved-listings','label'=>'Saved Listings','icon'=>'star'],
+        ['route'=>'account.saved-jobs','label'=>'Saved Jobs','icon'=>'bookmark'],
+      ]],
+      ['heading'=>'Orders & Communication','items'=>[
+        ['route'=>'contracts.index','label'=>'My Contracts','icon'=>'file-check'],
+        ['route'=>'jobs.mine','label'=>'My Job Posts','icon'=>'briefcase','roles'=>['customer','subscriber','super_admin']],
+        ['route'=>'account.inquiries','label'=>'Service Requests','icon'=>'message','roles'=>['customer','subscriber']],
+        ['route'=>'jobs.applied','label'=>'My Proposals','icon'=>'send','roles'=>['freelancer']],
+      ]],
+      ['heading'=>'Privacy & Records','items'=>[
+        ['route'=>'account.policy-receipts','label'=>'Policy Receipts','icon'=>'scroll-text'],
+        ['route'=>'privacy.index','label'=>'Privacy Requests','icon'=>'shield-check'],
+        ['route'=>'support','label'=>'Support Center','icon'=>'life-buoy'],
+      ]],
+    ];
+    if ($user->isCreator()) {
+      $groups[]=['heading'=>'Creator Access','items'=>[
+        ['route'=>'creator','label'=>'Creator Studio','icon'=>'palette'],
+        ['route'=>'studio.profile.edit','label'=>'Creator Profile','icon'=>'user-round-check'],
+      ]];
+    } elseif (in_array($user->role,['customer','subscriber'],true)) {
+      $groups[]=['heading'=>'Creator Access','items'=>[
+        ['route'=>'creator.apply','label'=>'Become a Creator','icon'=>'user-round-check'],
+      ]];
+    }
+  }
+
+  $workspaceRoot = match ($workspace) {
+    'admin' => route('dashboard'),
+    'creator' => route('creator'),
+    'developer' => route('developer.index'),
+    default => route('account'),
+  };
+@endphp
+<body class="dashboard-body workspace-body" data-workspace="{{ $workspace }}">
+<div class="workspace-shell" id="workspace-shell">
+  <aside class="workspace-sidebar" id="workspace-sidebar" aria-label="{{ $workspaceTitles[$workspace] }} navigation">
+    <div class="workspace-sidebar-head">
+      <a class="workspace-brand" href="{{ $workspaceRoot }}" title="{{ $workspaceTitles[$workspace] }}">
+        <span class="brand-mark" aria-hidden="true">B</span><span class="workspace-brand-name">Bambodia</span>
+      </a>
+      <span class="workspace-kind"><x-icon name="circle-dot" size="14"/><span>{{ $workspaceTitles[$workspace] }}</span></span>
+    </div>
+    <nav class="workspace-navigation" aria-label="{{ $workspaceTitles[$workspace] }} menu" id="workspace-navigation">
+      @foreach($groups as $group)
+        <div class="workspace-nav-group">
+          <div class="workspace-nav-heading">{{ $group['heading'] }}</div>
+          @foreach($group['items'] as $item)
+            @continue(isset($item['roles']) && !in_array($user->role,$item['roles'],true))
+            @php
+              $match = $currentName === $item['route']
+                && (!isset($item['params']) || (request()->route('type') === ($item['params']['type'] ?? null)));
+            @endphp
+            <a href="{{ route($item['route'], $item['params'] ?? []) }}"
+               class="workspace-nav-link {{ $match ? 'active' : '' }}"
+               title="{{ $item['label'] }}"
+               @if($match) aria-current="page" @endif>
+              <x-icon :name="$item['icon']" size="19"/>
+              <span class="workspace-nav-text">{{ $item['label'] }}</span>
+            </a>
+          @endforeach
+        </div>
+      @endforeach
+      <div class="workspace-empty-search" hidden>No matching menu items</div>
+    </nav>
+    <div class="workspace-sidebar-bottom">
+      <a href="{{ route('home') }}" class="workspace-nav-link" title="Public website">
+        <x-icon name="home" size="19"/><span class="workspace-nav-text">Public website</span>
+      </a>
+      @if($workspace !== 'account')
+      <a href="{{ route('account') }}" class="workspace-nav-link" title="My Account">
+        <x-icon name="user" size="19"/><span class="workspace-nav-text">My Account</span>
+      </a>
+      @endif
+    </div>
+  </aside>
+  <div class="workspace-backdrop" data-workspace-backdrop aria-hidden="true"></div>
+  <div class="workspace-main" id="workspace-main">
+    <header class="workspace-topbar">
+      <button type="button" class="icon-button workspace-sidebar-toggle"
+              data-workspace-toggle aria-label="Collapse navigation"
+              aria-controls="workspace-sidebar" aria-expanded="true"
+              title="Show or hide sidebar">
+        <span class="workspace-collapse-icon"><x-icon name="panel-left-close" size="20"/></span>
+        <span class="workspace-expand-icon"><x-icon name="panel-left-open" size="20"/></span>
+      </button>
+      <div class="workspace-top-title">
+        <strong>{{ $workspaceTitles[$workspace] }}</strong>
+      </div>
+      <div class="workspace-menu-search">
+        <x-icon name="search" size="19"/>
+        <input type="search" data-workspace-search
+               placeholder="Search {{ strtolower($workspaceTitles[$workspace]) }} menu"
+               aria-label="Search {{ $workspaceTitles[$workspace] }} navigation"
+               autocomplete="off">
+        <span class="workspace-search-hint">Menu</span>
+      </div>
+      <div class="workspace-top-actions">
+        <a class="icon-button workspace-home-link" href="{{ route('home') }}" title="Home" aria-label="Home"><x-icon name="home" size="19"/></a>
+        <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle light or dark mode"><x-icon name="moon" size="19"/></button>
+        <x-language-menu/>
+        <a class="workspace-profile" href="{{ route('account') }}" aria-label="My Account" title="My Account"><x-icon name="user" size="19"/></a>
+      </div>
+    </header>
+    <main class="workspace-content" id="workspace-content">
+      @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
+      @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
+      @yield('content')
+    </main>
+  </div>
+</div>
+</body>
+</html>
