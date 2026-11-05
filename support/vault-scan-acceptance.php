@@ -70,8 +70,8 @@ try{
         : "BLOCKED: ClamAV did not provide both expected independent results.\n";
     echo "Engine: ".trim($version['output'])."\n";
     echo "This is NOT a production-file malware clearance, legal-rights review or full hosting acceptance.\n";
-    exit($good?0:2);
 }finally{
     @unlink($clean);
     @unlink($infected);
 }
+exit($good?0:2);

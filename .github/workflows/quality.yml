@@ -34,7 +34,7 @@ jobs:
           mkdir -p database
       - name: Check PHP syntax
         run: |
-          find app bootstrap config database routes tests installer public -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Install frontend dependencies
         run: npm install --ignore-scripts
       - name: Compile production frontend
@@ -49,6 +49,10 @@ jobs:
           grep -q 'Requirements' /tmp/bambodia-setup.html
           test -f storage/app/installer-access.txt
           test ! -f storage/app/installed.lock
+      - name: Validate release preflight report format without claiming hosting approval
+        run: |
+          php support/hosting-preflight.php --webroot=public --json > /tmp/bambodia-preflight.json
+          php -r '$r=json_decode(file_get_contents("/tmp/bambodia-preflight.json"),true,512,JSON_THROW_ON_ERROR); if (!isset($r["status"],$r["blockers"],$r["results"]) || !is_array($r["results"])) exit(1);'
       - name: Test routes and workflows
         env:
           APP_ENV: testing
