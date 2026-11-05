@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\MarketplaceListing;
+use App\Models\Policy;
+use App\Models\PolicyPublication;
+use App\Models\PolicyAcknowledgement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -31,16 +34,38 @@ class BambodiaFoundationTest extends TestCase
 
     public function test_registration_creates_customer_account_not_administrator(): void
     {
+        $admin = $this->user('super_admin');
+        $policy = Policy::query()->create([
+            'title'=>'Terms of Service',
+            'body'=>str_repeat('Lawful marketplace use and licensing obligations. ',3),
+            'category'=>'terms','status'=>'published',
+        ]);
+        $publication = PolicyPublication::query()->create([
+            'policy_id'=>$policy->id,
+            'revision'=>1,'title'=>$policy->title,'category'=>'terms',
+            'body_snapshot'=>$policy->body,
+            'sha256'=>PolicyPublication::digestFor($policy),
+            'published_by'=>$admin->id,
+            'created_at'=>now(),
+        ]);
         $response = $this->post('/register', [
             'name' => 'New Customer',
             'email' => 'new@example.test',
             'password' => 'SecurePasswordOne!',
             'password_confirmation' => 'SecurePasswordOne!',
+            'terms_accepted' => '1',
+            'terms_publication_id'=>$publication->id,
         ]);
         $response->assertRedirect();
         $user = User::where('email', 'new@example.test')->firstOrFail();
         $this->assertSame('customer', $user->role);
         $this->assertAuthenticatedAs($user);
+        $this->assertDatabaseHas('policy_acknowledgements',[
+            'user_id'=>$user->id,
+            'policy_publication_id'=>$publication->id,
+            'sha256'=>$publication->sha256,
+            'record_type'=>'registration_acceptance',
+        ]);
     }
 
     public function test_customer_cannot_access_super_admin_manager(): void

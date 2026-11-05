@@ -42,15 +42,7 @@
       </details>
       @endif
       <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle light or dark mode"><x-icon name="moon"/></button>
-      <form method="post" action="{{ route('locale.update') }}" class="language-form">
-        @csrf
-        <label for="locale-main" class="sr-only">{{ __('ui.language') }}</label>
-        <select id="locale-main" name="locale" onchange="this.form.submit()" aria-label="{{ __('ui.language') }}">
-          @foreach(['en'=>'EN','zh'=>'中文','km'=>'ខ្មែរ','ko'=>'한국어','ja'=>'日本語','th'=>'ไทย','vi'=>'Tiếng Việt','de'=>'Deutsch'] as $code=>$native)
-            <option value="{{ $code }}" @selected(app()->getLocale()===$code)>{{ $native }}</option>
-          @endforeach
-        </select>
-      </form>
+      <x-language-menu/>
       @auth
       <details class="dropdown profile-dropdown">
         <summary class="profile-trigger" aria-label="Profile menu"><x-icon name="user" size="19"/></summary>

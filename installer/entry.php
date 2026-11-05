@@ -277,17 +277,17 @@ $names = ['Requirements', 'Database', 'Application', 'Administrator', 'Finish'];
   <meta name="robots" content="noindex,nofollow">
   <title>Bambodia — Installation</title>
   <style>
-    :root{color-scheme:dark;--bg:#0a1020;--card:#111c31;--border:#30425d;--text:#f6f8fc;--muted:#a7bad5;--accent:#5cd6af}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;font:15px/1.6 system-ui,-apple-system,sans-serif;color:var(--text);background:radial-gradient(ellipse at 80% 10%,#1e4463 0,transparent 45%),var(--bg);display:grid;place-items:center;padding:24px}
+    :root{color-scheme:dark;--bg:#0a1020;--card:#111c31;--border:#30425d;--text:#f6f8fc;--muted:#a7bad5;--accent:#fb923c;--secondary:#93c5fd}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;font:15px/1.6 system-ui,-apple-system,sans-serif;color:var(--text);background:radial-gradient(ellipse at 80% 10%,#163d71 0,transparent 45%),var(--bg);display:grid;place-items:center;padding:24px}
     main{width:min(100%,720px);background:var(--card);border:1px solid var(--border);border-radius:24px;padding:clamp(20px,5vw,44px);box-shadow:0 30px 85px #0007}
     .brand{font-size:22px;font-weight:800;letter-spacing:-.05em}.brand span{color:var(--accent)}.eyebrow{color:var(--accent);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;margin-top:18px}
     h1{font-size:clamp(25px,4vw,38px);letter-spacing:-.045em;line-height:1.16;margin:8px 0}p,.hint{color:var(--muted)}
-    .stages{display:flex;gap:6px;flex-wrap:wrap;margin:24px 0 30px}.stages span{font-size:11px;padding:7px 11px;border:1px solid var(--border);border-radius:999px;color:var(--muted)}.stages .active{background:var(--accent);color:#06241b;border-color:var(--accent);font-weight:800}
+    .stages{display:flex;gap:6px;flex-wrap:wrap;margin:24px 0 30px}.stages span{font-size:11px;padding:7px 11px;border:1px solid var(--border);border-radius:999px;color:var(--muted)}.stages .active{background:var(--accent);color:#21170f;border-color:var(--accent);font-weight:800}
     label{display:block;margin:14px 0 6px;font-size:13px;font-weight:700}input{font:inherit;display:block;width:100%;color:var(--text);background:#0a1425;border:1px solid var(--border);padding:12px 13px;border-radius:12px}input:focus{outline:2px solid var(--accent);outline-offset:1px}
-    button{display:inline-flex;border:0;background:var(--accent);color:#05261b;border-radius:12px;padding:13px 22px;font:inherit;font-weight:800;cursor:pointer;margin-top:24px}
+    button{display:inline-flex;border:0;background:var(--accent);color:#21170f;border-radius:12px;padding:13px 22px;font:inherit;font-weight:800;cursor:pointer;margin-top:24px}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:520px){.row{grid-template-columns:1fr}}
-    .check{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}.check strong{color:#74e4bc}.check .no{color:#ffa8a8}
-    .error{border:1px solid #c46b78;background:#522937;padding:13px;border-radius:12px;margin:16px 0}.hint{font-size:13px;margin-top:12px}code{color:#b8f4d9;overflow-wrap:anywhere}a{color:var(--accent)}
+    .check{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}.check strong{color:#fdba74}.check .no{color:#ffa8a8}
+    .error{border:1px solid #c46b78;background:#522937;padding:13px;border-radius:12px;margin:16px 0}.hint{font-size:13px;margin-top:12px}code{color:#bfdbfe;overflow-wrap:anywhere}a{color:var(--accent)}
   </style>
 </head>
 <body>

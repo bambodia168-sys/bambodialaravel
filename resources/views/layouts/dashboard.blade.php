@@ -61,7 +61,7 @@
     <header class="admin-topbar">
       <button type="button" class="icon-button admin-menu-button" data-menu-toggle aria-label="Toggle navigation"><x-icon name="grid"/></button>
       <div><strong>@yield('title','Dashboard')</strong><small>Bambodia control center</small></div>
-      <div class="topbar-right"><button type="button" class="icon-button" data-theme-toggle aria-label="Toggle theme"><x-icon name="moon"/></button>
+      <div class="topbar-right"><button type="button" class="icon-button" data-theme-toggle aria-label="Toggle theme"><x-icon name="moon"/></button><x-language-menu/>
         <a class="profile-trigger" href="{{ url('/account?='.auth()->user()->public_id) }}" aria-label="My account"><x-icon name="user"/></a>
       </div>
     </header>
