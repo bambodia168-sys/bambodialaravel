@@ -61,11 +61,18 @@
   </div>
 </header>
 <main class="site-main">@yield('content')</main>
+@php
+  $footerPolicies = \App\Models\Policy::query()->where('status', 'published')
+      ->whereIn('category', ['cookies', 'gdpr', 'privacy', 'terms'])
+      ->orderByDesc('updated_at')->get()->unique('category')->keyBy('category');
+  $aboutPage = \App\Models\ContentEntry::query()->where('status', 'published')
+      ->where('type', 'page')->where('slug', 'about')->latest()->first();
+@endphp
 <footer class="site-footer">
   <div class="container footer-columns">
     <div><div class="brand footer-brand"><span class="brand-mark">B</span><span>Bambodia<span class="brand-dot">.</span></span></div>
-      @if(Route::has('about'))<a href="{{ route('about') }}">About</a>@endif
-      @if(Route::has('author'))<a href="{{ route('author') }}">Author</a>@endif
+      @if($aboutPage)<a href="{{ $aboutPage->publicUrl() }}">About</a>@endif
+      <a href="https://tonsamith.com" target="_blank" rel="noopener noreferrer">Author</a>
       @if(Route::has('blog'))<a href="{{ route('blog') }}">Blog</a>@endif
       @if(Route::has('contact'))<a href="{{ route('contact') }}">Contact</a>@endif
     </div>
@@ -76,13 +83,13 @@
       @if(Route::has('support'))<a href="{{ route('support') }}">Support Center</a>@endif
     </div>
     <div><h3>{{ __('ui.compliance') }}</h3>
-      @if(Route::has('policy.cookie'))<a href="{{ route('policy.cookie') }}">Cookie Policy</a>@endif
-      @if(Route::has('policy.gdpr'))<a href="{{ route('policy.gdpr') }}">GDPR Policy</a>@endif
-      @if(Route::has('policy.privacy'))<a href="{{ route('policy.privacy') }}">Privacy Policy</a>@endif
-      @if(Route::has('policy.terms'))<a href="{{ route('policy.terms') }}">Terms of Service</a>@endif
+      @if($footerPolicies->has('cookies'))<a href="{{ $footerPolicies->get('cookies')->publicUrl() }}">Cookie Policy</a>@endif
+      @if($footerPolicies->has('gdpr'))<a href="{{ $footerPolicies->get('gdpr')->publicUrl() }}">GDPR Policy</a>@endif
+      @if($footerPolicies->has('privacy'))<a href="{{ $footerPolicies->get('privacy')->publicUrl() }}">Privacy Policy</a>@endif
+      @if($footerPolicies->has('terms'))<a href="{{ $footerPolicies->get('terms')->publicUrl() }}">Terms of Service</a>@endif
     </div>
   </div>
-  <div class="container footer-bottom"><span>© {{ date('Y') }} Bambodia · All Rights Reserved.</span><div class="footer-social"><a href="https://tonsamith.com" target="_blank" rel="noopener noreferrer" aria-label="Author website"><x-icon name="globe" size="18"/></a></div></div>
+  <div class="container footer-bottom"><span>© {{ date('Y') }} Bambodia · All Rights Reserved.</span><div class="footer-social"><a href="https://tonsamith.com" target="_blank" rel="noopener noreferrer" aria-label="Author website"><x-icon name="globe" size="18"/></a><a href="https://github.com/bambodia168-sys/bambodialaravel" target="_blank" rel="noopener noreferrer" aria-label="Bambodia GitHub repository"><x-icon name="github" size="18"/></a></div></div>
 </footer>
 </body>
 </html>
