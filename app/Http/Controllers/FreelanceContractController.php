@@ -96,7 +96,7 @@ class FreelanceContractController extends Controller
         DB::transaction(function()use($request,$contract,$data): void {
             $locked=FreelanceContract::query()->lockForUpdate()->findOrFail($contract->id);
             abort_unless($locked->status==='draft',409,'Milestones are frozen after the agreement is offered.');
-            $sequence=(int)$locked->milestones()->max('sequence')+1;
+            $sequence=(int)$locked->milestones()->reorder()->max('sequence')+1;
             abort_if($sequence>20,409,'At most twenty milestones are supported.');
             $locked->milestones()->create([...$data,'sequence'=>$sequence,'status'=>'planned']);
             AuditEvent::record('contract.milestone.created',$request->user(),$request);
@@ -153,7 +153,7 @@ class FreelanceContractController extends Controller
         $this->freelancerOnly($request,$contract);
         $data=$request->validate([
             'decision'=>['required',Rule::in(['accepted','declined'])],
-            'confirm_terms'=>['required_if:decision,accepted','nullable','accepted'],
+            'confirm_terms'=>['exclude_unless:decision,accepted','required','accepted'],
         ]);
 
         DB::transaction(function()use($contract,$request,$data): void {

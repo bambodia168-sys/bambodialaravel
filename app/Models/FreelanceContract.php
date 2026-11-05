@@ -11,12 +11,12 @@ class FreelanceContract extends Model
 {
     protected $fillable = [
         'job_proposal_id','client_id','freelancer_id','title','scope','terms','currency',
-        'agreed_budget','terms_sha256','status','offered_at','accepted_at','completed_at','cancelled_at',
+        'agreed_budget','terms_sha256','status','offered_at','accepted_at','completed_at','cancelled_at','freelancer_completed_at',
     ];
     protected function casts(): array
     {
         return ['agreed_budget'=>'decimal:2','offered_at'=>'datetime','accepted_at'=>'datetime',
-            'completed_at'=>'datetime','cancelled_at'=>'datetime'];
+            'completed_at'=>'datetime','cancelled_at'=>'datetime','freelancer_completed_at'=>'datetime'];
     }
     protected static function booted(): void
     {
