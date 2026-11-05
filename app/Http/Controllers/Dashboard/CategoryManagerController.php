@@ -42,7 +42,7 @@ class CategoryManagerController extends Controller
         }
         $exists=MarketplaceCategory::query()->where('type',$data['type'])
             ->where('slug',\Illuminate\Support\Str::slug($data['name']))
-            ->whereKeyNot($category->id)->exists();
+            ->where('id','!=',$category->id)->exists();
         if($exists){return back()->withErrors(['name'=>'Category name already exists in this type.']);}
         $category->update($data);
         AuditEvent::record('category.updated',$request->user(),$request);

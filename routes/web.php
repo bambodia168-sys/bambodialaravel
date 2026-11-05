@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\Dashboard\CategoryManagerController;
+use App\Http\Controllers\Dashboard\MarketplaceManagerController;
 use App\Http\Controllers\AccountNotificationController;
 use App\Http\Controllers\Dashboard\NotificationAnalyticsController;
 use App\Http\Controllers\ServiceInquiryController;
@@ -117,6 +119,7 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/inquiries', [ServiceInquiryController::class, 'index'])->name('studio.inquiries');
         Route::get('/listings', [CreatorListingController::class, 'index'])->name('studio.listings');
         Route::post('/listings', [CreatorListingController::class, 'store'])->name('studio.listings.store')->middleware('throttle:10,1');
+        Route::patch('/listings/{listing}', [CreatorListingController::class, 'update'])->name('studio.listings.update');
         Route::get('/products/{product}/releases', [ProductVaultController::class, 'index'])->name('studio.vault.index');
         Route::post('/products/{product}/releases', [ProductVaultController::class, 'store'])
             ->name('studio.vault.store')->middleware('throttle:5,1');
@@ -142,6 +145,11 @@ Route::middleware('auth')->group(function (): void {
                 ->name('dashboard.vault.inspect')->middleware('throttle:10,1');
             Route::get('/notification-analytics', [NotificationAnalyticsController::class, 'index'])->name('dashboard.notifications.index');
             Route::get('/service-inquiries', [ServiceManagerController::class, 'index'])->name('dashboard.inquiries.index');
+            Route::get('/category-manager', [CategoryManagerController::class, 'index'])->name('dashboard.categories.index');
+            Route::post('/category-manager', [CategoryManagerController::class, 'store'])->name('dashboard.categories.store');
+            Route::patch('/category-manager/{category}', [CategoryManagerController::class, 'update'])->name('dashboard.categories.update');
+            Route::get('/{type}-manager', [MarketplaceManagerController::class, 'index'])
+                ->where('type','project|freelance|service')->name('dashboard.marketplace.index');
             Route::get('/job-manager', [JobManagerController::class, 'index'])->name('dashboard.jobs.index');
             Route::patch('/job-manager/{job}', [JobManagerController::class, 'decide'])->name('dashboard.jobs.decide');
             Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');

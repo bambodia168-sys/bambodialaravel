@@ -8,6 +8,7 @@ use App\Models\FeatureFlag;
 use App\Models\LicenseDefinition;
 use App\Models\MarketplaceListing;
 use App\Models\MediaAsset;
+use App\Models\MarketplaceCategory;
 use App\Support\ProductReadiness;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,7 +32,9 @@ class ProductController extends Controller
             ->where('review_status', 'approved')
             ->latest()->get(['id', 'public_id', 'alt_text']);
 
-        return view('account.products', compact('products', 'licenses', 'assets'));
+        $categories=MarketplaceCategory::query()->where('type','product')
+            ->where('is_active',true)->orderBy('sort_order')->orderBy('name')->get(['id','name']);
+        return view('account.products', compact('products', 'licenses', 'assets','categories'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -93,6 +96,7 @@ class ProductController extends Controller
             'license_terms' => ['nullable', 'string', 'max:20000'],
             'license_definition_id' => ['nullable', 'integer', Rule::exists('license_definitions', 'id')],
             'cover_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')],
+            'category_id' => ['nullable','integer',Rule::exists('marketplace_categories','id')],
             'status' => ['required', Rule::in(['draft', 'pending'])],
         ]);
 
@@ -105,6 +109,10 @@ class ProductController extends Controller
             ]);
         }
 
+        if(!empty($data['category_id']) && !MarketplaceCategory::query()
+            ->whereKey($data['category_id'])->where('type','product')->where('is_active',true)->exists()){
+            throw ValidationException::withMessages(['category_id'=>'Select an active product category.']);
+        }
         return $data;
     }
 }

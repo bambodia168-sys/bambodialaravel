@@ -18,11 +18,11 @@ class MarketplaceCategory extends Model
     protected static function booted(): void
     {
         static::creating(function(self $category): void {
-            $category->slug=Str::slug($category->name);
             for($attempt=0;$attempt<30;$attempt++){
                 $id=(string)random_int(100000000,999999999);
                 if(!self::query()->where('public_id',$id)->exists()){
                     $category->public_id=$id;
+                    $category->slug=Str::slug($category->name) ?: 'category-'.$id;
                     return;
                 }
             }
@@ -30,7 +30,7 @@ class MarketplaceCategory extends Model
         });
         static::updating(function(self $category): void {
             if($category->isDirty('name')) {
-                $category->slug=Str::slug($category->name);
+                $category->slug=Str::slug($category->name) ?: 'category-'.$category->public_id;
             }
         });
     }
