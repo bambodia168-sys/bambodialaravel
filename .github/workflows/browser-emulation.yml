@@ -1,0 +1,75 @@
+name: Bambodia Browser Emulation Acceptance
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  responsive-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout isolated source
+        uses: actions/checkout@v4
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, pdo_sqlite, fileinfo, xml, curl, zip
+          coverage: none
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare local test application
+        run: |
+          composer install --prefer-dist --no-interaction --no-progress
+          npm install --ignore-scripts
+          npm run build
+          cp .env.example .env
+          php artisan key:generate
+          mkdir -p database
+          touch database/database.sqlite
+          {
+            echo "APP_ENV=testing"
+            echo "APP_DEBUG=false"
+            echo "APP_URL=http://127.0.0.1:8094"
+            echo "DB_CONNECTION=sqlite"
+            echo "DB_DATABASE=$GITHUB_WORKSPACE/database/database.sqlite"
+            echo "SESSION_DRIVER=file"
+            echo "CACHE_STORE=file"
+          } >> "$GITHUB_ENV"
+      - name: Install Chromium browser engine
+        run: |
+          npm install --no-save --ignore-scripts playwright
+          npx playwright install --with-deps chromium
+      - name: Migrate and seed isolated UI fixtures
+        run: |
+          php artisan migrate --force --no-interaction
+          php tests/browser/seed.php
+          touch storage/app/installed.lock
+      - name: Verify desktop, tablet and mobile-emulated workflows
+        env:
+          BASE_URL: http://127.0.0.1:8094
+          BROWSER_ARTIFACT_DIR: browser-artifacts
+        run: |
+          php artisan serve --host=127.0.0.1 --port=8094 > /tmp/bambodia-browser-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl -fsS -o /dev/null http://127.0.0.1:8094/; then break; fi
+            sleep 1
+          done
+          node tests/browser/smoke.mjs
+      - name: Keep screenshots for acceptance review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bambodia-Browser-Emulation-Screenshots
+          path: browser-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
