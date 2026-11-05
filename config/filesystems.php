@@ -33,7 +33,9 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Disable signed/temporary URL serving for original vault files.
+            // Originals are streamed only through entitlement-checked controllers.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],
