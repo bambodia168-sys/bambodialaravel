@@ -66,6 +66,9 @@ class WorkspaceExperienceTest extends TestCase
             ->assertSee('Download Entitlements')
             ->assertSee('User Manager')
             ->assertSee('workspace-nav-link')
+            ->assertSee('workspace-account-menu')
+            ->assertSee('Sign out')
+            ->assertSee('action="'.route('logout').'"',false)
             ->assertDontSee('Bambodia<span class="brand-dot">.',false);
     }
 

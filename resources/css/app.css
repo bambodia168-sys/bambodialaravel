@@ -563,3 +563,26 @@ svg{flex-shrink:0}
 @media(prefers-reduced-motion:reduce){
   .workspace-shell,.workspace-sidebar,.workspace-nav-link,.workspace-main{transition:none;scroll-behavior:auto}
 }
+
+
+/* Accessible account dropdown shared across all four workspaces. */
+.workspace-account-menu{position:relative;flex:0 0 auto;min-width:0}
+.workspace-account-menu summary{list-style:none;cursor:pointer}
+.workspace-account-menu summary::-webkit-details-marker{display:none}
+.workspace-account-menu[open] .workspace-profile{border-color:var(--secondary);outline:2px solid var(--secondary);outline-offset:2px}
+.workspace-account-panel{
+  position:absolute;right:0;top:calc(100% + 12px);width:min(275px,88vw);
+  border:1px solid var(--line);border-radius:17px;z-index:160;
+  background:var(--surface);padding:9px;box-shadow:0 24px 70px rgba(4,14,30,.27);
+}
+.workspace-account-identity{display:grid;gap:4px;border-bottom:1px solid var(--line);padding:13px 12px 15px;margin-bottom:5px}
+.workspace-account-identity strong{color:var(--text);font-size:13px;overflow-wrap:anywhere}
+.workspace-account-identity small{color:var(--muted);font-size:11px}
+.workspace-account-panel a,.workspace-account-panel form button{
+  display:flex;align-items:center;gap:11px;min-height:40px;width:100%;padding:9px 10px;
+  text-align:left;color:var(--text);background:transparent;border:0;border-radius:10px;
+  font-size:12px;font-weight:750;line-height:1.25;
+}
+.workspace-account-panel a:hover,.workspace-account-panel form button:hover{background:var(--surface-2);color:var(--accent)}
+.workspace-account-panel form{margin:0;border-top:1px solid var(--line);padding-top:5px;margin-top:5px}
+.workspace-account-panel form button{cursor:pointer;color:var(--accent)}

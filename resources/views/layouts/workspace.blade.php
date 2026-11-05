@@ -222,7 +222,31 @@
         <a class="icon-button workspace-home-link" href="{{ route('home') }}" title="Home" aria-label="Home"><x-icon name="home" size="19"/></a>
         <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle light or dark mode"><x-icon name="moon" size="19"/></button>
         <x-language-menu/>
-        <a class="workspace-profile" href="{{ route('account') }}" aria-label="My Account" title="My Account"><x-icon name="user" size="19"/></a>
+        <details class="workspace-account-menu">
+          <summary class="workspace-profile" aria-label="Account menu" title="{{ $user->name }}">
+            <x-icon name="user" size="19"/>
+          </summary>
+          <div class="workspace-account-panel">
+            <div class="workspace-account-identity">
+              <strong>{{ $user->name }}</strong>
+              <small>{{ ucwords(str_replace('_',' ',$user->role)) }}</small>
+            </div>
+            <a href="{{ route('account') }}"><x-icon name="user" size="17"/> My Account</a>
+            @if($user->isCreator())
+              <a href="{{ route('creator') }}"><x-icon name="palette" size="17"/> Creator Studio</a>
+            @endif
+            @if($user->isAdministrator())
+              <a href="{{ route('dashboard') }}"><x-icon name="layout-dashboard" size="17"/> Administration</a>
+            @endif
+            @if($user->role === 'super_admin')
+              <a href="{{ route('developer.index') }}"><x-icon name="terminal" size="17"/> Developer Workspace</a>
+            @endif
+            <form method="post" action="{{ route('logout') }}">
+              @csrf
+              <button type="submit"><x-icon name="logout" size="17"/> Sign out</button>
+            </form>
+          </div>
+        </details>
       </div>
     </header>
     <main class="workspace-content" id="workspace-content">
