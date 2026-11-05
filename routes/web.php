@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\ResumeController;
+use App\Http\Controllers\JobBoardController;
+use App\Http\Controllers\Dashboard\JobManagerController;
 use App\Http\Controllers\Account\ProductDownloadController;
 use App\Http\Controllers\Creator\ProductVaultController;
 use App\Http\Controllers\Dashboard\ProductVaultReviewController;
@@ -33,6 +36,9 @@ use Illuminate\Support\Facades\Route;
 Route::view('/', 'home')->name('home');
 Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 Route::get('/blog', [ContentController::class, 'blog'])->name('blog');
+Route::get('/jobs', [JobBoardController::class, 'index'])->name('jobs');
+Route::get('/jobs/{job}', [JobBoardController::class, 'show'])->name('jobs.show')
+    ->where('job','[0-9]{9}-[a-z0-9-]+');
 Route::get('/licenses', [LicenseController::class, 'show'])->name('license.show');
 Route::get('/media/{publicId}/preview', [MediaLibraryController::class, 'preview'])
     ->where('publicId', '[0-9]{9}')->name('media.preview');
@@ -68,6 +74,16 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1');
     Route::get('/support-center/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('support.show');
     Route::post('/support-center/{ticket}/reply', [SupportController::class, 'reply'])->whereNumber('ticket')->name('support.reply')->middleware('throttle:10,1');
+    Route::get('/resume-builder', [ResumeController::class, 'edit'])->name('resume.edit');
+    Route::patch('/resume-builder', [ResumeController::class, 'update'])->name('resume.update');
+    Route::get('/my-jobs', [JobBoardController::class, 'mine'])->name('jobs.mine');
+    Route::post('/my-jobs', [JobBoardController::class, 'store'])->name('jobs.store')->middleware('throttle:5,1');
+    Route::patch('/my-jobs/{job}/close', [JobBoardController::class, 'close'])->name('jobs.close');
+    Route::get('/my-jobs/{job}/proposals', [JobBoardController::class, 'proposals'])->name('jobs.proposals');
+    Route::patch('/my-jobs/proposals/{proposal}', [JobBoardController::class, 'decide'])->name('jobs.proposals.decide');
+    Route::post('/jobs/{job}/apply', [JobBoardController::class, 'apply'])
+        ->name('jobs.apply')->middleware('throttle:5,1');
+    Route::get('/my-proposals', [JobBoardController::class, 'applied'])->name('jobs.applied');
     Route::get('/account/downloads', [ProductDownloadController::class, 'index'])->name('account.downloads');
     Route::get('/account/downloads/{entitlement}/file', [ProductDownloadController::class, 'download'])
         ->name('account.downloads.file')->middleware('throttle:10,1');
@@ -109,6 +125,8 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/file-vault/{version}', [ProductVaultReviewController::class, 'decide'])->name('dashboard.vault.decide');
             Route::post('/file-vault/{version}/inspect', [ProductVaultReviewController::class, 'inspect'])
                 ->name('dashboard.vault.inspect')->middleware('throttle:10,1');
+            Route::get('/job-manager', [JobManagerController::class, 'index'])->name('dashboard.jobs.index');
+            Route::patch('/job-manager/{job}', [JobManagerController::class, 'decide'])->name('dashboard.jobs.decide');
             Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');
             Route::patch('/product-manager/{product}', [ProductManagerController::class, 'decide'])->name('dashboard.products.decide');
             Route::get('/license-manager', [LicenseManagerController::class, 'index'])->name('dashboard.licenses.index');

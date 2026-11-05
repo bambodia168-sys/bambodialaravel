@@ -18,7 +18,10 @@
       <button class="btn primary" type="submit">Save changes</button>
     </form>
   </section>
-  <p><a class="btn primary" href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a></p>
+  <div class="studio-actions"><a class="btn primary" href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
+  @if(in_array($user->role,['customer','subscriber','super_admin'],true))<a class="btn subtle" href="{{ route('jobs.mine') }}">My Job Posts</a>@endif
+  @if($user->role==='freelancer')<a class="btn subtle" href="{{ route('resume.edit') }}">Resume Builder</a><a class="btn subtle" href="{{ route('jobs.applied') }}">My Proposals</a>@endif
+  </div>
   @if($user->isCreator())<a class="btn subtle" href="{{ url('/studio?='.$user->public_id) }}">Creator Studio</a>
   @elseif(in_array($user->role, ['customer','subscriber'], true))<a class="btn subtle" href="{{ route('creator.apply') }}">Become a creator</a>@endif
 </div>

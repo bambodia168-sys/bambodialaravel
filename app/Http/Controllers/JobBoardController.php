@@ -74,8 +74,16 @@ class JobBoardController extends Controller
     {
         abort_unless((int)$job->client_id === (int)$request->user()->id,404);
         $proposals=JobProposal::query()->where('marketplace_job_id',$job->id)
-            ->with('freelancer:id,name,public_id')->latest()->paginate(10);
+            ->with('freelancer.resume')->latest()->paginate(10);
         return view('jobs.proposals',compact('job','proposals'));
+    }
+
+    public function applied(Request $request): View
+    {
+        abort_unless($request->user()->role === 'freelancer',403);
+        $proposals=JobProposal::query()->where('freelancer_id',$request->user()->id)
+            ->with('job:id,public_id,slug,title,status')->latest()->paginate(10);
+        return view('jobs.applied',compact('proposals'));
     }
 
     public function apply(Request $request, MarketplaceJob $job): RedirectResponse

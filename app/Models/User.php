@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -36,6 +37,11 @@ class User extends Authenticatable
             }
             throw new \RuntimeException('Could not allocate a unique public user ID.');
         });
+    }
+
+    public function resume(): HasOne
+    {
+        return $this->hasOne(FreelancerResume::class);
     }
 
     public function isAdministrator(): bool
