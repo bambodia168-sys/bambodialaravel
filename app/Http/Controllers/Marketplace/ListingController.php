@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceListing;
+use App\Models\FeatureFlag;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -11,6 +12,7 @@ class ListingController extends Controller
 {
     public function search(Request $request): View
     {
+        abort_unless(FeatureFlag::isEnabled('marketplace_search'), 404);
         $type = (string) $request->query('type', '');
         $query = mb_substr(trim((string) $request->query('q', '')), 0, 120);
         abort_if($type !== '' && ! in_array($type, MarketplaceListing::TYPES, true), 404);

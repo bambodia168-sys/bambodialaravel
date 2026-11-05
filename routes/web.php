@@ -11,6 +11,7 @@ use App\Http\Controllers\PolicyCenterController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\Dashboard\SupportCenterController;
+use App\Http\Controllers\Dashboard\FeatureManagerController;
 use App\Http\Controllers\Dashboard\ContentManagerController;
 use App\Http\Controllers\Dashboard\PolicyManagerController;
 use Illuminate\Support\Facades\Route;
@@ -71,6 +72,8 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/review-queue/{listing}', [ReviewQueueController::class, 'decide'])->name('dashboard.reviews.update');
         });
         Route::middleware('role:super_admin')->group(function (): void {
+            Route::get('/feature-manager', [FeatureManagerController::class, 'index'])->name('dashboard.features');
+            Route::patch('/feature-manager/{feature}', [FeatureManagerController::class, 'update'])->name('dashboard.features.update');
             Route::get('/user-manager', [UserManagerController::class, 'index'])->name('dashboard.users');
             Route::patch('/user-manager/{user}', [UserManagerController::class, 'update'])->name('dashboard.users.update');
         });

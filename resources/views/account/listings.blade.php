@@ -6,7 +6,7 @@
   @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
   @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
   <section class="panel">
-    <div class="panel-head"><h2>Submitted listings <span class="count">{{ $listings->total() }}</span></h2><button type="button" class="btn primary" data-modal-open="create-listing">Submit listing</button></div>
+    <div class="panel-head"><h2>Submitted listings <span class="count">{{ $listings->total() }}</span></h2>@if(\App\Models\FeatureFlag::isEnabled('creator_submissions'))<button type="button" class="btn primary" data-modal-open="create-listing">Submit listing</button>@endif</div>
     <div class="table-scroll">
       <table class="data-table"><thead><tr><th>Listing ID</th><th>Title</th><th>Type</th><th>Status</th><th>Submitted</th><th>Action</th></tr></thead><tbody>
       @forelse($listings as $listing)

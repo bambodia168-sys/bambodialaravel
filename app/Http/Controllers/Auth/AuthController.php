@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\FeatureFlag;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,11 +41,13 @@ class AuthController extends Controller
 
     public function register(): View
     {
+        abort_unless(FeatureFlag::isEnabled('registration'), 404);
         return view('auth.register');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        abort_unless(FeatureFlag::isEnabled('registration'), 404);
         $values = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'email' => ['required', 'email', 'max:254', 'unique:users,email'],

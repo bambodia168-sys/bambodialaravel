@@ -15,6 +15,8 @@
     <nav class="side-nav" aria-label="Administration">
       <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><x-icon name="grid"/>Overview</a>
       @if(auth()->user()->role === 'super_admin')
+        <div class="sidebar-heading">System Controls</div>
+        <a class="{{ request()->routeIs('dashboard.features*') ? 'active' : '' }}" href="{{ route('dashboard.features') }}"><x-icon name="settings"/>Feature Manager</a>
         <div class="sidebar-heading">Access & People</div>
         <a class="{{ request()->routeIs('dashboard.users*') ? 'active' : '' }}" href="{{ route('dashboard.users') }}"><x-icon name="users"/>User Manager</a>
       @endif

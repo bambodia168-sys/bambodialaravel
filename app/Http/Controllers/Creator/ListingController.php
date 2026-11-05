@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceListing;
+use App\Models\FeatureFlag;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -22,6 +23,7 @@ class ListingController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        abort_unless(FeatureFlag::isEnabled('creator_submissions'), 403);
         $data = $request->validate([
             'type' => ['required', Rule::in(MarketplaceListing::TYPES)],
             'title' => ['required', 'string', 'min:4', 'max:180'],
