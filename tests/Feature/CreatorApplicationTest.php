@@ -119,6 +119,14 @@ class CreatorApplicationTest extends TestCase
             ->assertViewHas('applications', fn ($page) => $page->count() === 10 && $page->total() === 13);
     }
 
+    public function test_staff_cannot_open_or_submit_creator_application(): void
+    {
+        $staff = $this->account('staff');
+        $this->actingAs($staff)->get('/creator/apply')->assertForbidden();
+        $this->post('/creator/apply', $this->details())->assertForbidden();
+        $this->get('/creator')->assertRedirect('/account?='.$staff->public_id);
+    }
+
     public function test_password_and_private_user_data_are_never_in_application_review(): void
     {
         $applicant = $this->account();

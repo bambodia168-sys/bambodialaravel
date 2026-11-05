@@ -18,6 +18,8 @@ class CreatorApplicationController extends Controller
             return redirect('/studio?='.$request->user()->public_id);
         }
 
+        abort_unless(in_array($request->user()->role, ['customer', 'subscriber'], true), 403);
+
         $application = CreatorApplication::query()
             ->where('user_id', $request->user()->id)->first();
 
