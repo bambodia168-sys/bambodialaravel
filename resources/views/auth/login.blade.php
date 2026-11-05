@@ -10,5 +10,5 @@
   <div class="form-row"><label><input type="checkbox" name="remember"> Remember me</label><a href="{{ route('password.request') }}">Forgot password?</a></div>
   <button class="btn primary" type="submit">Sign in</button>
 </form>
-<p class="form-foot">New to Bambodia? <a href="{{ route('register') }}">Create your account</a></p>
+@if(\App\Models\FeatureFlag::isEnabled('registration'))<p class="form-foot">New to Bambodia? <a href="{{ route('register') }}">Create your account</a></p>@endif
 @endsection
