@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\ContractArtifactController;
 use App\Http\Controllers\PolicyAcknowledgementController;
 use App\Http\Controllers\Dashboard\ComplianceRegisterController;
 use App\Http\Controllers\FreelanceContractController;
@@ -112,6 +113,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/contracts/{contract}/cancel', [FreelanceContractController::class,'cancel'])->name('contracts.cancel');
     Route::post('/contracts/{contract}/acknowledge-completion', [FreelanceContractController::class,'acknowledgeCompletion'])->name('contracts.acknowledge');
     Route::post('/contracts/{contract}/complete', [FreelanceContractController::class,'complete'])->name('contracts.complete');
+    Route::get('/contract-submissions/{submission}/artifact', [ContractArtifactController::class,'download'])
+        ->name('contracts.artifacts.download')->middleware('throttle:10,1');
     Route::post('/contract-milestones/{milestone}/deliver', [ContractMilestoneController::class,'deliver'])
         ->name('contracts.milestones.deliver')->middleware('throttle:8,1');
     Route::post('/contract-milestones/{milestone}/review', [ContractMilestoneController::class,'review'])

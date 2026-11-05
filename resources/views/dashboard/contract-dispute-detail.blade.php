@@ -30,7 +30,13 @@
 @forelse($milestones as $milestone)
 <tr><td>{{ $milestone->sequence }}</td><td><strong>{{ $milestone->title }}</strong><p class="review-text">{{ $milestone->description }}</p></td>
 <td><span class="role-pill">{{ ucfirst(str_replace('_',' ',$milestone->status)) }}</span></td>
-<td>@foreach($milestone->submissions as $submission)<p class="review-text">{{ $submission->delivery_notes }}</p>@endforeach</td>
+<td>@foreach($milestone->submissions as $submission)
+  <p class="review-text">{{ $submission->delivery_notes }}</p>
+  @if($submission->storage_path)
+    <a class="btn subtle compact" href="{{ route('contracts.artifacts.download',$submission) }}">Inspect private {{ strtoupper($submission->file_type) }} file</a>
+    <p><small class="mono hash-line">{{ $submission->sha256 }}</small></p>
+  @endif
+@endforeach</td>
 <td>@foreach($milestone->submissions as $submission)
 @if($submission->review)<p><strong>{{ ucfirst(str_replace('_',' ',$submission->review->decision)) }}</strong>: {{ $submission->review->feedback }}</p>@endif
 @endforeach</td></tr>

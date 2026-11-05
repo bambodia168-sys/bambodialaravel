@@ -7,6 +7,9 @@ use App\Models\AuditEvent;
 use App\Models\ContractMilestone;
 use App\Models\MilestoneReview;
 use App\Models\MilestoneSubmission;
+use App\Support\ContractArtifact;
+use App\Support\ProductVault;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,9 +25,17 @@ class ContractMilestoneController extends Controller
         $data=$request->validate([
             'delivery_notes'=>['required','string','min:40','max:12000'],
             'evidence_url'=>['nullable','url','starts_with:https://','max:500'],
+            'artifact'=>['nullable','file','max:'.ProductVault::MAX_UPLOAD_KB],
         ]);
 
-        DB::transaction(function()use($milestone,$data,$request){
+        $file=$request->file('artifact');
+        $metadata=[];
+        if($file){
+            $metadata=ContractArtifact::persist($file,(int)$contract->id,(int)$milestone->id);
+        }
+
+        try {
+        DB::transaction(function()use($milestone,$data,$request,$metadata){
             $locked=ContractMilestone::query()->lockForUpdate()->findOrFail($milestone->id);
             $contract=$locked->contract()->lockForUpdate()->firstOrFail();
             abort_unless($contract->status==='active',409,'Milestones may only be submitted under an active agreement.');
@@ -36,7 +47,7 @@ class ContractMilestoneController extends Controller
             MilestoneSubmission::query()->create([
                 'contract_milestone_id'=>$locked->id,'submitted_by'=>$request->user()->id,
                 'delivery_notes'=>$data['delivery_notes'],'evidence_url'=>$data['evidence_url']??null,
-                'created_at'=>now(),
+                ...$metadata,'created_at'=>now(),
             ]);
             $locked->update(['status'=>'submitted']);
             AccountNotification::deliver((int)$contract->client_id,'contract.milestone.submitted',
@@ -45,6 +56,12 @@ class ContractMilestoneController extends Controller
                 '/contracts/'.$contract->public_id);
             AuditEvent::record('contract.milestone.submitted',$request->user(),$request);
         });
+        } catch (\Throwable $error){
+            if(!empty($metadata['storage_path'])){
+                Storage::disk('local')->delete($metadata['storage_path']);
+            }
+            throw $error;
+        }
 
         return back()->with('status','Deliverable submitted privately for client review.');
     }
@@ -63,6 +80,10 @@ class ContractMilestoneController extends Controller
             $contract=$locked->contract()->lockForUpdate()->firstOrFail();
             abort_unless($contract->status==='active' && $locked->status==='submitted',409);
             $submission=$locked->submissions()->latest('id')->firstOrFail();
+            if($submission->storage_path!==null){
+                abort_unless(ContractArtifact::verifiedPath($submission)!==null,409,
+                    'Uploaded evidence is missing or failed its integrity check.');
+            }
             abort_if(MilestoneReview::query()->where('milestone_submission_id',$submission->id)->exists(),
                 409,'This delivery already has a review.');
             MilestoneReview::query()->create([

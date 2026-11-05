@@ -58,6 +58,8 @@ class AuditEvent extends Model
         'contract.completion.acknowledged',
         'contract.completed',
         'contract.message.sent',
+        'contract.file.downloaded',
+        'contract.file.case_inspected',
         'contract.dispute.opened',
         'contract.dispute.inspected',
         'contract.dispute.under_review',

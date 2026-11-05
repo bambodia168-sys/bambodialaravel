@@ -74,6 +74,12 @@
             @if($submission)
               <h3>Latest submitted evidence</h3>
               <p class="review-text">{{ $submission->delivery_notes }}</p>
+              @if($submission->storage_path)
+                <p><a href="{{ route('contracts.artifacts.download',$submission) }}" class="btn subtle">
+                  <x-icon name="download" size="16"/> Download original {{ strtoupper($submission->file_type) }} deliverable
+                </a></p>
+                <p class="hint">SHA-256: <span class="mono hash-line">{{ $submission->sha256 }}</span></p>
+              @endif
               @if($submission->evidence_url)
                 <a href="{{ $submission->evidence_url }}" class="btn subtle" target="_blank" rel="noopener noreferrer">Open linked evidence</a>
               @endif
@@ -90,10 +96,13 @@
                 </div>
               </form>
             @elseif($freelancer && $contract->status==='active' && in_array($milestone->status,['planned','revision_requested'],true))
-              <form method="post" action="{{ route('contracts.milestones.deliver',$milestone) }}">
+              <form method="post" action="{{ route('contracts.milestones.deliver',$milestone) }}" enctype="multipart/form-data">
                 @csrf
                 <label for="deliver-{{ $milestone->id }}">Delivery evidence and completion notes</label>
                 <textarea id="deliver-{{ $milestone->id }}" name="delivery_notes" minlength="40" maxlength="12000" rows="5" required></textarea>
+                <label for="deliverable-{{ $milestone->id }}">Private deliverable file (ZIP, PPTX or PDF; max 25 MiB, optional)</label>
+                <input type="file" id="deliverable-{{ $milestone->id }}" name="artifact" accept=".zip,.pptx,.pdf">
+                <p class="hint">Uploaded originals are never publicly linked. Each delivery is immutable and independently hash-checked before review and download. These checks are not malware scanning.</p>
                 <label for="evidence-{{ $milestone->id }}">HTTPS evidence URL (optional)</label>
                 <input id="evidence-{{ $milestone->id }}" type="url" name="evidence_url" placeholder="https://" maxlength="500">
                 <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Cancel</button><button type="submit" class="btn primary">Submit deliverable</button></div>
