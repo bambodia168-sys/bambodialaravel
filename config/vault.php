@@ -9,4 +9,5 @@ return [
     'scanner_binary'=>env('VAULT_CLAMSCAN_BINARY','/usr/bin/clamscan'),
     'scanner_timeout_seconds'=>(int)env('VAULT_CLAMSCAN_TIMEOUT',90),
     'max_scan_age_days'=>(int)env('VAULT_MAX_SCAN_AGE_DAYS',30),
+    'max_definition_age_days'=>(int)env('VAULT_MAX_DEFINITION_AGE_DAYS',7),
 ];

@@ -15,7 +15,8 @@ final class VaultReleaseGate
             && preg_match('/^[a-f0-9]{64}$/D',$version->malware_scanned_sha256)===1
             && $version->sha256!==null
             && hash_equals($version->sha256,$version->malware_scanned_sha256)
-            && $version->malware_scan_engine!==null
+            && is_string($version->malware_scan_engine)
+            && str_starts_with($version->malware_scan_engine,'ClamAV ')
             && $version->malware_scanned_at!==null
             && $version->malware_scanned_at->greaterThanOrEqualTo(now()->subDays($days));
     }
