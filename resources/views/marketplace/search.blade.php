@@ -2,50 +2,71 @@
 @section('title','Search Marketplace')
 @section('content')
 <div class="container inner-page">
-  <div class="page-intro"><div class="eyebrow">Marketplace discovery</div><h1>Browse listings</h1><p>Only approved, published listings appear here.</p></div>
-  <section class="panel">
-    <div class="panel-head">
-      <h2>Listings <span class="count">{{ $listings->total() }}</span></h2>
-      <form class="table-search" action="{{ route('marketplace.search') }}" method="get">
-        <x-icon name="search" size="18"/>
-        <input name="q" type="search" value="{{ $query }}" placeholder="Search listings" aria-label="Search marketplace">
-        <select name="type" aria-label="Listing type" class="table-select">
+  <div class="page-intro"><div class="eyebrow">Marketplace discovery</div><h1>Browse listings</h1>
+    <p>Explore approved digital products, services, projects and freelance offers. Listings displayed here reflect current publication checks.</p>
+  </div>
+  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
+  <section class="marketplace-filter-panel">
+    <form method="get" action="{{ route('marketplace.search') }}" class="marketplace-filter-form">
+      <div class="marketplace-filter-field marketplace-filter-search">
+        <label for="marketplace-q">Search listings</label>
+        <input id="marketplace-q" name="q" type="search" maxlength="120" value="{{ $query }}" placeholder="Title, service or keyword">
+      </div>
+      <div class="marketplace-filter-field">
+        <label for="marketplace-type">Type</label>
+        <select name="type" id="marketplace-type">
           <option value="">All types</option>
           @foreach(\App\Models\MarketplaceListing::TYPES as $option)
             <option value="{{ $option }}" @selected($type===$option)>{{ ucfirst($option) }}</option>
           @endforeach
         </select>
-        <select name="category" class="table-select" aria-label="Marketplace category">
+      </div>
+      <div class="marketplace-filter-field">
+        <label for="marketplace-category">Category</label>
+        <select name="category" id="marketplace-category">
           <option value="">All categories</option>
           @foreach($categories as $category)
             <option value="{{ $category->public_id }}" @selected($selectedCategory===$category->public_id)>{{ ucfirst($category->type) }} · {{ $category->name }}</option>
           @endforeach
         </select>
-        <button type="submit" class="btn subtle">Search</button>
-      </form>
+      </div>
+      <div class="marketplace-filter-field">
+        <label for="marketplace-min">Minimum USD</label>
+        <input name="min_price" id="marketplace-min" type="number" min="0" max="9999999999.99" step="0.01" value="{{ $minPrice }}" placeholder="Any">
+      </div>
+      <div class="marketplace-filter-field">
+        <label for="marketplace-max">Maximum USD</label>
+        <input name="max_price" id="marketplace-max" type="number" min="0" max="9999999999.99" step="0.01" value="{{ $maxPrice }}" placeholder="Any">
+      </div>
+      <div class="marketplace-filter-field">
+        <label for="marketplace-sort">Sort results</label>
+        <select id="marketplace-sort" name="sort">
+          @foreach(['recent'=>'Newest first','oldest'=>'Oldest first','price_low'=>'Price: low to high','price_high'=>'Price: high to low','title'=>'Title A–Z'] as $value=>$label)
+            <option value="{{ $value }}" @selected($sort===$value)>{{ $label }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="marketplace-filter-actions">
+        <button type="submit" class="btn primary"><x-icon name="search" size="16"/> Apply filters</button>
+        <a href="{{ route('marketplace.search') }}" class="btn subtle">Reset</a>
+      </div>
+    </form>
+  </section>
+  <section class="marketplace-section">
+    <div class="marketplace-section-heading">
+      <div><span class="eyebrow">Current public listings</span>
+        <h2>{{ number_format($listings->total()) }} {{ $listings->total()===1?'result':'results' }}</h2></div>
+      @auth<a href="{{ route('account.saved-listings') }}" class="btn subtle"><x-icon name="star" size="16"/> My saved listings</a>@endauth
     </div>
-    <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Title</th><th>Type / Category</th><th>Creator</th><th>Listed Price</th><th>Published</th><th>View</th></tr></thead>
-      <tbody>
-        @forelse($listings as $listing)
-          <tr>
-            <td><div class="catalog-row-title">
-              @if($listing->type==='product' && $listing->coverAsset)
-                <img class="media-thumb" src="{{ $listing->coverAsset->previewUrl() }}" alt="{{ $listing->coverAsset->alt_text }}" width="56" height="56" loading="lazy">
-              @endif
-              <strong>{{ $listing->title }}</strong>
-            </div></td>
-            <td><span class="role-pill">{{ ucfirst($listing->type) }}</span><div class="text-muted">{{ $listing->category?->name ?? 'Uncategorized' }}</div></td>
-            <td>{{ $listing->creator?->name }}</td>
-            <td>{{ $listing->price===null ? '—' : 'USD '.number_format((float)$listing->price,2) }}</td>
-            <td>{{ $listing->updated_at->format('d M Y') }}</td>
-            <td><a class="btn subtle compact" href="{{ $listing->publicUrl() }}">View listing</a></td>
-          </tr>
-        @empty
-          <tr><td colspan="6" class="empty-cell">There are no published listings matching these filters.</td></tr>
-        @endforelse
-      </tbody>
-    </table></div>
+    @if($listings->isNotEmpty())
+      <div class="marketplace-card-grid">
+        @foreach($listings as $listing)
+          <x-listing-card :listing="$listing" :is-saved="in_array((int)$listing->id,$savedIds,true)"/>
+        @endforeach
+      </div>
+    @else
+      <div class="marketplace-empty">No approved listings match these filters. Adjust your search or reset the price range.</div>
+    @endif
     <x-pagination :paginator="$listings"/>
   </section>
 </div>
