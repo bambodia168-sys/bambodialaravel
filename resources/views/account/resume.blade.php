@@ -1,4 +1,5 @@
-@extends('layouts.main')
+@extends('layouts.workspace')
+@section('workspace','creator')
 @section('title','Resume Builder')
 @section('content')
 <div class="container inner-page creator-onboarding">

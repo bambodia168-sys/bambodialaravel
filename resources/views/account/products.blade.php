@@ -1,4 +1,5 @@
-@extends('layouts.main')
+@extends('layouts.workspace')
+@section('workspace','creator')
 @section('title','Creator Product Manager')
 @section('content')
 <div class="container inner-page">
