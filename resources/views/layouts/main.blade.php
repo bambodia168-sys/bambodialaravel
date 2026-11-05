@@ -19,6 +19,7 @@
         ->orderBy('type')->orderBy('sort_order')->orderBy('name')
         ->get(['public_id','type','name'])->groupBy('type');
       $categoryTypes = ['product'=>'Product','project'=>'Project','service'=>'Service','freelance'=>'Freelance'];
+      $categoryIcons = ['product'=>'package','project'=>'layers','service'=>'wrench','freelance'=>'briefcase'];
     @endphp
     <details class="dropdown nav-category-menu" data-public-category-menu>
       <summary class="nav-category-trigger" aria-label="Browse marketplace categories" title="Browse categories">
@@ -32,20 +33,21 @@
         </div>
         <nav class="nav-category-groups" aria-label="Marketplace categories">
           @foreach($categoryTypes as $categoryType => $categoryLabel)
-            @php($items = $categoryGroups->get($categoryType, collect()))
             <section class="nav-category-group" aria-label="{{ $categoryLabel }} categories">
               <a class="nav-category-heading" href="{{ route('marketplace.search',['type'=>$categoryType]) }}">
-                <x-icon :name="match($categoryType) {'product'=>'package','project'=>'layers','service'=>'wrench',default=>'briefcase'}" size="18"/>
+                <x-icon :name="$categoryIcons[$categoryType]" size="18"/>
                 <span>{{ $categoryLabel }}</span>
                 <x-icon name="chevron-right" size="15"/>
               </a>
-              @forelse($items as $category)
+              @if($categoryGroups->has($categoryType))
+              @foreach($categoryGroups->get($categoryType) as $category)
                 <a class="nav-category-entry" href="{{ route('marketplace.search',['type'=>$categoryType,'category'=>$category->public_id]) }}">
                   {{ $category->name }}
                 </a>
-              @empty
+              @endforeach
+              @else
                 <span class="nav-category-empty">No active categories yet</span>
-              @endforelse
+              @endif
             </section>
           @endforeach
         </nav>
