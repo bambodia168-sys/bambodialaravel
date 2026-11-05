@@ -27,10 +27,14 @@ The active repository is source code. It is not a validated production installer
 - Page and post draft/published CMS with unique public URLs and blog listing.
 - Authenticated ticket creation, ticket privacy, customer conversations and staff status/reply workflow.
 - Shared responsive theme and styles using one resources/css/app.css and one resources/js/app.js.
+- Super Admin /developer workspace with scoped, expiring, revocable hashed API credentials and one-time secret display.
+- Actual read-only /api/v1/account and /api/v1/listings endpoints, guarded by custom bearer authentication and rate limiting.
+- Super Admin /security-dashboard with real audit counts and ten-row filtered audit tables, pseudonymized daily IP fingerprint and scheduled retention when cron is enabled.
+- English, Chinese, Khmer, Korean, Japanese, Thai, Vietnamese and German locale catalogs with a language selector for the translated core UI.
 
 ## Role boundaries
 
-Super Admin: system administration, user roles, reviews, content, support.
+Super Admin: system administration, user roles, reviews, content, support, developer credentials and security audits.
 Admin: reviews, pages, posts, policies and support.
 Staff: operational overview and support tickets.
 Customer / Subscriber: account and personal support tickets.
@@ -39,7 +43,7 @@ Roles are protected by server-side Laravel middleware, not only by hiding menu l
 
 ## Not implemented / never shown as working
 
-Purchases, checkout, external payment gateways, refunds, payouts, tax invoices, fulfillment and license-key delivery; freelance contracts and escrow; job applications; verified resumes; media library; API token vault; plugin execution; security incident analytics; live chat; email provider management; international policy/legal certification; per-locale translated text; and other requested manager modules outside the current implemented workflow.
+Purchases, checkout, external payment gateways, refunds, payouts, tax invoices, fulfillment and license-key delivery; freelance contracts and escrow; job applications; verified resumes; media library; broad third-party API integrations; plugin execution; security incident response automation; live chat; email provider management; international policy/legal certification; complete per-locale translated text; and other requested manager modules outside the current implemented workflow.
 
 No financial transaction must be accepted until provider-side verification, refunds/chargeback handling, payout accounting and merchant eligibility are independently validated. A legal professional must approve and publish policies appropriate to each served jurisdiction.
 
@@ -52,3 +56,7 @@ Avoid version suffixes on CSS, JavaScript, PHP, Blade and documentation filename
 Use a new empty database; current installer refuses existing tables and existing environment configuration. Use the private access code stored at storage/app/installer-access.txt; it is not a product purchase code and does not verify a license. Remove access file automatically after successful setup. Keep the web server document root at public/, block access to private directories, enable HTTPS, configure SMTP if password reset emails are needed, and test on isolated aaPanel/cPanel before production cutover.
 
 A one-click release archive must include Composer vendor dependencies and compiled public/build assets, or the wizard correctly refuses to proceed.
+
+For audit retention, set a hosting cron job to execute Laravel schedule:run every minute, after installation. audit:prune deletes event records older than 90 days on that schedule. GitHub CI and packaged ZIP creation are not substitutes for an aaPanel/cPanel clean-install test or a supported SMTP integration test.
+
+Developer API contract: docs/developer-api.md.

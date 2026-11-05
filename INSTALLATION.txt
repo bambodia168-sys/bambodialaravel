@@ -22,3 +22,12 @@ Do not set APP_DEBUG=true on production. Never upload a .env with real credentia
 SMTP must be configured before password reset mail can be delivered. Publishing products and listing prices does NOT enable payment processing, refunds, license delivery or escrow. Those workflows remain disabled until external provider and security verification.
 
 Rollback requires a prior full website and database backup. The current installer is for NEW empty databases and is not an upgrade/migration wizard. Do not reuse it to update a live Bambodia installation.
+
+
+POST-INSTALL SCHEDULER
+To apply the configured 90-day audit retention and other future scheduled jobs, configure a hosting cron job after installing Bambodia:
+  * * * * * /path/to/php /absolute/path/to/bambodia/artisan schedule:run >> /dev/null 2>&1
+Use the PHP binary for your installed application and set the correct absolute project path. For hosts with a control panel, use its Cron Jobs interface. If cron is not configured, automatic audit retention will not run.
+
+DEVELOPER AND SECURITY MODULES
+/developer and /security-dashboard require a Super Admin account. Use /developer/docs for the available read-only API methods. Credentials are shown once and stored only as hashes; scope, expiration and revocation are enforced on every request. The security audit stores no raw IP addresses or request body contents.
