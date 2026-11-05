@@ -5,16 +5,24 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// Determine if the application is in maintenance mode...
-if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
+$root = dirname(__DIR__);
+
+if (! is_file($root.'/storage/app/installed.lock')) {
+    if (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) !== '/installer') {
+        header('Location: /installer', true, 302);
+        exit;
+    }
+    require $root.'/installer/entry.php';
+    exit;
+}
+
+if (file_exists($maintenance = $root.'/storage/framework/maintenance.php')) {
     require $maintenance;
 }
 
-// Register the Composer autoloader...
-require __DIR__.'/../vendor/autoload.php';
+require $root.'/vendor/autoload.php';
 
-// Bootstrap Laravel and handle the request...
 /** @var Application $app */
-$app = require_once __DIR__.'/../bootstrap/app.php';
+$app = require_once $root.'/bootstrap/app.php';
 
 $app->handleRequest(Request::capture());
