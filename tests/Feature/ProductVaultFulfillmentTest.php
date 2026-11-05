@@ -31,6 +31,9 @@ class ProductVaultFulfillmentTest extends TestCase
     {
         parent::setUp();
         Storage::fake('local');
+        // Repeated scanner endpoint calls in one test exercise business rules,
+        // not the live HTTP rate limiter.
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         // Test-only scanner double: production always requires real ClamAV.
         $this->app->instance(VaultMalwareScanner::class,new class extends VaultMalwareScanner {
             public function scanFile(string $absoluteFile): array
