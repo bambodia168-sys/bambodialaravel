@@ -225,3 +225,9 @@ svg{flex-shrink:0}
 .creator-application-form input,.creator-application-form textarea{padding:12px;border:1px solid var(--line);border-radius:12px;color:var(--text);background:var(--surface-2)}
 .creator-application-form .btn{justify-self:start;margin-top:10px}
 .editorial-page h2{font-size:21px;font-weight:800;margin-top:28px}
+
+/* Immutable release and access grant workspace */
+.table-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.hash-line{font-size:12px;overflow-wrap:anywhere;word-break:break-all}
+.history-entry{padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;line-height:1.65}
+.config-dialog h3{margin:18px 0 8px;font-size:14px;font-weight:800}

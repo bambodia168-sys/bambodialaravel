@@ -314,6 +314,67 @@ class ProductVaultFulfillmentTest extends TestCase
         $this->assertDatabaseCount('product_download_events', 0);
     }
 
+    public function test_regrant_has_permanent_history_without_duplicate_entitlement(): void
+    {
+        $version = $this->upload();
+        $this->approve($version);
+        $entitlement = $this->grant($version);
+
+        $this->actingAs($this->superAdmin)->patch('/dashboard/entitlements/'.$entitlement->id.'/revoke', [
+            'revocation_reason' => 'Revocation requested after a manual support review.',
+        ])->assertRedirect();
+
+        $this->post('/dashboard/entitlements', [
+            'recipient_public_id' => $this->customer->public_id,
+            'product_file_version_id' => $version->id,
+            'grant_reason' => 'Renewed complimentary access after support confirmation.',
+            'expires_days' => '7',
+            'confirm_no_payment' => '1',
+        ])->assertRedirect();
+
+        $this->assertDatabaseCount('product_entitlements', 1);
+        $this->assertDatabaseCount('product_entitlement_actions', 3);
+        $this->assertSame(['granted', 'revoked', 'regranted'],
+            $entitlement->actions()->oldest('id')->pluck('action')->all());
+        $this->assertTrue($entitlement->fresh()->isActive());
+        $this->actingAs($this->customer)->get(route('account.downloads.file', $entitlement))->assertOk();
+        $this->assertDatabaseCount('product_download_events', 1);
+    }
+
+    public function test_pdf_and_pptx_uploads_are_private_and_versioned(): void
+    {
+        $pdf = UploadedFile::fake()->createWithContent('presentation.pdf', "%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF");
+        $this->actingAs($this->creator)->post('/studio/products/'.$this->product->id.'/releases', [
+            'version' => '2.0.0',
+            'release_notes' => 'A PDF presentation document licensed with this product.',
+            'artifact' => $pdf,
+            'rights_attested' => '1',
+        ])->assertRedirect();
+        $this->assertSame('pdf', ProductFileVersion::query()->where('version','2.0.0')->firstOrFail()->file_type);
+
+        $pptxSource = $this->zip([
+            '[Content_Types].xml' => '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>',
+            'ppt/presentation.xml' => '<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"/>',
+        ]);
+        $pptx = UploadedFile::fake()->createWithContent('presentation.pptx',
+            file_get_contents($pptxSource->getRealPath()));
+        $this->post('/studio/products/'.$this->product->id.'/releases', [
+            'version' => '2.1.0',
+            'release_notes' => 'A presentation package with standard OpenXML file entries.',
+            'artifact' => $pptx,
+            'rights_attested' => '1',
+        ])->assertRedirect();
+        $this->assertSame('pptx', ProductFileVersion::query()->where('version','2.1.0')->firstOrFail()->file_type);
+        $this->assertSame(2, ProductFileVersion::query()->where('status','pending')->count());
+
+        $this->post('/studio/products/'.$this->product->id.'/releases', [
+            'version' => '2.2.0',
+            'release_notes' => 'A spoofed file that has no proper PDF header.',
+            'artifact' => UploadedFile::fake()->createWithContent('spoof.pdf', 'NOT_A_PDF'),
+            'rights_attested' => '1',
+        ])->assertSessionHasErrors('artifact');
+    }
+
     public function test_customer_cannot_manually_grant_access_or_inspect_admin_originals(): void
     {
         $version = $this->upload();

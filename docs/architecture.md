@@ -44,7 +44,7 @@ Roles are protected by server-side Laravel middleware, not only by hiding menu l
 
 ## Not implemented / never shown as working
 
-Purchases, checkout, external payment gateways, refunds, payouts, tax invoices, fulfillment and license-key delivery; freelance contracts and escrow; job applications; verified resumes; secure original-source artifact delivery; broad third-party API integrations; plugin execution; security incident response automation; live chat; email provider management; international policy/legal certification; complete per-locale translated text; and other requested manager modules outside the current implemented workflow.
+Purchases, checkout, external payment gateways, refunds, payouts, tax invoices, automatic paid fulfillment and license-key delivery; freelance contracts and escrow; job applications; verified resumes; automated source-file entitlements after verified purchases; broad third-party API integrations; plugin execution; security incident response automation; live chat; email provider management; international policy/legal certification; complete per-locale translated text; and other requested manager modules outside the current implemented workflow.
 
 No financial transaction must be accepted until provider-side verification, refunds/chargeback handling, payout accounting and merchant eligibility are independently validated. A legal professional must approve and publish policies appropriate to each served jurisdiction.
 
@@ -71,6 +71,19 @@ Developer API contract: docs/developer-api.md.
 - /dashboard/license-manager: administrator-maintained versioned definitions, explicit permissions and restrictions, published license pages, legal-review confirmation, and immutability once referenced.
 - A digital product cannot pass moderation without an active license, a rights-approved image owned by its creator, and an existing private image file. The same gate is enforced from the general Review Queue.
 - Media uploads are for preview imagery only, limited to 4 MB and 24 megapixels; SVG and raw executable files are rejected.
-- Prices are informational. Original digital-product source ZIPs, secure download fulfillment, orders, payments, refunds, and purchase entitlements are NOT implemented, and must not be presented as working.
+- Prices are informational. Manual, version-specific download entitlements are implemented; automated purchase-entitlements, checkout, payment verification and refunds are NOT implemented.
 
 Media rights approval is performed by administrators based on the available rights declaration; it is not independent proof of ownership or a legal compliance certification. Deployment on aaPanel or cPanel and native-device checks remain outstanding.
+
+ 
+## Secure File Vault — versioned originals and entitlement-controlled fulfillment
+
+- Creators use /studio/products/{product}/releases to upload an immutable release for their own published product. Accepted sources: ZIP, PPTX and PDF, maximum 25 MiB. A rights declaration and release notes are required.
+- Sources are stored only in storage/app/private/marketplace/originals; they are never symlinked into public/ or delivered from a public static URL.
+- Uploaded content is checked for allowed type, ZIP traversal/symlink/expansion issues, SHA-256 hash, and immutable per-product semantic release version. These validations are NOT antivirus scanning or a substitute for independent artifact review.
+- Administrators use /dashboard/file-vault. An audited inspection download and reviewer confirmation are required to approve a release. Rejected or disabled versions cannot be downloaded.
+- Super Admins use /dashboard/entitlements to grant manual, **non-payment** complimentary/support access by public recipient ID to a particular approved version, with an expiration and reason. Grants, re-grants and revocations have an append-only history.
+- Customers use /account/downloads. Every download requires authenticated ownership of the entitlement, active access, an approved version, a published product with valid license/preview, and matching on-disk SHA-256/size. File downloads are logged.
+- Entitlements do not automatically include future versions. A new version requires an explicit separate grant.
+- No payment records, orders, tax invoices or financial transactions are created. The vault must not be used to mark unpaid orders paid, and no payment gateways are enabled.
+- Source-file integrity protects against unintended file modification, but does not prove files are safe or legally distributable. Independent malware detection, host-level upload limits, rights review and aaPanel/cPanel acceptance remain release gates.

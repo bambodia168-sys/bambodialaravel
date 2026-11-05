@@ -69,7 +69,7 @@ function installer_requirements(string $base): array
         'Storage writable' => is_writable($base.'/storage/app'),
         'Cache directory writable' => is_writable($base.'/bootstrap/cache'),
     ];
-    foreach (['ctype', 'curl', 'dom', 'fileinfo', 'filter', 'hash', 'mbstring', 'openssl', 'pdo', 'pdo_mysql', 'session', 'tokenizer', 'xml'] as $extension) {
+    foreach (['ctype', 'curl', 'dom', 'fileinfo', 'filter', 'hash', 'mbstring', 'openssl', 'pdo', 'pdo_mysql', 'session', 'tokenizer', 'xml', 'zip'] as $extension) {
         $checks['PHP extension: '.$extension] = extension_loaded($extension);
     }
     return $checks;

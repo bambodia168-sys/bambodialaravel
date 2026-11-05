@@ -38,4 +38,15 @@ Create a license definition in /dashboard/license-manager and activate it after 
 
 Private media files must remain in storage/app/private, never in a public symlink. The public document root must remain the Laravel public/ directory. Site operators must independently verify host limits for PHP upload sizes, file permissions, HTTPS and PHP modules.
 
-Only preview images are available for this release. Original downloadable source artifacts, license delivery, payment validation, and secure purchase entitlements are not active. The release is not approved for customer transactions.
+Preview images are separate from original downloadable ZIP/PPTX/PDF files. The source-file vault and version-specific manual download entitlements are implemented but have not been accepted on live shared hosting. Automated paid purchase delivery, order payment verification, refunds, tax invoices, and financial transaction processing remain disabled. The release is not approved for customer financial transactions.
+ 
+PRIVATE DIGITAL FILE VAULT
+PHP zip extension is required. Creators with a published and rights-reviewed digital product may upload original ZIP, PPTX or PDF files in /studio/products/{product}/releases. Each version is immutable, stored in storage/app/private, and limited to 25 MiB. PHP upload_max_filesize and post_max_size must be configured high enough for intended uploads, and the host must have sufficient private disk space. ZIP archives are checked for unsafe paths, symlinks, entry-count limits and unsafe expansion; no archives are extracted during the upload.
+ 
+Administrators inspect an original via an authenticated, logged download and explicitly approve, reject, or disable the release at /dashboard/file-vault. These checks are NOT malware scanning; product operators need independent malware/content screening and license rights verification before real customer distribution.
+ 
+The Super Admin can grant a specific approved version to an existing Customer, Subscriber or Freelancer by eight-digit public ID at /dashboard/entitlements, providing a reason and expiration window and confirming that no payment is being claimed. Grants, re-grants, and revocations retain individual history events.
+ 
+The recipient's /account/downloads page permits only identity-bound, unexpired, unrecalled entitlements. Every download revalidates product publication, release approval, entitlement status, file size, and SHA-256 digest. No public direct file URL is generated.
+ 
+After installing on aaPanel/cPanel, run independent upload, review, download, expiry, revocation, ZIP and PPTX/PDF acceptance tests before any customer release. Production deployments and actual malware scanning are not yet accepted.
