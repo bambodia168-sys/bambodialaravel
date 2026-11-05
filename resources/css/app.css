@@ -178,3 +178,14 @@ svg{flex-shrink:0}
 .editorial-page{max-width:930px;margin:0 auto;padding:clamp(25px,5vw,62px)}
 .editorial-page h1{font-size:clamp(30px,5vw,52px);line-height:1.1;letter-spacing:-.055em;font-weight:850;margin:12px 0}
 .editorial-copy{font-size:15px;line-height:1.95;padding-top:30px;border-top:1px solid var(--line);margin-top:29px;overflow-wrap:anywhere}
+
+.ticket-conversation{max-width:920px}
+.messages{padding:12px 28px}
+.message{padding:20px 0;border-bottom:1px solid var(--line)}
+.message-meta{display:flex;gap:15px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.message-meta strong{font-size:14px}.message-meta span{color:var(--muted);font-size:12px}
+.message p{font-size:14px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0 0}
+.ticket-reply{padding:26px 28px;display:grid;gap:10px}
+.ticket-reply label{font-weight:750;font-size:13px}
+.ticket-reply textarea,.ticket-reply select{width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--text);padding:12px;border-radius:12px}
+.ticket-reply .btn{justify-self:start;margin-top:7px}
