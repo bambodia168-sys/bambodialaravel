@@ -22,6 +22,7 @@ class AuditEvent extends Model
         'listing.review.published',
         'listing.review.rejected',
         'policy.published',
+        'policy.read.acknowledged',
         'license.definition.created',
         'license.definition.updated',
         'license.definition.activated',

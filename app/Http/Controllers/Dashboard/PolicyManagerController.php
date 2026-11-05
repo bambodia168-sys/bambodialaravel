@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Policy;
+use App\Models\PolicyPublication;
+use Illuminate\Support\Facades\DB;
 use App\Models\AuditEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,10 +51,26 @@ class PolicyManagerController extends Controller
             $data['reviewed_at'] = now();
             $data['reviewed_by'] = $request->user()->id;
         }
-        $policy->update($data);
-        if ($data['status'] === 'published') {
-            AuditEvent::record('policy.published', $request->user(), $request);
-        }
+        DB::transaction(function () use ($policy, $data, $request): void {
+            $locked=Policy::query()->lockForUpdate()->findOrFail($policy->id);
+            $locked->update($data);
+            if ($data['status'] === 'published') {
+                $revision=(int) PolicyPublication::query()
+                    ->where('policy_id',$locked->id)->max('revision')+1;
+                PolicyPublication::query()->create([
+                    'policy_id'=>$locked->id,
+                    'revision'=>$revision,
+                    'title'=>$locked->title,
+                    'category'=>$locked->category,
+                    'jurisdiction'=>$locked->jurisdiction,
+                    'body_snapshot'=>$locked->body,
+                    'sha256'=>PolicyPublication::digestFor($locked),
+                    'published_by'=>$request->user()->id,
+                    'created_at'=>now(),
+                ]);
+                AuditEvent::record('policy.published', $request->user(), $request);
+            }
+        });
 
         return back()->with('status', 'Policy saved.');
     }

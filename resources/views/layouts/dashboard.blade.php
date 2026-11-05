@@ -22,6 +22,7 @@
         <a class="{{ request()->routeIs('dashboard.entitlements.*') ? 'active' : '' }}" href="{{ route('dashboard.entitlements.index') }}"><x-icon name="download"/>Download Entitlements</a>
         <div class="sidebar-heading">Access & People</div>
         <a class="{{ request()->routeIs('dashboard.users*') ? 'active' : '' }}" href="{{ route('dashboard.users') }}"><x-icon name="users"/>User Manager</a>
+        <a class="{{ request()->routeIs('dashboard.compliance.*') ? 'active' : '' }}" href="{{ route('dashboard.compliance.index') }}"><x-icon name="shield"/>Compliance Register</a>
       @endif
       @if(in_array(auth()->user()->role, ['super_admin','admin'], true))
         <div class="sidebar-heading">Content & Policies</div>

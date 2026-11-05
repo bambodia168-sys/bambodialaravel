@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Policy;
+use App\Models\PolicyPublication;
+use App\Models\PolicyAcknowledgement;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -32,6 +34,13 @@ class PolicyCenterController extends Controller
 
         $otherPolicies = Policy::query()->where('status', 'published')->orderBy('title')->get(['id', 'public_id', 'title', 'slug']);
 
-        return view('policies.show', compact('policy', 'otherPolicies'));
+        $publication=PolicyPublication::query()->where('policy_id',$policy->id)
+            ->orderByDesc('revision')->first();
+        $acknowledged=$publication && $request->user()
+            ? PolicyAcknowledgement::query()->where('policy_publication_id',$publication->id)
+                ->where('user_id',$request->user()->id)->exists()
+            : false;
+
+        return view('policies.show', compact('policy', 'otherPolicies','publication','acknowledged'));
     }
 }

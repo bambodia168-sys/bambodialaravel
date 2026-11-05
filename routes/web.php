@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\PolicyAcknowledgementController;
+use App\Http\Controllers\Dashboard\ComplianceRegisterController;
 use App\Http\Controllers\FreelanceContractController;
 use App\Http\Controllers\ContractMilestoneController;
 use App\Http\Controllers\ContractCommunicationController;
@@ -85,6 +87,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1');
     Route::get('/support-center/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('support.show');
     Route::post('/support-center/{ticket}/reply', [SupportController::class, 'reply'])->whereNumber('ticket')->name('support.reply')->middleware('throttle:10,1');
+    Route::get('/account/policy-receipts', [PolicyAcknowledgementController::class,'index'])->name('account.policy-receipts');
+    Route::post('/policies/acknowledgements/{publication}', [PolicyAcknowledgementController::class,'acknowledge'])
+        ->name('policy.acknowledge')->middleware('throttle:10,1');
     Route::get('/account/notifications', [AccountNotificationController::class, 'index'])->name('account.notifications');
     Route::patch('/account/notifications/read-all', [AccountNotificationController::class, 'readAll'])->name('account.notifications.read-all');
     Route::patch('/account/notifications/{notification}', [AccountNotificationController::class, 'read'])->name('account.notifications.read');
@@ -208,6 +213,7 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/review-queue/{listing}', [ReviewQueueController::class, 'decide'])->name('dashboard.reviews.update');
         });
         Route::middleware('role:super_admin')->group(function (): void {
+            Route::get('/compliance-register', [ComplianceRegisterController::class,'index'])->name('dashboard.compliance.index');
             Route::get('/entitlements', [ProductEntitlementController::class, 'index'])->name('dashboard.entitlements.index');
             Route::post('/entitlements', [ProductEntitlementController::class, 'grant'])
                 ->name('dashboard.entitlements.grant')->middleware('throttle:6,1');
