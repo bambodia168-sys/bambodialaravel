@@ -28,14 +28,16 @@ class SetLocale
         // Every internal route/url() link renders with an explicit language
         // prefix. Never rewrite static assets, APIs, health, installer files,
         // or already prefixed URLs. Leave external links untouched.
-        URL::formatPathUsing(static function (string $path) use ($language): string {
+        if (in_array($pathLanguage, self::SUPPORTED, true)) {
+            URL::formatPathUsing(static function (string $path) use ($language): string {
             $path = '/'.ltrim($path, '/');
             if (preg_match('~^/(en|zh|km|ko|ja|th|vi|de)(/|$)~', $path)
                 || preg_match('~^/(api|build|storage|vendor|installer|up)(/|$)~', $path)) {
                 return $path;
             }
             return '/'.$language.($path === '/' ? '' : $path);
-        });
+            });
+        }
 
         try {
             return $next($request);
