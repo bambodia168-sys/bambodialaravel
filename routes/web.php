@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\SavedListingController;
+use App\Http\Controllers\Creator\CreatorProfileController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PrivacyRequestController;
 use App\Http\Controllers\Dashboard\PrivacyRequestManagerController;
 use App\Http\Controllers\ContractArtifactController;
@@ -49,7 +52,9 @@ use App\Http\Controllers\Dashboard\ContentManagerController;
 use App\Http\Controllers\Dashboard\PolicyManagerController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'home')->name('home');
+Route::get('/', [HomeController::class,'index'])->name('home');
+Route::get('/creators/{creator}', [CreatorProfileController::class,'show'])
+    ->where('creator','[0-9]{8}')->name('creators.show');
 Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 Route::get('/blog', [ContentController::class, 'blog'])->name('blog');
 Route::get('/jobs', [JobBoardController::class, 'index'])->name('jobs');
@@ -100,6 +105,11 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/account/policy-receipts', [PolicyAcknowledgementController::class,'index'])->name('account.policy-receipts');
     Route::post('/policies/acknowledgements/{publication}', [PolicyAcknowledgementController::class,'acknowledge'])
         ->name('policy.acknowledge')->middleware('throttle:10,1');
+    Route::get('/account/saved-listings', [SavedListingController::class,'index'])->name('account.saved-listings');
+    Route::post('/account/saved-listings/{listing}', [SavedListingController::class,'store'])
+        ->name('saved-listings.store')->middleware('throttle:20,1');
+    Route::delete('/account/saved-listings/{listing}', [SavedListingController::class,'destroy'])
+        ->name('saved-listings.destroy')->middleware('throttle:20,1');
     Route::get('/account/notifications', [AccountNotificationController::class, 'index'])->name('account.notifications');
     Route::patch('/account/notifications/read-all', [AccountNotificationController::class, 'readAll'])->name('account.notifications.read-all');
     Route::patch('/account/notifications/{notification}', [AccountNotificationController::class, 'read'])->name('account.notifications.read');
@@ -156,6 +166,9 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/creator/apply', [CreatorApplicationController::class, 'show'])->name('creator.apply');
     Route::post('/creator/apply', [CreatorApplicationController::class, 'submit'])->name('creator.apply.store')->middleware('throttle:3,1');
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
+        Route::get('/profile', [CreatorProfileController::class,'edit'])->name('studio.profile.edit');
+        Route::patch('/profile', [CreatorProfileController::class,'update'])
+            ->name('studio.profile.update')->middleware('throttle:10,1');
         Route::get('/inquiries', [ServiceInquiryController::class, 'index'])->name('studio.inquiries');
         Route::get('/listings', [CreatorListingController::class, 'index'])->name('studio.listings');
         Route::post('/listings', [CreatorListingController::class, 'store'])->name('studio.listings.store')->middleware('throttle:10,1');

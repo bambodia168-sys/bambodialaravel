@@ -2,6 +2,7 @@ const root = document.documentElement;
 
 function syncTheme() {
     root.dataset.theme = localStorage.getItem('bambodia-theme') ||
+        root.dataset.theme ||
         (document.body?.classList.contains('dashboard-body') || document.body?.classList.contains('auth-body') ? 'dark' : 'light');
 }
 

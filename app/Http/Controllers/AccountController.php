@@ -2,6 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccountNotification;
+use App\Models\FreelanceContract;
+use App\Models\JobProposal;
+use App\Models\MarketplaceJob;
+use App\Models\MarketplaceListing;
+use App\Models\SavedListing;
+use App\Models\ServiceInquiry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,7 +23,28 @@ class AccountController extends Controller
             return redirect('/account?='.$id);
         }
 
-        return view('account.index', ['user' => $request->user()]);
+        $user=$request->user();
+        $stats=[
+            'saved'=>SavedListing::query()->where('user_id',$user->id)->count(),
+            'unread'=>AccountNotification::query()->where('user_id',$user->id)->whereNull('read_at')->count(),
+            'contracts'=>FreelanceContract::query()->where(function($query)use($user){
+                $query->where('client_id',$user->id)->orWhere(function($q)use($user){
+                    $q->where('freelancer_id',$user->id)->where('status','!=','draft');
+                });
+            })->whereIn('status',['offered','active','disputed'])->count(),
+        ];
+        if(in_array($user->role,['customer','subscriber','super_admin'],true)){
+            $stats['jobs']=MarketplaceJob::query()->where('client_id',$user->id)->count();
+        }
+        if($user->role==='freelancer'){
+            $stats['proposals']=JobProposal::query()->where('freelancer_id',$user->id)->count();
+        }
+        if($user->isCreator()){
+            $stats['listings']=MarketplaceListing::query()->where('user_id',$user->id)->count();
+            $stats['client_inquiries']=ServiceInquiry::query()->where('creator_id',$user->id)->where('status','open')->count();
+        }
+        $activity=AccountNotification::query()->where('user_id',$user->id)->latest()->limit(5)->get();
+        return view('account.index', compact('user','stats','activity'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -40,6 +68,12 @@ class AccountController extends Controller
             return redirect('/studio?='.$id);
         }
 
-        return view('account.studio', ['user' => $request->user()]);
+        $user=$request->user();
+        $stats=[
+            'published'=>MarketplaceListing::query()->publiclyAvailable()->where('user_id',$user->id)->count(),
+            'pending'=>MarketplaceListing::query()->where('user_id',$user->id)->where('status','pending')->count(),
+            'inquiries'=>ServiceInquiry::query()->where('creator_id',$user->id)->where('status','open')->count(),
+        ];
+        return view('account.studio',compact('user','stats'));
     }
 }

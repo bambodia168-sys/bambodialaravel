@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
@@ -34,6 +36,23 @@ class MarketplaceListing extends Model
             }
             throw new \RuntimeException('Unable to allocate a listing identifier.');
         });
+    }
+
+    public function scopePubliclyAvailable(Builder $query): Builder
+    {
+        return $query->where('status','published')
+            ->where(function(Builder $q): void {
+                $q->where('type','!=','product')->orWhere(function(Builder $products): void {
+                    $products->where('type','product')
+                        ->whereHas('licenseDefinition',fn(Builder $license)=>$license->where('status','active'))
+                        ->whereHas('coverAsset',fn(Builder $media)=>$media->where('review_status','approved'));
+                });
+            });
+    }
+
+    public function savedBy(): HasMany
+    {
+        return $this->hasMany(SavedListing::class,'marketplace_listing_id');
     }
 
     public function creator(): BelongsTo
