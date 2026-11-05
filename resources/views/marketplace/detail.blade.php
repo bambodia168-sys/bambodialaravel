@@ -4,7 +4,9 @@
 <div class="container inner-page listing-detail">
   <div class="eyebrow">{{ ucfirst($listing->type) }} · ID {{ $listing->public_id }}</div>
   <h1>{{ $listing->title }}</h1>
-  <p class="text-muted">Published by {{ $listing->creator?->name }}</p>
+  <p class="text-muted">Published by {{ $listing->creator?->name }}
+    @if($listing->category) · Category: {{ $listing->category->name }} @endif
+  </p>
   @if($listing->type === 'product' && $listing->coverAsset)
   <figure class="product-cover"><img src="{{ $listing->coverAsset->previewUrl() }}" alt="{{ $listing->coverAsset->alt_text }}" loading="lazy"></figure>
   @endif

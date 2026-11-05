@@ -36,6 +36,10 @@
                     <label for="product-license-{{ $product->id }}">Active product license</label><select name="license_definition_id" id="product-license-{{ $product->id }}"><option value="">Not selected</option>
                       @foreach($licenses as $license)<option value="{{ $license->id }}" @selected((int)$product->license_definition_id === $license->id)>{{ $license->name }} · {{ $license->version }}</option>@endforeach
                     </select>
+                    <label for="product-category-{{ $product->id }}">Product category</label>
+                    <select name="category_id" id="product-category-{{ $product->id }}"><option value="">Uncategorized</option>
+                      @foreach($categories as $category)<option value="{{ $category->id }}" @selected((int)$product->category_id===$category->id)>{{ $category->name }}</option>@endforeach
+                    </select>
                     <label for="product-cover-{{ $product->id }}">Approved cover image</label><select name="cover_media_id" id="product-cover-{{ $product->id }}"><option value="">Not selected</option>
                       @foreach($assets as $asset)<option value="{{ $asset->id }}" @selected((int)$product->cover_media_id === $asset->id)>{{ $asset->alt_text }} · {{ $asset->public_id }}</option>@endforeach
                     </select>
@@ -64,6 +68,10 @@
       <label for="product-new-price">Displayed price (USD, checkout disabled)</label><input id="product-new-price" name="price" type="number" min="0" max="9999999999.99" step="0.01">
       <label for="product-new-license">Product license</label><select id="product-new-license" name="license_definition_id"><option value="">Not selected</option>
         @foreach($licenses as $license)<option value="{{ $license->id }}">{{ $license->name }} · {{ $license->version }}</option>@endforeach
+      </select>
+      <label for="product-new-category">Product category</label>
+      <select id="product-new-category" name="category_id"><option value="">Uncategorized</option>
+        @foreach($categories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach
       </select>
       <label for="product-new-cover">Approved cover image</label><select id="product-new-cover" name="cover_media_id"><option value="">Not selected</option>
         @foreach($assets as $asset)<option value="{{ $asset->id }}">{{ $asset->alt_text }} · {{ $asset->public_id }}</option>@endforeach

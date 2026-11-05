@@ -28,6 +28,15 @@
           <a href="{{ url('/search?type=project') }}"><x-icon name="layers"/>{{ __('ui.projects') }}</a>
           <a href="{{ url('/search?type=freelance') }}"><x-icon name="briefcase"/>{{ __('ui.freelance') }}</a>
           <a href="{{ url('/search?type=service') }}"><x-icon name="settings"/>{{ __('ui.services') }}</a>
+          @php
+            $menuCategories = \App\Models\MarketplaceCategory::query()->where('is_active',true)
+              ->orderBy('type')->orderBy('sort_order')->orderBy('name')->limit(24)->get();
+          @endphp
+          @foreach($menuCategories as $category)
+          <a href="{{ route('marketplace.search',['type'=>$category->type,'category'=>$category->public_id]) }}">
+            <x-icon name="layers"/>{{ $category->name }}
+          </a>
+          @endforeach
         </nav>
       </details>
       @endif
