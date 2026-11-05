@@ -30,7 +30,7 @@ class PolicyCenterController extends Controller
             ->where('slug', $match[2])
             ->firstOrFail();
 
-        $otherPolicies = Policy::query()->where('status', 'published')->orderBy('title')->get(['public_id', 'title', 'slug']);
+        $otherPolicies = Policy::query()->where('status', 'published')->orderBy('title')->get(['id', 'public_id', 'title', 'slug']);
 
         return view('policies.show', compact('policy', 'otherPolicies'));
     }
