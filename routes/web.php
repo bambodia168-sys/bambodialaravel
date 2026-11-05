@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\PrivacyRequestController;
+use App\Http\Controllers\Dashboard\PrivacyRequestManagerController;
 use App\Http\Controllers\ContractArtifactController;
 use App\Http\Controllers\PolicyAcknowledgementController;
 use App\Http\Controllers\Dashboard\ComplianceRegisterController;
@@ -88,6 +90,13 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1');
     Route::get('/support-center/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('support.show');
     Route::post('/support-center/{ticket}/reply', [SupportController::class, 'reply'])->whereNumber('ticket')->name('support.reply')->middleware('throttle:10,1');
+    Route::get('/privacy-requests', [PrivacyRequestController::class,'index'])->name('privacy.index');
+    Route::post('/privacy-requests', [PrivacyRequestController::class,'store'])
+        ->name('privacy.store')->middleware('throttle:3,1');
+    Route::get('/privacy-requests/{privacyRequest}', [PrivacyRequestController::class,'show'])
+        ->name('privacy.show')->where('privacyRequest','[0-9]{9}');
+    Route::patch('/privacy-requests/{privacyRequest}/close', [PrivacyRequestController::class,'close'])
+        ->name('privacy.close')->where('privacyRequest','[0-9]{9}');
     Route::get('/account/policy-receipts', [PolicyAcknowledgementController::class,'index'])->name('account.policy-receipts');
     Route::post('/policies/acknowledgements/{publication}', [PolicyAcknowledgementController::class,'acknowledge'])
         ->name('policy.acknowledge')->middleware('throttle:10,1');
@@ -216,6 +225,11 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/review-queue/{listing}', [ReviewQueueController::class, 'decide'])->name('dashboard.reviews.update');
         });
         Route::middleware('role:super_admin')->group(function (): void {
+            Route::get('/privacy-requests', [PrivacyRequestManagerController::class,'index'])->name('dashboard.privacy.index');
+            Route::get('/privacy-requests/{privacyRequest}', [PrivacyRequestManagerController::class,'inspect'])
+                ->name('dashboard.privacy.inspect')->where('privacyRequest','[0-9]{9}');
+            Route::patch('/privacy-requests/{privacyRequest}', [PrivacyRequestManagerController::class,'update'])
+                ->name('dashboard.privacy.update')->where('privacyRequest','[0-9]{9}');
             Route::get('/compliance-register', [ComplianceRegisterController::class,'index'])->name('dashboard.compliance.index');
             Route::get('/entitlements', [ProductEntitlementController::class, 'index'])->name('dashboard.entitlements.index');
             Route::post('/entitlements', [ProductEntitlementController::class, 'grant'])

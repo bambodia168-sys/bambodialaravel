@@ -60,6 +60,7 @@
           <a href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
           <a href="{{ route('account.notifications') }}"><x-icon name="mail" size="16"/> Notifications</a>
           <a href="{{ route('account.policy-receipts') }}"><x-icon name="book" size="16"/> My Policy Receipts</a>
+          <a href="{{ route('privacy.index') }}"><x-icon name="shield" size="16"/> Privacy Requests</a>
           <a href="{{ route('contracts.index') }}"><x-icon name="briefcase" size="16"/> My Contracts</a>
           @if(in_array(auth()->user()->role,['customer','subscriber'],true))<a href="{{ route('account.inquiries') }}">My Service Requests</a>@endif
           @if(auth()->user()->isCreator())<a href="{{ route('studio.inquiries') }}">Creator Inquiries</a>@endif

@@ -9,10 +9,12 @@
   <div class="metric"><span><x-icon name="check"/> Reading acknowledgements</span><strong>{{ number_format($totalReceipts) }}</strong></div>
   <div class="metric"><span><x-icon name="file"/> Account contract decisions</span><strong>{{ number_format($contractAcknowledgements) }}</strong></div>
   <div class="metric"><span><x-icon name="alert"/> Unresolved disputes</span><strong>{{ number_format($openDisputes) }}</strong></div>
+  <div class="metric"><span><x-icon name="shield"/> Pending privacy requests</span><strong>{{ number_format($pendingPrivacyRequests) }}</strong></div>
 </div>
 <section class="panel">
   <div class="panel-head"><h2>Most recent published policy revisions</h2>
-    <a class="btn subtle" href="{{ route('dashboard.policies') }}">Policy Center</a>
+    <div class="toolbar-actions"><a class="btn subtle" href="{{ route('dashboard.policies') }}">Policy Center</a>
+    <a class="btn subtle" href="{{ route('dashboard.privacy.index') }}">Privacy Request Manager</a></div>
   </div>
   <div class="table-scroll"><table class="data-table">
     <thead><tr><th>Policy</th><th>Revision</th><th>Published by</th><th>SHA-256</th><th>Date</th></tr></thead>

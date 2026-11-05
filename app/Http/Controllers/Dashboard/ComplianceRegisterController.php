@@ -7,6 +7,7 @@ use App\Models\ContractConsent;
 use App\Models\ContractDispute;
 use App\Models\PolicyAcknowledgement;
 use App\Models\PolicyPublication;
+use App\Models\PrivacyRequest;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -21,10 +22,11 @@ class ComplianceRegisterController extends Controller
         $totalReceipts=PolicyAcknowledgement::query()->count();
         $contractAcknowledgements=ContractConsent::query()->count();
         $openDisputes=ContractDispute::query()->whereIn('status',['open','under_review'])->count();
+        $pendingPrivacyRequests=PrivacyRequest::query()->whereIn('status',['submitted','in_review'])->count();
         $publications=PolicyPublication::query()->with('publishedBy:id,name')
             ->orderByDesc('id')->limit(10)->get();
         return view('dashboard.compliance-register',compact(
-            'receipts','totalPublications','totalReceipts','contractAcknowledgements','openDisputes','publications'
+            'receipts','totalPublications','totalReceipts','contractAcknowledgements','openDisputes','pendingPrivacyRequests','publications'
         ));
     }
 }
