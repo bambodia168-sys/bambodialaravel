@@ -1,0 +1,24 @@
+BAMBODIA INSTALLATION (v0.0.1)
+
+RELEASE STATUS
+Source and initial QA are under development. Use a test domain and a fresh database first. Do not replace a production website without backups and independent acceptance.
+
+REQUIREMENTS
+PHP 8.3+, MySQL/MariaDB with PDO MySQL, required Laravel PHP extensions, HTTPS, writable storage/ and bootstrap/cache/, and an aaPanel/cPanel/Nginx/Apache host configured to serve public/ as the document root.
+
+ONE-CLICK BROWSER SETUP (PACKAGED RELEASE ONLY)
+1. Upload the complete build artifact, including vendor/ and public/build/.
+2. Extract into a new empty installation directory. Do not expose the project root publicly.
+3. Configure the website's document root to the project's public/ directory. On Apache ensure mod_rewrite and public/.htaccess work. On Nginx route requests through public/index.php.
+4. Create an EMPTY MySQL database and a database user with the rights needed to create the application's tables.
+5. Visit https://your-domain/installer and check the Requirements page.
+6. In hosting file manager, open storage/app/installer-access.txt and read the installation access code. Enter that code into the wizard. This key is a setup authorization code, NOT a marketplace product purchase license.
+7. Enter MySQL connection values, verify application URL, and create the initial super administrator. Select Install.
+8. Installer writes a private .env, applies migrations, creates the super administrator and locks installation. Sign in via /login.
+
+SECURITY AND LIMITATIONS
+Do not set APP_DEBUG=true on production. Never upload a .env with real credentials to GitHub. Do not point the document root to the project root. The installer refuses existing tables and does not delete or replace a preexisting .env. The setup access code is destroyed after installation and the installer is disabled by installed.lock.
+
+SMTP must be configured before password reset mail can be delivered. Publishing products and listing prices does NOT enable payment processing, refunds, license delivery or escrow. Those workflows remain disabled until external provider and security verification.
+
+Rollback requires a prior full website and database backup. The current installer is for NEW empty databases and is not an upgrade/migration wizard. Do not reuse it to update a live Bambodia installation.

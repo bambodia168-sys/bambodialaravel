@@ -1,0 +1,69 @@
+name: Build Bambodia Installer
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-installer.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Prepare PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, pdo_mysql, pdo_sqlite, fileinfo, xml, curl
+          coverage: none
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build PHP dependencies
+        run: composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+      - name: Build frontend assets
+        run: |
+          npm install --ignore-scripts
+          npm run build
+      - name: Assert complete runtime
+        run: |
+          test -f vendor/autoload.php
+          test -f public/build/manifest.json
+          test -f installer/entry.php
+          test -f public/index.php
+          test -f VERSION
+          php -l installer/entry.php
+          php -l public/index.php
+      - name: Create clean installer archive
+        run: |
+          mkdir -p dist/Bambodia
+          rsync -a ./ dist/Bambodia/ \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'dist/' \
+            --exclude 'node_modules/' \
+            --exclude 'tests/' \
+            --exclude 'docs/' \
+            --exclude '.env' \
+            --exclude '.env.*.local' \
+            --exclude '*.md' \
+            --exclude 'bootstrap/cache/*.php' \
+            --exclude 'storage/logs/*.log' \
+            --exclude 'storage/app/installer-access.txt' \
+            --exclude 'storage/app/installed.lock'
+          cd dist
+          zip -qr Bambodia-Installer.zip Bambodia
+          unzip -tq Bambodia-Installer.zip
+      - name: Upload installer ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bambodia-Installer-v0.0.1
+          path: dist/Bambodia-Installer.zip
+          if-no-files-found: error
+          retention-days: 14

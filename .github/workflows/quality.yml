@@ -39,6 +39,15 @@ jobs:
         run: npm install --ignore-scripts
       - name: Compile production frontend
         run: npm run build
+      - name: Preinstall HTTP smoke test
+        run: |
+          php -S 127.0.0.1:8090 -t public public/index.php > /tmp/bambodia-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          sleep 2
+          curl -fsS http://127.0.0.1:8090/installer | grep -q 'Requirements'
+          test -f storage/app/installer-access.txt
+          test ! -f storage/app/installed.lock
       - name: Test routes and workflows
         env:
           APP_ENV: testing

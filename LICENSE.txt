@@ -1,0 +1,15 @@
+BAMBODIA PROPRIETARY SOFTWARE LICENSE
+Copyright (c) 2026 Ton Samith. All rights reserved.
+
+Bambodia-specific source code, design, brand assets and documentation are proprietary to the rights holder, except where otherwise identified. No license to reproduce, redistribute, resell, sublicense or commercially exploit proprietary code is granted without a separate signed license agreement.
+
+Bambodia is built on the Laravel framework and other open-source components. Such third-party components retain their respective original license notices and conditions. This document does not restrict rights granted under their original licenses.
+
+Marketplace products sold by third-party creators must specify their own legal usage rights, ownership, restrictions and redistribution permissions. Purchase of an item does not automatically transfer the creator's copyright or permit resale.
+
+Official rights holder: Ton Samith
+Official author website: https://tonsamith.com
+Project website: https://bambodia.com
+Version: 0.0.1
+
+This statement is a project ownership and license declaration, not a substitute for published platform Terms of Service, a Privacy Policy, or jurisdiction-specific professional legal review.
