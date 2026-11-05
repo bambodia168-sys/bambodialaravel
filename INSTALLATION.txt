@@ -62,3 +62,9 @@ APPEARANCE AND SETTINGS TEST
 On a fresh installation visit /dashboard/appearance and /dashboard/system-settings as Super Admin or Admin. Change the English homepage headline and confirm it appears on the public homepage. Disable and re-enable the homepage search and category quick links to verify real visibility changes. Change the default guest theme and locale and test with an independent browser session. Configure a public support email only if the site's verified operator owns the address; this setting is a public mailto contact, not an SMTP credential or an outgoing email integration.
 
 Do not use installer setup on an existing production database. Back up file storage, database and the full environment configuration before manual upgrade testing.
+
+
+CONTRACT AND COMPLIANCE HOSTING ACCEPTANCE
+Test the full client draft, itemized milestone, offer, freelancer assent, private file delivery, review, revision, mutual completion and dispute process using independent accounts. Verify unrelated accounts cannot view contract drafts, messages or files. Check the private storage document root, uploaded PDF/ZIP/PPTX constraints and SHA-256 integrity. Test a legally reviewed policy publication, voluntary reading receipt, and private personal-data request response. Verify the Super Admin compliance register reflects actual records.
+
+These actions do not verify signatures, transfer funds, perform escrow, automatically delete user data or constitute independent legal compliance acceptance. Do not use a fresh installer to upgrade an existing populated customer database.

@@ -33,3 +33,10 @@ Admin-moderated jobs, Freelancer Resume Builder, owner-only proposals, private s
 
 ## Appearance and system settings
 Administrators can change actual homepage text, homepage search/category visibility, default theme and guest locale, and the displayed support email through saved database settings. Settings are restricted to an explicit allowlist, validated, and audited. This does not enable SMTP, licensed plugins or payment processing.
+
+
+## Freelance contracts and compliance
+
+Authenticated freelance contracts now support itemized milestones, frozen offer digests, client and freelancer acknowledgements, original private ZIP/PPTX/PDF deliverables, revision requests, completion confirmations and reported disputes. The compliance and privacy modules add versioned published policies, voluntary reading receipts and restricted data-subject request handling.
+
+No real-money transfers, escrow, payouts, automatic erasure or verified legal e-signatures are claimed. See docs/contract-workflows.md for the complete acceptance criteria.

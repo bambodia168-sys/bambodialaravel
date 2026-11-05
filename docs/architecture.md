@@ -112,3 +112,8 @@ Financial contracts, payment gateways, escrow, processor verification, refunds, 
 - No SMTP provider connection is implied by configuring a public email address. An external mail delivery provider needs separate verification.
 
 Only settings with implemented code paths should appear in the UI. Editor configuration changes are audited.
+
+
+## Contract, milestone and compliance implementation
+
+See contract-workflows.md for the actual owner-scoped contract states, verified account acknowledgments, private deliverable files, restricted dispute review, immutable published policy revisions, voluntary receipts, privacy request processing and independent release gates. Real payments, escrow, provider verification, legal signatures and automatic erasure remain disabled.
