@@ -174,3 +174,7 @@ svg{flex-shrink:0}
 .check-label{display:flex!important;align-items:flex-start;gap:9px}.check-label input{width:auto!important;margin-top:4px}
 .table-select{min-width:114px;border:1px solid var(--line);border-radius:9px;padding:8px;background:var(--surface);color:var(--text)}
 @media(max-width:760px){.policy-tiles{grid-template-columns:1fr}.policy-layout{grid-template-columns:1fr}.policy-aside{position:static}.policy-tile{padding:25px}}
+
+.editorial-page{max-width:930px;margin:0 auto;padding:clamp(25px,5vw,62px)}
+.editorial-page h1{font-size:clamp(30px,5vw,52px);line-height:1.1;letter-spacing:-.055em;font-weight:850;margin:12px 0}
+.editorial-copy{font-size:15px;line-height:1.95;padding-top:30px;border-top:1px solid var(--line);margin-top:29px;overflow-wrap:anywhere}
