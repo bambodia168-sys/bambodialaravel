@@ -107,6 +107,8 @@ Route::middleware('auth')->group(function (): void {
         Route::middleware('role:super_admin,admin')->group(function (): void {
             Route::get('/file-vault', [ProductVaultReviewController::class, 'index'])->name('dashboard.vault.index');
             Route::patch('/file-vault/{version}', [ProductVaultReviewController::class, 'decide'])->name('dashboard.vault.decide');
+            Route::post('/file-vault/{version}/inspect', [ProductVaultReviewController::class, 'inspect'])
+                ->name('dashboard.vault.inspect')->middleware('throttle:10,1');
             Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');
             Route::patch('/product-manager/{product}', [ProductManagerController::class, 'decide'])->name('dashboard.products.decide');
             Route::get('/license-manager', [LicenseManagerController::class, 'index'])->name('dashboard.licenses.index');

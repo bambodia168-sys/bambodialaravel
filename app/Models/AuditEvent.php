@@ -32,6 +32,7 @@ class AuditEvent extends Model
         'product.created',
         'product.updated',
         'vault.version.uploaded',
+        'vault.version.inspected',
         'vault.version.approved',
         'vault.version.rejected',
         'vault.version.disabled',

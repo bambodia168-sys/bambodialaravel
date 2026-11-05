@@ -11,12 +11,12 @@ class ProductFileVersion extends Model
     protected $fillable = [
         'marketplace_listing_id', 'uploaded_by', 'version', 'release_notes', 'original_filename',
         'storage_path', 'file_type', 'byte_size', 'sha256', 'status', 'rights_attested_at',
-        'reviewed_at', 'reviewed_by', 'review_note',
+        'inspected_at', 'inspected_by', 'reviewed_at', 'reviewed_by', 'review_note',
     ];
 
     protected function casts(): array
     {
-        return ['rights_attested_at' => 'datetime', 'reviewed_at' => 'datetime'];
+        return ['rights_attested_at' => 'datetime', 'inspected_at' => 'datetime', 'reviewed_at' => 'datetime'];
     }
 
     public function product(): BelongsTo

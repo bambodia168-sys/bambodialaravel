@@ -20,6 +20,8 @@ return new class extends Migration {
             $table->char('sha256', 64);
             $table->string('status', 20)->default('pending')->index();
             $table->timestamp('rights_attested_at');
+            $table->timestamp('inspected_at')->nullable();
+            $table->foreignId('inspected_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('reviewed_at')->nullable();
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->text('review_note')->nullable();

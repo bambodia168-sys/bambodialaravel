@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProductVaultReviewController extends Controller
 {
@@ -28,11 +29,36 @@ class ProductVaultReviewController extends Controller
         return view('dashboard.vault-versions', compact('versions', 'status'));
     }
 
+    public function inspect(Request $request, ProductFileVersion $version): BinaryFileResponse
+    {
+        abort_unless(in_array($version->status, ['pending', 'approved'], true), 409);
+        $path = ProductVault::verifiedPath($version->storage_path, $version->sha256, (int) $version->byte_size);
+        abort_unless($path !== null, 409, 'Release integrity verification failed.');
+
+        DB::transaction(function () use ($version, $request): void {
+            $locked = ProductFileVersion::query()->lockForUpdate()->findOrFail($version->id);
+            abort_unless(in_array($locked->status, ['pending', 'approved'], true), 409);
+            $locked->update(['inspected_at' => now(), 'inspected_by' => $request->user()->id]);
+            AuditEvent::record('vault.version.inspected', $request->user(), $request);
+        });
+
+        $type = $version->file_type;
+        $name = 'bambodia-review-'.$version->id.'-'.$version->version.'.'.$type;
+
+        return response()->download($path, $name, [
+            'Content-Type' => 'application/octet-stream',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => 'sandbox',
+        ]);
+    }
+
     public function decide(Request $request, ProductFileVersion $version): RedirectResponse
     {
         $data = $request->validate([
             'decision' => ['required', Rule::in(['approved', 'rejected', 'disabled'])],
             'review_note' => ['nullable', 'string', 'max:2000', 'required_if:decision,rejected,disabled'],
+            'confirm_review' => ['sometimes', 'accepted'],
         ]);
 
         DB::transaction(function () use ($version, $request, $data): void {
@@ -43,6 +69,10 @@ class ProductVaultReviewController extends Controller
             abort_unless(in_array($data['decision'], $allowed, true), 409, 'This release cannot enter the requested state.');
 
             if ($data['decision'] === 'approved') {
+                abort_unless($locked->inspected_at !== null
+                    && (int) $locked->inspected_by === (int) $request->user()->id
+                    && $request->boolean('confirm_review'), 409,
+                    'Inspect the original and confirm release review before approving.');
                 $product = $locked->product()->firstOrFail();
                 abort_unless($product->status === 'published', 409, 'The product is not currently published.');
                 ProductReadiness::assertListing($product);
