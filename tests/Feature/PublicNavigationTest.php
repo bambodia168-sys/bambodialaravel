@@ -13,7 +13,14 @@ class PublicNavigationTest extends TestCase
 
     private function category(string $type, string $name, bool $active=true): MarketplaceCategory
     {
+        $editor=User::query()->first() ?? User::query()->create([
+            'name'=>'Category Editor',
+            'email'=>'category-editor@example.test',
+            'password'=>'LongCategoryEditorPassword123!',
+            'role'=>'super_admin',
+        ]);
         return MarketplaceCategory::query()->create([
+            'created_by'=>$editor->id,
             'type'=>$type,
             'name'=>$name,
             'description'=>'An approved marketplace navigation category for public browsing.',

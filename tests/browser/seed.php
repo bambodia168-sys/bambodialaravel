@@ -28,11 +28,11 @@ $serviceCategory=\App\Models\MarketplaceCategory::query()->create([
     'type'=>'service',
     'name'=>'Browser QA Consulting Category',
     'description'=>'A real active category for marketplace navigation testing.',
-    'is_active'=>true,'sort_order'=>1,
+    'is_active'=>true,'sort_order'=>1,'created_by'=>$creator->id,
 ]);
 \App\Models\MarketplaceCategory::query()->create([
     'type'=>'service','name'=>'Hidden Browser QA Category',
-    'is_active'=>false,'sort_order'=>2,
+    'is_active'=>false,'sort_order'=>2,'created_by'=>$creator->id,
 ]);
 \App\Models\MarketplaceListing::query()->create([
     'user_id'=>$creator->id,'type'=>'service','category_id'=>$serviceCategory->id,
