@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
 use App\Models\MarketplaceListing;
 use App\Models\ProductEntitlement;
+use App\Models\ProductEntitlementAction;
 use App\Models\ProductFileVersion;
 use App\Models\User;
 use App\Support\ProductReadiness;
@@ -24,7 +25,7 @@ class ProductEntitlementController extends Controller
     public function index(Request $request): View
     {
         $entitlements = ProductEntitlement::query()
-            ->with(['recipient:id,public_id,name,email,role', 'version:id,marketplace_listing_id,version,status'])
+            ->with(['recipient:id,public_id,name,email,role', 'version:id,marketplace_listing_id,version,status', 'actions.actor:id,name'])
             ->latest()->paginate(10);
         $available = ProductFileVersion::query()
             ->where('status', 'approved')
@@ -77,9 +78,18 @@ class ProductEntitlementController extends Controller
             ];
             if ($existing) {
                 $existing->update($attributes);
+                $entitlement = $existing;
             } else {
-                ProductEntitlement::query()->create($attributes);
+                $entitlement = ProductEntitlement::query()->create($attributes);
             }
+            ProductEntitlementAction::query()->create([
+                'product_entitlement_id' => $entitlement->id,
+                'actor_id' => $request->user()->id,
+                'action' => $existing ? 'regranted' : 'granted',
+                'reason' => $data['grant_reason'],
+                'access_expires_at' => $attributes['expires_at'],
+                'created_at' => now(),
+            ]);
             AuditEvent::record('vault.entitlement.granted', $request->user(), $request);
         });
 
@@ -98,6 +108,13 @@ class ProductEntitlementController extends Controller
                 'revoked_at' => now(),
                 'revoked_by' => $request->user()->id,
                 'revocation_reason' => $data['revocation_reason'],
+            ]);
+            ProductEntitlementAction::query()->create([
+                'product_entitlement_id' => $locked->id,
+                'actor_id' => $request->user()->id,
+                'action' => 'revoked',
+                'reason' => $data['revocation_reason'],
+                'created_at' => now(),
             ]);
             AuditEvent::record('vault.entitlement.revoked', $request->user(), $request);
         });

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductEntitlement extends Model
 {
@@ -30,6 +31,11 @@ class ProductEntitlement extends Model
     public function grantor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'granted_by');
+    }
+
+    public function actions(): HasMany
+    {
+        return $this->hasMany(ProductEntitlementAction::class, 'product_entitlement_id')->latest('id');
     }
 
     public function isActive(): bool

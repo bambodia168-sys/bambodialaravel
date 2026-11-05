@@ -27,6 +27,10 @@
               <p><strong>Grant reason:</strong> {{ $entitlement->grant_reason }}</p>
               <p><strong>Expires:</strong> {{ $entitlement->expires_at?->format('d M Y H:i') }}</p>
               @if($entitlement->revocation_reason)<p><strong>Revocation:</strong> {{ $entitlement->revocation_reason }}</p>@endif
+              <h3>Access history</h3>
+              @foreach($entitlement->actions->take(10) as $action)
+                <p class="history-entry"><strong>{{ ucfirst($action->action) }}</strong> · {{ $action->created_at->format('d M Y H:i') }} · {{ $action->actor?->name }}<span class="text-muted"> — {{ $action->reason }}</span></p>
+              @endforeach
               @if($entitlement->status==='active')
                 <form method="post" action="{{ route('dashboard.entitlements.revoke',$entitlement) }}">
                   @csrf @method('PATCH')
