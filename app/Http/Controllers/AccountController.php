@@ -66,7 +66,9 @@ class AccountController extends Controller
     {
         abort_unless($request->user()->isCreator(), 403);
         $id = $request->user()->public_id;
-        if ($request->server('QUERY_STRING', '') !== '='.$id) {
+        // A dedicated Creator workspace; existing /studio links remain valid.
+        if (! $request->routeIs('creator', 'localized.*.creator')
+            && $request->server('QUERY_STRING', '') !== '='.$id) {
             return redirect('/studio?='.$id);
         }
 

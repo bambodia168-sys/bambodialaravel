@@ -11,7 +11,7 @@
 <body class="site-body">
 <header class="site-header">
   <div class="site-nav container">
-    <a class="brand" href="{{ route('home') }}"><span class="brand-mark">B</span><span>Bambodia<span class="brand-dot">.</span></span></a>
+    <a class="brand" href="{{ route('home') }}"><span class="brand-mark">B</span><span>Bambodia</span></a>
     @if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))
     <form class="nav-search" action="{{ url('/search') }}" method="get">
       <x-icon name="search" size="19"/>
@@ -83,7 +83,7 @@
 @endphp
 <footer class="site-footer">
   <div class="container footer-columns">
-    <div><div class="brand footer-brand"><span class="brand-mark">B</span><span>Bambodia<span class="brand-dot">.</span></span></div>
+    <div><div class="brand footer-brand"><span class="brand-mark">B</span><span>Bambodia</span></div>
       @if($aboutPage)<a href="{{ $aboutPage->publicUrl() }}">About</a>@endif
       <a href="https://tonsamith.com" target="_blank" rel="noopener noreferrer">Author</a>
       @if(Route::has('blog'))<a href="{{ route('blog') }}">Blog</a>@endif
