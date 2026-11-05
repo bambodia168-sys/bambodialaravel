@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
+use App\Models\AccountNotification;
 use App\Models\MarketplaceListing;
 use App\Models\ProductEntitlement;
 use App\Models\ProductEntitlementAction;
@@ -90,6 +91,11 @@ class ProductEntitlementController extends Controller
                 'access_expires_at' => $attributes['expires_at'],
                 'created_at' => now(),
             ]);
+            AccountNotification::deliver(
+                (int)$recipient->id,'vault.access.granted','Download access granted',
+                'A verified product release was made available to your account.',
+                '/account/downloads'
+            );
             AuditEvent::record('vault.entitlement.granted', $request->user(), $request);
         });
 
@@ -116,6 +122,11 @@ class ProductEntitlementController extends Controller
                 'reason' => $data['revocation_reason'],
                 'created_at' => now(),
             ]);
+            AccountNotification::deliver(
+                (int)$locked->user_id,'vault.access.revoked','Download access revoked',
+                'Manual access to a product release was revoked.',
+                '/account/downloads'
+            );
             AuditEvent::record('vault.entitlement.revoked', $request->user(), $request);
         });
 

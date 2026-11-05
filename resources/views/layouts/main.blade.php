@@ -49,6 +49,7 @@
           <span class="text-muted">ID {{ auth()->user()->public_id }}</span>
           <a href="{{ url('/account?='.auth()->user()->public_id) }}">{{ __('ui.my_account') }}</a>
           <a href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
+          <a href="{{ route('account.notifications') }}"><x-icon name="mail" size="16"/> Notifications</a>
           @if(in_array(auth()->user()->role,['customer','subscriber'],true))<a href="{{ route('account.inquiries') }}">My Service Requests</a>@endif
           @if(auth()->user()->isCreator())<a href="{{ route('studio.inquiries') }}">Creator Inquiries</a>@endif
           @if(auth()->user()->role==='freelancer')<a href="{{ route('resume.edit') }}">Resume Builder</a><a href="{{ route('jobs.applied') }}">My Proposals</a>@endif

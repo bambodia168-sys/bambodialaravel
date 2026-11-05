@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditEvent;
+use App\Models\AccountNotification;
 use App\Models\MarketplaceListing;
 use App\Models\ServiceInquiry;
 use App\Models\ServiceInquiryMessage;
@@ -57,6 +58,11 @@ class ServiceInquiryController extends Controller
                 'sender_id'=>$request->user()->id,
                 'body'=>$values['body'],
             ]);
+            AccountNotification::deliver(
+                (int)$inquiry->creator_id,'inquiry.received','New client inquiry',
+                'You received a private inquiry about a published listing.',
+                '/inquiries/'.$inquiry->id
+            );
             AuditEvent::record('inquiry.submitted',$request->user(),$request);
             return $inquiry->id;
         });
@@ -84,6 +90,13 @@ class ServiceInquiryController extends Controller
                 'service_inquiry_id'=>$locked->id,'sender_id'=>$request->user()->id,'body'=>$data['body'],
             ]);
             $locked->touch();
+            $recipient=(int)$locked->client_id===(int)$request->user()->id
+                ? (int)$locked->creator_id : (int)$locked->client_id;
+            AccountNotification::deliver(
+                $recipient,'inquiry.replied','New inquiry message',
+                'You have a new private message from the other participant.',
+                '/inquiries/'.$locked->id
+            );
             AuditEvent::record('inquiry.replied',$request->user(),$request);
         });
         return back()->with('status','Message sent.');
@@ -97,6 +110,13 @@ class ServiceInquiryController extends Controller
             $this->authorizeParticipant($request,$locked);
             abort_unless($locked->status==='open',409);
             $locked->update(['status'=>'closed','closed_by'=>$request->user()->id,'closed_at'=>now()]);
+            $recipient=(int)$locked->client_id===(int)$request->user()->id
+                ? (int)$locked->creator_id : (int)$locked->client_id;
+            AccountNotification::deliver(
+                $recipient,'inquiry.closed','Inquiry closed',
+                'The other participant closed this conversation.',
+                '/inquiries/'.$locked->id
+            );
             AuditEvent::record('inquiry.closed',$request->user(),$request);
         });
         return back()->with('status','Inquiry closed.');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditEvent;
+use App\Models\AccountNotification;
 use App\Models\FreelancerResume;
 use App\Models\JobProposal;
 use App\Models\MarketplaceJob;
@@ -103,6 +104,10 @@ class JobBoardController extends Controller
                 ->where('freelancer_id',$request->user()->id)->exists(),409,'Already applied to this job.');
             JobProposal::query()->create([...$values,'marketplace_job_id'=>$locked->id,
                 'freelancer_id'=>$request->user()->id,'status'=>'submitted']);
+            AccountNotification::deliver(
+                (int)$locked->client_id,'job.proposal.received','New job application',
+                'A freelancer submitted a proposal for your job.','/my-jobs/'.$locked->id.'/proposals'
+            );
             AuditEvent::record('job.proposal.submitted',$request->user(),$request);
         });
         return back()->with('status','Your proposal was submitted to the job owner.');
@@ -117,6 +122,11 @@ class JobBoardController extends Controller
             abort_unless((int)$job->client_id === (int)$request->user()->id,404);
             abort_unless($locked->status==='submitted',409);
             $locked->update(['status'=>$data['decision'],'responded_at'=>now()]);
+            AccountNotification::deliver(
+                (int)$locked->freelancer_id,'job.proposal.decision','Job application reviewed',
+                'The client has '.($data['decision']==='shortlisted'?'shortlisted':'declined').' your proposal.',
+                '/my-proposals'
+            );
             AuditEvent::record('job.proposal.reviewed',$request->user(),$request);
         });
         return back()->with('status','Proposal decision recorded. No contract or payment was created.');

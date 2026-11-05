@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceListing;
 use App\Models\AuditEvent;
+use App\Models\AccountNotification;
 use App\Support\ProductReadiness;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
@@ -34,6 +35,11 @@ class ReviewQueueController extends Controller
                 ProductReadiness::assertListing($record);
             }
             $record->update(['status' => $data['decision']]);
+            AccountNotification::deliver(
+                (int)$record->user_id,'listing.reviewed','Marketplace listing reviewed',
+                'A listing was '.($data['decision']==='published'?'published':'rejected').' after review.',
+                $record->type==='product'?'/studio/products':'/studio/listings'
+            );
             AuditEvent::record('listing.review.'.$data['decision'], $request->user(), $request);
         });
 

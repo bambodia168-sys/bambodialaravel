@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
+use App\Models\AccountNotification;
 use App\Models\MarketplaceJob;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,6 +30,11 @@ class JobManagerController extends Controller
             $locked=MarketplaceJob::query()->lockForUpdate()->findOrFail($job->id);
             abort_unless($locked->status==='pending',409);
             $locked->update(['status'=>$data['decision'],'reviewed_by'=>$request->user()->id,'reviewed_at'=>now()]);
+            AccountNotification::deliver(
+                (int)$locked->client_id,'job.reviewed','Job review completed',
+                'Your submitted job was '.($data['decision']==='published'?'published':'rejected').'.',
+                '/my-jobs'
+            );
             AuditEvent::record('job.review.'.$data['decision'],$request->user(),$request);
         });
         return back()->with('status','Job review recorded.');

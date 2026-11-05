@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AccountNotificationController;
+use App\Http\Controllers\Dashboard\NotificationAnalyticsController;
 use App\Http\Controllers\ServiceInquiryController;
 use App\Http\Controllers\Dashboard\ServiceManagerController;
 use App\Http\Controllers\ResumeController;
@@ -76,6 +78,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1');
     Route::get('/support-center/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('support.show');
     Route::post('/support-center/{ticket}/reply', [SupportController::class, 'reply'])->whereNumber('ticket')->name('support.reply')->middleware('throttle:10,1');
+    Route::get('/account/notifications', [AccountNotificationController::class, 'index'])->name('account.notifications');
+    Route::patch('/account/notifications/read-all', [AccountNotificationController::class, 'readAll'])->name('account.notifications.read-all');
+    Route::patch('/account/notifications/{notification}', [AccountNotificationController::class, 'read'])->name('account.notifications.read');
     Route::get('/account/inquiries', [ServiceInquiryController::class, 'index'])->name('account.inquiries');
     Route::get('/inquiries/{inquiry}', [ServiceInquiryController::class, 'show'])->name('inquiries.show');
     Route::post('/inquiries/for/{listing}', [ServiceInquiryController::class, 'store'])
@@ -135,6 +140,7 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/file-vault/{version}', [ProductVaultReviewController::class, 'decide'])->name('dashboard.vault.decide');
             Route::post('/file-vault/{version}/inspect', [ProductVaultReviewController::class, 'inspect'])
                 ->name('dashboard.vault.inspect')->middleware('throttle:10,1');
+            Route::get('/notification-analytics', [NotificationAnalyticsController::class, 'index'])->name('dashboard.notifications.index');
             Route::get('/service-inquiries', [ServiceManagerController::class, 'index'])->name('dashboard.inquiries.index');
             Route::get('/job-manager', [JobManagerController::class, 'index'])->name('dashboard.jobs.index');
             Route::patch('/job-manager/{job}', [JobManagerController::class, 'decide'])->name('dashboard.jobs.decide');
