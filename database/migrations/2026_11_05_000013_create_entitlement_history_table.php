@@ -15,7 +15,7 @@ return new class extends Migration {
             $table->string('reason', 500);
             $table->timestamp('access_expires_at')->nullable();
             $table->timestamp('created_at')->useCurrent();
-            $table->index(['product_entitlement_id', 'created_at']);
+            $table->index(['product_entitlement_id', 'created_at'], 'entitlement_action_date_idx');
         });
     }
 

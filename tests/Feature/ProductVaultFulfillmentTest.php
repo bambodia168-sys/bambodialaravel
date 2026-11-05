@@ -335,7 +335,7 @@ class ProductVaultFulfillmentTest extends TestCase
         $this->assertDatabaseCount('product_entitlements', 1);
         $this->assertDatabaseCount('product_entitlement_actions', 3);
         $this->assertSame(['granted', 'revoked', 'regranted'],
-            $entitlement->actions()->oldest('id')->pluck('action')->all());
+            $entitlement->actions()->reorder('id', 'asc')->pluck('action')->all());
         $this->assertTrue($entitlement->fresh()->isActive());
         $this->actingAs($this->customer)->get(route('account.downloads.file', $entitlement))->assertOk();
         $this->assertDatabaseCount('product_download_events', 1);
