@@ -42,6 +42,17 @@ class SecurityAuditTest extends TestCase
         $this->assertDatabaseHas('audit_events', ['event' => 'auth.logout', 'actor_id' => $user->id]);
     }
 
+    public function test_audit_pruning_deletes_only_events_outside_retention(): void
+    {
+        AuditEvent::query()->create(['event' => 'auth.login.failed', 'created_at' => now()->subDays(100)]);
+        AuditEvent::query()->create(['event' => 'auth.login.success', 'created_at' => now()->subDays(5)]);
+
+        $status = \Illuminate\Support\Facades\Artisan::call('audit:prune', ['--days' => 90]);
+        $this->assertSame(0, $status);
+        $this->assertDatabaseMissing('audit_events', ['event' => 'auth.login.failed']);
+        $this->assertDatabaseHas('audit_events', ['event' => 'auth.login.success']);
+    }
+
     public function test_only_super_admin_sees_real_security_counts_and_filtered_pages(): void
     {
         $admin = User::query()->create([

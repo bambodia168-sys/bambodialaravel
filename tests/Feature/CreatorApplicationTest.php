@@ -62,7 +62,8 @@ class CreatorApplicationTest extends TestCase
             ])->assertRedirect();
 
         $this->assertSame('approved', $application->fresh()->status);
-        $this->assertSame('freelancer', $customer->fresh()->role);
+        $customer = $customer->fresh();
+        $this->assertSame('freelancer', $customer->role);
         $this->actingAs($customer)->get('/studio/listings')->assertOk();
         $this->get('/creator/apply')->assertRedirect('/studio?='.$customer->public_id);
         $this->assertDatabaseHas('audit_events', ['event' => 'creator.application.approved', 'actor_id' => $reviewer->id]);

@@ -45,7 +45,8 @@ jobs:
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
           sleep 2
-          curl -fsS http://127.0.0.1:8090/installer | grep -q 'Requirements'
+          curl -fsS -o /tmp/bambodia-setup.html http://127.0.0.1:8090/installer
+          grep -q 'Requirements' /tmp/bambodia-setup.html
           test -f storage/app/installer-access.txt
           test ! -f storage/app/installed.lock
       - name: Test routes and workflows

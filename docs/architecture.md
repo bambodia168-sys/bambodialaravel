@@ -22,6 +22,7 @@ The active repository is source code. It is not a validated production installer
 - Auth: registration, login, logout, password-reset request and token reset (email provider configuration required for email delivery).
 - Public user identities, roles, account profile editing and language preference storage.
 - Admin role-controlled dashboard, user table with search, ten items per page and a role-edit modal.
+- Customers and subscribers can submit creator applications with specialization, experience and HTTPS portfolio, resubmit after rejection, and receive Freelancer privileges only after administrator approval. The workflow uses database transactions and audit events.
 - Creator listing submission, pending moderation, approval/rejection, published-only marketplace search and detail pages.
 - Policy drafts, administrator-reviewed publication, searchable public policy index and document pages.
 - Page and post draft/published CMS with unique public URLs and blog listing.
@@ -35,7 +36,7 @@ The active repository is source code. It is not a validated production installer
 ## Role boundaries
 
 Super Admin: system administration, user roles, reviews, content, support, developer credentials and security audits.
-Admin: reviews, pages, posts, policies and support.
+Admin: reviews, creator application decisions, pages, posts, policies and support.
 Staff: operational overview and support tickets.
 Customer / Subscriber: account and personal support tickets.
 Freelancer: account, creator studio, listing submission and support.
