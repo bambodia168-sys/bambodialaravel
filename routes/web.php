@@ -7,9 +7,13 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\ReviewQueueController;
 use App\Http\Controllers\Dashboard\UserManagerController;
 use App\Http\Controllers\Marketplace\ListingController;
+use App\Http\Controllers\PolicyCenterController;
+use App\Http\Controllers\Dashboard\PolicyManagerController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'home')->name('home');
+Route::get('/policy-center', [PolicyCenterController::class, 'index'])->name('policy-center');
+Route::get('/policies', [PolicyCenterController::class, 'show'])->name('policy.show');
 Route::get('/search', [ListingController::class, 'search'])->name('marketplace.search');
 foreach (['product', 'project', 'freelance', 'service'] as $type) {
     Route::get('/'.$type, fn (\Illuminate\Http\Request $request) => app(ListingController::class)->show($request, $type))->name('marketplace.'.$type);
@@ -40,6 +44,9 @@ Route::middleware('auth')->group(function (): void {
     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::middleware('role:super_admin,admin')->group(function (): void {
+            Route::get('/policy-center', [PolicyManagerController::class, 'index'])->name('dashboard.policies');
+            Route::post('/policy-center', [PolicyManagerController::class, 'store'])->name('dashboard.policies.store');
+            Route::patch('/policy-center/{policy}', [PolicyManagerController::class, 'update'])->name('dashboard.policies.update');
             Route::get('/review-queue', [ReviewQueueController::class, 'index'])->name('dashboard.reviews');
             Route::patch('/review-queue/{listing}', [ReviewQueueController::class, 'decide'])->name('dashboard.reviews.update');
         });

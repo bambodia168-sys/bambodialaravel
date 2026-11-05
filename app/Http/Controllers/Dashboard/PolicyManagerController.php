@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Http\Controllers\Dashboard;
+
+use App\Http\Controllers\Controller;
+use App\Models\Policy;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+class PolicyManagerController extends Controller
+{
+    public function index(): View
+    {
+        return view('dashboard.policies', ['policies' => Policy::query()->latest()->paginate(10)]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'min:4', 'max:180', 'unique:policies,title'],
+            'body' => ['required', 'string', 'min:50', 'max:100000'],
+            'category' => ['required', Rule::in(['general', 'privacy', 'cookies', 'gdpr', 'terms', 'commerce'])],
+            'jurisdiction' => ['nullable', 'string', 'max:120'],
+        ]);
+        Policy::query()->create([...$data, 'status' => 'draft']);
+
+        return back()->with('status', 'Policy saved as a draft for administrator review.');
+    }
+
+    public function update(Request $request, Policy $policy): RedirectResponse
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'min:4', 'max:180', Rule::unique('policies', 'title')->ignore($policy->id)],
+            'body' => ['required', 'string', 'min:50', 'max:100000'],
+            'category' => ['required', Rule::in(['general', 'privacy', 'cookies', 'gdpr', 'terms', 'commerce'])],
+            'jurisdiction' => ['nullable', 'string', 'max:120'],
+            'status' => ['required', Rule::in(['draft', 'published'])],
+            'confirm_legal_review' => ['sometimes', 'accepted'],
+        ]);
+
+        if ($data['status'] === 'published' && ! $request->boolean('confirm_legal_review')) {
+            return back()->withErrors(['status' => 'Confirm an administrator has reviewed the legal text before publication.']);
+        }
+        unset($data['confirm_legal_review']);
+        if ($data['status'] === 'published') {
+            $data['reviewed_at'] = now();
+            $data['reviewed_by'] = $request->user()->id;
+        }
+        $policy->update($data);
+
+        return back()->with('status', 'Policy saved.');
+    }
+}

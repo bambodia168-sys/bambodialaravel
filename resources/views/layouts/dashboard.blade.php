@@ -19,6 +19,8 @@
         <a class="{{ request()->routeIs('dashboard.users*') ? 'active' : '' }}" href="{{ route('dashboard.users') }}"><x-icon name="users"/>User Manager</a>
       @endif
       @if(in_array(auth()->user()->role, ['super_admin','admin'], true))
+        <div class="sidebar-heading">Content & Policies</div>
+        <a class="{{ request()->routeIs('dashboard.policies*') ? 'active' : '' }}" href="{{ route('dashboard.policies') }}"><x-icon name="book"/>Policy Center</a>
         <div class="sidebar-heading">Marketplace</div>
         <a class="{{ request()->routeIs('dashboard.reviews') ? 'active' : '' }}" href="{{ route('dashboard.reviews') }}"><x-icon name="shield"/>Review Queue</a>
       @endif
