@@ -28,6 +28,7 @@
           <a href="{{ url('/search?type=project') }}"><x-icon name="layers"/>{{ __('ui.projects') }}</a>
           <a href="{{ url('/search?type=freelance') }}"><x-icon name="briefcase"/>{{ __('ui.freelance') }}</a>
           <a href="{{ url('/search?type=service') }}"><x-icon name="settings"/>{{ __('ui.services') }}</a>
+          <a href="{{ route('creators.index') }}"><x-icon name="users"/>Explore creators</a>
           @php
             $menuCategories = \App\Models\MarketplaceCategory::query()->where('is_active',true)
               ->orderBy('type')->orderBy('sort_order')->orderBy('name')->limit(24)->get();
@@ -58,6 +59,7 @@
           <span class="text-muted">ID {{ auth()->user()->public_id }}</span>
           <a href="{{ url('/account?='.auth()->user()->public_id) }}">{{ __('ui.my_account') }}</a>
           <a href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
+          <a href="{{ route('account.saved-listings') }}"><x-icon name="star" size="16"/> Saved Listings</a>
           <a href="{{ route('account.notifications') }}"><x-icon name="mail" size="16"/> Notifications</a>
           <a href="{{ route('account.policy-receipts') }}"><x-icon name="book" size="16"/> My Policy Receipts</a>
           <a href="{{ route('privacy.index') }}"><x-icon name="shield" size="16"/> Privacy Requests</a>
@@ -66,7 +68,7 @@
           @if(auth()->user()->isCreator())<a href="{{ route('studio.inquiries') }}">Creator Inquiries</a>@endif
           @if(auth()->user()->role==='freelancer')<a href="{{ route('resume.edit') }}">Resume Builder</a><a href="{{ route('jobs.applied') }}">My Proposals</a>@endif
           @if(in_array(auth()->user()->role,['customer','subscriber','super_admin'],true))<a href="{{ route('jobs.mine') }}">My Jobs</a>@endif
-          @if(auth()->user()->isCreator())<a href="{{ url('/studio?='.auth()->user()->public_id) }}">{{ __('ui.creator_studio') }}</a>@elseif(in_array(auth()->user()->role, ['customer','subscriber'], true))<a href="{{ route('creator.apply') }}">Become a creator</a>@endif
+          @if(auth()->user()->isCreator())<a href="{{ route('studio.profile.edit') }}"><x-icon name="user" size="16"/> Creator Profile</a><a href="{{ url('/studio?='.auth()->user()->public_id) }}">{{ __('ui.creator_studio') }}</a>@elseif(in_array(auth()->user()->role, ['customer','subscriber'], true))<a href="{{ route('creator.apply') }}">Become a creator</a>@endif
           @if(auth()->user()->isAdministrator())<a href="{{ route('dashboard') }}">{{ __('ui.administration') }}</a>@endif
           <form action="{{ route('logout') }}" method="post">@csrf<button type="submit"><x-icon name="logout" size="16"/>{{ __('ui.sign_out') }}</button></form>
         </div>
@@ -92,6 +94,7 @@
       @if($aboutPage)<a href="{{ $aboutPage->publicUrl() }}">About</a>@endif
       <a href="https://tonsamith.com" target="_blank" rel="noopener noreferrer">Author</a>
       @if(Route::has('blog'))<a href="{{ route('blog') }}">Blog</a>@endif
+      <a href="{{ route('creators.index') }}">Browse Creators</a>
       @if(Route::has('contact'))<a href="{{ route('contact') }}">Contact</a>@endif
     </div>
     <div><h3>{{ __('ui.marketplace') }}</h3>@if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))<a href="{{ url('/search?type=project') }}">{{ __('ui.find_projects') }}</a><a href="{{ url('/search?type=product') }}">{{ __('ui.find_products') }}</a><a href="{{ url('/search?type=freelance') }}">{{ __('ui.find_freelancers') }}</a><a href="{{ url('/search?type=service') }}">{{ __('ui.find_services') }}</a>@endif @if(Route::has('jobs'))<a href="{{ route('jobs') }}">Find Jobs</a>@endif</div>

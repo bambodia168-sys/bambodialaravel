@@ -86,6 +86,19 @@ class ListingController extends Controller
             ? SavedListing::query()->where('user_id',$request->user()->id)
                 ->where('marketplace_listing_id',$listing->id)->exists()
             : false;
-        return view('marketplace.detail',compact('listing','isSaved'));
+        $relatedListings=MarketplaceListing::query()->publiclyAvailable()
+            ->whereKeyNot($listing->id)->where('type',$listing->type)
+            ->when($listing->category_id!==null,
+                fn($q)=>$q->where('category_id',$listing->category_id))
+            ->with(['creator:id,name,public_id','creator.creatorProfile:user_id,is_public',
+                'coverAsset:id,public_id,alt_text,review_status','category:id,name'])
+            ->latest('id')->limit(3)->get();
+        $savedRelatedIds=$request->user()
+            ? SavedListing::query()->where('user_id',$request->user()->id)
+                ->whereIn('marketplace_listing_id',$relatedListings->pluck('id'))
+                ->pluck('marketplace_listing_id')->map(fn($id)=>(int)$id)->all()
+            : [];
+
+        return view('marketplace.detail',compact('listing','isSaved','relatedListings','savedRelatedIds'));
     }
 }

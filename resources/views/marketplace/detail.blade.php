@@ -2,11 +2,40 @@
 @section('title',$listing->title)
 @section('content')
 <div class="container inner-page listing-detail">
+  <nav class="marketplace-breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ route('home') }}">Home</a><x-icon name="chevron-right" size="14"/>
+    <a href="{{ route('marketplace.search',['type'=>$listing->type]) }}">{{ ucfirst($listing->type) }}</a>
+    <x-icon name="chevron-right" size="14"/><span>{{ $listing->public_id }}</span>
+  </nav>
   <div class="eyebrow">{{ ucfirst($listing->type) }} · ID {{ $listing->public_id }}</div>
   <h1>{{ $listing->title }}</h1>
-  <p class="text-muted">Published by {{ $listing->creator?->name }}
+  <p class="text-muted">Published by
+    @if($listing->creator?->creatorProfile?->is_public)
+      <a class="marketplace-creator-link" href="{{ route('creators.show',$listing->creator->public_id) }}">{{ $listing->creator->name }}</a>
+    @else
+      {{ $listing->creator?->name }}
+    @endif
     @if($listing->category) · Category: {{ $listing->category->name }} @endif
   </p>
+  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
+  <div class="marketplace-detail-actions">
+    @auth
+      @if($isSaved)
+        <form method="post" action="{{ route('saved-listings.destroy',$listing) }}">
+          @csrf @method('DELETE')
+          <button class="btn subtle" type="submit"><x-icon name="star" size="16"/> Saved — remove from collection</button>
+        </form>
+      @else
+        <form method="post" action="{{ route('saved-listings.store',$listing) }}">
+          @csrf
+          <button class="btn primary" type="submit"><x-icon name="star" size="16"/> Save listing</button>
+        </form>
+      @endif
+      <a class="btn subtle" href="{{ route('account.saved-listings') }}">My saved listings</a>
+    @else
+      <a class="btn subtle" href="{{ route('login') }}">Sign in to save this listing</a>
+    @endauth
+  </div>
   @if($listing->type === 'product' && $listing->coverAsset)
   <figure class="product-cover"><img src="{{ $listing->coverAsset->previewUrl() }}" alt="{{ $listing->coverAsset->alt_text }}" loading="lazy"></figure>
   @endif
@@ -53,7 +82,19 @@
       <p><a class="btn subtle" href="{{ route('login') }}">Sign in to contact this creator</a></p>
     @endauth
   @endif
-  <p class="text-muted">Purchasing and external payment acceptance are not enabled until independently verified transaction processing and license delivery are implemented.</p>
+  <p class="hint">Saving or contacting a creator does not constitute a purchase, reservation or payment. Checkout, escrow, payouts and real-money transactions remain disabled.</p>
+  @if($relatedListings->isNotEmpty())
+    <section class="marketplace-section">
+      <div class="marketplace-section-heading">
+        <div><span class="eyebrow">Continue exploring</span><h2>Related approved listings</h2></div>
+      </div>
+      <div class="marketplace-card-grid">
+        @foreach($relatedListings as $related)
+          <x-listing-card :listing="$related" :is-saved="in_array((int)$related->id,$savedRelatedIds,true)"/>
+        @endforeach
+      </div>
+    </section>
+  @endif
   <a class="btn subtle" href="{{ route('marketplace.search') }}">Back to listings</a>
 </div>
 @endsection
