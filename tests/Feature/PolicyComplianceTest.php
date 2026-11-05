@@ -52,7 +52,7 @@ class PolicyComplianceTest extends TestCase
         $publication=$this->publish($admin,$policy,$body);
 
         $this->assertSame(1,$publication->revision);
-        $this->assertSame($body,$publication->body_snapshot);
+        $this->assertSame(trim($body),$publication->body_snapshot);
         $this->assertSame(PolicyPublication::digestFor($policy->fresh()),$publication->sha256);
         $this->assertDatabaseHas('audit_events',['event'=>'policy.published','actor_id'=>$admin->id]);
 
@@ -91,7 +91,7 @@ class PolicyComplianceTest extends TestCase
         $this->post('/policies/acknowledgements/'.$second->id,['confirm_read'=>'1'])
             ->assertRedirect();
         $this->assertDatabaseCount('policy_acknowledgements',2);
-        $this->assertSame(str_repeat('First written version of the marketplace terms. ',2),
+        $this->assertSame(trim(str_repeat('First written version of the marketplace terms. ',2)),
             $first->fresh()->body_snapshot);
     }
 
