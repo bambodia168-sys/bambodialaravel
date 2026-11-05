@@ -18,7 +18,7 @@
         <div class="sidebar-heading">Access & People</div>
         <a class="{{ request()->routeIs('dashboard.users*') ? 'active' : '' }}" href="{{ route('dashboard.users') }}"><x-icon name="users"/>User Manager</a>
       @endif
-      @if(Route::has('dashboard.reviews'))
+      @if(in_array(auth()->user()->role, ['super_admin','admin'], true))
         <div class="sidebar-heading">Marketplace</div>
         <a class="{{ request()->routeIs('dashboard.reviews') ? 'active' : '' }}" href="{{ route('dashboard.reviews') }}"><x-icon name="shield"/>Review Queue</a>
       @endif
