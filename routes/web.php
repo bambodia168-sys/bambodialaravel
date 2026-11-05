@@ -22,6 +22,7 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/account', [AccountController::class, 'index'])->name('account');
+    Route::patch('/account', [AccountController::class, 'update'])->name('account.update');
     Route::get('/studio', [AccountController::class, 'studio'])->name('studio');
     Route::get('/creator', fn () => redirect('/studio?='.auth()->user()->public_id))->name('creator');
 
