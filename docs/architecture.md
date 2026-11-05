@@ -101,3 +101,14 @@ Media rights approval is performed by administrators based on the available righ
 - /dashboard/project-manager, /dashboard/freelance-manager and /dashboard/service-manager provide ten-row filtered records and moderator actions. Creators can revise rejected or draft listings.
 
 Financial contracts, payment gateways, escrow, processor verification, refunds, payouts, invoices, automated paid delivery and legal country-specific certification are NOT implemented. Real hosting, security scanning and device acceptance remain separate release gates.
+
+
+## Appearance and System Settings
+
+- /dashboard/appearance is restricted to administrators and edits English homepage headline, introduction, eyebrow, homepage search visibility and homepage category quick-link visibility.
+- /dashboard/system-settings edits default guest theme, default guest language and public support mailto address.
+- Both pages persist an explicit allowlist of settings in the site_settings table and expose real Configure dialogs. Unsupported keys, unexpected cross-group changes, invalid locale values and invalid emails are rejected.
+- Homepage changes appear in the actual public Blade rendering. Other-language title and introduction still use the existing translation catalogs.
+- No SMTP provider connection is implied by configuring a public email address. An external mail delivery provider needs separate verification.
+
+Only settings with implemented code paths should appear in the UI. Editor configuration changes are audited.

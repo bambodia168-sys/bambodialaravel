@@ -29,3 +29,7 @@ Source-file delivery, paid checkout and financial processing are not implemented
 
 ## Additional real workflows
 Admin-moderated jobs, Freelancer Resume Builder, owner-only proposals, private service/project inquiries with messaging, in-app notifications and analytics, marketplace Category Manager, and separate Project/Freelance/Service management are now implemented in the Laravel codebase. Checkout, banking, legal compliance certification, escrow, payout settlement, and verified provider email delivery remain disabled and out of scope until independently accepted.
+
+
+## Appearance and system settings
+Administrators can change actual homepage text, homepage search/category visibility, default theme and guest locale, and the displayed support email through saved database settings. Settings are restricted to an explicit allowlist, validated, and audited. This does not enable SMTP, licensed plugins or payment processing.

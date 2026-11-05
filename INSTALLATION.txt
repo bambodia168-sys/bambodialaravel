@@ -56,3 +56,9 @@ NEW WORKFLOW HOSTING ACCEPTANCE
 Test approved job visibility and freelancer applications, role authorization of private proposals, closed-job behavior, category filtering, and private inquiry access from both participant accounts. Verify notification inbox ownership and read state; in-app messages do not constitute verified email delivery. Confirm the admin listings and categories use exactly ten items per table page and functional Configure actions.
 
 Do not activate paid checkout, freelancer escrow or transactions. This one-click installer only accepts a fresh empty database, not upgrades to an existing installation. Use a fully backed-up staging installation for this verification.
+
+
+APPEARANCE AND SETTINGS TEST
+On a fresh installation visit /dashboard/appearance and /dashboard/system-settings as Super Admin or Admin. Change the English homepage headline and confirm it appears on the public homepage. Disable and re-enable the homepage search and category quick links to verify real visibility changes. Change the default guest theme and locale and test with an independent browser session. Configure a public support email only if the site's verified operator owns the address; this setting is a public mailto contact, not an SMTP credential or an outgoing email integration.
+
+Do not use installer setup on an existing production database. Back up file storage, database and the full environment configuration before manual upgrade testing.
