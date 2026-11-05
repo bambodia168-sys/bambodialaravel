@@ -32,6 +32,8 @@ jobs:
           cp .env.example .env
           php artisan key:generate
           mkdir -p database
+      - name: Validate installed-site upgrade shell syntax
+        run: bash -n support/workspace-upgrade.sh
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l

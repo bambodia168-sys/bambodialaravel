@@ -29,3 +29,35 @@ User-specific saves use CSRF-protected POST/DELETE, throttling, unique per-accou
 All related styles remain consolidated in resources/css/app.css and source files use version-free names.
 
 Before release, separately test aaPanel/cPanel migrations, physical devices, accessible keyboard/mobile behavior, regional translations, file scanning, content rights, privacy compliance and legal review. Payment gateways, checkout, escrow, refunds, payouts, taxation settlement and real financial transactions remain disabled. Do not run the clean-install wizard against an existing populated customer database.
+
+
+## Four premium role-isolated workspaces
+
+The front-facing workspaces share resources/views/layouts/workspace.blade.php, resources/css/app.css and resources/js/app.js, but show different authorized menu groups and functions:
+
+- Administration: /dashboard — platform overview, roles, policy, compliance, support, digital vault and marketplace operations (according to existing administrator/staff permissions).
+- Creator: /creator — approved creators' profile, products, releases, media, listings, inquiries and client agreements. Existing /studio links continue to work; noncreators are redirected to application or account.
+- Account: /account — customer or creator's personal profile, downloads, notifications, private saved items, contracts and privacy records.
+- Developer: /developer — Super Admin-only API credentials, documentation, security and integration controls.
+
+The responsive header contains a real navigation search, Home, light/dark toggle, language selector with SVG flags, and a dropdown with securely authenticated sign out. The sidebar has unique semantic SVG icons, an accessible collapse/expand control, contrasting selected states in light/dark mode, and separately scrollable menu/content panes. Sidebar collapse is saved per workspace in browser localStorage; sidebar scroll position is remembered per workspace/tab in sessionStorage. Browsers can clear those preferences. On mobile, the menu becomes a dismissible drawer.
+
+Language-prefixed routes are available at /en/dashboard, /km/account, /zh/creator, /de/developer, etc. Switching languages retains the current path and query when a trustworthy same-origin referrer exists. Existing unprefixed routes are still supported; the first language switch establishes a language-prefixed URL. Not every interface phrase has a full translated equivalent yet, and native-speaker review remains a release gate.
+
+## Upgrade the installed aaPanel website without reinstalling
+
+The existing bambodia.com website currently points to /www/wwwroot/bambodia-staging-qa/public. Never run the clean installer on its existing populated database. Use support/workspace-upgrade.sh for this exact instance only.
+
+The script requires GitHub CLI authentication, an exact successful Build Bambodia Installer run ID and its matching full commit SHA. It downloads the CI-produced package, compares it with the Git repository and the existing application's stable files, and upgrades only the allowlisted UI/controllers/routes/compiled assets.
+
+First inspect with:
+
+    bash /root/bambodia-release-audit/support/workspace-upgrade.sh --check RUN_ID FULL_SHA
+
+Then run:
+
+    bash /root/bambodia-release-audit/support/workspace-upgrade.sh --apply RUN_ID FULL_SHA
+
+The source checkout automatically fast-forwards from main when clean. The apply mode creates a root-only backup at /root/Bambodia-Workspace-Backups, activates Laravel maintenance mode, copies verified files and built assets, refreshes routes and compiled Blade views as www, then reopens the site. When an intermediate step fails, it attempts file restoration and exits maintenance. It will refuse to reapply if the new layout already exists. This script is specific to the existing aaPanel paths and is not a generic customer updater.
+
+The application .env, installation lock, database, private vault, Composer vendor, aaPanel Nginx and PHP-FPM settings are never intentionally changed. Verify all workspace routes and login/logout after applying. For stale PHP opcode cache, reload PHP 8.5 FPM through aaPanel. Genuine hosting/device/regulatory acceptance remains separate from CI and browser emulation.
