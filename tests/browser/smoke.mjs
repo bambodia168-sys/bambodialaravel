@@ -44,7 +44,7 @@ try {
         // Real active categories, category-first header, and live listing filter.
         if(await page.locator('.site-header .language-menu').count())
           throw new Error(device.name+' language selector must be in footer');
-        if(await page.locator('.site-nav [data-theme-toggle]').count())
+        if(await page.locator('.site-nav .nav-actions > [data-theme-toggle]').count())
           throw new Error(device.name+' theme toggle must be in profile dropdown');
         if(!(await page.locator('.site-nav .nav-category-menu summary svg').isVisible()))
           throw new Error(device.name+' missing four-square category grid icon');
