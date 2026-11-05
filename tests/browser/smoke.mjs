@@ -149,7 +149,37 @@ try {
         throw new Error('Developer workspace is not distinct');
       if(await admin.locator('.workspace-nav-link').getByText('Digital File Vault').count())
         throw new Error('Developer navigation leaked administration modules');
-      checks+=5;
+
+      // Check visual distinction of the light sidebar and selected menu,
+      // then sign out through the real CSRF-protected account dropdown.
+      await admin.goto(origin+'/en/dashboard',{waitUntil:'networkidle'});
+      await admin.evaluate(() => {
+        localStorage.setItem('bambodia-theme','light');
+        document.documentElement.dataset.theme='light';
+      });
+      const visual=await admin.evaluate(() => {
+        const aside=document.querySelector('.workspace-sidebar');
+        const item=document.querySelector('.workspace-nav-link.active');
+        const styles=(el)=>getComputedStyle(el);
+        return {
+          sidebar:styles(aside).backgroundColor,
+          sidebarText:styles(aside).color,
+          active:styles(item).backgroundColor,
+          activeText:styles(item).color,
+        };
+      });
+      if(visual.sidebar===visual.active || visual.sidebar==='rgba(0, 0, 0, 0)')
+        throw new Error('Light mode menu and active item lack distinct backgrounds: '+JSON.stringify(visual));
+
+      await admin.locator('.workspace-account-menu summary').click();
+      if(!(await admin.locator('.workspace-account-panel form button[type="submit"]').isVisible()))
+        throw new Error('Secure Sign out is missing in profile dropdown');
+      await admin.locator('.workspace-account-panel form button[type="submit"]').click();
+      await admin.waitForLoadState('networkidle');
+      await admin.goto(origin+'/en/developer',{waitUntil:'networkidle'});
+      if(!admin.url().includes('/login'))
+        throw new Error('Developer route did not require authentication after logout');
+      checks+=8;
       await adminContext.close();
 
       const creatorContext=await browser.newContext({viewport:device.viewport});
