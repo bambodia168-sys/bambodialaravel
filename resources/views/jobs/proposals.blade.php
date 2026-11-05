@@ -15,7 +15,21 @@
  <strong>Experience</strong><p class="review-text">{{ $proposal->freelancer->resume->experience }}</p>
  @if($proposal->freelancer->resume->portfolio_url)<a href="{{ $proposal->freelancer->resume->portfolio_url }}" rel="noopener noreferrer" target="_blank" class="btn subtle">Professional portfolio</a>@endif
 @endif
-@if($proposal->status === 'submitted')
+@if($proposal->status === 'shortlisted')
+<form method="post" action="{{ route('contracts.store') }}">
+@csrf <input type="hidden" name="proposal_id" value="{{ $proposal->id }}">
+<label for="contract-title-{{ $proposal->id }}">Agreement title</label>
+<input id="contract-title-{{ $proposal->id }}" name="title" value="{{ $job->title }}" minlength="8" maxlength="180" required>
+<label for="contract-scope-{{ $proposal->id }}">Specific scope and deliverables</label>
+<textarea id="contract-scope-{{ $proposal->id }}" name="scope" minlength="80" maxlength="12000" rows="5" required>{{ $job->description }}</textarea>
+<label for="contract-terms-{{ $proposal->id }}">Work terms, revision rules and intellectual property provisions</label>
+<textarea id="contract-terms-{{ $proposal->id }}" name="terms" minlength="60" maxlength="12000" rows="5" required>Both parties will review milestones before marking delivery complete. Any intellectual property and usage rights must be agreed explicitly. Bambodia does not hold escrow or process payment.</textarea>
+<label for="contract-budget-{{ $proposal->id }}">Total milestone value (USD, informational)</label>
+<input id="contract-budget-{{ $proposal->id }}" name="agreed_budget" type="number" step=".01" min="0" max="9999999999.99" value="{{ $proposal->proposed_budget ?? $job->budget ?? 0 }}" required>
+<p class="hint">Creates a private draft. Add milestones and send an explicit offer before work can begin. This is not a verified e-signature or payment.</p>
+<div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Close</button><button type="submit" class="btn primary">Create contract draft</button></div>
+</form>
+@elseif($proposal->status === 'submitted')
 <form method="post" action="{{ route('jobs.proposals.decide',$proposal) }}">@csrf @method('PATCH')
 <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Cancel</button><button class="btn subtle" type="submit" name="decision" value="declined">Decline</button><button class="btn primary" type="submit" name="decision" value="shortlisted">Shortlist</button></div>
 </form>

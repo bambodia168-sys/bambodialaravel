@@ -141,7 +141,7 @@ class FreelanceContractController extends Controller
             AccountNotification::deliver((int)$locked->freelancer_id,'contract.offered',
                 'A contract offer requires your review',
                 'A client offered an agreement with detailed milestones and terms.',
-                '/contracts/'.$locked->id);
+                '/contracts/'.$locked->public_id);
             AuditEvent::record('contract.offered',$request->user(),$request);
         });
 
@@ -173,7 +173,7 @@ class FreelanceContractController extends Controller
             AccountNotification::deliver((int)$locked->client_id,
                 'contract.'.$action,'Contract offer '.$action,
                 'The freelancer has '.($action==='accepted'?'accepted':'declined').' your original offer.',
-                '/contracts/'.$locked->id);
+                '/contracts/'.$locked->public_id);
             AuditEvent::record('contract.'.$action,$request->user(),$request);
         });
 
@@ -190,7 +190,7 @@ class FreelanceContractController extends Controller
             if($contract->status==='offered'){
                 AccountNotification::deliver((int)$locked->freelancer_id,'contract.cancelled',
                     'Contract offer withdrawn','The client withdrew an unaccepted agreement.',
-                    '/contracts/'.$locked->id);
+                    '/contracts/'.$locked->public_id);
             }
             AuditEvent::record('contract.cancelled',$request->user(),$request);
         });
@@ -209,7 +209,7 @@ class FreelanceContractController extends Controller
             AccountNotification::deliver((int)$locked->client_id,'contract.completion.acknowledged',
                 'Freelancer confirmed milestone delivery',
                 'All milestones are accepted and the freelancer has acknowledged completion.',
-                '/contracts/'.$locked->id);
+                '/contracts/'.$locked->public_id);
             AuditEvent::record('contract.completion.acknowledged',$request->user(),$request);
         });
         return back()->with('status','Completion acknowledgement recorded.');
@@ -227,7 +227,7 @@ class FreelanceContractController extends Controller
             AccountNotification::deliver((int)$locked->freelancer_id,'contract.completed',
                 'Contract delivery completed',
                 'The client confirmed completion of the accepted milestones.',
-                '/contracts/'.$locked->id);
+                '/contracts/'.$locked->public_id);
             AuditEvent::record('contract.completed',$request->user(),$request);
         });
         return back()->with('status','Both parties recorded completion. No payment was created.');

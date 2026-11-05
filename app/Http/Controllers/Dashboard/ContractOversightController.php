@@ -83,7 +83,7 @@ class ContractOversightController extends Controller
                     AccountNotification::deliver((int)$userId,'contract.dispute.resolved',
                         'Contract dispute review completed',
                         'The administrative case was closed with disposition: '.$data['disposition'].'.',
-                        '/contracts/'.$contract->id);
+                        '/contracts/'.$contract->public_id);
                 }
             }
             AuditEvent::record('contract.dispute.'.$data['decision'],$request->user(),$request);

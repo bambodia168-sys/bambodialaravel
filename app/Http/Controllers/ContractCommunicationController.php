@@ -30,7 +30,7 @@ class ContractCommunicationController extends Controller
                 ? (int)$locked->freelancer_id : (int)$locked->client_id;
             AccountNotification::deliver($recipient,'contract.message.received',
                 'New private contract message','The other party sent a message in your contract workspace.',
-                '/contracts/'.$locked->id);
+                '/contracts/'.$locked->public_id);
             AuditEvent::record('contract.message.sent',$request->user(),$request);
         });
 
@@ -61,7 +61,7 @@ class ContractCommunicationController extends Controller
             AccountNotification::deliver($other,'contract.dispute.opened',
                 'Contract dispute reported',
                 'The other participant requested an administrative review of the agreement.',
-                '/contracts/'.$locked->id);
+                '/contracts/'.$locked->public_id);
             AuditEvent::record('contract.dispute.opened',$request->user(),$request);
         });
 

@@ -42,7 +42,7 @@ class ContractMilestoneController extends Controller
             AccountNotification::deliver((int)$contract->client_id,'contract.milestone.submitted',
                 'A contract milestone is ready for review',
                 'The freelancer submitted the deliverables for milestone '.$locked->sequence.'.',
-                '/contracts/'.$contract->id);
+                '/contracts/'.$contract->public_id);
             AuditEvent::record('contract.milestone.submitted',$request->user(),$request);
         });
 
@@ -80,7 +80,7 @@ class ContractMilestoneController extends Controller
                 'Milestone review recorded',
                 'The client '.($data['decision']==='accepted'?'accepted':'requested revisions for').
                     ' milestone '.$locked->sequence.'.',
-                '/contracts/'.$contract->id);
+                '/contracts/'.$contract->public_id);
             AuditEvent::record('contract.milestone.'.$data['decision'],$request->user(),$request);
         });
 

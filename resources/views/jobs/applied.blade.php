@@ -4,7 +4,7 @@
 <div class="container inner-page">
 <div class="page-intro"><div class="eyebrow">Freelancer Workspace</div><h1>My Proposals</h1><p>Track submitted applications and job-owner decisions without exposing private information to other users.</p></div>
 <section class="panel">
-<div class="panel-head"><h2>Submitted proposals <span class="count">{{ $proposals->total() }}</span></h2><a class="btn subtle" href="{{ route('jobs') }}">Find more jobs</a></div>
+<div class="panel-head"><h2>Submitted proposals <span class="count">{{ $proposals->total() }}</span></h2><div class="toolbar-actions"><a class="btn subtle" href="{{ route('jobs') }}">Find more jobs</a><a class="btn primary" href="{{ route('contracts.index') }}">My Contracts</a></div></div>
 <div class="table-scroll"><table class="data-table">
 <thead><tr><th>Job</th><th>Job status</th><th>Proposed budget</th><th>Decision</th><th>Submitted</th><th>Action</th></tr></thead><tbody>
 @forelse($proposals as $proposal)<tr>

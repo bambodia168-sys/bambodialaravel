@@ -17,6 +17,17 @@ class AccountNotification extends Model
         'vault.access.granted',
         'vault.access.revoked',
         'listing.reviewed',
+        'contract.offered',
+        'contract.accepted',
+        'contract.declined',
+        'contract.cancelled',
+        'contract.milestone.submitted',
+        'contract.milestone.reviewed',
+        'contract.completion.acknowledged',
+        'contract.completed',
+        'contract.message.received',
+        'contract.dispute.opened',
+        'contract.dispute.resolved',
     ];
 
     protected $fillable = ['user_id','event','title','message','target_path','read_at'];

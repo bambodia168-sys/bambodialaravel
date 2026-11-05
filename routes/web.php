@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\FreelanceContractController;
+use App\Http\Controllers\ContractMilestoneController;
+use App\Http\Controllers\ContractCommunicationController;
+use App\Http\Controllers\Dashboard\ContractOversightController;
 use App\Http\Controllers\Dashboard\SiteSettingsController;
 use App\Http\Controllers\Dashboard\CategoryManagerController;
 use App\Http\Controllers\Dashboard\MarketplaceManagerController;
@@ -93,6 +97,24 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/inquiries/{inquiry}/close', [ServiceInquiryController::class, 'close'])->name('inquiries.close');
     Route::get('/resume-builder', [ResumeController::class, 'edit'])->name('resume.edit');
     Route::patch('/resume-builder', [ResumeController::class, 'update'])->name('resume.update');
+    Route::get('/contracts', [FreelanceContractController::class,'index'])->name('contracts.index');
+    Route::post('/contracts', [FreelanceContractController::class,'store'])->name('contracts.store')->middleware('throttle:5,1');
+    Route::get('/contracts/{contract}', [FreelanceContractController::class,'show'])->name('contracts.show');
+    Route::post('/contracts/{contract}/milestones', [FreelanceContractController::class,'addMilestone'])->name('contracts.milestones.store');
+    Route::delete('/contract-milestones/{milestone}', [FreelanceContractController::class,'removeMilestone'])->name('contracts.milestones.destroy');
+    Route::post('/contracts/{contract}/offer', [FreelanceContractController::class,'offer'])->name('contracts.offer');
+    Route::post('/contracts/{contract}/respond', [FreelanceContractController::class,'respond'])->name('contracts.respond');
+    Route::post('/contracts/{contract}/cancel', [FreelanceContractController::class,'cancel'])->name('contracts.cancel');
+    Route::post('/contracts/{contract}/acknowledge-completion', [FreelanceContractController::class,'acknowledgeCompletion'])->name('contracts.acknowledge');
+    Route::post('/contracts/{contract}/complete', [FreelanceContractController::class,'complete'])->name('contracts.complete');
+    Route::post('/contract-milestones/{milestone}/deliver', [ContractMilestoneController::class,'deliver'])
+        ->name('contracts.milestones.deliver')->middleware('throttle:8,1');
+    Route::post('/contract-milestones/{milestone}/review', [ContractMilestoneController::class,'review'])
+        ->name('contracts.milestones.review');
+    Route::post('/contracts/{contract}/messages', [ContractCommunicationController::class,'message'])
+        ->name('contracts.messages.store')->middleware('throttle:20,1');
+    Route::post('/contracts/{contract}/disputes', [ContractCommunicationController::class,'dispute'])
+        ->name('contracts.disputes.store')->middleware('throttle:2,1');
     Route::get('/my-jobs', [JobBoardController::class, 'mine'])->name('jobs.mine');
     Route::post('/my-jobs', [JobBoardController::class, 'store'])->name('jobs.store')->middleware('throttle:5,1');
     Route::patch('/my-jobs/{job}/close', [JobBoardController::class, 'close'])->name('jobs.close');
@@ -155,6 +177,10 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/category-manager/{category}', [CategoryManagerController::class, 'update'])->name('dashboard.categories.update');
             Route::get('/{type}-manager', [MarketplaceManagerController::class, 'index'])
                 ->where('type','project|freelance|service')->name('dashboard.marketplace.index');
+            Route::get('/contract-manager', [ContractOversightController::class,'index'])->name('dashboard.contracts.index');
+            Route::get('/contract-disputes', [ContractOversightController::class,'disputes'])->name('dashboard.contracts.disputes');
+            Route::get('/contract-disputes/{dispute}', [ContractOversightController::class,'inspect'])->name('dashboard.contracts.inspect');
+            Route::patch('/contract-disputes/{dispute}', [ContractOversightController::class,'decide'])->name('dashboard.contracts.decide');
             Route::get('/job-manager', [JobManagerController::class, 'index'])->name('dashboard.jobs.index');
             Route::patch('/job-manager/{job}', [JobManagerController::class, 'decide'])->name('dashboard.jobs.decide');
             Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');

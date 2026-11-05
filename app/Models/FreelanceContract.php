@@ -31,6 +31,7 @@ class FreelanceContract extends Model
             throw new \RuntimeException('Unable to allocate unique contract reference.');
         });
     }
+    public function getRouteKeyName(): string { return 'public_id'; }
     public function proposal(): BelongsTo { return $this->belongsTo(JobProposal::class,'job_proposal_id'); }
     public function client(): BelongsTo { return $this->belongsTo(User::class,'client_id'); }
     public function freelancer(): BelongsTo { return $this->belongsTo(User::class,'freelancer_id'); }

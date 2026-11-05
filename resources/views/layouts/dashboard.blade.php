@@ -35,6 +35,8 @@
         <div class="sidebar-heading">Marketplace</div>
         <a class="{{ request()->routeIs('dashboard.products.*') ? 'active' : '' }}" href="{{ route('dashboard.products.index') }}"><x-icon name="package"/>Product Manager</a>
         <a class="{{ request()->routeIs('dashboard.jobs.*') ? 'active' : '' }}" href="{{ route('dashboard.jobs.index') }}"><x-icon name="briefcase"/>Job Manager</a>
+        <a class="{{ request()->routeIs('dashboard.contracts.index') ? 'active' : '' }}" href="{{ route('dashboard.contracts.index') }}"><x-icon name="file"/>Contract Manager</a>
+        <a class="{{ request()->routeIs('dashboard.contracts.disputes','dashboard.contracts.inspect') ? 'active' : '' }}" href="{{ route('dashboard.contracts.disputes') }}"><x-icon name="shield"/>Contract Disputes</a>
         <a class="{{ request()->routeIs('dashboard.categories.*') ? 'active' : '' }}" href="{{ route('dashboard.categories.index') }}"><x-icon name="layers"/>Category Manager</a>
         <a class="{{ request()->routeIs('dashboard.marketplace.index') && request()->route('type') === 'project' ? 'active' : '' }}" href="{{ route('dashboard.marketplace.index',['type'=>'project']) }}"><x-icon name="layers"/>Project Manager</a>
         <a class="{{ request()->routeIs('dashboard.marketplace.index') && request()->route('type') === 'freelance' ? 'active' : '' }}" href="{{ route('dashboard.marketplace.index',['type'=>'freelance']) }}"><x-icon name="briefcase"/>Freelance Manager</a>

@@ -18,7 +18,7 @@
       <button class="btn primary" type="submit">Save changes</button>
     </form>
   </section>
-  <div class="studio-actions"><a class="btn subtle" href="{{ route('account.notifications') }}"><x-icon name="mail" size="16"/> Notification Center</a><a class="btn primary" href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
+  <div class="studio-actions"><a class="btn subtle" href="{{ route('account.notifications') }}"><x-icon name="mail" size="16"/> Notification Center</a><a class="btn subtle" href="{{ route('contracts.index') }}"><x-icon name="file" size="16"/> My Contracts</a><a class="btn primary" href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
   @if(in_array($user->role,['customer','subscriber','super_admin'],true))<a class="btn subtle" href="{{ route('jobs.mine') }}">My Job Posts</a>@endif
   @if(in_array($user->role,['customer','subscriber'],true))<a class="btn subtle" href="{{ route('account.inquiries') }}">My Service Requests</a>@endif
   @if($user->isCreator())<a class="btn subtle" href="{{ route('studio.inquiries') }}">Creator Inquiries</a>@endif
