@@ -1,0 +1,50 @@
+name: Bambodia Quality
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, pdo_sqlite, pdo_mysql, fileinfo, xml, curl
+          coverage: none
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate Composer metadata
+        run: composer validate --no-check-publish
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Configure test environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          mkdir -p database
+      - name: Check PHP syntax
+        run: |
+          find app bootstrap config database routes tests installer public -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Install frontend dependencies
+        run: npm install --ignore-scripts
+      - name: Compile production frontend
+        run: npm run build
+      - name: Test routes and workflows
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+        run: php artisan test
