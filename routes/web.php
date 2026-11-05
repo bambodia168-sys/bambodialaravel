@@ -9,6 +9,7 @@ use App\Http\Controllers\Dashboard\UserManagerController;
 use App\Http\Controllers\Marketplace\ListingController;
 use App\Http\Controllers\PolicyCenterController;
 use App\Http\Controllers\ContentController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\Dashboard\SupportCenterController;
 use App\Http\Controllers\Dashboard\FeatureManagerController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Dashboard\PolicyManagerController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'home')->name('home');
+Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 Route::get('/blog', [ContentController::class, 'blog'])->name('blog');
 Route::get('/policy-center', [PolicyCenterController::class, 'index'])->name('policy-center');
 Route::get('/policies', [PolicyCenterController::class, 'show'])->name('policy.show');
