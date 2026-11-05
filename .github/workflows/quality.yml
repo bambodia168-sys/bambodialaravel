@@ -41,6 +41,12 @@ jobs:
         run: npm install --ignore-scripts
       - name: Compile production frontend
         run: npm run build
+      - name: Lint compiled Blade templates
+        run: |
+          php artisan view:cache
+          find storage/framework/views -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l > /tmp/bambodia-blade-lint.txt
+          echo "Compiled Blade PHP syntax: PASS"
+          php artisan view:clear
       - name: Preinstall HTTP smoke test
         run: |
           php -S 127.0.0.1:8090 -t public public/index.php > /tmp/bambodia-http.log 2>&1 &
