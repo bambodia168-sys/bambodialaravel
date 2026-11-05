@@ -43,6 +43,7 @@ class AuditEvent extends Model
         'inquiry.closed',
         'category.created',
         'category.updated',
+        'site.setting.changed',
         'listing.resubmitted',
         'vault.version.uploaded',
         'vault.version.inspected',

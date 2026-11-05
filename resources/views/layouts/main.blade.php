@@ -5,7 +5,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>@yield('title','Bambodia') · Licensed Digital Marketplace</title>
   <meta name="description" content="Discover licensed digital products, independent creators, and freelance services on Bambodia.">
-  <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || 'light';</script>
+  <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
 </head>
 <body class="site-body">
@@ -96,6 +96,9 @@
       @if(auth()->check() && auth()->user()->isCreator())<a href="{{ url('/studio?='.auth()->user()->public_id) }}">Creator Account</a>@else @if(\App\Models\FeatureFlag::isEnabled('registration'))<a href="{{ route('register') }}">Creator Account</a>@endif @endif
       @if(Route::has('policy-center'))<a href="{{ route('policy-center') }}">Policy Center</a>@endif
       @if(Route::has('support'))<a href="{{ route('support') }}">Support Center</a>@endif
+      @if(\App\Models\SiteSetting::setting('site.support_email')!=='')
+        <a href="mailto:{{ \App\Models\SiteSetting::setting('site.support_email') }}">Email support</a>
+      @endif
     </div>
     <div><h3>{{ __('ui.compliance') }}</h3>
       @if($footerPolicies->has('cookies'))<a href="{{ $footerPolicies->get('cookies')->publicUrl() }}">Cookie Policy</a>@endif

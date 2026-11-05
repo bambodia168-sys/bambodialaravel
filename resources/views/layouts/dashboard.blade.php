@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>@yield('title','Dashboard') · Bambodia</title>
-  <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || 'dark';</script>
+  <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
 </head>
 <body class="dashboard-body">
@@ -25,6 +25,10 @@
       @endif
       @if(in_array(auth()->user()->role, ['super_admin','admin'], true))
         <div class="sidebar-heading">Content & Policies</div>
+        <div class="sidebar-heading">Front Customizer</div>
+        <a class="{{ request()->routeIs('dashboard.appearance*') ? 'active' : '' }}" href="{{ route('dashboard.appearance') }}"><x-icon name="sun"/>Appearance</a>
+        <a class="{{ request()->routeIs('dashboard.system-settings*') ? 'active' : '' }}" href="{{ route('dashboard.system-settings') }}"><x-icon name="settings"/>System Settings</a>
+        <div class="sidebar-heading">Content Management</div>
         <a class="{{ request()->routeIs('dashboard.pages*') ? 'active' : '' }}" href="{{ route('dashboard.pages') }}"><x-icon name="file"/>Page Manager</a>
         <a class="{{ request()->routeIs('dashboard.posts*') ? 'active' : '' }}" href="{{ route('dashboard.posts') }}"><x-icon name="edit"/>Post Manager</a>
         <a class="{{ request()->routeIs('dashboard.policies*') ? 'active' : '' }}" href="{{ route('dashboard.policies') }}"><x-icon name="book"/>Policy Center</a>

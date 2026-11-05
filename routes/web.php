@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\Dashboard\SiteSettingsController;
 use App\Http\Controllers\Dashboard\CategoryManagerController;
 use App\Http\Controllers\Dashboard\MarketplaceManagerController;
 use App\Http\Controllers\AccountNotificationController;
@@ -145,6 +146,10 @@ Route::middleware('auth')->group(function (): void {
                 ->name('dashboard.vault.inspect')->middleware('throttle:10,1');
             Route::get('/notification-analytics', [NotificationAnalyticsController::class, 'index'])->name('dashboard.notifications.index');
             Route::get('/service-inquiries', [ServiceManagerController::class, 'index'])->name('dashboard.inquiries.index');
+            Route::get('/appearance', [SiteSettingsController::class, 'appearance'])->name('dashboard.appearance');
+            Route::patch('/appearance', [SiteSettingsController::class, 'updateAppearance'])->name('dashboard.appearance.update');
+            Route::get('/system-settings', [SiteSettingsController::class, 'system'])->name('dashboard.system-settings');
+            Route::patch('/system-settings', [SiteSettingsController::class, 'updateSystem'])->name('dashboard.system-settings.update');
             Route::get('/category-manager', [CategoryManagerController::class, 'index'])->name('dashboard.categories.index');
             Route::post('/category-manager', [CategoryManagerController::class, 'store'])->name('dashboard.categories.store');
             Route::patch('/category-manager/{category}', [CategoryManagerController::class, 'update'])->name('dashboard.categories.update');

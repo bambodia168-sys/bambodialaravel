@@ -12,6 +12,11 @@ use Illuminate\View\View;
 
 class SiteSettingsController extends Controller
 {
+    public function appearance(Request $request): View { return $this->index($request,'appearance'); }
+    public function system(Request $request): View { return $this->index($request,'system'); }
+    public function updateAppearance(Request $request): RedirectResponse { return $this->update($request,'appearance'); }
+    public function updateSystem(Request $request): RedirectResponse { return $this->update($request,'system'); }
+
     public function index(Request $request,string $group): View
     {
         abort_unless(in_array($group,['appearance','system'],true),404);
