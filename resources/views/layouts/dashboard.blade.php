@@ -26,6 +26,8 @@
         <div class="sidebar-heading">Marketplace</div>
         <a class="{{ request()->routeIs('dashboard.reviews') ? 'active' : '' }}" href="{{ route('dashboard.reviews') }}"><x-icon name="shield"/>Review Queue</a>
       @endif
+      <div class="sidebar-heading">Customer Care</div>
+      <a class="{{ request()->routeIs('dashboard.support*') ? 'active' : '' }}" href="{{ route('dashboard.support') }}"><x-icon name="message"/>Support Center</a>
     </nav>
     <div class="sidebar-bottom"><a href="{{ route('home') }}"><x-icon name="home" size="17"/> Public website</a><span>Administrator workspace</span></div>
   </aside>

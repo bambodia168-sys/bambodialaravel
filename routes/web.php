@@ -9,6 +9,8 @@ use App\Http\Controllers\Dashboard\UserManagerController;
 use App\Http\Controllers\Marketplace\ListingController;
 use App\Http\Controllers\PolicyCenterController;
 use App\Http\Controllers\ContentController;
+use App\Http\Controllers\SupportController;
+use App\Http\Controllers\Dashboard\SupportCenterController;
 use App\Http\Controllers\Dashboard\ContentManagerController;
 use App\Http\Controllers\Dashboard\PolicyManagerController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +37,11 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/contact', fn () => redirect()->route('support'))->name('contact');
+    Route::get('/support-center', [SupportController::class, 'index'])->name('support');
+    Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1');
+    Route::get('/support-center/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('support.show');
+    Route::post('/support-center/{ticket}/reply', [SupportController::class, 'reply'])->whereNumber('ticket')->name('support.reply')->middleware('throttle:10,1');
     Route::get('/account', [AccountController::class, 'index'])->name('account');
     Route::patch('/account', [AccountController::class, 'update'])->name('account.update');
     Route::get('/studio', [AccountController::class, 'studio'])->name('studio');
@@ -46,6 +53,10 @@ Route::middleware('auth')->group(function (): void {
 
     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/support-center', [SupportCenterController::class, 'index'])->name('dashboard.support');
+        Route::get('/support-center/{ticket}', [SupportCenterController::class, 'show'])->whereNumber('ticket')->name('dashboard.support.show');
+        Route::post('/support-center/{ticket}/reply', [SupportCenterController::class, 'reply'])->whereNumber('ticket')->name('dashboard.support.reply');
+        Route::patch('/support-center/{ticket}/status', [SupportCenterController::class, 'status'])->whereNumber('ticket')->name('dashboard.support.status');
         Route::middleware('role:super_admin,admin')->group(function (): void {
             Route::get('/page-manager', [ContentManagerController::class, 'pages'])->name('dashboard.pages');
             Route::post('/page-manager', [ContentManagerController::class, 'storePage'])->name('dashboard.pages.store');
