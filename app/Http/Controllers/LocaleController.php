@@ -24,11 +24,15 @@ class LocaleController extends Controller
         $previous = $request->headers->get('referer', '');
         $url = parse_url($previous);
         $currentHost = $request->getHost();
-        if (is_array($url)
-            && isset($url['host'])
-            && strcasecmp((string) $url['host'], $currentHost) === 0
-            && in_array(strtolower((string) ($url['scheme'] ?? '')), ['http', 'https'], true)
-            && !isset($url['user'], $url['pass'])) {
+        $sameOrigin = is_array($url) && (
+            (isset($url['host'])
+                && strcasecmp((string) $url['host'], $currentHost) === 0
+                && in_array(strtolower((string) ($url['scheme'] ?? '')), ['http', 'https'], true))
+            || (!isset($url['host']) && isset($url['path'])
+                && str_starts_with((string) $url['path'], '/')
+                && !str_starts_with((string) $url['path'], '//'))
+        );
+        if ($sameOrigin && !isset($url['user'], $url['pass'])) {
             $path = (string) ($url['path'] ?? '/');
             $path = preg_replace('~^/(en|zh|km|ko|ja|th|vi|de)(?=/|$)~', '', $path) ?: '/';
             if (!str_starts_with($path, '/')) {

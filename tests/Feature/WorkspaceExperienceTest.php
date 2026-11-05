@@ -116,9 +116,9 @@ class WorkspaceExperienceTest extends TestCase
     {
         $client=$this->account('customer');
         $this->actingAs($client)->get('/en/creator')
-            ->assertRedirect(route('creator.apply'));
+            ->assertRedirect(url('/en/creator/apply'));
         $staff=$this->account('staff');
         $this->actingAs($staff)->get('/en/creator')
-            ->assertRedirect('/account?='.$staff->public_id);
+            ->assertRedirect('/en/account?='.$staff->public_id);
     }
 }
