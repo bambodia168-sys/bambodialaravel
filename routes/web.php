@@ -8,10 +8,13 @@ use App\Http\Controllers\Dashboard\ReviewQueueController;
 use App\Http\Controllers\Dashboard\UserManagerController;
 use App\Http\Controllers\Marketplace\ListingController;
 use App\Http\Controllers\PolicyCenterController;
+use App\Http\Controllers\ContentController;
+use App\Http\Controllers\Dashboard\ContentManagerController;
 use App\Http\Controllers\Dashboard\PolicyManagerController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'home')->name('home');
+Route::get('/blog', [ContentController::class, 'blog'])->name('blog');
 Route::get('/policy-center', [PolicyCenterController::class, 'index'])->name('policy-center');
 Route::get('/policies', [PolicyCenterController::class, 'show'])->name('policy.show');
 Route::get('/search', [ListingController::class, 'search'])->name('marketplace.search');
@@ -44,6 +47,12 @@ Route::middleware('auth')->group(function (): void {
     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::middleware('role:super_admin,admin')->group(function (): void {
+            Route::get('/page-manager', [ContentManagerController::class, 'pages'])->name('dashboard.pages');
+            Route::post('/page-manager', [ContentManagerController::class, 'storePage'])->name('dashboard.pages.store');
+            Route::patch('/page-manager/{entry}', [ContentManagerController::class, 'updatePage'])->name('dashboard.pages.update');
+            Route::get('/post-manager', [ContentManagerController::class, 'posts'])->name('dashboard.posts');
+            Route::post('/post-manager', [ContentManagerController::class, 'storePost'])->name('dashboard.posts.store');
+            Route::patch('/post-manager/{entry}', [ContentManagerController::class, 'updatePost'])->name('dashboard.posts.update');
             Route::get('/policy-center', [PolicyManagerController::class, 'index'])->name('dashboard.policies');
             Route::post('/policy-center', [PolicyManagerController::class, 'store'])->name('dashboard.policies.store');
             Route::patch('/policy-center/{policy}', [PolicyManagerController::class, 'update'])->name('dashboard.policies.update');
@@ -56,3 +65,5 @@ Route::middleware('auth')->group(function (): void {
         });
     });
 });
+
+Route::get('/{content}', [ContentController::class, 'show'])->where('content', '[0-9]{9}_[a-z0-9-]+')->name('content.show');
