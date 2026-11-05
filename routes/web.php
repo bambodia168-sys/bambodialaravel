@@ -53,6 +53,7 @@ use App\Http\Controllers\Dashboard\PolicyManagerController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class,'index'])->name('home');
+Route::get('/creators', [CreatorProfileController::class,'directory'])->name('creators.index');
 Route::get('/creators/{creator}', [CreatorProfileController::class,'show'])
     ->where('creator','[0-9]{8}')->name('creators.show');
 Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');

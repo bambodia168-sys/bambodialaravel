@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
 use App\Models\CreatorProfile;
 use App\Models\MarketplaceListing;
+use App\Models\SavedListing;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,7 +47,31 @@ class CreatorProfileController extends Controller
         return back()->with('status',$data['is_public']?'Public creator profile updated.':'Your creator profile is saved privately.');
     }
 
-    public function show(string $creator): View
+    public function directory(Request $request): View
+    {
+        $search=mb_substr(trim((string)$request->query('q','')),0,120);
+        $creators=User::query()
+            ->select(['id','public_id','name','role'])
+            ->whereIn('role',['freelancer','super_admin'])
+            ->whereHas('creatorProfile',function($q)use($search){
+                $q->where('is_public',true);
+            })
+            ->when($search!=='',fn($q)=>$q->where(function($builder)use($search){
+                $builder->where('name','like','%'.$search.'%')
+                    ->orWhereHas('creatorProfile',fn($p)=>$p
+                        ->where('is_public',true)
+                        ->where(function($q)use($search){
+                            $q->where('headline','like','%'.$search.'%')
+                                ->orWhere('biography','like','%'.$search.'%');
+                        }));
+            }))
+            ->with('creatorProfile:user_id,headline,biography,is_public')
+            ->withCount(['publishedListings as public_listings_count'])
+            ->orderBy('name')->paginate(10)->withQueryString();
+        return view('creators.index',compact('creators','search'));
+    }
+
+    public function show(Request $request,string $creator): View
     {
         abort_unless(preg_match('/^[0-9]{8}$/D',$creator)===1,404);
         $user=User::query()->where('public_id',$creator)
@@ -58,6 +83,14 @@ class CreatorProfileController extends Controller
             ->where('user_id',$user->id)
             ->with(['coverAsset:id,public_id,alt_text,review_status','category:id,name'])
             ->latest()->paginate(10);
-        return view('creators.show',['creator'=>$user,'profile'=>$user->creatorProfile,'listings'=>$listings]);
+        $savedIds=$request->user()
+            ? SavedListing::query()->where('user_id',$request->user()->id)
+                ->whereIn('marketplace_listing_id',$listings->pluck('id'))
+                ->pluck('marketplace_listing_id')->map(fn($id)=>(int)$id)->all()
+            : [];
+        return view('creators.show',[
+            'creator'=>$user,'profile'=>$user->creatorProfile,
+            'listings'=>$listings,'savedIds'=>$savedIds,
+        ]);
     }
 }
