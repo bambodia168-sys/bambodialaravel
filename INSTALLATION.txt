@@ -73,3 +73,20 @@ These actions do not verify signatures, transfer funds, perform escrow, automati
 FRONTEND AND ACCOUNT ACCEPTANCE
 
 Verify the public homepage and marketplace search list only real approved items. Test creator profile opt-in and withdrawal, saved listings/jobs ownership isolation, unpublishing/closing saved items, all user-role account dashboards, and real category/price/budget sorts. Confirm the user cannot access another account's bookmarks or private profile. Independently test iPhone, Android, tablet, keyboard accessibility and aaPanel/cPanel upgrades; CI is not sufficient proof of production acceptance. Keep payment processing disabled and never run the fresh installer on a populated production database.
+
+
+DIGITAL VAULT RELEASE SCREENING AND HOSTING ACCEPTANCE
+
+The vault now requires a real ClamAV clean verdict with fresh signatures on the exact stored SHA-256 original, independent documented distribution-rights review, and final administrator approval. Previously approved versions cannot be downloaded until they pass these new checks. A shared host that cannot run ClamAV must NOT bypass this gate; downloadable vault fulfillment remains blocked.
+
+On an isolated finished aaPanel or cPanel staging installation (from the Laravel project root), run:
+
+  php support/hosting-preflight.php --webroot=/absolute/path/to/app/public --json --strict
+  php support/vault-scan-acceptance.php --scanner=/usr/bin/clamscan
+  php support/http-release-probe.php --url=https://your-staging-host.example --json --strict
+
+All scripts are read-only except the antivirus smoke test, which creates and cleans up harmless temporary fixtures. Do not run unknown malware. Record sanitizer-safe results for each actual host.
+
+Independently complete authenticated ZIP/PPTX/PDF upload, antivirus and rights review, customer entitlement download, revocation/expiry, 25 MiB HTTP transfer, real mobile and tablet acceptance, and non-destructive aaPanel/cPanel upgrade tests before any production activation. Full instructions and the actual incomplete-gate matrix are recorded in the GitHub source file docs/production-release-gates.md.
+
+Payment gateways, automated paid entitlements, refunds, invoices, escrow, payouts and real-money transactions remain disabled.

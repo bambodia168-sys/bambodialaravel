@@ -47,3 +47,15 @@ No real-money transfers, escrow, payouts, automatic erasure or verified legal e-
 The homepage now displays approved marketplace listings, category data and open job briefs. Marketplace and job search support real filters and sorting. Every authenticated role can keep private Saved Listings and Saved Jobs collections. Creators can publish an optional professional portfolio profile and are discoverable in a searchable creator directory. Account and Creator Studio dashboards show actual per-user activity and notifications. See docs/frontend-workspaces.md for privacy, routing and release acceptance.
 
 No payments, refunds, escrow or financial transactions have been enabled.
+
+
+## Digital File Vault production release gates
+
+Approved product versions now require actual ClamAV screening with recent signatures and scan timestamp tied to the SHA-256 original, and a separately documented rights review. Missing/infected/outdated scan states and rights revocation block all entitlement-controlled downloads. Existing versions are **not grandfathered**.
+
+For staging installation and hosting evidence, see docs/production-release-gates.md. Read-only support tools included in installer packaging:
+- support/hosting-preflight.php: verifies essential aaPanel/cPanel PHP, private storage and ClamAV prerequisites.
+- support/vault-scan-acceptance.php: checks the real scanner detects a harmless EICAR signature.
+- support/http-release-probe.php: checks actual staging HTTPS, installer lockout and private-path security.
+
+A Chromium browser-emulation CI workflow and MySQL vault tests are included. Actual aaPanel/cPanel production acceptance, real physical-device checks, legal rights approval and payment-provider onboarding remain separate.

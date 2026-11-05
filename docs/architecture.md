@@ -122,3 +122,10 @@ See contract-workflows.md for the actual owner-scoped contract states, verified 
 ## Frontend and Account Workspaces
 
 The homepage, market filters, private Saved Listings and Saved Jobs, opt-in creator portfolios, public directory and account activity dashboards now use real Laravel database records. See frontend-workspaces.md for privacy controls, routing and acceptance criteria. Bookmarks do not imply entitlements or contracts. All payment services remain disabled.
+
+
+## Vault Production Release Hardening
+
+See [Digital File Vault Production Release Gates](production-release-gates.md) for specific host and physical-device acceptance. Laravel's private file URL serving is disabled, downloads require current ClamAV scanning tied to the original SHA-256, and independent distribution rights review plus release approval. Legacy approved versions without screening provenance fail closed. The repository includes aaPanel/cPanel hosting preflight, HTTPS public-path probe and real ClamAV harmless-signature smoke checks, with separate browser viewport emulation and MySQL vault acceptance workflows.
+
+These features do not constitute independent operator legal clearance, aaPanel/cPanel customer certification, physical device testing or payment-provider approval. The website and real financial transactions remain untouched.
