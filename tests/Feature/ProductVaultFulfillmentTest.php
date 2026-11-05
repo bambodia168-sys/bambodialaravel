@@ -9,6 +9,7 @@ use App\Models\ProductDownloadEvent;
 use App\Models\ProductEntitlement;
 use App\Models\ProductFileVersion;
 use App\Models\User;
+use App\Support\VaultMalwareScanner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -30,6 +31,16 @@ class ProductVaultFulfillmentTest extends TestCase
     {
         parent::setUp();
         Storage::fake('local');
+        // Test-only scanner double: production always requires real ClamAV.
+        $this->app->instance(VaultMalwareScanner::class,new class extends VaultMalwareScanner {
+            public function scanFile(string $absoluteFile): array
+            {
+                return [
+                    'status'=>'clean','engine'=>'ClamAV 1.4.0 (unit-test double)',
+                    'note'=>'Test-only deterministic clean result, not external malware acceptance.',
+                ];
+            }
+        });
         $this->creator = $this->account('freelancer');
         $this->reviewer = $this->account('admin');
         $this->superAdmin = $this->account('super_admin');
@@ -111,6 +122,7 @@ class ProductVaultFulfillmentTest extends TestCase
             'version' => $version,
             'release_notes' => 'A complete release containing licensed source files.',
             'artifact' => $this->zip(),
+            'rights_evidence'=>'I created this release and hold original redistribution rights under the active product license.',
             'rights_attested' => '1',
         ])->assertRedirect(route('studio.vault.index', $this->product));
 
@@ -119,8 +131,15 @@ class ProductVaultFulfillmentTest extends TestCase
 
     private function approve(ProductFileVersion $version): void
     {
-        $this->actingAs($this->reviewer)->post('/dashboard/file-vault/'.$version->id.'/inspect')
+        $this->actingAs($this->reviewer)->post('/dashboard/file-vault/'.$version->id.'/scan')
+            ->assertRedirect();
+        $this->post('/dashboard/file-vault/'.$version->id.'/inspect')
             ->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->post('/dashboard/file-vault/'.$version->id.'/rights', [
+            'decision'=>'verified',
+            'rights_review_note'=>'I checked the uploader evidence, ownership statement and distribution license for this release.',
+            'confirm_rights'=>'1',
+        ])->assertRedirect();
         $this->patch('/dashboard/file-vault/'.$version->id, [
             'decision' => 'approved',
             'confirm_review' => '1',
@@ -156,6 +175,7 @@ class ProductVaultFulfillmentTest extends TestCase
             'version' => '1.0.0',
             'release_notes' => 'An attempt to overwrite an original immutable release.',
             'artifact' => $this->zip(),
+            'rights_evidence'=>'I created this release and hold original redistribution rights under the active product license.',
             'rights_attested' => '1',
         ])->assertSessionHasErrors('version');
         $this->assertSame(1, ProductFileVersion::count());
@@ -168,6 +188,7 @@ class ProductVaultFulfillmentTest extends TestCase
             'version' => '1.0.0',
             'release_notes' => 'An unauthorized attempt to replace a licensed file.',
             'artifact' => $this->zip(),
+            'rights_evidence'=>'I created this release and hold original redistribution rights under the active product license.',
             'rights_attested' => '1',
         ])->assertForbidden();
 
@@ -176,6 +197,7 @@ class ProductVaultFulfillmentTest extends TestCase
             'version' => '1.0.0',
             'release_notes' => 'An unauthorized attempt to upload to another creator.',
             'artifact' => $this->zip(),
+            'rights_evidence'=>'I created this release and hold original redistribution rights under the active product license.',
             'rights_attested' => '1',
         ])->assertNotFound();
         $this->assertDatabaseCount('product_file_versions', 0);
@@ -187,6 +209,7 @@ class ProductVaultFulfillmentTest extends TestCase
             'version' => '1.0.0',
             'release_notes' => 'An archive with unsafe traversal path elements.',
             'artifact' => $this->zip(['../unsafe.php' => '<?php echo 1;']),
+            'rights_evidence'=>'I created this release and hold original redistribution rights under the active product license.',
             'rights_attested' => '1',
         ])->assertSessionHasErrors('artifact');
 
@@ -194,6 +217,7 @@ class ProductVaultFulfillmentTest extends TestCase
             'version' => '1.0.0',
             'release_notes' => 'An archive with excessive expansion from compression.',
             'artifact' => $this->zip(['large.txt' => str_repeat('A', 2 * 1024 * 1024)]),
+            'rights_evidence'=>'I created this release and hold original redistribution rights under the active product license.',
             'rights_attested' => '1',
         ])->assertSessionHasErrors('artifact');
 
@@ -201,6 +225,7 @@ class ProductVaultFulfillmentTest extends TestCase
             'version' => '1.0.0',
             'release_notes' => 'A disguised script is not an accepted upload type.',
             'artifact' => UploadedFile::fake()->createWithContent('script.php', '<?php echo 1;'),
+            'rights_evidence'=>'I created this release and hold original redistribution rights under the active product license.',
             'rights_attested' => '1',
         ])->assertSessionHasErrors('artifact');
 
@@ -213,7 +238,14 @@ class ProductVaultFulfillmentTest extends TestCase
         $this->actingAs($this->reviewer)->patch('/dashboard/file-vault/'.$version->id, [
             'decision' => 'approved', 'confirm_review' => '1',
         ])->assertStatus(409);
+        $this->post('/dashboard/file-vault/'.$version->id.'/inspect')->assertStatus(409);
+        $this->post('/dashboard/file-vault/'.$version->id.'/scan')->assertRedirect();
         $this->post('/dashboard/file-vault/'.$version->id.'/inspect')->assertOk();
+        $this->post('/dashboard/file-vault/'.$version->id.'/rights', [
+            'decision'=>'verified',
+            'rights_review_note'=>'Reviewed original source provenance and ownership rights against distribution policy.',
+            'confirm_rights'=>'1',
+        ])->assertRedirect();
         $this->patch('/dashboard/file-vault/'.$version->id, ['decision' => 'approved'])
             ->assertStatus(409);
 
@@ -348,6 +380,7 @@ class ProductVaultFulfillmentTest extends TestCase
             'version' => '2.0.0',
             'release_notes' => 'A PDF presentation document licensed with this product.',
             'artifact' => $pdf,
+            'rights_evidence'=>'I created this release and hold original redistribution rights under the active product license.',
             'rights_attested' => '1',
         ])->assertRedirect();
         $this->assertSame('pdf', ProductFileVersion::query()->where('version','2.0.0')->firstOrFail()->file_type);
@@ -362,6 +395,7 @@ class ProductVaultFulfillmentTest extends TestCase
             'version' => '2.1.0',
             'release_notes' => 'A presentation package with standard OpenXML file entries.',
             'artifact' => $pptx,
+            'rights_evidence'=>'I created this release and hold original redistribution rights under the active product license.',
             'rights_attested' => '1',
         ])->assertRedirect();
         $this->assertSame('pptx', ProductFileVersion::query()->where('version','2.1.0')->firstOrFail()->file_type);
@@ -371,6 +405,7 @@ class ProductVaultFulfillmentTest extends TestCase
             'version' => '2.2.0',
             'release_notes' => 'A spoofed file that has no proper PDF header.',
             'artifact' => UploadedFile::fake()->createWithContent('spoof.pdf', 'NOT_A_PDF'),
+            'rights_evidence'=>'I created this release and hold original redistribution rights under the active product license.',
             'rights_attested' => '1',
         ])->assertSessionHasErrors('artifact');
     }
