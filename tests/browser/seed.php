@@ -24,8 +24,18 @@ $creator=\App\Models\User::query()->create([
     'biography'=>str_repeat('Original test content for responsive UI verification. ',3),
     'is_public'=>true,
 ]);
+$serviceCategory=\App\Models\MarketplaceCategory::query()->create([
+    'type'=>'service',
+    'name'=>'Browser QA Consulting Category',
+    'description'=>'A real active category for marketplace navigation testing.',
+    'is_active'=>true,'sort_order'=>1,
+]);
+\App\Models\MarketplaceCategory::query()->create([
+    'type'=>'service','name'=>'Hidden Browser QA Category',
+    'is_active'=>false,'sort_order'=>2,
+]);
 \App\Models\MarketplaceListing::query()->create([
-    'user_id'=>$creator->id,'type'=>'service',
+    'user_id'=>$creator->id,'type'=>'service','category_id'=>$serviceCategory->id,
     'title'=>'Browser QA Published Service',
     'description'=>str_repeat('Original service listing for real browser acceptance tests. ',3),
     'status'=>'published','price'=>'95.00','currency'=>'USD',

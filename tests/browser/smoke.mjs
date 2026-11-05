@@ -41,6 +41,58 @@ try {
         if(!(await page.getByText('Browser QA Published Freelance Job').first().isVisible()))
           throw new Error(device.name+' homepage missing approved job');
         await page.screenshot({path:out+'/'+device.name+'-homepage.png',fullPage:true});
+        // Real active categories, category-first header, and live listing filter.
+        if(await page.locator('.site-header .language-menu').count())
+          throw new Error(device.name+' language selector must be in footer');
+        if(await page.locator('.site-nav [data-theme-toggle]').count())
+          throw new Error(device.name+' theme toggle must be in profile dropdown');
+        if(!(await page.locator('.site-nav .nav-category-menu summary svg').isVisible()))
+          throw new Error(device.name+' missing four-square category grid icon');
+        if(!(await page.locator('.nav-marketplace-links').getByText('Product').isVisible()))
+          throw new Error(device.name+' missing Product menu');
+        if(!(await page.locator('.nav-marketplace-links').getByText('Project').isVisible()))
+          throw new Error(device.name+' missing Project menu');
+        if(!(await page.locator('.nav-marketplace-links').getByText('Service').isVisible()))
+          throw new Error(device.name+' missing Service menu');
+        if(!(await page.locator('.nav-marketplace-links').getByText('Freelance').isVisible()))
+          throw new Error(device.name+' missing Freelance menu');
+        const order=await page.evaluate(()=>{
+          const category=document.querySelector('.nav-category-menu');
+          const search=document.querySelector('.nav-search');
+          const links=document.querySelector('.nav-marketplace-links');
+          const profile=document.querySelector('.profile-dropdown');
+          const parent=document.querySelector('.site-nav');
+          return [category,search,links,profile].map(el=>({
+            order:[...parent.querySelectorAll('*')].indexOf(el),
+            top:el.getBoundingClientRect().top,
+          }));
+        });
+        if(!(order[0].top<=order[1].top+5 && order[1].top<=order[2].top+5
+          && order[2].top<=order[3].top+5))
+          throw new Error(device.name+' header navigation visual order incorrect: '+JSON.stringify(order));
+        await page.locator('.nav-category-menu summary').click();
+        if(!(await page.locator('.nav-category-panel .nav-category-entry').getByText('Browser QA Consulting Category').isVisible()))
+          throw new Error(device.name+' real active category missing');
+        if(await page.locator('.nav-category-panel').getByText('Hidden Browser QA Category').count())
+          throw new Error(device.name+' inactive category is exposed');
+        await page.locator('.nav-category-entry').getByText('Browser QA Consulting Category').click();
+        await page.waitForLoadState('networkidle');
+        if(!page.url().includes('category=') || !page.url().includes('type=service'))
+          throw new Error(device.name+' category link did not preserve filter');
+        checks+=9;
+        await page.goto(origin+'/',{waitUntil:'networkidle'});
+        const footer=page.locator('.footer-actions');
+        if(!(await footer.locator('.language-menu summary .locale-flag').isVisible()))
+          throw new Error(device.name+' footer language selector missing');
+        const social=await footer.locator('.footer-social a').evaluateAll(anchors=>anchors.map(x=>({
+          top:x.getBoundingClientRect().top,
+          background:getComputedStyle(x).backgroundColor,
+        })));
+        if(social.length!==2 || Math.abs(social[0].top-social[1].top)>3
+            || social.some(x=>x.background!=='rgba(0, 0, 0, 0)'))
+          throw new Error(device.name+' footer social icons are not horizontal/transparent '+JSON.stringify(social));
+        checks+=2;
+
       }
       if(path==='/search'){
         if(!(await page.getByText('Browser QA Published Service').first().isVisible()))
@@ -93,6 +145,16 @@ try {
       await page.locator('input[name="password"]').fill('BrowserOnlyPassword123!');
       await page.locator('form.auth-form button[type="submit"]').click();
       await page.waitForURL(/\/account\?/,{timeout:15000});
+      await page.goto(origin+'/en',{waitUntil:'networkidle'});
+      const profileMenu=page.locator('.site-header .profile-dropdown');
+      await profileMenu.locator('summary').click();
+      if(!(await profileMenu.locator('.profile-theme-row [data-theme-toggle]').isVisible()))
+        throw new Error('Theme control is not the last profile tray action');
+      const beforeTheme=await page.locator('html').getAttribute('data-theme');
+      await profileMenu.locator('[data-theme-toggle]').click();
+      if(beforeTheme===await page.locator('html').getAttribute('data-theme'))
+        throw new Error('Profile-menu theme action did not toggle');
+      checks+=2;
       await page.goto(origin+'/search',{waitUntil:'networkidle'});
       const save=page.locator('form[action*="/account/saved-listings/"] button[type="submit"]').first();
       if(!(await save.isVisible()))throw new Error('Saved-listing action missing for signed-in customer');
