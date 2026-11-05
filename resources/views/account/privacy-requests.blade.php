@@ -1,4 +1,5 @@
-@extends('layouts.main')
+@extends('layouts.workspace')
+@section('workspace','account')
 @section('title','Privacy Requests')
 @section('content')
 <div class="container inner-page">

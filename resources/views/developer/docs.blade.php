@@ -1,4 +1,5 @@
-@extends('layouts.dashboard')
+@extends('layouts.workspace')
+@section('workspace','developer')
 @section('title','Developer API Documentation')
 @section('content')
 <div class="page-intro"><div class="eyebrow">Integrations & Credentials</div><h1>API documentation</h1><p>Authenticated, read-only Bambodia API endpoints currently implemented in the codebase.</p></div>

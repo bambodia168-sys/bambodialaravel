@@ -1,4 +1,5 @@
-@extends('layouts.dashboard')
+@extends('layouts.workspace')
+@section('workspace','developer')
 @section('title','Developer Dashboard')
 @section('content')
 <div class="page-intro">
