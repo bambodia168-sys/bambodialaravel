@@ -14,6 +14,8 @@ function syncThemeButtons() {
         button.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
         button.setAttribute('aria-pressed', dark ? 'true' : 'false');
         button.title = dark ? 'Light mode' : 'Dark mode';
+        const label = button.querySelector('[data-theme-label]');
+        if (label) label.textContent = dark ? 'Switch to light mode' : 'Switch to dark mode';
     });
 }
 document.addEventListener('DOMContentLoaded', syncThemeButtons);
@@ -185,3 +187,21 @@ function initializeWorkspaces() {
 }
 
 document.addEventListener('DOMContentLoaded', initializeWorkspaces);
+
+
+/* The real category grid uses native <details>, with convenient dismissal.
+   Keep focus and account/language dropdown behaviors independent. */
+document.addEventListener('click', (event) => {
+    const categoryMenu = document.querySelector('[data-public-category-menu]');
+    if (categoryMenu?.open && !categoryMenu.contains(event.target)) {
+        categoryMenu.open = false;
+    }
+});
+document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const categoryMenu = document.querySelector('[data-public-category-menu]');
+    if (categoryMenu?.open) {
+        categoryMenu.open = false;
+        categoryMenu.querySelector('summary')?.focus();
+    }
+});
