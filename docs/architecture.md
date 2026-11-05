@@ -87,3 +87,17 @@ Media rights approval is performed by administrators based on the available righ
 - Entitlements do not automatically include future versions. A new version requires an explicit separate grant.
 - No payment records, orders, tax invoices or financial transactions are created. The vault must not be used to mark unpaid orders paid, and no payment gateways are enabled.
 - Source-file integrity protects against unintended file modification, but does not prove files are safe or legally distributable. Independent malware detection, host-level upload limits, rights review and aaPanel/cPanel acceptance remain release gates.
+
+
+## Job, freelancer, inquiry, notification and category additions
+
+- /jobs provides a searchable public job board for administrator-approved client jobs. Public job IDs are nine random digits.
+- Customers/Subscribers post at /my-jobs, inspect proposals and shortlist/decline applicants. Job owners can close posts.
+- Freelancers maintain an opt-in resume under /resume-builder. A published resume is required before job application. A freelancer can apply only once per job and tracks results under /my-proposals.
+- Clients submit private project, service and freelancer inquiries from published listings. Both participants can send messages and close a conversation; no unrelated user is granted access to message bodies.
+- /dashboard/service-inquiries provides operational metadata, not confidential conversation content.
+- /account/notifications provides actual event-driven messages with read/unread controls. /dashboard/notification-analytics displays database-derived counts; no external email, SMS, or push delivery is implied.
+- /dashboard/category-manager manages marketplace-typed active categories. Public marketplace search and the category mega menu reflect real category data.
+- /dashboard/project-manager, /dashboard/freelance-manager and /dashboard/service-manager provide ten-row filtered records and moderator actions. Creators can revise rejected or draft listings.
+
+Financial contracts, payment gateways, escrow, processor verification, refunds, payouts, invoices, automated paid delivery and legal country-specific certification are NOT implemented. Real hosting, security scanning and device acceptance remain separate release gates.

@@ -25,3 +25,7 @@ Bambodia-specific application code is proprietary and is not licensed for redist
 The current codebase includes Creator Product Manager, private preview Media Library and reviewed License Manager alongside earlier authentication, CMS, Policy Center, Support Center and Developer/Security workspaces. Review the module-specific publication gates in docs/architecture.md.
 
 Source-file delivery, paid checkout and financial processing are not implemented. No live website deployment has been performed.
+
+
+## Additional real workflows
+Admin-moderated jobs, Freelancer Resume Builder, owner-only proposals, private service/project inquiries with messaging, in-app notifications and analytics, marketplace Category Manager, and separate Project/Freelance/Service management are now implemented in the Laravel codebase. Checkout, banking, legal compliance certification, escrow, payout settlement, and verified provider email delivery remain disabled and out of scope until independently accepted.
