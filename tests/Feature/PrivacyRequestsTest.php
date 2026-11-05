@@ -113,7 +113,12 @@ class PrivacyRequestsTest extends TestCase
     {
         $owner=$this->member('subscriber');
         for($i=0;$i<12;$i++){
-            $this->submitted($owner);
+            PrivacyRequest::query()->create([
+                'user_id'=>$owner->id,
+                'category'=>'access',
+                'details'=>str_repeat('Request to review my current user data. ',2),
+                'status'=>'submitted',
+            ]);
         }
         $this->actingAs($owner)->get('/privacy-requests')
             ->assertOk()->assertViewHas('requests',fn($page)=>$page->count()===10 && $page->total()===12);
