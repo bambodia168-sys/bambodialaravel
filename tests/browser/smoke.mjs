@@ -101,6 +101,69 @@ try {
       if(!(await page.getByText('Browser QA Published Service').first().isVisible()))
         throw new Error('Saved listing not persisted for real browser customer session');
       checks+=3;
+
+      // The Account shell must keep its sidebar and content scroll independent.
+      await page.goto(origin+'/en/account',{waitUntil:'networkidle'});
+      if(await page.locator('body').getAttribute('data-workspace')!=='account')
+        throw new Error('Account workspace did not use shared premium shell');
+      if(!(await page.locator('.workspace-menu-search input').isVisible()))
+        throw new Error('Account header search is missing');
+      await page.locator('[data-workspace-toggle]').click();
+      if(!(await page.locator('body.workspace-collapsed').count()))
+        throw new Error('Desktop sidebar did not collapse to icons');
+      await page.goto(origin+'/en/account/saved-jobs',{waitUntil:'networkidle'});
+      if(!(await page.locator('body.workspace-collapsed').count()))
+        throw new Error('Sidebar collapse preference was not persisted between pages');
+      await page.locator('[data-workspace-search]').fill('Notifications');
+      if(!(await page.locator('.workspace-nav-link:visible').getByText('Notifications').isVisible()))
+        throw new Error('Workspace navigation search not functional');
+      await page.locator('[data-workspace-search]').fill('');
+      await page.locator('[data-workspace-toggle]').click();
+      checks+=5;
+
+      // Admin and Developer have separate role-governed menus, not account clones.
+      const adminContext=await browser.newContext({viewport:device.viewport});
+      const admin=await adminContext.newPage();
+      await admin.goto(origin+'/en/login',{waitUntil:'networkidle'});
+      await admin.locator('input[name="email"]').fill('browser.admin@example.test');
+      await admin.locator('input[name="password"]').fill('BrowserOnlyPassword123!');
+      await admin.locator('form.auth-form button[type="submit"]').click();
+      await admin.waitForURL(/\/dashboard/,{timeout:15000});
+      await admin.goto(origin+'/en/dashboard',{waitUntil:'networkidle'});
+      if(await admin.locator('body').getAttribute('data-workspace')!=='admin')
+        throw new Error('Admin shell missing');
+      const sidebar=admin.locator('#workspace-sidebar');
+      const main=admin.locator('#workspace-main');
+      const scrollBefore=await main.evaluate(node=>node.scrollTop);
+      await sidebar.evaluate(node=>node.scrollTo({top:node.scrollHeight,behavior:'instant'}));
+      await admin.waitForTimeout(200);
+      const scrollAfter=await main.evaluate(node=>node.scrollTop);
+      if(scrollBefore!==scrollAfter)
+        throw new Error('Scrolling admin sidebar moved main content');
+      if(!(await admin.getByText('Feature Manager').first().count()))
+        throw new Error('Admin menu lacks real controls');
+      await admin.screenshot({path:out+'/desktop-admin-workspace.png',fullPage:false});
+      await admin.goto(origin+'/en/developer',{waitUntil:'networkidle'});
+      if(await admin.locator('body').getAttribute('data-workspace')!=='developer')
+        throw new Error('Developer workspace is not distinct');
+      if(await admin.locator('.workspace-nav-link').getByText('Digital File Vault').count())
+        throw new Error('Developer navigation leaked administration modules');
+      checks+=5;
+      await adminContext.close();
+
+      const creatorContext=await browser.newContext({viewport:device.viewport});
+      const creator=await creatorContext.newPage();
+      await creator.goto(origin+'/en/login',{waitUntil:'networkidle'});
+      await creator.locator('input[name="email"]').fill('browser.creator@example.test');
+      await creator.locator('input[name="password"]').fill('BrowserOnlyPassword123!');
+      await creator.locator('form.auth-form button[type="submit"]').click();
+      await creator.waitForURL(/\/account\?/,{timeout:15000});
+      await creator.goto(origin+'/en/creator',{waitUntil:'networkidle'});
+      if(await creator.locator('body').getAttribute('data-workspace')!=='creator')
+        throw new Error('Creator workspace route did not render correctly');
+      await creator.screenshot({path:out+'/desktop-creator-workspace.png',fullPage:false});
+      checks+=2;
+      await creatorContext.close();
     }
     await context.close();
   }
