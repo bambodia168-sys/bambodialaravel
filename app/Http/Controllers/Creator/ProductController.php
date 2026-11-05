@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -85,7 +86,7 @@ class ProductController extends Controller
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'title' => ['required', 'string', 'min:4', 'max:180'],
             'description' => ['required', 'string', 'min:40', 'max:10000'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
@@ -94,5 +95,16 @@ class ProductController extends Controller
             'cover_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')],
             'status' => ['required', Rule::in(['draft', 'pending'])],
         ]);
+
+        // A draft must never be allowed to reference a different creator's private asset.
+        if (! empty($data['cover_media_id'])
+            && ! MediaAsset::query()->whereKey($data['cover_media_id'])
+                ->where('user_id', $request->user()->id)->exists()) {
+            throw ValidationException::withMessages([
+                'cover_media_id' => 'Select a preview image from your own Media Library.',
+            ]);
+        }
+
+        return $data;
     }
 }
