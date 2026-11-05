@@ -63,10 +63,9 @@ class BambodiaFoundationTest extends TestCase
     {
         $creator = $this->user('freelancer');
         $response = $this->actingAs($creator)->post('/studio/listings', [
-            'type' => 'product',
+            'type' => 'project',
             'title' => 'Original Website Template',
             'description' => str_repeat('A commercially useful original website layout. ', 2),
-            'license_terms' => 'Single project license. Redistribution of the source code is not permitted.',
         ]);
         $response->assertRedirect();
         $listing = MarketplaceListing::firstOrFail();

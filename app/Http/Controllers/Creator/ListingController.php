@@ -25,11 +25,11 @@ class ListingController extends Controller
     {
         abort_unless(FeatureFlag::isEnabled('creator_submissions'), 403);
         $data = $request->validate([
-            'type' => ['required', Rule::in(MarketplaceListing::TYPES)],
+            'type' => ['required', Rule::in(['project', 'freelance', 'service'])],
             'title' => ['required', 'string', 'min:4', 'max:180'],
             'description' => ['required', 'string', 'min:40', 'max:10000'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
-            'license_terms' => ['nullable', 'string', 'max:20000', 'required_if:type,product'],
+            'license_terms' => ['nullable', 'string', 'max:20000'],
         ]);
 
         MarketplaceListing::query()->create([

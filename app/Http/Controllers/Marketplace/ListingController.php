@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceListing;
+use App\Models\MediaAsset;
 use App\Models\FeatureFlag;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -18,8 +19,16 @@ class ListingController extends Controller
         abort_if($type !== '' && ! in_array($type, MarketplaceListing::TYPES, true), 404);
 
         $listings = MarketplaceListing::query()
-            ->with('creator:id,name,public_id')
+            ->with(['creator:id,name,public_id', 'coverAsset:id,public_id,review_status,alt_text'])
             ->where('status', 'published')
+            ->where(function ($builder): void {
+                $builder->where('type', '!=', 'product')
+                    ->orWhere(function ($product): void {
+                        $product->where('type', 'product')
+                            ->whereHas('licenseDefinition', fn ($license) => $license->where('status', 'active'))
+                            ->whereHas('coverAsset', fn ($cover) => $cover->where('review_status', 'approved'));
+                    });
+            })
             ->when($type !== '', fn ($builder) => $builder->where('type', $type))
             ->when($query !== '', fn ($builder) => $builder->where(function ($builder) use ($query): void {
                 $builder->where('title', 'like', '%'.$query.'%')
@@ -37,12 +46,17 @@ class ListingController extends Controller
         abort_unless(preg_match('/^=(\d{9})-([a-z0-9-]+)$/', $raw, $match) === 1, 404);
 
         $listing = MarketplaceListing::query()
-            ->with('creator:id,name,public_id')
+            ->with(['creator:id,name,public_id', 'licenseDefinition', 'coverAsset'])
             ->where('public_id', $match[1])
             ->where('slug', $match[2])
             ->where('type', $type)
             ->where('status', 'published')
             ->firstOrFail();
+
+        if ($listing->type === 'product') {
+            abort_unless($listing->licenseDefinition?->status === 'active'
+                && $listing->coverAsset?->review_status === 'approved', 404);
+        }
 
         return view('marketplace.detail', compact('listing'));
     }

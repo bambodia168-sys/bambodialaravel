@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\LicenseController;
+use App\Http\Controllers\MediaLibraryController;
+use App\Http\Controllers\Creator\ProductController as CreatorProductController;
+use App\Http\Controllers\Dashboard\LicenseManagerController;
+use App\Http\Controllers\Dashboard\ProductManagerController;
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\SecurityDashboardController;
 use App\Http\Controllers\Auth\AuthController;
@@ -24,6 +29,9 @@ use Illuminate\Support\Facades\Route;
 Route::view('/', 'home')->name('home');
 Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 Route::get('/blog', [ContentController::class, 'blog'])->name('blog');
+Route::get('/licenses', [LicenseController::class, 'show'])->name('license.show');
+Route::get('/media/{publicId}/preview', [MediaLibraryController::class, 'preview'])
+    ->where('publicId', '[0-9]{9}')->name('media.preview');
 Route::get('/policy-center', [PolicyCenterController::class, 'index'])->name('policy-center');
 Route::get('/policies', [PolicyCenterController::class, 'show'])->name('policy.show');
 Route::get('/search', [ListingController::class, 'search'])->name('marketplace.search');
@@ -71,6 +79,13 @@ Route::middleware('auth')->group(function (): void {
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
         Route::get('/listings', [CreatorListingController::class, 'index'])->name('studio.listings');
         Route::post('/listings', [CreatorListingController::class, 'store'])->name('studio.listings.store')->middleware('throttle:10,1');
+        Route::get('/products', [CreatorProductController::class, 'index'])->name('studio.products.index');
+        Route::post('/products', [CreatorProductController::class, 'store'])->name('studio.products.store')->middleware('throttle:10,1');
+        Route::patch('/products/{product}', [CreatorProductController::class, 'update'])->name('studio.products.update')->middleware('throttle:10,1');
+        Route::get('/media-library', [MediaLibraryController::class, 'index'])->name('studio.media.index');
+        Route::post('/media-library', [MediaLibraryController::class, 'store'])->name('studio.media.store')->middleware('throttle:10,1');
+        Route::patch('/media-library/{asset}', [MediaLibraryController::class, 'update'])->name('studio.media.update');
+        Route::delete('/media-library/{asset}', [MediaLibraryController::class, 'destroy'])->name('studio.media.destroy');
     });
 
     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
@@ -80,6 +95,16 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/support-center/{ticket}/reply', [SupportCenterController::class, 'reply'])->whereNumber('ticket')->name('dashboard.support.reply');
         Route::patch('/support-center/{ticket}/status', [SupportCenterController::class, 'status'])->whereNumber('ticket')->name('dashboard.support.status');
         Route::middleware('role:super_admin,admin')->group(function (): void {
+            Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');
+            Route::patch('/product-manager/{product}', [ProductManagerController::class, 'decide'])->name('dashboard.products.decide');
+            Route::get('/license-manager', [LicenseManagerController::class, 'index'])->name('dashboard.licenses.index');
+            Route::post('/license-manager', [LicenseManagerController::class, 'store'])->name('dashboard.licenses.store');
+            Route::patch('/license-manager/{license}', [LicenseManagerController::class, 'update'])->name('dashboard.licenses.update');
+            Route::get('/media-library', [MediaLibraryController::class, 'index'])->name('dashboard.media.index');
+            Route::post('/media-library', [MediaLibraryController::class, 'store'])->name('dashboard.media.store')->middleware('throttle:10,1');
+            Route::patch('/media-library/{asset}', [MediaLibraryController::class, 'update'])->name('dashboard.media.update');
+            Route::delete('/media-library/{asset}', [MediaLibraryController::class, 'destroy'])->name('dashboard.media.destroy');
+            Route::patch('/media-library/{asset}/review', [MediaLibraryController::class, 'review'])->name('dashboard.media.review');
             Route::get('/page-manager', [ContentManagerController::class, 'pages'])->name('dashboard.pages');
             Route::post('/page-manager', [ContentManagerController::class, 'storePage'])->name('dashboard.pages.store');
             Route::patch('/page-manager/{entry}', [ContentManagerController::class, 'updatePage'])->name('dashboard.pages.update');

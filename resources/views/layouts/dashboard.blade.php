@@ -28,6 +28,9 @@
         <a class="{{ request()->routeIs('dashboard.posts*') ? 'active' : '' }}" href="{{ route('dashboard.posts') }}"><x-icon name="edit"/>Post Manager</a>
         <a class="{{ request()->routeIs('dashboard.policies*') ? 'active' : '' }}" href="{{ route('dashboard.policies') }}"><x-icon name="book"/>Policy Center</a>
         <div class="sidebar-heading">Marketplace</div>
+        <a class="{{ request()->routeIs('dashboard.products.*') ? 'active' : '' }}" href="{{ route('dashboard.products.index') }}"><x-icon name="package"/>Product Manager</a>
+        <a class="{{ request()->routeIs('dashboard.media.*') ? 'active' : '' }}" href="{{ route('dashboard.media.index') }}"><x-icon name="image"/>Media Library</a>
+        <a class="{{ request()->routeIs('dashboard.licenses.*') ? 'active' : '' }}" href="{{ route('dashboard.licenses.index') }}"><x-icon name="scroll-text"/>License Manager</a>
         <a class="{{ request()->routeIs('dashboard.creator-applications*') ? 'active' : '' }}" href="{{ route('dashboard.creator-applications') }}"><x-icon name="user-check"/>Creator Applications</a>
         <a class="{{ request()->routeIs('dashboard.reviews') ? 'active' : '' }}" href="{{ route('dashboard.reviews') }}"><x-icon name="shield"/>Review Queue</a>
       @endif

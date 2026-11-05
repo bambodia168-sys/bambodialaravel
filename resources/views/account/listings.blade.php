@@ -5,7 +5,7 @@
   <div class="page-intro"><div class="eyebrow">Creator studio</div><h1>My listings</h1><p>Submit original work for review and track publication status.</p></div>
   @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
   @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
-  <section class="panel">
+  <p><a class="btn subtle" href="{{ route('studio.products.index') }}">Manage digital products and licenses</a></p><section class="panel">
     <div class="panel-head"><h2>Submitted listings <span class="count">{{ $listings->total() }}</span></h2>@if(\App\Models\FeatureFlag::isEnabled('creator_submissions'))<button type="button" class="btn primary" data-modal-open="create-listing">Submit listing</button>@endif</div>
     <div class="table-scroll">
       <table class="data-table"><thead><tr><th>Listing ID</th><th>Title</th><th>Type</th><th>Status</th><th>Submitted</th><th>Action</th></tr></thead><tbody>
@@ -22,11 +22,11 @@
       @csrf
       <div class="dialog-heading"><h2>Submit a listing</h2><p>Listings are reviewed before publication.</p></div>
       <label for="listing-type">Type</label>
-      <select id="listing-type" name="type" required>@foreach(\App\Models\MarketplaceListing::TYPES as $type)<option value="{{ $type }}">{{ ucfirst($type) }}</option>@endforeach</select>
+      <select id="listing-type" name="type" required>@foreach(['project', 'freelance', 'service'] as $type)<option value="{{ $type }}">{{ ucfirst($type) }}</option>@endforeach</select>
       <label for="listing-title">Title</label><input id="listing-title" name="title" required minlength="4" maxlength="180">
       <label for="listing-description">Description (40+ characters)</label><textarea id="listing-description" name="description" rows="5" minlength="40" required></textarea>
       <label for="listing-price">Listed price, USD (optional; checkout unavailable)</label><input id="listing-price" name="price" type="number" min="0" step="0.01">
-      <label for="listing-license">License terms (required for digital products)</label><textarea id="listing-license" name="license_terms" rows="4" placeholder="Specify the rights granted, usage limitations, and redistribution rules."></textarea>
+      <label for="listing-license">Supplemental terms (optional)</label><textarea id="listing-license" name="license_terms" rows="4" placeholder="Specify the rights granted, usage limitations, and redistribution rules."></textarea>
       <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit">Submit for review</button></div>
     </form>
   </dialog>

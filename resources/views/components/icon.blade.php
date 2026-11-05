@@ -1,6 +1,9 @@
 @props(['name' => 'circle', 'size' => 20])
 @php
 $paths = [
+    'image' => '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+    'upload' => '<path d="M12 16V3m0 0L7 8m5-5 5 5M4 17v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
+    'scroll-text' => '<path d="M8 21h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v13a3 3 0 0 1-3 3M6 8h12M6 12h12M6 16h8"/>',
     'user-check' => '<circle cx="9" cy="8" r="4"/><path d="M2 21v-2a7 7 0 0 1 14 0M17 14l2 2 4-4"/>',
     'key' => '<circle cx="7" cy="15" r="4"/><path d="m10 12 11-11M18 4l3 3M15 7l3 3"/>',
     'activity' => '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
