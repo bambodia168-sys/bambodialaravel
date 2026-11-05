@@ -104,7 +104,7 @@ class ProductVaultReviewController extends Controller
         $data=$request->validate([
             'decision'=>['required',Rule::in(['verified','rejected'])],
             'rights_review_note'=>['required','string','min:30','max:2000'],
-            'confirm_rights'=>['required_if:decision,verified','nullable','accepted'],
+            'confirm_rights'=>['exclude_unless:decision,verified','required','accepted'],
         ]);
 
         DB::transaction(function()use($request,$version,$data): void {
