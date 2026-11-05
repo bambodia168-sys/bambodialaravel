@@ -65,10 +65,13 @@ try {
           return [category,search,links,profile].map(el=>({
             order:[...parent.querySelectorAll('*')].indexOf(el),
             top:el.getBoundingClientRect().top,
+            left:el.getBoundingClientRect().left,
           }));
         });
-        if(!(order[0].top<=order[1].top+5 && order[1].top<=order[2].top+5
-          && order[2].top<=order[3].top+5))
+        const before=(a,b)=> a.top<=b.top+25
+          && (Math.abs(a.top-b.top)>25 || a.left<b.left);
+        if(!(before(order[0],order[1]) && before(order[1],order[2])
+          && before(order[2],order[3])))
           throw new Error(device.name+' header navigation visual order incorrect: '+JSON.stringify(order));
         await page.locator('.nav-category-menu summary').click();
         if(!(await page.locator('.nav-category-panel .nav-category-entry').getByText('Browser QA Consulting Category').isVisible()))
