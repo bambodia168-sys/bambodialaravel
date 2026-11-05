@@ -433,4 +433,129 @@ class ProductVaultFulfillmentTest extends TestCase
         ])->assertStatus(409);
         $this->assertDatabaseCount('product_entitlements', 0);
     }
+
+    public function test_missing_scanner_fails_closed_and_cannot_be_replaced_by_admin_confirmation(): void
+    {
+        $version=$this->upload();
+        $this->app->forgetInstance(VaultMalwareScanner::class);
+        config(['vault.scanner_binary'=>'/missing/clamscan-binary']);
+        $this->actingAs($this->reviewer)->post('/dashboard/file-vault/'.$version->id.'/scan')
+            ->assertRedirect();
+
+        $this->assertSame('error',$version->fresh()->malware_scan_status);
+        $this->assertNull($version->fresh()->malware_scanned_sha256);
+        $this->post('/dashboard/file-vault/'.$version->id.'/inspect')->assertStatus(409);
+        $this->patch('/dashboard/file-vault/'.$version->id,[
+            'decision'=>'approved','confirm_review'=>'1',
+        ])->assertStatus(409);
+        $this->assertDatabaseHas('audit_events',[
+            'event'=>'vault.malware.error','actor_id'=>$this->reviewer->id,
+        ]);
+    }
+
+    public function test_infected_upload_is_rejected_automatically_without_distribution(): void
+    {
+        $version=$this->upload();
+        $this->app->instance(VaultMalwareScanner::class,new class extends VaultMalwareScanner {
+            public function scanFile(string $absoluteFile): array
+            {
+                return ['status'=>'infected','engine'=>'ClamAV 1.4.0 (test double)',
+                    'note'=>'Test-only simulated signature detection'];
+            }
+        });
+
+        $this->actingAs($this->reviewer)->post('/dashboard/file-vault/'.$version->id.'/scan')
+            ->assertRedirect();
+        $this->assertSame('rejected',$version->fresh()->status);
+        $this->assertSame('infected',$version->fresh()->malware_scan_status);
+        $this->post('/dashboard/file-vault/'.$version->id.'/inspect')->assertStatus(409);
+        $this->patch('/dashboard/file-vault/'.$version->id,[
+            'decision'=>'approved','confirm_review'=>'1',
+        ])->assertStatus(409);
+        $this->assertDatabaseHas('audit_events',['event'=>'vault.malware.infected']);
+    }
+
+    public function test_new_release_requires_documented_rights_verification_after_scanned_inspection(): void
+    {
+        $version=$this->upload();
+        $this->actingAs($this->reviewer)->post('/dashboard/file-vault/'.$version->id.'/scan')
+            ->assertRedirect();
+
+        $this->post('/dashboard/file-vault/'.$version->id.'/rights',[
+            'decision'=>'verified','confirm_rights'=>'1',
+            'rights_review_note'=>'I verified independently that this project had proper distribution rights.',
+        ])->assertStatus(409);
+
+        $this->post('/dashboard/file-vault/'.$version->id.'/inspect')->assertOk();
+
+        $this->post('/dashboard/file-vault/'.$version->id.'/rights',[
+            'decision'=>'rejected',
+            'rights_review_note'=>'The distribution grant is insufficient for commercial source code redistribution.',
+        ])->assertRedirect();
+        $this->assertSame('rejected',$version->fresh()->rights_review_status);
+        $this->patch('/dashboard/file-vault/'.$version->id,[
+            'decision'=>'approved','confirm_review'=>'1',
+        ])->assertStatus(409);
+
+        $this->post('/dashboard/file-vault/'.$version->id.'/rights',[
+            'decision'=>'verified',
+            'rights_review_note'=>'The author supplied signed provenance and the license grants redistribution permission.',
+            'confirm_rights'=>'1',
+        ])->assertRedirect();
+        $this->patch('/dashboard/file-vault/'.$version->id,[
+            'decision'=>'approved','confirm_review'=>'1',
+        ])->assertRedirect();
+        $this->assertTrue($version->fresh()->isApproved());
+    }
+
+    public function test_clean_approval_is_revoked_on_expired_scanning_or_changed_rights_evidence(): void
+    {
+        $version=$this->upload();
+        $this->approve($version);
+        $entitlement=$this->grant($version);
+
+        $url=route('account.downloads.file',$entitlement);
+        $this->actingAs($this->customer)->get($url)->assertOk();
+        $this->assertDatabaseCount('product_download_events',1);
+
+        $version->update(['malware_scanned_at'=>now()->subDays(40)]);
+        $this->get($url)->assertForbidden();
+        $this->assertFalse($version->fresh()->isApproved());
+
+        $this->actingAs($this->reviewer)->post('/dashboard/file-vault/'.$version->id.'/scan')
+            ->assertRedirect();
+        $this->actingAs($this->customer)->get($url)->assertOk();
+        $this->assertDatabaseCount('product_download_events',2);
+
+        $this->actingAs($this->creator)->patch(
+            '/studio/products/'.$this->product->id.'/releases/'.$version->id.'/rights',[
+                'rights_evidence'=>'The original license records were amended, requiring an additional independent review.',
+            ])->assertRedirect();
+        $this->assertSame('pending',$version->fresh()->rights_review_status);
+        $this->actingAs($this->customer)->get($url)->assertForbidden();
+        $this->assertDatabaseCount('product_download_events',2);
+    }
+
+    public function test_post_approval_threat_detection_disables_existing_granted_entitlements(): void
+    {
+        $version=$this->upload();
+        $this->approve($version);
+        $entitlement=$this->grant($version);
+        $url=route('account.downloads.file',$entitlement);
+        $this->actingAs($this->customer)->get($url)->assertOk();
+
+        $this->app->instance(VaultMalwareScanner::class,new class extends VaultMalwareScanner {
+            public function scanFile(string $absoluteFile): array
+            {
+                return ['status'=>'infected','engine'=>'ClamAV 1.4.0 (test double)',
+                    'note'=>'Test-only simulated threat result'];
+            }
+        });
+        $this->actingAs($this->reviewer)->post('/dashboard/file-vault/'.$version->id.'/scan')
+            ->assertRedirect();
+        $this->assertSame('disabled',$version->fresh()->status);
+        $this->actingAs($this->customer)->get($url)->assertForbidden();
+        $this->assertDatabaseCount('product_download_events',1);
+    }
+
 }
