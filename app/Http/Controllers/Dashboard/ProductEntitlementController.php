@@ -30,6 +30,10 @@ class ProductEntitlementController extends Controller
             ->latest()->paginate(10);
         $available = ProductFileVersion::query()
             ->where('status', 'approved')
+            ->where('malware_scan_status','clean')
+            ->where('rights_review_status','verified')
+            ->whereColumn('malware_scanned_sha256','sha256')
+            ->where('malware_scanned_at','>=',now()->subDays(max(1,min(365,(int)config('vault.max_scan_age_days',30)))))
             ->whereHas('product', fn ($q) => $q->where('type', 'product')->where('status', 'published'))
             ->with('product:id,title,public_id')->latest()->get();
 

@@ -181,6 +181,8 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/listings', [CreatorListingController::class, 'store'])->name('studio.listings.store')->middleware('throttle:10,1');
         Route::patch('/listings/{listing}', [CreatorListingController::class, 'update'])->name('studio.listings.update');
         Route::get('/products/{product}/releases', [ProductVaultController::class, 'index'])->name('studio.vault.index');
+        Route::patch('/products/{product}/releases/{version}/rights', [ProductVaultController::class,'evidence'])
+            ->name('studio.vault.rights');
         Route::post('/products/{product}/releases', [ProductVaultController::class, 'store'])
             ->name('studio.vault.store')->middleware('throttle:5,1');
         Route::get('/products', [CreatorProductController::class, 'index'])->name('studio.products.index');
@@ -201,6 +203,10 @@ Route::middleware('auth')->group(function (): void {
         Route::middleware('role:super_admin,admin')->group(function (): void {
             Route::get('/file-vault', [ProductVaultReviewController::class, 'index'])->name('dashboard.vault.index');
             Route::patch('/file-vault/{version}', [ProductVaultReviewController::class, 'decide'])->name('dashboard.vault.decide');
+            Route::post('/file-vault/{version}/scan', [ProductVaultReviewController::class,'scan'])
+                ->name('dashboard.vault.scan')->middleware('throttle:2,1');
+            Route::post('/file-vault/{version}/rights', [ProductVaultReviewController::class,'rights'])
+                ->name('dashboard.vault.rights')->middleware('throttle:10,1');
             Route::post('/file-vault/{version}/inspect', [ProductVaultReviewController::class, 'inspect'])
                 ->name('dashboard.vault.inspect')->middleware('throttle:10,1');
             Route::get('/notification-analytics', [NotificationAnalyticsController::class, 'index'])->name('dashboard.notifications.index');

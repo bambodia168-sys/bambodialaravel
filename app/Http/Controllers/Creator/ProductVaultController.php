@@ -37,6 +37,8 @@ class ProductVaultController extends Controller
             'version' => ['required', 'string', 'max:32', 'regex:/^[0-9]+\.[0-9]+\.[0-9]+$/'],
             'release_notes' => ['required', 'string', 'min:20', 'max:3000'],
             'rights_attested' => ['required', 'accepted'],
+            'rights_evidence' => ['required','string','min:30','max:3000'],
+            'rights_source_url' => ['nullable','url','starts_with:https://','max:500'],
             'artifact' => ['required', 'file', 'max:'.ProductVault::MAX_UPLOAD_KB],
         ]);
 
@@ -75,6 +77,10 @@ class ProductVaultController extends Controller
                     'byte_size' => $file->getSize(),
                     'sha256' => $inspection['sha256'],
                     'rights_attested_at' => now(),
+                    'rights_evidence'=>$data['rights_evidence'],
+                    'rights_source_url'=>$data['rights_source_url']??null,
+                    'rights_review_status'=>'pending',
+                    'malware_scan_status'=>'pending',
                     'status' => 'pending',
                 ]);
 
@@ -87,6 +93,31 @@ class ProductVaultController extends Controller
 
         return redirect()->route('studio.vault.index', $product)
             ->with('status', 'Release uploaded privately. An administrator must verify it before downloads are possible.');
+    }
+
+    public function evidence(Request $request, MarketplaceListing $product, ProductFileVersion $version): RedirectResponse
+    {
+        $product=$this->ownedProduct($request,$product);
+        abort_unless((int)$version->marketplace_listing_id===(int)$product->id,404);
+        $data=$request->validate([
+            'rights_evidence'=>['required','string','min:30','max:3000'],
+            'rights_source_url'=>['nullable','url','starts_with:https://','max:500'],
+        ]);
+        DB::transaction(function()use($request,$product,$version,$data){
+            $locked=ProductFileVersion::query()->lockForUpdate()->findOrFail($version->id);
+            abort_unless((int)$locked->marketplace_listing_id===(int)$product->id
+                && in_array($locked->status,['pending','approved'],true),409);
+
+            $locked->update([
+                'rights_evidence'=>$data['rights_evidence'],
+                'rights_source_url'=>$data['rights_source_url']??null,
+                'rights_attested_at'=>now(),
+                'rights_review_status'=>'pending','rights_reviewed_by'=>null,
+                'rights_reviewed_at'=>null,'rights_review_note'=>null,
+            ]);
+            AuditEvent::record('vault.rights.evidence_updated',$request->user(),$request);
+        });
+        return back()->with('status','Rights evidence updated. Independent review is required before downloads are permitted.');
     }
 
     private function ownedProduct(Request $request, MarketplaceListing $product): MarketplaceListing

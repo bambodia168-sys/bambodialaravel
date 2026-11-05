@@ -55,7 +55,7 @@ class ProductDownloadController extends Controller
             $locked = ProductEntitlement::query()->lockForUpdate()->findOrFail($entitlement->id);
             abort_unless($locked->isActive(), 403, 'Download access is no longer active.');
             $current = $version->fresh();
-            abort_unless($current && $current->status === 'approved', 403);
+            abort_unless($current && $current->isApproved(), 403);
             ProductDownloadEvent::query()->create([
                 'product_entitlement_id' => $locked->id,
                 'user_id' => $request->user()->id,
