@@ -46,7 +46,7 @@
                   </form>
                 </dialog>
               @elseif($product->status === 'published')
-                <a class="btn subtle compact" href="{{ $product->publicUrl() }}">View product</a>
+                <div class="table-actions"><a class="btn subtle compact" href="{{ $product->publicUrl() }}">View</a><a class="btn primary compact" href="{{ route('studio.vault.index', $product) }}">Releases</a></div>
               @else<span class="text-muted">Under review</span>@endif
             </td>
           </tr>

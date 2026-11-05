@@ -48,6 +48,7 @@
           <strong>{{ auth()->user()->name }}</strong>
           <span class="text-muted">ID {{ auth()->user()->public_id }}</span>
           <a href="{{ url('/account?='.auth()->user()->public_id) }}">{{ __('ui.my_account') }}</a>
+          <a href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
           @if(auth()->user()->isCreator())<a href="{{ url('/studio?='.auth()->user()->public_id) }}">{{ __('ui.creator_studio') }}</a>@elseif(in_array(auth()->user()->role, ['customer','subscriber'], true))<a href="{{ route('creator.apply') }}">Become a creator</a>@endif
           @if(auth()->user()->isAdministrator())<a href="{{ route('dashboard') }}">{{ __('ui.administration') }}</a>@endif
           <form action="{{ route('logout') }}" method="post">@csrf<button type="submit"><x-icon name="logout" size="16"/>{{ __('ui.sign_out') }}</button></form>

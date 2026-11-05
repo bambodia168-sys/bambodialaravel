@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\Account\ProductDownloadController;
+use App\Http\Controllers\Creator\ProductVaultController;
+use App\Http\Controllers\Dashboard\ProductVaultReviewController;
+use App\Http\Controllers\Dashboard\ProductEntitlementController;
 use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\MediaLibraryController;
 use App\Http\Controllers\Creator\ProductController as CreatorProductController;
@@ -64,6 +68,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1');
     Route::get('/support-center/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('support.show');
     Route::post('/support-center/{ticket}/reply', [SupportController::class, 'reply'])->whereNumber('ticket')->name('support.reply')->middleware('throttle:10,1');
+    Route::get('/account/downloads', [ProductDownloadController::class, 'index'])->name('account.downloads');
+    Route::get('/account/downloads/{entitlement}/file', [ProductDownloadController::class, 'download'])
+        ->name('account.downloads.file')->middleware('throttle:10,1');
     Route::get('/account', [AccountController::class, 'index'])->name('account');
     Route::patch('/account', [AccountController::class, 'update'])->name('account.update');
     Route::get('/studio', [AccountController::class, 'studio'])->name('studio');
@@ -79,6 +86,9 @@ Route::middleware('auth')->group(function (): void {
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
         Route::get('/listings', [CreatorListingController::class, 'index'])->name('studio.listings');
         Route::post('/listings', [CreatorListingController::class, 'store'])->name('studio.listings.store')->middleware('throttle:10,1');
+        Route::get('/products/{product}/releases', [ProductVaultController::class, 'index'])->name('studio.vault.index');
+        Route::post('/products/{product}/releases', [ProductVaultController::class, 'store'])
+            ->name('studio.vault.store')->middleware('throttle:5,1');
         Route::get('/products', [CreatorProductController::class, 'index'])->name('studio.products.index');
         Route::post('/products', [CreatorProductController::class, 'store'])->name('studio.products.store')->middleware('throttle:10,1');
         Route::patch('/products/{product}', [CreatorProductController::class, 'update'])->name('studio.products.update')->middleware('throttle:10,1');
@@ -95,6 +105,8 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/support-center/{ticket}/reply', [SupportCenterController::class, 'reply'])->whereNumber('ticket')->name('dashboard.support.reply');
         Route::patch('/support-center/{ticket}/status', [SupportCenterController::class, 'status'])->whereNumber('ticket')->name('dashboard.support.status');
         Route::middleware('role:super_admin,admin')->group(function (): void {
+            Route::get('/file-vault', [ProductVaultReviewController::class, 'index'])->name('dashboard.vault.index');
+            Route::patch('/file-vault/{version}', [ProductVaultReviewController::class, 'decide'])->name('dashboard.vault.decide');
             Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');
             Route::patch('/product-manager/{product}', [ProductManagerController::class, 'decide'])->name('dashboard.products.decide');
             Route::get('/license-manager', [LicenseManagerController::class, 'index'])->name('dashboard.licenses.index');
@@ -120,6 +132,11 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/review-queue/{listing}', [ReviewQueueController::class, 'decide'])->name('dashboard.reviews.update');
         });
         Route::middleware('role:super_admin')->group(function (): void {
+            Route::get('/entitlements', [ProductEntitlementController::class, 'index'])->name('dashboard.entitlements.index');
+            Route::post('/entitlements', [ProductEntitlementController::class, 'grant'])
+                ->name('dashboard.entitlements.grant')->middleware('throttle:6,1');
+            Route::patch('/entitlements/{entitlement}/revoke', [ProductEntitlementController::class, 'revoke'])
+                ->name('dashboard.entitlements.revoke');
             Route::get('/feature-manager', [FeatureManagerController::class, 'index'])->name('dashboard.features');
             Route::patch('/feature-manager/{feature}', [FeatureManagerController::class, 'update'])->name('dashboard.features.update');
             Route::get('/user-manager', [UserManagerController::class, 'index'])->name('dashboard.users');

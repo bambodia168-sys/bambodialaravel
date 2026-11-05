@@ -1,6 +1,8 @@
 @props(['name' => 'circle', 'size' => 20])
 @php
 $paths = [
+    'archive' => '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v12h14V8M10 12h4"/>',
+    'download' => '<path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/>',
     'image' => '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
     'upload' => '<path d="M12 16V3m0 0L7 8m5-5 5 5M4 17v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
     'scroll-text' => '<path d="M8 21h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v13a3 3 0 0 1-3 3M6 8h12M6 12h12M6 16h8"/>',
