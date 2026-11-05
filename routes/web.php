@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\ServiceInquiryController;
+use App\Http\Controllers\Dashboard\ServiceManagerController;
 use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\JobBoardController;
 use App\Http\Controllers\Dashboard\JobManagerController;
@@ -74,6 +76,13 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1');
     Route::get('/support-center/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('support.show');
     Route::post('/support-center/{ticket}/reply', [SupportController::class, 'reply'])->whereNumber('ticket')->name('support.reply')->middleware('throttle:10,1');
+    Route::get('/account/inquiries', [ServiceInquiryController::class, 'index'])->name('account.inquiries');
+    Route::get('/inquiries/{inquiry}', [ServiceInquiryController::class, 'show'])->name('inquiries.show');
+    Route::post('/inquiries/for/{listing}', [ServiceInquiryController::class, 'store'])
+        ->name('inquiries.store')->middleware('throttle:5,1');
+    Route::post('/inquiries/{inquiry}/reply', [ServiceInquiryController::class, 'reply'])
+        ->name('inquiries.reply')->middleware('throttle:20,1');
+    Route::patch('/inquiries/{inquiry}/close', [ServiceInquiryController::class, 'close'])->name('inquiries.close');
     Route::get('/resume-builder', [ResumeController::class, 'edit'])->name('resume.edit');
     Route::patch('/resume-builder', [ResumeController::class, 'update'])->name('resume.update');
     Route::get('/my-jobs', [JobBoardController::class, 'mine'])->name('jobs.mine');
@@ -100,6 +109,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/creator/apply', [CreatorApplicationController::class, 'show'])->name('creator.apply');
     Route::post('/creator/apply', [CreatorApplicationController::class, 'submit'])->name('creator.apply.store')->middleware('throttle:3,1');
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
+        Route::get('/inquiries', [ServiceInquiryController::class, 'index'])->name('studio.inquiries');
         Route::get('/listings', [CreatorListingController::class, 'index'])->name('studio.listings');
         Route::post('/listings', [CreatorListingController::class, 'store'])->name('studio.listings.store')->middleware('throttle:10,1');
         Route::get('/products/{product}/releases', [ProductVaultController::class, 'index'])->name('studio.vault.index');
@@ -125,6 +135,7 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/file-vault/{version}', [ProductVaultReviewController::class, 'decide'])->name('dashboard.vault.decide');
             Route::post('/file-vault/{version}/inspect', [ProductVaultReviewController::class, 'inspect'])
                 ->name('dashboard.vault.inspect')->middleware('throttle:10,1');
+            Route::get('/service-inquiries', [ServiceManagerController::class, 'index'])->name('dashboard.inquiries.index');
             Route::get('/job-manager', [JobManagerController::class, 'index'])->name('dashboard.jobs.index');
             Route::patch('/job-manager/{job}', [JobManagerController::class, 'decide'])->name('dashboard.jobs.decide');
             Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');

@@ -27,6 +27,30 @@
       </div>
     </section>
   @endif
+  @if(in_array($listing->type,['service','project','freelance'],true))
+    @auth
+      @if(in_array(auth()->user()->role,['customer','subscriber'],true) && (int)auth()->id() !== (int)$listing->user_id)
+      <section class="panel">
+        <div class="panel-head"><h2>Contact this creator privately</h2>
+          <button type="button" class="btn primary" data-modal-open="request-service">Start an inquiry</button>
+        </div>
+        <div class="listing-body"><p>Describe your project scope and an optional budget. Only you and the creator can read your discussion.</p></div>
+      </section>
+      <dialog class="config-dialog wide-dialog" id="request-service">
+        <form method="post" action="{{ route('inquiries.store',$listing) }}">@csrf
+          <h2>Request a service or project discussion</h2>
+          <label for="inquiry-subject">Subject</label><input id="inquiry-subject" name="subject" minlength="6" maxlength="180" required>
+          <label for="inquiry-body">Project brief</label><textarea id="inquiry-body" name="body" minlength="40" maxlength="5000" rows="7" required></textarea>
+          <label for="inquiry-budget">Proposed budget (USD, optional)</label><input id="inquiry-budget" name="proposed_budget" type="number" min="0" step="0.01">
+          <p class="hint">The inquiry starts a private conversation only. There is no payment processing or automatic contract.</p>
+          <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Cancel</button><button type="submit" class="btn primary">Send inquiry</button></div>
+        </form>
+      </dialog>
+      @endif
+    @else
+      <p><a class="btn subtle" href="{{ route('login') }}">Sign in to contact this creator</a></p>
+    @endauth
+  @endif
   <p class="text-muted">Purchasing and external payment acceptance are not enabled until independently verified transaction processing and license delivery are implemented.</p>
   <a class="btn subtle" href="{{ route('marketplace.search') }}">Back to listings</a>
 </div>

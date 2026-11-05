@@ -231,3 +231,11 @@ svg{flex-shrink:0}
 .hash-line{font-size:12px;overflow-wrap:anywhere;word-break:break-all}
 .history-entry{padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;line-height:1.65}
 .config-dialog h3{margin:18px 0 8px;font-size:14px;font-weight:800}
+
+/* Private buyer/creator inquiry threads */
+.conversation-thread{display:grid;gap:13px;padding:22px;max-height:640px;overflow-y:auto}
+.conversation-message{background:var(--surface-2);border:1px solid var(--line);border-radius:15px;padding:15px 17px;max-width:91%;line-height:1.7}
+.conversation-message.own{justify-self:end;border-color:var(--accent);background:var(--surface)}
+.conversation-byline{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:12px;margin-bottom:10px}
+.conversation-byline span{opacity:.65}
+.inquiry-close-form{margin-top:18px}

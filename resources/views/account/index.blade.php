@@ -20,6 +20,8 @@
   </section>
   <div class="studio-actions"><a class="btn primary" href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
   @if(in_array($user->role,['customer','subscriber','super_admin'],true))<a class="btn subtle" href="{{ route('jobs.mine') }}">My Job Posts</a>@endif
+  @if(in_array($user->role,['customer','subscriber'],true))<a class="btn subtle" href="{{ route('account.inquiries') }}">My Service Requests</a>@endif
+  @if($user->isCreator())<a class="btn subtle" href="{{ route('studio.inquiries') }}">Creator Inquiries</a>@endif
   @if($user->role==='freelancer')<a class="btn subtle" href="{{ route('resume.edit') }}">Resume Builder</a><a class="btn subtle" href="{{ route('jobs.applied') }}">My Proposals</a>@endif
   </div>
   @if($user->isCreator())<a class="btn subtle" href="{{ url('/studio?='.$user->public_id) }}">Creator Studio</a>

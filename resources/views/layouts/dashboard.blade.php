@@ -31,6 +31,7 @@
         <div class="sidebar-heading">Marketplace</div>
         <a class="{{ request()->routeIs('dashboard.products.*') ? 'active' : '' }}" href="{{ route('dashboard.products.index') }}"><x-icon name="package"/>Product Manager</a>
         <a class="{{ request()->routeIs('dashboard.jobs.*') ? 'active' : '' }}" href="{{ route('dashboard.jobs.index') }}"><x-icon name="briefcase"/>Job Manager</a>
+        <a class="{{ request()->routeIs('dashboard.inquiries.*') ? 'active' : '' }}" href="{{ route('dashboard.inquiries.index') }}"><x-icon name="message"/>Service Inquiries</a>
         <a class="{{ request()->routeIs('dashboard.media.*') ? 'active' : '' }}" href="{{ route('dashboard.media.index') }}"><x-icon name="image"/>Media Library</a>
         <a class="{{ request()->routeIs('dashboard.vault.*') ? 'active' : '' }}" href="{{ route('dashboard.vault.index') }}"><x-icon name="archive"/>Digital File Vault</a>
         <a class="{{ request()->routeIs('dashboard.licenses.*') ? 'active' : '' }}" href="{{ route('dashboard.licenses.index') }}"><x-icon name="scroll-text"/>License Manager</a>
