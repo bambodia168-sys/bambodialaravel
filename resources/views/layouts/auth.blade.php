@@ -9,7 +9,6 @@
 </head>
 <body class="auth-body">
 <main class="auth-shell">
-  <a href="{{ route('home') }}" class="auth-brand" aria-label="Bambodia homepage"><span class="brand-mark">B</span><span>Bambodia<span class="brand-dot">.</span></span></a>
   <section class="auth-card" aria-labelledby="auth-title">
     <div class="auth-card-head">
       <div class="eyebrow">Your marketplace account</div>
@@ -20,16 +19,17 @@
     @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
     @yield('content')
   </section>
-  <div class="auth-bottom"><a href="{{ route('home') }}">Back to Bambodia</a><button type="button" class="icon-button" data-theme-toggle aria-label="Toggle light or dark mode"><x-icon name="moon"/></button></div>
-<div class="auth-locale"><form method="post" action="{{ route('locale.update') }}" class="language-form">
-        @csrf
-        <label for="locale-auth" class="sr-only">{{ __('ui.language') }}</label>
-        <select id="locale-auth" name="locale" onchange="this.form.submit()" aria-label="{{ __('ui.language') }}">
-          @foreach(['en'=>'EN','zh'=>'中文','km'=>'ខ្មែរ','ko'=>'한국어','ja'=>'日本語','th'=>'ไทย','vi'=>'Tiếng Việt','de'=>'Deutsch'] as $code=>$native)
-            <option value="{{ $code }}" @selected(app()->getLocale()===$code)>{{ $native }}</option>
-          @endforeach
-        </select>
-      </form></div>
+  <nav class="auth-tools" aria-label="Account page controls">
+    <a class="auth-home-tool" href="{{ route('home') }}" aria-label="{{ __('ui.home') }}">
+      <x-icon name="home" size="18"/><span>{{ __('ui.home') }}</span>
+    </a>
+    <button type="button" class="auth-theme-tool" data-theme-toggle aria-label="Toggle light or dark mode">
+      <span class="theme-icon-moon"><x-icon name="moon" size="18"/></span>
+      <span class="theme-icon-sun"><x-icon name="sun" size="18"/></span>
+      <span class="sr-only">Toggle theme</span>
+    </button>
+    <x-language-menu :compact="true" />
+  </nav>
 </main>
 </body>
 </html>
