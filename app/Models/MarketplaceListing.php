@@ -9,9 +9,9 @@ use Illuminate\Support\Str;
 class MarketplaceListing extends Model
 {
     public const TYPES = ['product', 'project', 'freelance', 'service'];
-    public const STATUSES = ['pending', 'published', 'rejected'];
+    public const STATUSES = ['draft', 'pending', 'published', 'rejected'];
 
-    protected $fillable = ['user_id', 'type', 'title', 'description', 'price', 'currency', 'license_terms', 'status'];
+    protected $fillable = ['user_id', 'type', 'title', 'description', 'price', 'currency', 'license_terms', 'license_definition_id', 'cover_media_id', 'status'];
 
     protected function casts(): array
     {
@@ -39,6 +39,16 @@ class MarketplaceListing extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function licenseDefinition(): BelongsTo
+    {
+        return $this->belongsTo(LicenseDefinition::class, 'license_definition_id');
+    }
+
+    public function coverAsset(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'cover_media_id');
     }
 
     public function publicUrl(): string
