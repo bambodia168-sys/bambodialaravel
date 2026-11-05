@@ -13,6 +13,47 @@
   <div class="site-nav container">
     <a class="brand" href="{{ route('home') }}"><span class="brand-mark">B</span><span>Bambodia</span></a>
     @if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))
+    @php
+      $categoryGroups = \App\Models\MarketplaceCategory::query()
+        ->where('is_active', true)
+        ->orderBy('type')->orderBy('sort_order')->orderBy('name')
+        ->get(['public_id','type','name'])->groupBy('type');
+      $categoryTypes = ['product'=>'Product','project'=>'Project','service'=>'Service','freelance'=>'Freelance'];
+    @endphp
+    <details class="dropdown nav-category-menu" data-public-category-menu>
+      <summary class="nav-category-trigger" aria-label="Browse marketplace categories" title="Browse categories">
+        <x-icon name="grid" size="23"/>
+        <span class="sr-only">Categories</span>
+      </summary>
+      <div class="dropdown-panel nav-category-panel">
+        <div class="nav-category-intro">
+          <strong>Browse categories</strong>
+          <span>Discover products, projects, services and freelance work</span>
+        </div>
+        <nav class="nav-category-groups" aria-label="Marketplace categories">
+          @foreach($categoryTypes as $categoryType => $categoryLabel)
+            @php($items = $categoryGroups->get($categoryType, collect()))
+            <section class="nav-category-group" aria-label="{{ $categoryLabel }} categories">
+              <a class="nav-category-heading" href="{{ route('marketplace.search',['type'=>$categoryType]) }}">
+                <x-icon :name="match($categoryType) {'product'=>'package','project'=>'layers','service'=>'wrench',default=>'briefcase'}" size="18"/>
+                <span>{{ $categoryLabel }}</span>
+                <x-icon name="chevron-right" size="15"/>
+              </a>
+              @forelse($items as $category)
+                <a class="nav-category-entry" href="{{ route('marketplace.search',['type'=>$categoryType,'category'=>$category->public_id]) }}">
+                  {{ $category->name }}
+                </a>
+              @empty
+                <span class="nav-category-empty">No active categories yet</span>
+              @endforelse
+            </section>
+          @endforeach
+        </nav>
+        <a class="nav-category-explore" href="{{ route('marketplace.search') }}">Explore all listings <x-icon name="chevron-right" size="16"/></a>
+      </div>
+    </details>
+    @endif
+    @if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))
     <form class="nav-search" action="{{ url('/search') }}" method="get">
       <x-icon name="search" size="19"/>
       <input type="search" name="q" value="{{ request('q') }}" aria-label="Search marketplace" placeholder="{{ __('ui.search_placeholder') }}">
@@ -21,28 +62,13 @@
     @endif
     <div class="nav-actions">
       @if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))
-      <details class="dropdown mega">
-        <summary>{{ __('ui.categories') }}</summary>
-        <nav class="dropdown-panel mega-panel" aria-label="Browse categories">
-          <a href="{{ url('/search?type=product') }}"><x-icon name="package"/>{{ __('ui.digital_products') }}</a>
-          <a href="{{ url('/search?type=project') }}"><x-icon name="layers"/>{{ __('ui.projects') }}</a>
-          <a href="{{ url('/search?type=freelance') }}"><x-icon name="briefcase"/>{{ __('ui.freelance') }}</a>
-          <a href="{{ url('/search?type=service') }}"><x-icon name="settings"/>{{ __('ui.services') }}</a>
-          <a href="{{ route('creators.index') }}"><x-icon name="users"/>Explore creators</a>
-          @php
-            $menuCategories = \App\Models\MarketplaceCategory::query()->where('is_active',true)
-              ->orderBy('type')->orderBy('sort_order')->orderBy('name')->limit(24)->get();
-          @endphp
-          @foreach($menuCategories as $category)
-          <a href="{{ route('marketplace.search',['type'=>$category->type,'category'=>$category->public_id]) }}">
-            <x-icon name="layers"/>{{ $category->name }}
-          </a>
-          @endforeach
+        <nav class="nav-marketplace-links" aria-label="Marketplace">
+          <a href="{{ route('marketplace.search',['type'=>'product']) }}">Product</a>
+          <a href="{{ route('marketplace.search',['type'=>'project']) }}">Project</a>
+          <a href="{{ route('marketplace.search',['type'=>'service']) }}">Service</a>
+          <a href="{{ route('marketplace.search',['type'=>'freelance']) }}">Freelance</a>
         </nav>
-      </details>
       @endif
-      <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle light or dark mode"><x-icon name="moon"/></button>
-      <x-language-menu/>
       @auth
       <details class="dropdown profile-dropdown">
         <summary class="profile-trigger" aria-label="Profile menu"><x-icon name="user" size="19"/></summary>
@@ -64,11 +90,30 @@
           @if(auth()->user()->isCreator())<a href="{{ route('studio.profile.edit') }}"><x-icon name="user" size="16"/> Creator Profile</a><a href="{{ url('/studio?='.auth()->user()->public_id) }}">{{ __('ui.creator_studio') }}</a>@elseif(in_array(auth()->user()->role, ['customer','subscriber'], true))<a href="{{ route('creator.apply') }}">Become a creator</a>@endif
           @if(auth()->user()->isAdministrator())<a href="{{ route('dashboard') }}">{{ __('ui.administration') }}</a>@endif
           <form action="{{ route('logout') }}" method="post">@csrf<button type="submit"><x-icon name="logout" size="16"/>{{ __('ui.sign_out') }}</button></form>
+          <div class="profile-theme-row">
+            <button type="button" class="profile-theme-toggle" data-theme-toggle>
+              <span class="theme-icon-moon"><x-icon name="moon" size="17"/></span>
+              <span class="theme-icon-sun"><x-icon name="sun" size="17"/></span>
+              <span data-theme-label>Switch theme</span>
+            </button>
+          </div>
         </div>
       </details>
       @else
-      <a class="btn subtle compact" href="{{ route('login') }}">{{ __('ui.sign_in') }}</a>
-      @if(\App\Models\FeatureFlag::isEnabled('registration'))<a class="btn primary compact" href="{{ route('register') }}">{{ __('ui.join') }}</a>@endif
+      <details class="dropdown profile-dropdown">
+        <summary class="profile-trigger" aria-label="Account menu"><x-icon name="user" size="19"/></summary>
+        <div class="dropdown-panel profile-panel">
+          <a href="{{ route('login') }}">{{ __('ui.sign_in') }}</a>
+          @if(\App\Models\FeatureFlag::isEnabled('registration'))<a href="{{ route('register') }}">{{ __('ui.join') }}</a>@endif
+          <div class="profile-theme-row">
+            <button type="button" class="profile-theme-toggle" data-theme-toggle>
+              <span class="theme-icon-moon"><x-icon name="moon" size="17"/></span>
+              <span class="theme-icon-sun"><x-icon name="sun" size="17"/></span>
+              <span data-theme-label>Switch theme</span>
+            </button>
+          </div>
+        </div>
+      </details>
       @endauth
     </div>
   </div>
@@ -106,7 +151,15 @@
       @if($footerPolicies->has('terms'))<a href="{{ $footerPolicies->get('terms')->publicUrl() }}">Terms of Service</a>@endif
     </div>
   </div>
-  <div class="container footer-bottom"><span>© {{ date('Y') }} Bambodia · All Rights Reserved.</span><div class="footer-social"><a href="https://tonsamith.com" target="_blank" rel="noopener noreferrer" aria-label="Author website"><x-icon name="globe" size="18"/></a><a href="https://github.com/bambodia168-sys/bambodialaravel" target="_blank" rel="noopener noreferrer" aria-label="Bambodia GitHub repository"><x-icon name="github" size="18"/></a></div></div>
+  <div class="container footer-bottom"><span>© {{ date('Y') }} Bambodia · All Rights Reserved.</span>
+    <div class="footer-actions">
+      <div class="footer-social" aria-label="Social media">
+        <a href="https://tonsamith.com" target="_blank" rel="noopener noreferrer" aria-label="Author website"><x-icon name="globe" size="18"/></a>
+        <a href="https://github.com/bambodia168-sys/bambodialaravel" target="_blank" rel="noopener noreferrer" aria-label="Bambodia GitHub repository"><x-icon name="github" size="18"/></a>
+      </div>
+      <x-language-menu/>
+    </div>
+  </div>
 </footer>
 </body>
 </html>
