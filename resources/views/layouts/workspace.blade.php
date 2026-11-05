@@ -171,15 +171,30 @@
       @endforeach
       <div class="workspace-empty-search" hidden>No matching menu items</div>
     </nav>
-    <div class="workspace-sidebar-bottom">
-      <a href="{{ route('home') }}" class="workspace-nav-link" title="Public website">
-        <x-icon name="home" size="19"/><span class="workspace-nav-text">Public website</span>
+    <div class="workspace-sidebar-bottom" aria-label="Switch workspaces">
+      @if($workspace !== 'admin' && $user->isAdministrator())
+      <a href="{{ route('dashboard') }}" class="workspace-nav-link" title="Admin Dashboard">
+        <x-icon name="layout-dashboard" size="19"/><span class="workspace-nav-text">Administration</span>
       </a>
+      @endif
+      @if($workspace !== 'developer' && $user->role === 'super_admin')
+      <a href="{{ route('developer.index') }}" class="workspace-nav-link" title="Developer Workspace">
+        <x-icon name="terminal" size="19"/><span class="workspace-nav-text">Developer Workspace</span>
+      </a>
+      @endif
+      @if($workspace !== 'creator' && $user->isCreator())
+      <a href="{{ route('creator') }}" class="workspace-nav-link" title="Creator Studio">
+        <x-icon name="palette" size="19"/><span class="workspace-nav-text">Creator Studio</span>
+      </a>
+      @endif
       @if($workspace !== 'account')
       <a href="{{ route('account') }}" class="workspace-nav-link" title="My Account">
         <x-icon name="user" size="19"/><span class="workspace-nav-text">My Account</span>
       </a>
       @endif
+      <a href="{{ route('home') }}" class="workspace-nav-link" title="Public website">
+        <x-icon name="home" size="19"/><span class="workspace-nav-text">Public website</span>
+      </a>
     </div>
   </aside>
   <div class="workspace-backdrop" data-workspace-backdrop aria-hidden="true"></div>
