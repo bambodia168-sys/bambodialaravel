@@ -28,6 +28,7 @@
         <a class="{{ request()->routeIs('dashboard.posts*') ? 'active' : '' }}" href="{{ route('dashboard.posts') }}"><x-icon name="edit"/>Post Manager</a>
         <a class="{{ request()->routeIs('dashboard.policies*') ? 'active' : '' }}" href="{{ route('dashboard.policies') }}"><x-icon name="book"/>Policy Center</a>
         <div class="sidebar-heading">Marketplace</div>
+        <a class="{{ request()->routeIs('dashboard.creator-applications*') ? 'active' : '' }}" href="{{ route('dashboard.creator-applications') }}"><x-icon name="user-check"/>Creator Applications</a>
         <a class="{{ request()->routeIs('dashboard.reviews') ? 'active' : '' }}" href="{{ route('dashboard.reviews') }}"><x-icon name="shield"/>Review Queue</a>
       @endif
       <div class="sidebar-heading">Customer Care</div>

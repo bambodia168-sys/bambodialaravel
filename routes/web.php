@@ -5,6 +5,8 @@ use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\SecurityDashboardController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Creator\ListingController as CreatorListingController;
+use App\Http\Controllers\Creator\CreatorApplicationController;
+use App\Http\Controllers\Dashboard\CreatorReviewController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\ReviewQueueController;
 use App\Http\Controllers\Dashboard\UserManagerController;
@@ -57,7 +59,11 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/account', [AccountController::class, 'index'])->name('account');
     Route::patch('/account', [AccountController::class, 'update'])->name('account.update');
     Route::get('/studio', [AccountController::class, 'studio'])->name('studio');
-    Route::get('/creator', fn () => redirect('/studio?='.auth()->user()->public_id))->name('creator');
+    Route::get('/creator', fn () => redirect(auth()->user()->isCreator()
+        ? '/studio?='.auth()->user()->public_id
+        : route('creator.apply')))->name('creator');
+    Route::get('/creator/apply', [CreatorApplicationController::class, 'show'])->name('creator.apply');
+    Route::post('/creator/apply', [CreatorApplicationController::class, 'submit'])->name('creator.apply.store')->middleware('throttle:3,1');
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
         Route::get('/listings', [CreatorListingController::class, 'index'])->name('studio.listings');
         Route::post('/listings', [CreatorListingController::class, 'store'])->name('studio.listings.store')->middleware('throttle:10,1');
@@ -79,6 +85,8 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/policy-center', [PolicyManagerController::class, 'index'])->name('dashboard.policies');
             Route::post('/policy-center', [PolicyManagerController::class, 'store'])->name('dashboard.policies.store');
             Route::patch('/policy-center/{policy}', [PolicyManagerController::class, 'update'])->name('dashboard.policies.update');
+            Route::get('/creator-applications', [CreatorReviewController::class, 'index'])->name('dashboard.creator-applications');
+            Route::patch('/creator-applications/{application}', [CreatorReviewController::class, 'decide'])->name('dashboard.creator-applications.decide');
             Route::get('/review-queue', [ReviewQueueController::class, 'index'])->name('dashboard.reviews');
             Route::patch('/review-queue/{listing}', [ReviewQueueController::class, 'decide'])->name('dashboard.reviews.update');
         });

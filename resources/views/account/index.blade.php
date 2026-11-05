@@ -18,6 +18,7 @@
       <button class="btn primary" type="submit">Save changes</button>
     </form>
   </section>
-  @if($user->isCreator())<a class="btn subtle" href="{{ url('/studio?='.$user->public_id) }}">Creator studio</a>@endif
+  @if($user->isCreator())<a class="btn subtle" href="{{ url('/studio?='.$user->public_id) }}">Creator Studio</a>
+  @elseif(in_array($user->role, ['customer','subscriber'], true))<a class="btn subtle" href="{{ route('creator.apply') }}">Become a creator</a>@endif
 </div>
 @endsection

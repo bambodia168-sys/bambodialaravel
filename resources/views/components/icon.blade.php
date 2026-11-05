@@ -1,6 +1,7 @@
 @props(['name' => 'circle', 'size' => 20])
 @php
 $paths = [
+    'user-check' => '<circle cx="9" cy="8" r="4"/><path d="M2 21v-2a7 7 0 0 1 14 0M17 14l2 2 4-4"/>',
     'key' => '<circle cx="7" cy="15" r="4"/><path d="m10 12 11-11M18 4l3 3M15 7l3 3"/>',
     'activity' => '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
     'terminal' => '<rect x="2" y="3" width="20" height="18" rx="2"/><path d="m6 8 4 4-4 4M12 16h6"/>',
