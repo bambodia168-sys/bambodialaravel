@@ -114,11 +114,12 @@ try {
       await page.goto(origin+'/en/account/saved-jobs',{waitUntil:'networkidle'});
       if(!(await page.locator('body.workspace-collapsed').count()))
         throw new Error('Sidebar collapse preference was not persisted between pages');
+      // Expand labels before checking visibility of matching menu text.
+      await page.locator('[data-workspace-toggle]').click();
       await page.locator('[data-workspace-search]').fill('Notifications');
       if(!(await page.locator('.workspace-nav-link:visible').getByText('Notifications').isVisible()))
         throw new Error('Workspace navigation search not functional');
       await page.locator('[data-workspace-search]').fill('');
-      await page.locator('[data-workspace-toggle]').click();
       checks+=5;
 
       // Admin and Developer have separate role-governed menus, not account clones.
