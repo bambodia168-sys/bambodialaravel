@@ -18,3 +18,10 @@ New application under development. This repository is **not yet production-deplo
 Copyright (c) 2026 Ton Samith. All rights reserved.
 
 Bambodia-specific application code is proprietary and is not licensed for redistribution without written permission. The Laravel application skeleton and third-party packages retain their own licenses. Marketplace products will have individual license terms that must be displayed and accepted before purchase; code repository licensing does not grant product resale rights.
+
+
+## Working marketplace administration
+
+The current codebase includes Creator Product Manager, private preview Media Library and reviewed License Manager alongside earlier authentication, CMS, Policy Center, Support Center and Developer/Security workspaces. Review the module-specific publication gates in docs/architecture.md.
+
+Source-file delivery, paid checkout and financial processing are not implemented. No live website deployment has been performed.

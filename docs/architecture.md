@@ -44,7 +44,7 @@ Roles are protected by server-side Laravel middleware, not only by hiding menu l
 
 ## Not implemented / never shown as working
 
-Purchases, checkout, external payment gateways, refunds, payouts, tax invoices, fulfillment and license-key delivery; freelance contracts and escrow; job applications; verified resumes; media library; broad third-party API integrations; plugin execution; security incident response automation; live chat; email provider management; international policy/legal certification; complete per-locale translated text; and other requested manager modules outside the current implemented workflow.
+Purchases, checkout, external payment gateways, refunds, payouts, tax invoices, fulfillment and license-key delivery; freelance contracts and escrow; job applications; verified resumes; secure original-source artifact delivery; broad third-party API integrations; plugin execution; security incident response automation; live chat; email provider management; international policy/legal certification; complete per-locale translated text; and other requested manager modules outside the current implemented workflow.
 
 No financial transaction must be accepted until provider-side verification, refunds/chargeback handling, payout accounting and merchant eligibility are independently validated. A legal professional must approve and publish policies appropriate to each served jurisdiction.
 
@@ -61,3 +61,16 @@ A one-click release archive must include Composer vendor dependencies and compil
 For audit retention, set a hosting cron job to execute Laravel schedule:run every minute, after installation. audit:prune deletes event records older than 90 days on that schedule. GitHub CI and packaged ZIP creation are not substitutes for an aaPanel/cPanel clean-install test or a supported SMTP integration test.
 
 Developer API contract: docs/developer-api.md.
+
+
+## Product, Media and License Manager milestone
+
+- /studio/products: draft and rejected product editing, owner-only preview selections, active license selection, and submission to the real review queue.
+- /dashboard/product-manager: filtered ten-row product table, review decisions, and mandatory license/media checks before publishing.
+- /studio/media-library and /dashboard/media-library: private JPEG/PNG/WebP preview uploads, rights-holder statements, admin rights review, guarded preview route, and deletion blocked while linked.
+- /dashboard/license-manager: administrator-maintained versioned definitions, explicit permissions and restrictions, published license pages, legal-review confirmation, and immutability once referenced.
+- A digital product cannot pass moderation without an active license, a rights-approved image owned by its creator, and an existing private image file. The same gate is enforced from the general Review Queue.
+- Media uploads are for preview imagery only, limited to 4 MB and 24 megapixels; SVG and raw executable files are rejected.
+- Prices are informational. Original digital-product source ZIPs, secure download fulfillment, orders, payments, refunds, and purchase entitlements are NOT implemented, and must not be presented as working.
+
+Media rights approval is performed by administrators based on the available rights declaration; it is not independent proof of ownership or a legal compliance certification. Deployment on aaPanel or cPanel and native-device checks remain outstanding.

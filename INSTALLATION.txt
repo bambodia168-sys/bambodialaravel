@@ -31,3 +31,11 @@ Use the PHP binary for your installed application and set the correct absolute p
 
 DEVELOPER AND SECURITY MODULES
 /developer and /security-dashboard require a Super Admin account. Use /developer/docs for the available read-only API methods. Credentials are shown once and stored only as hashes; scope, expiration and revocation are enforced on every request. The security audit stores no raw IP addresses or request body contents.
+
+
+PRODUCT AND MEDIA ACCEPTANCE
+Create a license definition in /dashboard/license-manager and activate it after human legal review. An approved Creator uploads genuine JPEG, PNG or WebP previews in /studio/media-library, with rights-holder data. An administrator reviews those images in /dashboard/media-library. A Creator can then submit a Product with the active license and approved owned image in /studio/products. An administrator approves or rejects in /dashboard/product-manager.
+
+Private media files must remain in storage/app/private, never in a public symlink. The public document root must remain the Laravel public/ directory. Site operators must independently verify host limits for PHP upload sizes, file permissions, HTTPS and PHP modules.
+
+Only preview images are available for this release. Original downloadable source artifacts, license delivery, payment validation, and secure purchase entitlements are not active. The release is not approved for customer transactions.
