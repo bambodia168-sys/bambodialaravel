@@ -34,6 +34,7 @@ class FeatureManagerTest extends TestCase
         $this->patch('/dashboard/feature-manager/'.$registration->id, ['enabled' => '0'])
             ->assertRedirect();
 
+        $this->post('/logout')->assertRedirect();
         $this->get('/register')->assertNotFound();
         $this->post('/register', [
             'name' => 'New Account', 'email' => 'new@example.test',
