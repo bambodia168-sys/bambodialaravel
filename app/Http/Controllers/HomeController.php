@@ -7,6 +7,7 @@ use App\Models\MarketplaceCategory;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
+use App\Models\SavedJob;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -44,9 +45,14 @@ class HomeController extends Controller
 
         $recentJobs=MarketplaceJob::query()->where('status','published')
             ->latest('id')->limit(4)->with('client:id,name,public_id')->get();
+        $savedJobIds=$request->user()
+            ? SavedJob::query()->where('user_id',$request->user()->id)
+                ->whereIn('marketplace_job_id',$recentJobs->pluck('id'))
+                ->pluck('marketplace_job_id')->map(fn($id)=>(int)$id)->all()
+            : [];
 
         return view('home',compact(
-            'searchEnabled','recentListings','categories','listingTotals','savedIds','recentJobs'
+            'searchEnabled','recentListings','categories','listingTotals','savedIds','recentJobs','savedJobIds'
         ));
     }
 }

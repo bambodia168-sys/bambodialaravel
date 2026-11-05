@@ -44,6 +44,8 @@ class AuditEvent extends Model
         'job.review.rejected',
         'job.proposal.submitted',
         'job.proposal.reviewed',
+        'job.saved',
+        'job.unsaved',
         'inquiry.submitted',
         'inquiry.replied',
         'inquiry.closed',

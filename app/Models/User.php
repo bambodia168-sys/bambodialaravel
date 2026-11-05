@@ -50,6 +50,11 @@ class User extends Authenticatable
         return $this->hasMany(MarketplaceListing::class,'user_id')->publiclyAvailable();
     }
 
+    public function savedJobs(): HasMany
+    {
+        return $this->hasMany(SavedJob::class);
+    }
+
     public function savedListings(): HasMany
     {
         return $this->hasMany(SavedListing::class);

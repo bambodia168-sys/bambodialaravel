@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\SavedJobController;
 use App\Http\Controllers\SavedListingController;
 use App\Http\Controllers\Creator\CreatorProfileController;
 use App\Http\Controllers\HomeController;
@@ -106,6 +107,11 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/account/policy-receipts', [PolicyAcknowledgementController::class,'index'])->name('account.policy-receipts');
     Route::post('/policies/acknowledgements/{publication}', [PolicyAcknowledgementController::class,'acknowledge'])
         ->name('policy.acknowledge')->middleware('throttle:10,1');
+    Route::get('/account/saved-jobs', [SavedJobController::class,'index'])->name('account.saved-jobs');
+    Route::post('/account/saved-jobs/{job}', [SavedJobController::class,'store'])
+        ->name('saved-jobs.store')->middleware('throttle:20,1');
+    Route::delete('/account/saved-jobs/{job}', [SavedJobController::class,'destroy'])
+        ->name('saved-jobs.destroy')->middleware('throttle:20,1');
     Route::get('/account/saved-listings', [SavedListingController::class,'index'])->name('account.saved-listings');
     Route::post('/account/saved-listings/{listing}', [SavedListingController::class,'store'])
         ->name('saved-listings.store')->middleware('throttle:20,1');

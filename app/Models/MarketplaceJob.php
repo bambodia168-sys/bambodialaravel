@@ -28,6 +28,11 @@ class MarketplaceJob extends Model
             throw new \RuntimeException('Unique job ID could not be allocated.');
         });
     }
+    public function savedBy(): HasMany
+    {
+        return $this->hasMany(SavedJob::class,'marketplace_job_id');
+    }
+
     public function client(): BelongsTo { return $this->belongsTo(User::class, 'client_id'); }
     public function proposals(): HasMany { return $this->hasMany(JobProposal::class, 'marketplace_job_id'); }
     public function publicUrl(): string { return route('jobs.show', $this->public_id.'-'.$this->slug); }

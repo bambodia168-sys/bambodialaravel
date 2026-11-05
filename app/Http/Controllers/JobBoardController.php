@@ -7,6 +7,7 @@ use App\Models\AccountNotification;
 use App\Models\FreelancerResume;
 use App\Models\JobProposal;
 use App\Models\MarketplaceJob;
+use App\Models\SavedJob;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,12 +19,27 @@ class JobBoardController extends Controller
     public function index(Request $request): View
     {
         $search = mb_substr(trim((string)$request->query('q','')),0,120);
+        $category=(string)$request->query('category','');
+        abort_unless($category==='' || in_array($category,['development','design','writing','marketing','business','other'],true),404);
+        $sort=(string)$request->query('sort','recent');
+        abort_unless(in_array($sort,['recent','budget_low','budget_high'],true),404);
         $jobs = MarketplaceJob::query()->with('client:id,name,public_id')->withCount('proposals')
             ->where('status','published')
+            ->when($category!=='',fn($q)=>$q->where('category',$category))
             ->when($search !== '', fn($q)=>$q->where(function($query)use($search){
                 $query->where('title','like','%'.$search.'%')->orWhere('description','like','%'.$search.'%');
-            }))->latest()->paginate(10)->withQueryString();
-        return view('jobs.index', compact('jobs','search'));
+            }))
+            ->when($sort==='budget_low'||$sort==='budget_high',fn($q)=>$q
+                ->orderByRaw('CASE WHEN budget IS NULL THEN 1 ELSE 0 END')
+                ->orderBy('budget',$sort==='budget_low'?'asc':'desc'))
+            ->when($sort==='recent',fn($q)=>$q->orderByDesc('created_at'))
+            ->orderByDesc('id')->paginate(10)->withQueryString();
+        $savedJobIds=$request->user()
+            ? SavedJob::query()->where('user_id',$request->user()->id)
+                ->whereIn('marketplace_job_id',$jobs->pluck('id'))
+                ->pluck('marketplace_job_id')->map(fn($id)=>(int)$id)->all()
+            : [];
+        return view('jobs.index',compact('jobs','search','category','sort','savedJobIds'));
     }
 
     public function show(Request $request, string $job): View
@@ -34,7 +50,11 @@ class JobBoardController extends Controller
         $applied = $request->user()
             ? JobProposal::query()->where('marketplace_job_id',$listing->id)->where('freelancer_id',$request->user()->id)->exists()
             : false;
-        return view('jobs.show',['job'=>$listing,'applied'=>$applied]);
+        $isSaved=$request->user()
+            ? SavedJob::query()->where('user_id',$request->user()->id)
+                ->where('marketplace_job_id',$listing->id)->exists()
+            : false;
+        return view('jobs.show',['job'=>$listing,'applied'=>$applied,'isSaved'=>$isSaved]);
     }
 
     public function mine(Request $request): View

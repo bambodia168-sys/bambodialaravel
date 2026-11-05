@@ -8,6 +8,7 @@ use App\Models\JobProposal;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
+use App\Models\SavedJob;
 use App\Models\ServiceInquiry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,6 +27,7 @@ class AccountController extends Controller
         $user=$request->user();
         $stats=[
             'saved'=>SavedListing::query()->where('user_id',$user->id)->count(),
+            'saved_jobs'=>SavedJob::query()->where('user_id',$user->id)->count(),
             'unread'=>AccountNotification::query()->where('user_id',$user->id)->whereNull('read_at')->count(),
             'contracts'=>FreelanceContract::query()->where(function($query)use($user){
                 $query->where('client_id',$user->id)->orWhere(function($q)use($user){
