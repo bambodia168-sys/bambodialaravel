@@ -23,7 +23,10 @@ class FreelanceContractController extends Controller
         $contracts=FreelanceContract::query()
             ->where(function($q)use($request){
                 $q->where('client_id',$request->user()->id)
-                    ->orWhere('freelancer_id',$request->user()->id);
+                    ->orWhere(function($work)use($request){
+                        $work->where('freelancer_id',$request->user()->id)
+                            ->where('status','!=','draft');
+                    });
             })
             ->with(['client:id,name,public_id','freelancer:id,name,public_id'])
             ->latest()->paginate(10);
@@ -73,6 +76,8 @@ class FreelanceContractController extends Controller
     public function show(Request $request,FreelanceContract $contract): View
     {
         abort_unless($contract->isParticipant((int)$request->user()->id),404);
+        abort_if($contract->status==='draft' && (int)$contract->client_id!==(int)$request->user()->id,
+            404,'Unsent drafts are private to the client.');
         $contract->load(['client:id,name,public_id','freelancer:id,name,public_id',
             'milestones','proposal:id,marketplace_job_id,cover_message,proposed_budget',
             'dispute','consents.actor:id,name']);

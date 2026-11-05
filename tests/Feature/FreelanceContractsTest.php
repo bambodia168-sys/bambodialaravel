@@ -135,6 +135,8 @@ class FreelanceContractsTest extends TestCase
         $this->assertSame('draft',$contract->status);
         $this->actingAs($this->client)->get('/contracts/'.$contract->public_id)
             ->assertOk()->assertSee($contract->title)->assertSee('Agreement scope and terms');
+        $this->actingAs($this->freelancer)->get('/contracts/'.$contract->public_id)->assertNotFound();
+        $this->get('/contracts')->assertDontSee($contract->title);
         $this->actingAs($this->stranger)->get('/contracts/'.$contract->public_id)->assertNotFound();
         $this->actingAs($this->admin)->get('/contracts/'.$contract->public_id)->assertNotFound();
         $this->get('/dashboard/contract-manager')->assertOk()->assertSee($contract->public_id);
