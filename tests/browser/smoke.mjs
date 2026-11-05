@@ -53,7 +53,7 @@ try {
           throw new Error(device.name+' '+path+' missing Home SVG');
         if(!(await page.locator('.auth-tools [data-theme-toggle]').isVisible()))
           throw new Error(device.name+' '+path+' missing theme control');
-        if(!(await page.locator('.auth-tools .language-menu .locale-flag').isVisible()))
+        if(!(await page.locator('.auth-tools .language-menu summary .locale-flag').isVisible()))
           throw new Error(device.name+' '+path+' missing language SVG flag');
       }
       if(path==='/register'){
