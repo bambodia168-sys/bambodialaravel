@@ -1,0 +1,54 @@
+name: Bambodia MySQL Installer Acceptance
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-install:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: acceptance-root-only
+          MYSQL_DATABASE: bambodia_acceptance
+          MYSQL_USER: bambodia_acceptance
+          MYSQL_PASSWORD: acceptance-only-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: bambodia_acceptance
+      DB_USERNAME: bambodia_acceptance
+      DB_PASSWORD: acceptance-only-password
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, dom, pdo_mysql, fileinfo, xml, curl
+          coverage: none
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Composer dependencies
+        run: composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+      - name: Build frontend
+        run: |
+          npm install --ignore-scripts
+          npm run build
+      - name: Five-step browser installation against real MySQL
+        run: bash tests/installer/acceptance.sh
