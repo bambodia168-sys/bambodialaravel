@@ -15,38 +15,47 @@
     @if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))
     <form class="nav-search" action="{{ url('/search') }}" method="get">
       <x-icon name="search" size="19"/>
-      <input type="search" name="q" value="{{ request('q') }}" aria-label="Search marketplace" placeholder="Search products, projects and services">
-      <button type="submit">Search</button>
+      <input type="search" name="q" value="{{ request('q') }}" aria-label="Search marketplace" placeholder="{{ __('ui.search_placeholder') }}">
+      <button type="submit">{{ __('ui.search') }}</button>
     </form>
     @endif
     <div class="nav-actions">
       @if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))
       <details class="dropdown mega">
-        <summary>Categories</summary>
+        <summary>{{ __('ui.categories') }}</summary>
         <nav class="dropdown-panel mega-panel" aria-label="Browse categories">
-          <a href="{{ url('/search?type=product') }}"><x-icon name="package"/>Digital products</a>
-          <a href="{{ url('/search?type=project') }}"><x-icon name="layers"/>Projects</a>
-          <a href="{{ url('/search?type=freelance') }}"><x-icon name="briefcase"/>Freelance</a>
-          <a href="{{ url('/search?type=service') }}"><x-icon name="settings"/>Services</a>
+          <a href="{{ url('/search?type=product') }}"><x-icon name="package"/>{{ __('ui.digital_products') }}</a>
+          <a href="{{ url('/search?type=project') }}"><x-icon name="layers"/>{{ __('ui.projects') }}</a>
+          <a href="{{ url('/search?type=freelance') }}"><x-icon name="briefcase"/>{{ __('ui.freelance') }}</a>
+          <a href="{{ url('/search?type=service') }}"><x-icon name="settings"/>{{ __('ui.services') }}</a>
         </nav>
       </details>
       @endif
       <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle light or dark mode"><x-icon name="moon"/></button>
+      <form method="post" action="{{ route('locale.update') }}" class="language-form">
+        @csrf
+        <label for="locale-main" class="sr-only">{{ __('ui.language') }}</label>
+        <select id="locale-main" name="locale" onchange="this.form.submit()" aria-label="{{ __('ui.language') }}">
+          @foreach(['en'=>'EN','zh'=>'中文','km'=>'ខ្មែរ','ko'=>'한국어','ja'=>'日本語','th'=>'ไทย','vi'=>'Tiếng Việt','de'=>'Deutsch'] as $code=>$native)
+            <option value="{{ $code }}" @selected(app()->getLocale()===$code)>{{ $native }}</option>
+          @endforeach
+        </select>
+      </form>
       @auth
       <details class="dropdown profile-dropdown">
         <summary class="profile-trigger" aria-label="Profile menu"><x-icon name="user" size="19"/></summary>
         <div class="dropdown-panel profile-panel">
           <strong>{{ auth()->user()->name }}</strong>
           <span class="text-muted">ID {{ auth()->user()->public_id }}</span>
-          <a href="{{ url('/account?='.auth()->user()->public_id) }}">My account</a>
-          @if(auth()->user()->isCreator())<a href="{{ url('/studio?='.auth()->user()->public_id) }}">Creator studio</a>@endif
-          @if(auth()->user()->isAdministrator())<a href="{{ route('dashboard') }}">Administration</a>@endif
-          <form action="{{ route('logout') }}" method="post">@csrf<button type="submit"><x-icon name="logout" size="16"/> Sign out</button></form>
+          <a href="{{ url('/account?='.auth()->user()->public_id) }}">{{ __('ui.my_account') }}</a>
+          @if(auth()->user()->isCreator())<a href="{{ url('/studio?='.auth()->user()->public_id) }}">{{ __('ui.creator_studio') }}</a>@endif
+          @if(auth()->user()->isAdministrator())<a href="{{ route('dashboard') }}">{{ __('ui.administration') }}</a>@endif
+          <form action="{{ route('logout') }}" method="post">@csrf<button type="submit"><x-icon name="logout" size="16"/>{{ __('ui.sign_out') }}</button></form>
         </div>
       </details>
       @else
-      <a class="btn subtle compact" href="{{ route('login') }}">Sign in</a>
-      @if(\App\Models\FeatureFlag::isEnabled('registration'))<a class="btn primary compact" href="{{ route('register') }}">Join Bambodia</a>@endif
+      <a class="btn subtle compact" href="{{ route('login') }}">{{ __('ui.sign_in') }}</a>
+      @if(\App\Models\FeatureFlag::isEnabled('registration'))<a class="btn primary compact" href="{{ route('register') }}">{{ __('ui.join') }}</a>@endif
       @endauth
     </div>
   </div>
@@ -60,13 +69,13 @@
       @if(Route::has('blog'))<a href="{{ route('blog') }}">Blog</a>@endif
       @if(Route::has('contact'))<a href="{{ route('contact') }}">Contact</a>@endif
     </div>
-    <div><h3>Marketplace</h3>@if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))<a href="{{ url('/search?type=project') }}">Find Projects</a><a href="{{ url('/search?type=product') }}">Find Products</a><a href="{{ url('/search?type=freelance') }}">Find Freelancers</a><a href="{{ url('/search?type=service') }}">Find Services</a>@endif @if(Route::has('jobs'))<a href="{{ route('jobs') }}">Find Jobs</a>@endif</div>
-    <div><h3>For Users</h3>@auth<a href="{{ url('/account?='.auth()->user()->public_id) }}">Client Account</a>@else<a href="{{ route('register') }}">Client Account</a>@endauth
-      @if(auth()->check() && auth()->user()->isCreator())<a href="{{ url('/studio?='.auth()->user()->public_id) }}">Creator Account</a>@else<a href="{{ route('register') }}">Creator Account</a>@endif
+    <div><h3>{{ __('ui.marketplace') }}</h3>@if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))<a href="{{ url('/search?type=project') }}">{{ __('ui.find_projects') }}</a><a href="{{ url('/search?type=product') }}">{{ __('ui.find_products') }}</a><a href="{{ url('/search?type=freelance') }}">{{ __('ui.find_freelancers') }}</a><a href="{{ url('/search?type=service') }}">{{ __('ui.find_services') }}</a>@endif @if(Route::has('jobs'))<a href="{{ route('jobs') }}">Find Jobs</a>@endif</div>
+    <div><h3>{{ __('ui.for_users') }}</h3>@auth<a href="{{ url('/account?='.auth()->user()->public_id) }}">Client Account</a>@else @if(\App\Models\FeatureFlag::isEnabled('registration'))<a href="{{ route('register') }}">Client Account</a>@endif @endauth
+      @if(auth()->check() && auth()->user()->isCreator())<a href="{{ url('/studio?='.auth()->user()->public_id) }}">Creator Account</a>@else @if(\App\Models\FeatureFlag::isEnabled('registration'))<a href="{{ route('register') }}">Creator Account</a>@endif @endif
       @if(Route::has('policy-center'))<a href="{{ route('policy-center') }}">Policy Center</a>@endif
       @if(Route::has('support'))<a href="{{ route('support') }}">Support Center</a>@endif
     </div>
-    <div><h3>Compliance</h3>
+    <div><h3>{{ __('ui.compliance') }}</h3>
       @if(Route::has('policy.cookie'))<a href="{{ route('policy.cookie') }}">Cookie Policy</a>@endif
       @if(Route::has('policy.gdpr'))<a href="{{ route('policy.gdpr') }}">GDPR Policy</a>@endif
       @if(Route::has('policy.privacy'))<a href="{{ route('policy.privacy') }}">Privacy Policy</a>@endif

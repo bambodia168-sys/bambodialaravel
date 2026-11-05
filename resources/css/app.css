@@ -189,3 +189,9 @@ svg{flex-shrink:0}
 .ticket-reply label{font-weight:750;font-size:13px}
 .ticket-reply textarea,.ticket-reply select{width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--text);padding:12px;border-radius:12px}
 .ticket-reply .btn{justify-self:start;margin-top:7px}
+
+/* Language switcher */
+.language-form{display:flex;align-items:center}
+.language-form select{appearance:none;background:var(--surface-2);color:var(--text);border:1px solid var(--line);padding:9px 11px;border-radius:10px;font-size:12px;font-weight:750;min-width:62px;max-width:100px}
+.auth-locale{display:flex;justify-content:center;margin-top:14px}
+@media(max-width:760px){.language-form select{max-width:82px}.nav-actions{gap:4px}}

@@ -11,6 +11,14 @@ class FeatureManagerTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_homepage_renders_and_guest_can_change_language(): void
+    {
+        $this->get('/')->assertOk();
+        $this->post('/locale', ['locale' => 'km'])->assertRedirect();
+        $this->get('/')->assertOk()->assertSee('ស្នាដៃឌីជីថល');
+        $this->post('/locale', ['locale' => 'unknown'])->assertSessionHasErrors('locale');
+    }
+
     public function test_feature_switches_control_real_routes(): void
     {
         $admin = User::query()->create([

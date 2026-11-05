@@ -21,6 +21,15 @@
     @yield('content')
   </section>
   <div class="auth-bottom"><a href="{{ route('home') }}">Back to Bambodia</a><button type="button" class="icon-button" data-theme-toggle aria-label="Toggle light or dark mode"><x-icon name="moon"/></button></div>
+<div class="auth-locale"><form method="post" action="{{ route('locale.update') }}" class="language-form">
+        @csrf
+        <label for="locale-auth" class="sr-only">{{ __('ui.language') }}</label>
+        <select id="locale-auth" name="locale" onchange="this.form.submit()" aria-label="{{ __('ui.language') }}">
+          @foreach(['en'=>'EN','zh'=>'中文','km'=>'ខ្មែរ','ko'=>'한국어','ja'=>'日本語','th'=>'ไทย','vi'=>'Tiếng Việt','de'=>'Deutsch'] as $code=>$native)
+            <option value="{{ $code }}" @selected(app()->getLocale()===$code)>{{ $native }}</option>
+          @endforeach
+        </select>
+      </form></div>
 </main>
 </body>
 </html>
