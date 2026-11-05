@@ -8,6 +8,9 @@
   @if($listing->type === 'product' && $listing->coverAsset)
   <figure class="product-cover"><img src="{{ $listing->coverAsset->previewUrl() }}" alt="{{ $listing->coverAsset->alt_text }}" loading="lazy"></figure>
   @endif
+  @if($listing->type === 'product' && $listing->price !== null)
+  <p class="listed-price">Listed price: ${{ number_format((float)$listing->price, 2) }} USD</p>
+  @endif
   <section class="panel">
     <div class="panel-head"><h2>Details</h2><span class="role-pill">Published</span></div>
     <div class="listing-body">{!! nl2br(e($listing->description)) !!}</div>
