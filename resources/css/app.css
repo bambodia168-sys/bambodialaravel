@@ -1383,3 +1383,7 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   .license-account-dialog{width:calc(100vw - 20px);padding:18px}
   .license-account-dialog .license-key-summary{grid-template-columns:1fr}
 }
+
+/* Empty license tables remain centered and legible at narrow screen widths. */
+.license-account-table.is-empty{min-width:0}
+@media(max-width:640px){.license-account-table.is-empty thead{display:none}.license-account-table.is-empty .license-empty-state{padding:36px 16px 42px}}

@@ -18,7 +18,7 @@
       <a class="btn subtle compact" href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
     </div>
     <div class="table-scroll license-account-table-scroll" tabindex="0" role="region" aria-label="My product licenses table">
-      <table class="data-table license-account-table">
+      <table class="data-table license-account-table {{ $licenses->isEmpty() ? 'is-empty' : '' }}">
         <thead>
           <tr>
             <th scope="col">Product</th>
