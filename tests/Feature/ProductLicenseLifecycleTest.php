@@ -58,7 +58,7 @@ class ProductLicenseLifecycleTest extends TestCase
             'cover_media_id'=>$cover->id,'status'=>'published',
         ]);
 
-        $archive='marketplace/originals/'.$this->creator->id.'/'.$this->product->id.'/approved.zip';
+        $archive='marketplace/originals/'.$this->creator->id.'/'.$this->product->id.'/'.str_repeat('a',64).'.zip';
         // The test covers the immutable verified path. The production upload
         // controller separately validates actual ZIP structure before approval.
         $content='approved-private-digital-product-archive-content';
