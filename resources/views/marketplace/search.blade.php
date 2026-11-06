@@ -24,13 +24,6 @@
     <p>{{ $browseIntro }}</p>
   </div>
   @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-  <nav class="marketplace-discovery-tabs" aria-label="Marketplace listing types">
-    @foreach([''=>'All listings','product'=>'Products','project'=>'Projects','service'=>'Services','freelance'=>'Freelance'] as $tabType=>$tabLabel)
-      <a href="{{ route('marketplace.search',array_merge(request()->except('type','category','page'),$tabType!==''?['type'=>$tabType]:[])) }}"
-         class="marketplace-discovery-tab {{ $type===$tabType?'is-active':'' }}"
-         @if($type===$tabType)aria-current="page"@endif>{{ $tabLabel }}</a>
-    @endforeach
-  </nav>
   <div class="marketplace-browse-layout">
     <aside class="marketplace-filter-panel marketplace-filter-sidebar" aria-label="Marketplace filters">
       <div class="marketplace-filter-title"><div><x-icon name="filter" size="18"/><h2>Refine results</h2></div>
@@ -78,7 +71,7 @@
         </select>
       </div>
       <div class="marketplace-filter-actions">
-        <button type="submit" class="btn primary"><x-icon name="search" size="16"/> Apply filters</button>
+        <button type="submit" class="btn primary"><x-icon name="search" size="16"/> Apply</button>
         <a href="{{ route('marketplace.search') }}" class="btn subtle">Reset</a>
       </div>
       </form>
