@@ -358,7 +358,9 @@ try {
         throw new Error('Profile-menu theme action did not toggle');
       checks+=2;
       await page.goto(origin+'/search',{waitUntil:'networkidle'});
-      const save=page.locator('form[action*="/account/saved-listings/"] button[type="submit"]').first();
+      const save=page.locator('article.marketplace-card')
+        .filter({hasText:'Browser QA Published Service'})
+        .locator('form[action*="/account/saved-listings/"] button[type="submit"]').first();
       if(!(await save.isVisible()))throw new Error('Saved-listing action missing for signed-in customer');
       await save.click();
       await page.goto(origin+'/account/saved-listings',{waitUntil:'networkidle'});
