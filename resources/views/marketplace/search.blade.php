@@ -1,9 +1,27 @@
 @extends('layouts.main')
 @section('title','Search Marketplace')
 @section('content')
-<div class="container inner-page">
-  <div class="page-intro"><div class="eyebrow">Marketplace discovery</div><h1>Browse listings</h1>
-    <p>Explore approved digital products, services, projects and freelance offers. Listings displayed here reflect current publication checks.</p>
+@php
+  $browseTitle = match($type){
+    'product'=>'Browse digital products',
+    'project'=>'Explore projects',
+    'service'=>'Discover services',
+    'freelance'=>'Find freelance offers',
+    default=>'Explore the marketplace',
+  };
+  $browseIntro = match($type){
+    'product'=>'Find published, licensed digital products with approved previews.',
+    'project'=>'Discover creator-published projects and discuss requirements privately.',
+    'service'=>'Compare published services and contact providers through private inquiries.',
+    'freelance'=>'Explore professional offers from creators on Bambodia.',
+    default=>'Search approved digital products, projects, services and freelance offers.',
+  };
+@endphp
+<div class="container inner-page marketplace-browse-page">
+  <div class="page-intro marketplace-browse-intro">
+    <div class="eyebrow">Marketplace discovery</div>
+    <h1>{{ $browseTitle }}</h1>
+    <p>{{ $browseIntro }}</p>
   </div>
   @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
   <nav class="marketplace-discovery-tabs" aria-label="Marketplace listing types">
@@ -13,8 +31,12 @@
          @if($type===$tabType)aria-current="page"@endif>{{ $tabLabel }}</a>
     @endforeach
   </nav>
-  <section class="marketplace-filter-panel">
-    <form method="get" action="{{ route('marketplace.search') }}" class="marketplace-filter-form">
+  <div class="marketplace-browse-layout">
+    <aside class="marketplace-filter-panel marketplace-filter-sidebar" aria-label="Marketplace filters">
+      <div class="marketplace-filter-title"><div><x-icon name="filter" size="18"/><h2>Refine results</h2></div>
+        <a href="{{ route('marketplace.search') }}">Reset</a>
+      </div>
+      <form method="get" action="{{ route('marketplace.search') }}" class="marketplace-filter-form">
       <div class="marketplace-filter-field marketplace-filter-search">
         <label for="marketplace-q">Search listings</label>
         <input id="marketplace-q" name="q" type="search" maxlength="120" value="{{ $query }}" placeholder="Title, service or keyword">
@@ -59,8 +81,9 @@
         <button type="submit" class="btn primary"><x-icon name="search" size="16"/> Apply filters</button>
         <a href="{{ route('marketplace.search') }}" class="btn subtle">Reset</a>
       </div>
-    </form>
-  </section>
+      </form>
+    </aside>
+    <div class="marketplace-results-pane">
   @if($query!=='' || $type!=='' || $selectedCategory!=='' || $minPrice!=='' || $maxPrice!=='' || $sort!=='recent')
     <nav class="marketplace-active-filters" aria-label="Active search filters">
       <span class="marketplace-active-filters-label">Active filters</span>
@@ -87,8 +110,10 @@
   @endif
   <section class="marketplace-section">
     <div class="marketplace-section-heading">
-      <div><span class="eyebrow">Current public listings</span>
-        <h2>{{ number_format($listings->total()) }} {{ $listings->total()===1?'result':'results' }}</h2></div>
+      <div><span class="eyebrow">{{ $type!=='' ? ucfirst($type).' collection' : 'Current public listings' }}</span>
+        <h2>{{ number_format($listings->total()) }} {{ $listings->total()===1?'result':'results' }}</h2>
+        <p>Showing published listings only · {{ $type!==''?ucfirst($type):'All categories' }}</p>
+      </div>
       @auth<a href="{{ route('account.saved-listings') }}" class="btn subtle"><x-icon name="star" size="16"/> My saved listings</a>@endauth
     </div>
     @if($listings->isNotEmpty())
@@ -102,5 +127,7 @@
     @endif
     <x-pagination :paginator="$listings"/>
   </section>
+    </div>
+  </div>
 </div>
 @endsection
