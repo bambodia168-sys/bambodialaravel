@@ -144,7 +144,7 @@ class MarketplaceCategoriesTest extends TestCase
         $this->actingAs($admin)->get('/dashboard/category-manager')
             ->assertOk()->assertViewHas('categories',fn($page)=>$page->count()===10 && $page->total()===13);
     }
-    public function test_discovery_tabs_preserve_search_and_filter_categories_by_type(): void
+    public function test_search_sidebar_remains_functional_without_duplicate_listing_tabs(): void
     {
         $admin=$this->user('admin');
         $this->createCategory($admin,'service','Technical Services');
@@ -152,8 +152,12 @@ class MarketplaceCategoriesTest extends TestCase
 
         $response=$this->get('/search?type=service&q=website&sort=title');
         $response->assertOk()
-            ->assertSee('marketplace-discovery-tabs')
-            ->assertSee('aria-label="Marketplace listing types"',false)
+            ->assertDontSee('marketplace-discovery-tabs')
+            ->assertDontSee('aria-label="Marketplace listing types"',false)
+            ->assertSee('id="marketplace-type"',false)
+            ->assertSee('id="marketplace-category"',false)
+            ->assertSee('Apply</button>',false)
+            ->assertDontSee('Apply filters')
             ->assertSee('Technical Services')
             ->assertSee('Active filters')
             ->assertSee('Keyword: website')
@@ -168,7 +172,14 @@ class MarketplaceCategoriesTest extends TestCase
         $productResponse->assertOk()->assertSee('Category: Licensed Templates');
         $this->assertStringContainsString('<option value="'.$product->public_id.'"', $productResponse->getContent());
         $this->get('/search')->assertOk()->assertDontSee('marketplace-active-filters')
+            ->assertDontSee('marketplace-discovery-tabs')
             ->assertSee('Technical Services')->assertSee('Licensed Templates');
+        foreach (['product', 'project', 'service', 'freelance'] as $type) {
+            $this->get('/search?type='.$type)->assertOk()
+                ->assertDontSee('marketplace-discovery-tabs')
+                ->assertSee('id="marketplace-type"', false)
+                ->assertSee('Apply</button>', false);
+        }
     }
 
 }
