@@ -140,6 +140,32 @@ try {
              metrics.whiteSpace!=='nowrap' || metrics.labelHeight>metrics.lineHeight+2)
             throw new Error(device.name+' theme logo/label issue '+theme+' '+JSON.stringify(metrics));
         }
+        if(device.name==='desktop'){
+          // An SVG can have naturalWidth even if its embedded lettering fails to render.
+          // Check actual rasterized pixels in the brand mark and light wordmark.
+          const logoPixels=await page.evaluate(async ()=>{
+            const img=document.querySelector('.site-header .brand-logo-dark');
+            await img.decode();
+            const canvas=document.createElement('canvas');
+            canvas.width=550;canvas.height=144;
+            const context=canvas.getContext('2d');
+            context.drawImage(img,0,0,550,144);
+            const data=context.getImageData(0,0,550,144).data;
+            let lightWordmark=0,goldSymbol=0;
+            for(let y=10;y<140;y+=4){
+              for(let x=0;x<550;x+=4){
+                const n=(y*550+x)*4;
+                const red=data[n],green=data[n+1],blue=data[n+2],alpha=data[n+3];
+                if(alpha<128)continue;
+                if(x>118 && red>205 && green>205 && blue>205)lightWordmark++;
+                if(x<105 && red>170 && green>85 && blue<175)goldSymbol++;
+              }
+            }
+            return {lightWordmark,goldSymbol};
+          });
+          if(logoPixels.lightWordmark<100 || logoPixels.goldSymbol<35)
+            throw new Error('Dark-theme logo has unreadable letters or missing authentic gold mark '+JSON.stringify(logoPixels));
+        }
         // Restore the persisted theme before continuing the existing browser tests.
         await page.evaluate(()=>{document.documentElement.dataset.theme=localStorage.getItem('bambodia-theme')||'light';});
         await publicMenu.locator('summary').click();
