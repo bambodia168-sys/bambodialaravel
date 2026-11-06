@@ -22,6 +22,15 @@ class UnifiedBuilderTest extends TestCase
         ]);
     }
 
+    private function agreed(): array
+    {
+        return [
+            'builder_mode' => '1',
+            'accept_terms' => '1',
+            'terms_sha256' => \App\Support\BuilderSubmissionTerms::digest(),
+        ];
+    }
+
     private function jobData(): array
     {
         return [
@@ -58,7 +67,7 @@ class UnifiedBuilderTest extends TestCase
     {
         $creator = $this->member('freelancer');
         $this->actingAs($creator)->post('/studio/listings', [
-            'builder_mode' => '1',
+            ...$this->agreed(),
             'type' => 'service',
             'title' => 'Professional Laravel security review',
             'description' => str_repeat('A professional audit with a complete report and recommendations. ', 2),
@@ -72,7 +81,7 @@ class UnifiedBuilderTest extends TestCase
         $this->get('/studio/listings')->assertSee('/builder?='.$listing->public_id);
 
         $this->post('/studio/products', [
-            'builder_mode' => '1',
+            ...$this->agreed(),
             'title' => 'Original reusable digital interface',
             'description' => str_repeat('Original assets and documented features for a licensed project. ', 2),
             'status' => 'draft',
@@ -88,7 +97,7 @@ class UnifiedBuilderTest extends TestCase
     {
         $client = $this->member('customer');
         $this->actingAs($client)->post('/my-jobs', [
-            ...$this->jobData(), 'builder_mode'=>'1',
+            ...$this->jobData(), ...$this->agreed(),
         ])->assertRedirect();
         $job = MarketplaceJob::query()->firstOrFail();
         $this->get('/builder?='.$job->public_id)->assertOk()->assertSee($job->title);
@@ -185,7 +194,7 @@ class UnifiedBuilderTest extends TestCase
             'description_html'=>$html,
             'featured_kind'=>'color',
             'featured_color'=>'#123abc',
-            'builder_mode'=>'1',
+            ...$this->agreed(),
         ])->assertRedirect();
         $listing = MarketplaceListing::query()->firstOrFail();
         $this->assertSame('pending', $listing->status);
@@ -276,5 +285,126 @@ class UnifiedBuilderTest extends TestCase
         $this->assertStringNotContainsString('position:fixed', $safe);
         $this->assertStringNotContainsString('javascript:', $safe);
         $this->assertStringNotContainsString('rgb(999', $safe);
+    }
+
+    public function test_all_five_studio_forms_show_required_terms_popup_and_complete_media_controls(): void
+    {
+        $this->actingAs($this->member('super_admin'));
+        foreach (['product', 'project', 'service', 'freelance', 'job'] as $type) {
+            $this->get('/builder?type='.$type)->assertOk()
+                ->assertSee('data-builder-terms-check', false)
+                ->assertSee('id="studio-terms-popup"', false)
+                ->assertSee('name="terms_sha256"', false)
+                ->assertSee('data-builder-upload-files', false)
+                ->assertSee('data-builder-gallery', false)
+                ->assertDontSee('Rich text editor')
+                ->assertDontSee('Headings · Lists · Links · Tables · Formatting');
+        }
+        $this->get('/builder?type=product')->assertOk()
+            ->assertSee('Regular License price')
+            ->assertSee('Extended License price')
+            ->assertSee('name="regular_price"', false)
+            ->assertSee('name="extended_price"', false)
+            ->assertSee('Original downloadable product')
+            ->assertSee('Save your product as a draft first.')
+            ->assertSee('studio-final-action')
+            ->assertDontSee('class="studio-card studio-final-action"', false);
+    }
+
+    public function test_builder_acceptance_is_required_and_is_recorded_by_content_id(): void
+    {
+        $creator = $this->member('freelancer');
+        $payload = [
+            'type'=>'project',
+            'title'=>'Professional application customization project',
+            'description'=>str_repeat('Original documentation and deliverables for a licensed project. ',2),
+            'builder_mode'=>'1',
+        ];
+        $this->actingAs($creator)->post('/studio/listings',$payload)
+            ->assertSessionHasErrors('accept_terms');
+        $this->assertDatabaseCount('marketplace_listings',0);
+
+        $this->post('/studio/listings', [
+            ...$payload,'accept_terms'=>'1','terms_sha256'=>str_repeat('f',64),
+        ])->assertSessionHasErrors('accept_terms');
+        $this->assertDatabaseCount('marketplace_listings',0);
+
+        $this->post('/studio/listings', [
+            ...$payload,...$this->agreed(),
+        ])->assertRedirect();
+        $listing=MarketplaceListing::firstOrFail();
+        $this->assertDatabaseHas('builder_terms_acceptances',[
+            'user_id'=>$creator->id,'content_type'=>'project','content_id'=>$listing->id,
+            'terms_sha256'=>\App\Support\BuilderSubmissionTerms::digest(),
+        ]);
+    }
+
+    public function test_product_builder_saves_separate_license_tiers_and_prices_as_draft(): void
+    {
+        $creator=$this->member('freelancer');
+        $admin=$this->member('admin');
+        $regular=\App\Models\LicenseDefinition::query()->create([
+            'code'=>'BUILDER_REG','name'=>'Regular License','version'=>'1.0.0',
+            'permissions'=>str_repeat('Allowed use of an original digital product. ',2),
+            'restrictions'=>str_repeat('No unauthorized redistribution or resale. ',2),
+            'status'=>'active','created_by'=>$admin->id,
+        ]);
+        $extended=\App\Models\LicenseDefinition::query()->create([
+            'code'=>'BUILDER_EXT','name'=>'Extended License','version'=>'1.0.0',
+            'permissions'=>str_repeat('Broader published commercial rights for a product. ',2),
+            'restrictions'=>str_repeat('No unauthorized sublicensing or source redistribution. ',2),
+            'status'=>'active','created_by'=>$admin->id,
+        ]);
+        $this->actingAs($creator)->post('/studio/products', [
+            ...$this->agreed(),
+            'title'=>'Premium licensed Laravel content',
+            'description'=>str_repeat('A polished original Laravel application template with docs. ',2),
+            'regular_price'=>'39.00','extended_price'=>'189.00',
+            'license_definition_id'=>$regular->id,
+            'extended_license_definition_id'=>$extended->id,
+            'status'=>'draft',
+        ])->assertRedirect();
+
+        $product=MarketplaceListing::query()->where('type','product')->firstOrFail();
+        $this->assertEquals(39.00,(float)$product->regular_price);
+        $this->assertEquals(189.00,(float)$product->extended_price);
+        $this->assertEquals(39.00,(float)$product->price);
+        $this->assertSame($extended->id,(int)$product->extended_license_definition_id);
+        $this->get('/builder?='.$product->public_id)->assertOk()
+            ->assertSee('name="extended_license_definition_id"',false)
+            ->assertSee('id="studio-archive-file"',false);
+        $this->assertDatabaseCount('product_entitlements',0);
+    }
+
+    public function test_builder_can_attach_private_pending_screenshots_without_public_exposure(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $creator=$this->member('freelancer');
+        $other=$this->member('freelancer');
+        $asset=\App\Models\MediaAsset::query()->create([
+            'user_id'=>$creator->id,'original_name'=>'screen.png',
+            'storage_path'=>'marketplace/previews/screenshot.png',
+            'mime_type'=>'image/png','bytes'=>123,'width'=>20,'height'=>20,
+            'alt_text'=>'Private original screenshot','rights_basis'=>'owned',
+            'rights_holder'=>'Creator','review_status'=>'pending',
+        ]);
+        $payload=[
+            ...$this->agreed(),'type'=>'service',
+            'title'=>'Screenshot-driven software installation service',
+            'description'=>str_repeat('A professionally delivered software installation service. ',2),
+            'gallery_media_ids'=>[$asset->id],
+        ];
+        $this->actingAs($other)->post('/studio/listings',$payload)
+            ->assertSessionHasErrors('gallery_media_ids');
+
+        $this->actingAs($creator)->post('/studio/listings',$payload)->assertRedirect();
+        $listing=MarketplaceListing::firstOrFail();
+        $this->assertSame([$asset->id],$listing->gallery_media_ids);
+        $this->actingAs($other)->get($asset->previewUrl())->assertNotFound();
+
+        $this->actingAs($creator)->postJson('/builder/media',[
+            'return_to'=>'/builder?type=service','alt_text'=>'Upload without an actual file',
+            'rights_basis'=>'owned','rights_holder'=>'Creator',
+        ])->assertUnprocessable()->assertJsonValidationErrors('image');
     }
 }
