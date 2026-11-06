@@ -147,4 +147,48 @@ class ServiceInquiriesTest extends TestCase
             ->assertDontSee('Confidential client implementation details only participants');
         $this->get('/inquiries/1')->assertNotFound();
     }
+
+    public function test_private_inquiry_inbox_supports_status_and_search_without_leaking_conversations(): void
+    {
+        $creator=$this->user('freelancer');
+        $otherCreator=$this->user('freelancer');
+        $client=$this->user('customer');
+        $otherClient=$this->user('customer');
+        $listing=$this->listing($creator);
+        $otherListing=$this->listing($otherCreator);
+        $own=$this->send($client,$listing);
+        $own->update(['subject'=>'Private Laravel migration request']);
+        ServiceInquiry::query()->create([
+            'marketplace_listing_id'=>$listing->id,
+            'client_id'=>$otherClient->id,
+            'creator_id'=>$creator->id,
+            'subject'=>'Closed customer design request',
+            'status'=>'closed',
+        ]);
+        ServiceInquiry::query()->create([
+            'marketplace_listing_id'=>$otherListing->id,
+            'client_id'=>$otherClient->id,
+            'creator_id'=>$otherCreator->id,
+            'subject'=>'Other creator confidential inquiry',
+            'status'=>'open',
+        ]);
+
+        $this->actingAs($creator)->get('/studio/inquiries?status=open&q=migration')
+            ->assertOk()->assertSee('Private Laravel migration request')
+            ->assertDontSee('Closed customer design request')
+            ->assertDontSee('Other creator confidential inquiry')
+            ->assertSee('Private conversation status')
+            ->assertViewHas('inquiries',fn($page)=>$page->total()===1);
+        $this->get('/studio/inquiries?status=closed')->assertOk()
+            ->assertSee('Closed customer design request')
+            ->assertDontSee('Private Laravel migration request')
+            ->assertDontSee('Other creator confidential inquiry');
+        $this->get('/studio/inquiries?status=unknown')->assertNotFound();
+        $this->actingAs($client)->get('/account/inquiries?status=open')->assertOk()
+            ->assertSee('Private Laravel migration request')
+            ->assertDontSee('Closed customer design request');
+        $this->get('/account/inquiries?q='.str_repeat('a',121))->assertNotFound();
+        $this->actingAs($otherClient)->get('/account/inquiries')->assertOk()
+            ->assertDontSee('Private Laravel migration request');
+    }
 }

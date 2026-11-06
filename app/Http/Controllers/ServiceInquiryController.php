@@ -21,11 +21,22 @@ class ServiceInquiryController extends Controller
         abort_unless($creator
             ? $request->user()->isCreator()
             : in_array($request->user()->role, ['customer','subscriber'],true),403);
-        $inquiries=ServiceInquiry::query()
-            ->where($creator?'creator_id':'client_id',$request->user()->id)
+        $status=(string)$request->query('status','all');
+        abort_unless(in_array($status,['all','open','closed'],true),404);
+        $search=trim((string)$request->query('q',''));
+        abort_unless(mb_strlen($search)<=120,404);
+        $owned=ServiceInquiry::query()->where($creator?'creator_id':'client_id',$request->user()->id);
+        $counts=(clone $owned)->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')->pluck('total','status');
+        $inquiries=(clone $owned)
             ->with(['listing:id,public_id,title,type,slug,status','client:id,name,public_id','creator:id,name,public_id'])
-            ->latest('updated_at')->paginate(10);
-        return view('inquiries.index',compact('inquiries','creator'));
+            ->when($status!=='all',fn($q)=>$q->where('status',$status))
+            ->when($search!=='',fn($q)=>$q->where(function($inner)use($search){
+                $inner->where('subject','like','%'.$search.'%')
+                    ->orWhere('public_id','like','%'.$search.'%');
+            }))
+            ->latest('updated_at')->paginate(10)->withQueryString();
+        return view('inquiries.index',compact('inquiries','creator','status','search','counts'));
     }
 
     public function store(Request $request, MarketplaceListing $listing): RedirectResponse
