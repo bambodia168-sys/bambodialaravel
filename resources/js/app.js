@@ -442,5 +442,130 @@ function initializeBuilderStudio() {
     mediaSelect?.addEventListener('change', showMediaPreview);
     color?.addEventListener('input', showMediaPreview);
     toggleMedia();
+
+    // Terms are always re-accepted for a new submission or edit. Server-side
+    // verification binds acceptance to the current, immutable policy digest.
+    const termsDialog = studio.querySelector('#studio-terms-popup');
+    const termsCheck = studio.querySelector('[data-builder-terms-check]');
+    const openTerms = () => {
+        if (termsDialog && typeof termsDialog.showModal === 'function' && !termsDialog.open) {
+            termsDialog.showModal();
+        }
+    };
+    termsCheck?.addEventListener('click', (event) => {
+        if (termsCheck.checked || !termsDialog?.showModal) return;
+        event.preventDefault();
+        openTerms();
+    });
+    studio.querySelector('[data-builder-terms-open]')?.addEventListener('click', openTerms);
+    studio.querySelectorAll('[data-builder-terms-close]').forEach(button => {
+        button.addEventListener('click', () => termsDialog?.close());
+    });
+    studio.querySelector('[data-builder-terms-accept]')?.addEventListener('click', () => {
+        if (termsCheck) termsCheck.checked = true;
+        termsDialog?.close();
+    });
+
+    const suggestedTerms = studio.querySelector('[data-suggested-terms]');
+    const ownTerms = studio.querySelector('#studio-terms');
+    const platformTerms = () => {
+        if (!suggestedTerms) return '';
+        try { return JSON.parse(suggestedTerms.textContent || '""'); } catch (_) { return ''; }
+    };
+    studio.querySelector('[data-use-platform-terms]')?.addEventListener('click', () => {
+        if (ownTerms && !ownTerms.readOnly) ownTerms.value = platformTerms();
+    });
+    studio.querySelector('[data-clear-platform-terms]')?.addEventListener('click', () => {
+        if (ownTerms && !ownTerms.readOnly) { ownTerms.value = ''; ownTerms.focus(); }
+    });
+
+    const gallery = studio.querySelector('[data-gallery-grid]');
+    const galleryCount = studio.querySelector('[data-gallery-count]');
+    const maxGallery = 8;
+    function gallerySelections() {
+        return Array.from(gallery?.querySelectorAll('input[name="gallery_media_ids[]"]:checked') || []);
+    }
+    function refreshGallery() {
+        const selected = gallerySelections();
+        if (galleryCount) {
+            galleryCount.textContent = selected.length + ' of ' + maxGallery + ' screenshots selected. Pending files remain private until review.';
+        }
+        gallery?.querySelectorAll('input[name="gallery_media_ids[]"]').forEach(input => {
+            if (!input.checked && selected.length >= maxGallery) input.disabled = true;
+            else if (studio.dataset.builderReadonly !== '1') input.disabled = false;
+        });
+    }
+    gallery?.addEventListener('change', (event) => {
+        if (event.target?.matches('input[name="gallery_media_ids[]"]')) refreshGallery();
+    });
+    refreshGallery();
+
+    // Upload directly into the existing private Media Library without losing
+    // unsaved form changes. Each file is independently validated and reviewed.
+    const mediaForm = studio.querySelector('[data-builder-media-form]');
+    const mediaInput = studio.querySelector('[data-builder-upload-files]');
+    const mediaStatus = studio.querySelector('[data-builder-upload-status]');
+    if (mediaInput && typeof window.fetch === 'function') {
+        mediaInput.multiple = true;
+        mediaForm?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const files = Array.from(mediaInput.files || []);
+            if (!files.length) return;
+            const submit = mediaForm.querySelector('button[type="submit"]');
+            if (submit) submit.disabled = true;
+            let done = 0;
+            const errors = [];
+
+            for (const file of files) {
+                if (mediaStatus) mediaStatus.textContent = 'Uploading ' + (done + 1) + ' of ' + files.length + ' securely…';
+                const body = new FormData(mediaForm);
+                body.set('image', file, file.name);
+                try {
+                    const response = await fetch(mediaForm.action, {
+                        method: 'POST',
+                        body,
+                        headers: { Accept:'application/json', 'X-Requested-With':'XMLHttpRequest' },
+                        credentials: 'same-origin',
+                    });
+                    const payload = await response.json();
+                    if (!response.ok) {
+                        const problem = Object.values(payload.errors || {}).flat()[0] || payload.message || 'Upload failed';
+                        throw new Error(problem);
+                    }
+                    done++;
+                    // Pending media can be included in screenshot selections.
+                    // It will not become public until its rights review passes.
+                    if (payload.mime_type?.startsWith('image/') && gallery && studio.dataset.builderReadonly !== '1') {
+                        const item = document.createElement('label');
+                        item.className = 'studio-gallery-item';
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.name = 'gallery_media_ids[]';
+                        checkbox.value = String(payload.id);
+                        checkbox.checked = gallerySelections().length < maxGallery;
+                        const image = document.createElement('img');
+                        image.src = payload.preview_url;
+                        image.alt = payload.alt_text;
+                        image.loading = 'lazy';
+                        const label = document.createElement('span');
+                        label.textContent = payload.alt_text;
+                        const review = document.createElement('small');
+                        review.textContent = 'Pending review';
+                        item.append(checkbox, image, label, review);
+                        gallery.prepend(item);
+                    }
+                } catch (error) {
+                    errors.push(file.name + ': ' + error.message);
+                }
+            }
+            refreshGallery();
+            if (mediaStatus) {
+                mediaStatus.textContent = done + ' file(s) added to your private Media Library.'
+                    + (errors.length ? ' ' + errors.join('; ') : ' Keep this page open to continue editing.');
+            }
+            if (submit) submit.disabled = false;
+            if (!errors.length) mediaInput.value = '';
+        });
+    }
 }
 document.addEventListener('DOMContentLoaded', initializeBuilderStudio);
