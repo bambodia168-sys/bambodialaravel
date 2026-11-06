@@ -166,7 +166,7 @@ class UnifiedBuilderTest extends TestCase
                 ->assertSee('class="studio-type-actions"', false)
                 ->assertSee('data-builder-preview-toggle', false)
                 ->assertSee('My Content')
-                ->assertSee('name="globe"', false)
+                ->assertSee('<svg width="17" height="17"', false)
                 ->assertDontSee('studio-landing-guide');
         }
     }
