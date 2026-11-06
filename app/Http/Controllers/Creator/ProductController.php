@@ -61,7 +61,7 @@ class ProductController extends Controller
             );
         }
 
-        MarketplaceListing::query()->create([
+        $product = MarketplaceListing::query()->create([
             ...$data,
             'user_id' => $request->user()->id,
             'type' => 'product',
@@ -69,6 +69,10 @@ class ProductController extends Controller
         ]);
 
         AuditEvent::record('product.created', $request->user(), $request);
+
+        if ($request->boolean('builder_mode')) {
+            return redirect('/builder?='.$product->public_id)->with('status', 'Digital product saved.');
+        }
 
         return redirect()->route('studio.products.index')->with('status', 'Digital product saved.');
     }

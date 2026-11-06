@@ -7,53 +7,17 @@
   @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
   @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
   <p><a class="btn subtle" href="{{ route('studio.products.index') }}">Manage digital products and licenses</a></p><section class="panel">
-    <div class="panel-head"><h2>Submitted listings <span class="count">{{ $listings->total() }}</span></h2>@if(\App\Models\FeatureFlag::isEnabled('creator_submissions'))<button type="button" class="btn primary" data-modal-open="create-listing">Submit listing</button>@endif</div>
+    <div class="panel-head"><h2>Submitted listings <span class="count">{{ $listings->total() }}</span></h2>@if(\App\Models\FeatureFlag::isEnabled('creator_submissions'))<a class="btn primary" href="{{ route('builder', ['type' => 'project']) }}">Create listing</a>@endif</div>
     <div class="table-scroll">
       <table class="data-table"><thead><tr><th>Listing ID</th><th>Title</th><th>Type</th><th>Status</th><th>Submitted</th><th>Action</th></tr></thead><tbody>
       @forelse($listings as $listing)
       <tr><td class="mono">{{ $listing->public_id }}</td><td><strong>{{ $listing->title }}</strong></td><td>{{ ucfirst($listing->type) }}</td><td><span class="role-pill">{{ ucfirst($listing->status) }}</span></td><td>{{ $listing->created_at->format('d M Y') }}</td><td>
-      @if($listing->status === 'published')<a class="btn subtle compact" href="{{ $listing->publicUrl() }}">View</a>
-      @elseif(in_array($listing->status,['rejected','draft'],true))
-      <button type="button" class="btn subtle compact" data-modal-open="listing-{{ $listing->id }}"><x-icon name="settings" size="15"/> Configure</button>
-      <dialog id="listing-{{ $listing->id }}" class="config-dialog wide-dialog">
-        <form method="post" action="{{ route('studio.listings.update',$listing) }}">@csrf @method('PATCH')
-        <h2>Revise {{ $listing->type }} listing</h2><p>Re-submission returns the listing to administrator review.</p>
-        <label for="edit-title-{{ $listing->id }}">Title</label><input id="edit-title-{{ $listing->id }}" name="title" required minlength="4" maxlength="180" value="{{ $listing->title }}">
-        <label for="edit-description-{{ $listing->id }}">Description</label><textarea id="edit-description-{{ $listing->id }}" name="description" minlength="40" maxlength="10000" rows="6" required>{{ $listing->description }}</textarea>
-        <label for="edit-price-{{ $listing->id }}">Listed price (USD, optional)</label><input id="edit-price-{{ $listing->id }}" type="number" name="price" min="0" step="0.01" value="{{ $listing->price }}">
-        <label for="edit-category-{{ $listing->id }}">Category</label>
-        <select id="edit-category-{{ $listing->id }}" name="category_id"><option value="">Uncategorized</option>
-          @foreach($categories->where('type',$listing->type) as $category)<option value="{{ $category->id }}" @selected((int)$listing->category_id===$category->id)>{{ $category->name }}</option>@endforeach
-        </select>
-        <label for="edit-terms-{{ $listing->id }}">Supplemental terms (optional)</label><textarea id="edit-terms-{{ $listing->id }}" name="license_terms" rows="4">{{ $listing->license_terms }}</textarea>
-        <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Cancel</button><button type="submit" class="btn primary">Resubmit for review</button></div>
-        </form></dialog>
-      @else<span class="text-muted">Awaiting review</span>@endif
+      <a class="btn subtle compact" href="{{ url('/builder?='.$listing->public_id) }}"><x-icon name="edit" size="15"/> {{ in_array($listing->status,['draft','rejected'],true) ? 'Edit in builder' : 'Details' }}</a>
+      @if($listing->status === 'published')<a class="btn subtle compact" href="{{ $listing->publicUrl() }}">View</a>@endif
       </td></tr>
       @empty<tr><td colspan="6" class="empty-cell">No listings have been submitted by this creator.</td></tr>@endforelse
       </tbody></table>
     </div><x-pagination :paginator="$listings"/>
   </section>
-  <dialog id="create-listing" class="config-dialog wide-dialog">
-    <form method="post" action="{{ route('studio.listings.store') }}">
-      @csrf
-      <div class="dialog-heading"><h2>Submit a listing</h2><p>Listings are reviewed before publication.</p></div>
-      <label for="listing-type">Type</label>
-      <select id="listing-type" name="type" required>@foreach(['project', 'freelance', 'service'] as $type)<option value="{{ $type }}">{{ ucfirst($type) }}</option>@endforeach</select>
-      <label for="listing-category">Marketplace category (must match listing type)</label>
-      <select id="listing-category" name="category_id"><option value="">Uncategorized</option>
-        @foreach(['project','freelance','service'] as $type)
-          <optgroup label="{{ ucfirst($type) }}">
-            @foreach($categories->where('type',$type) as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach
-          </optgroup>
-        @endforeach
-      </select>
-      <label for="listing-title">Title</label><input id="listing-title" name="title" required minlength="4" maxlength="180">
-      <label for="listing-description">Description (40+ characters)</label><textarea id="listing-description" name="description" rows="5" minlength="40" required></textarea>
-      <label for="listing-price">Listed price, USD (optional; checkout unavailable)</label><input id="listing-price" name="price" type="number" min="0" step="0.01">
-      <label for="listing-license">Supplemental terms (optional)</label><textarea id="listing-license" name="license_terms" rows="4" placeholder="Specify the rights granted, usage limitations, and redistribution rules."></textarea>
-      <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit">Submit for review</button></div>
-    </form>
-  </dialog>
 </div>
 @endsection

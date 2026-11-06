@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\BuilderController;
 use App\Http\Controllers\SavedJobController;
 use App\Http\Controllers\SavedListingController;
 use App\Http\Controllers\Creator\CreatorProfileController;
@@ -84,6 +85,9 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/builder', [BuilderController::class, 'show'])->name('builder');
+    Route::patch('/builder', [BuilderController::class, 'updateJob'])
+        ->name('builder.job.update')->middleware('throttle:10,1');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::middleware('role:super_admin')->group(function (): void {
         Route::get('/developer', [DeveloperController::class, 'index'])->name('developer.index');

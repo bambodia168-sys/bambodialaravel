@@ -41,12 +41,16 @@ class ListingController extends Controller
         ]);
 
         $this->checkCategory($data);
-        MarketplaceListing::query()->create([
+        $listing = MarketplaceListing::query()->create([
             ...$data,
             'user_id' => $request->user()->id,
             'currency' => 'USD',
             'status' => 'pending',
         ]);
+
+        if ($request->boolean('builder_mode')) {
+            return redirect('/builder?='.$listing->public_id)->with('status', 'Listing submitted for review.');
+        }
 
         return redirect()->route('studio.listings')->with('status', 'Listing submitted for review.');
     }

@@ -20,6 +20,9 @@
     <div class="workspace-section-head"><div><h2 id="creator-actions">Manage your work</h2>
       <p>Only your creator-owned resources are available here.</p></div></div>
     <div class="workspace-quick-actions">
+      @if(\App\Models\FeatureFlag::isEnabled('creator_submissions'))
+        <a class="btn primary" href="{{ route('builder', ['type'=>'product']) }}"><x-icon name="plus" size="17"/> Open Builder</a>
+      @endif
       <a class="btn primary" href="{{ route('studio.products.index') }}"><x-icon name="package" size="17"/> Product Manager &amp; Releases</a>
       <a class="btn subtle" href="{{ route('studio.listings') }}"><x-icon name="layers" size="17"/> Listings &amp; Services</a>
       <a class="btn subtle" href="{{ route('studio.media.index') }}"><x-icon name="image" size="17"/> Media Library</a>
@@ -39,7 +42,7 @@
         <a class="btn subtle compact" href="{{ route('studio.listings') }}">View all</a></div>
       <div class="workspace-overview-list">
         @forelse($recentListings as $listing)
-          <a class="workspace-overview-row" href="{{ $listing->type === 'product' ? route('studio.products.index') : route('studio.listings') }}">
+          <a class="workspace-overview-row" href="{{ url('/builder?='.$listing->public_id) }}">
             <span class="workspace-overview-row-main"><strong>{{ $listing->title }}</strong>
             <small>{{ ucfirst($listing->type) }} · {{ ucfirst($listing->status) }}</small></span>
             <span class="workspace-overview-row-action">Manage <x-icon name="chevron-right" size="15"/></span>

@@ -74,8 +74,11 @@ class JobBoardController extends Controller
             'category'=>['required',Rule::in(['development','design','writing','marketing','business','other'])],
             'budget'=>['nullable','numeric','min:0','max:9999999999.99'],
         ]);
-        MarketplaceJob::query()->create([...$data, 'client_id'=>$request->user()->id,'currency'=>'USD','status'=>'pending']);
+        $job = MarketplaceJob::query()->create([...$data, 'client_id'=>$request->user()->id,'currency'=>'USD','status'=>'pending']);
         AuditEvent::record('job.submitted',$request->user(),$request);
+        if ($request->boolean('builder_mode')) {
+            return redirect('/builder?='.$job->public_id)->with('status', 'Job submitted for administrator review.');
+        }
         return back()->with('status','Job submitted for administrator review.');
     }
 
