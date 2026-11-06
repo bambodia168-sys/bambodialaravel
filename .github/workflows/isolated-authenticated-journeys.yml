@@ -1,0 +1,106 @@
+name: Bambodia Isolated Authenticated Journeys
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authenticated-journeys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: isolated-qa-root
+          MYSQL_DATABASE: bambodia_uat
+          MYSQL_USER: bambodia_uat
+          MYSQL_PASSWORD: qa-isolated-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      APP_URL: http://127.0.0.1:8096
+      DB_CONNECTION: mysql
+      DB_URL: ''
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: bambodia_uat
+      DB_USERNAME: bambodia_uat
+      DB_PASSWORD: qa-isolated-only
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      BAMBODIA_UAT_ISOLATED: '1'
+      BASE_URL: http://127.0.0.1:8096
+      UAT_ZIP_FILE: storage/framework/uat-original.zip
+    steps:
+      - name: Checkout audited commit
+        uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, dom, pdo_mysql, fileinfo, xml, curl, zip
+          coverage: none
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax check isolated fixtures
+        run: |
+          php -l tests/browser/uat-seed.php
+          php -l tests/browser/uat-verify.php
+          node --check tests/browser/uat-journey.mjs
+      - name: Install Laravel and real Chromium
+        run: |
+          composer install --prefer-dist --no-interaction --no-progress
+          npm install --ignore-scripts
+          npm run build
+          npm install --no-save --ignore-scripts playwright
+          npx playwright install --with-deps chromium
+      - name: Seed strictly disposable MySQL instance
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan migrate --force --no-interaction
+          mkdir -p storage/framework
+          php tests/browser/uat-seed.php
+          mkdir -p storage/app
+          touch storage/app/installed.lock
+          python3 - <<'PY'
+          import os, zipfile
+          with zipfile.ZipFile(os.environ['UAT_ZIP_FILE'], 'w', zipfile.ZIP_DEFLATED) as z:
+              z.writestr('README.txt', 'Isolated UAT source archive. No production files or customer records.')
+          PY
+      - name: Test real authenticated browser actions and verify MySQL records
+        run: |
+          set -Eeuo pipefail
+          php artisan serve --host=127.0.0.1 --port=8096 > "$RUNNER_TEMP/bambodia-uat-server.log" 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 25); do
+            if curl -fsS -o /dev/null http://127.0.0.1:8096/; then break; fi
+            sleep 1
+          done
+          node tests/browser/uat-journey.mjs
+          php tests/browser/uat-verify.php
+      - name: Save redacted QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bambodia-Authenticated-UAT-Evidence
+          path: uat-acceptance-results/*.json
+          retention-days: 7
+          if-no-files-found: ignore
