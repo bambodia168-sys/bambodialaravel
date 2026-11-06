@@ -29,29 +29,38 @@
   $previousText = old('description', $record?->description ?? '');
 @endphp
 <div class="container inner-page builder-studio" data-builder-studio data-builder-readonly="{{ $canEdit ? '0' : '1' }}">
-  <nav class="studio-breadcrumb" aria-label="Breadcrumb">
-    <a href="{{ route('home') }}"><x-icon name="home" size="15"/> Home</a>
-    <x-icon name="chevron-right" size="14"/>
-    <a href="{{ route('builder') }}">Builder Studio</a>
-    @if($type)<x-icon name="chevron-right" size="14"/><span aria-current="page">{{ $types[$type]['label'] }}</span>@endif
-  </nav>
+  @if($type !== null)
+    <nav class="studio-breadcrumb" aria-label="Breadcrumb">
+      <a href="{{ route('home') }}"><x-icon name="home" size="15"/> Home</a>
+      <x-icon name="chevron-right" size="14"/>
+      <a href="{{ route('builder') }}">Builder Studio</a>
+      <x-icon name="chevron-right" size="14"/><span aria-current="page">{{ $types[$type]['label'] }}</span>
+    </nav>
 
-  <header class="studio-hero">
-    <div>
-      <span class="eyebrow">Bambodia / Creative workspace</span>
-      <h1>Builder Studio<span class="studio-hero-period">.</span></h1>
-      <p>{{ $type ? ($editing ? 'Review and manage your '.$types[$type]['label'].' submission.' : 'Create a professional '.$types[$type]['label'].' in one focused workspace.') : 'One professional place to create products, projects, services, freelance offers and job posts.' }}</p>
-    </div>
-    <div class="studio-hero-actions" aria-label="Builder actions">
-      @if($type)
+    <header class="studio-hero">
+      <div>
+        <span class="eyebrow">Bambodia / Creative workspace</span>
+        <h1>Builder Studio<span class="studio-hero-period">.</span></h1>
+        <p>{{ $editing ? 'Review and manage your '.$types[$type]['label'].' submission.' : 'Create a professional '.$types[$type]['label'].' in one focused workspace.' }}</p>
+      </div>
+      <div class="studio-hero-actions" aria-label="Builder actions">
         <button type="button" class="studio-tool-action" data-builder-preview-toggle>
           <x-icon name="eye" size="17"/> Preview
         </button>
         <a class="studio-tool-action" href="{{ $back }}"><x-icon name="folders" size="17"/> My content</a>
-      @endif
-      <a class="studio-tool-action" href="{{ route('home') }}"><x-icon name="arrow-up-right" size="17"/> Website</a>
-    </div>
-  </header>
+        <a class="studio-tool-action" href="{{ route('home') }}"><x-icon name="arrow-up-right" size="17"/> Website</a>
+      </div>
+    </header>
+  @else
+    <section class="studio-landing-hero" aria-labelledby="studio-landing-heading">
+      <span class="studio-landing-shield" aria-hidden="true"><x-icon name="shield" size="256"/></span>
+      <div class="studio-landing-hero-content">
+        <span class="studio-landing-eyebrow"><x-icon name="shield" size="16"/> Creative workspace</span>
+        <h1 id="studio-landing-heading">Builder Studio</h1>
+        <p>One professional place to create products, projects, services, freelance offers and job posts.</p>
+      </div>
+    </section>
+  @endif
 
   @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
   @if($errors->any())
@@ -70,6 +79,11 @@
         <x-icon :name="$meta['icon']" size="18"/><span>{{ $meta['label'] }}</span>
       </a>
     @endforeach
+    @if($type === null)
+      <a class="studio-landing-website" href="{{ route('home') }}">
+        <x-icon name="globe" size="17"/> Website
+      </a>
+    @endif
   </nav>
 
   @if($type === null)
@@ -86,11 +100,61 @@
             <span class="studio-choice-icon"><x-icon :name="$meta['icon']" size="24"/></span>
             <strong>{{ $meta['label'] }}</strong>
             <span class="studio-choice-description">{{ $meta['text'] }}</span>
-            <span class="studio-choice-link">Create {{ strtolower($meta['label']) }} <x-icon name="arrow-up-right" size="16"/></span>
+            <span class="studio-choice-link">Create {{ strtolower($meta['label']) }} <x-icon name="chevron-right" size="17"/></span>
           </a>
         @endforeach
       </div>
     @endif
+
+    <section class="studio-landing-guide" aria-labelledby="studio-guide-heading">
+      <header class="studio-landing-guide-heading">
+        <span class="eyebrow">Discover the marketplace</span>
+        <h2 id="studio-guide-heading">What can you create?</h2>
+        <p>Choose the right listing type for your work. Every submission is reviewed before becoming visible to the public.</p>
+      </header>
+      @php
+        $guides = [
+          'product' => 'Share original digital downloads, such as software, templates, design resources or other licensed files. Buyers receive only the usage rights stated in the approved product license, not ownership of your intellectual property.',
+          'project' => 'Present a completed project or a clearly scoped proposal. Explain your objectives, process, deliverables and examples of your work to help potential clients understand what you can build.',
+          'service' => 'Offer a defined professional service, with a clear description of the work, expected outcomes and pricing. Customers can review your offer and contact you through the platform’s inquiry process.',
+          'freelance' => 'Showcase your independent skills and specialist expertise. Describe the type of assignments you accept, your working approach and the value you can deliver to prospective clients.',
+          'job' => 'Post an opportunity with its responsibilities, requirements and optional budget. Eligible freelancers can review approved job listings and submit proposals for your consideration.',
+        ];
+      @endphp
+      <div class="studio-landing-guide-grid">
+        @foreach($types as $key=>$meta)
+          <article class="studio-landing-guide-item">
+            <div class="studio-landing-guide-icon"><x-icon :name="$meta['icon']" size="20"/></div>
+            <div>
+              <h3>{{ $meta['label'] }}</h3>
+              <p>{{ $guides[$key] }}</p>
+            </div>
+          </article>
+        @endforeach
+      </div>
+
+      <section class="studio-landing-license" aria-labelledby="studio-license-heading">
+        <div class="studio-landing-license-header">
+          <span class="studio-landing-license-icon"><x-icon name="shield" size="23"/></span>
+          <div>
+            <span class="eyebrow">Product licensing</span>
+            <h2 id="studio-license-heading">Choose the rights that fit your use</h2>
+            <p>Products use administrator-reviewed license terms. The permissions and restrictions in the published license determine what a buyer can do with the files.</p>
+          </div>
+        </div>
+        <div class="studio-landing-license-grid">
+          <article class="studio-landing-license-option">
+            <h3><x-icon name="file-check" size="19"/> Regular License</h3>
+            <p>Generally suited to one project or end product under the specific product’s published permissions. Reuse, redistribution and commercial restrictions depend on those written terms.</p>
+          </article>
+          <article class="studio-landing-license-option">
+            <h3><x-icon name="shield" size="19"/> Extended License</h3>
+            <p>Designed for products whose published terms grant broader commercial or monetized use. Extended rights are not assumed: only the permissions expressly stated in the selected license apply.</p>
+          </article>
+        </div>
+        <p class="studio-landing-license-note"><x-icon name="info" size="17"/> After verified purchases become available, the platform is intended to generate the corresponding product license automatically. Checkout and automatic license delivery are not currently enabled.</p>
+      </section>
+    </section>
   @else
     <div class="studio-section-heading">
       <div>

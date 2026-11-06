@@ -143,7 +143,21 @@ class UnifiedBuilderTest extends TestCase
             ->assertSee('value="animated"', false)
             ->assertSee('value="color"', false)
             ->assertSee('data-builder-copy-url', false);
-        $this->get('/builder')->assertOk()->assertSee('Create service')->assertSee('Create job');
+        $this->get('/builder')->assertOk()->assertSee('Create service')->assertSee('Create job')
+            ->assertSee('studio-landing-hero')
+            ->assertSee('Creative workspace')
+            ->assertSee('studio-landing-shield')
+            ->assertSee('studio-landing-website')
+            ->assertSee('What can you create?')
+            ->assertSee('Regular License')
+            ->assertSee('Extended License')
+            ->assertSee('automatic license delivery are not currently enabled')
+            ->assertDontSee('class="studio-breadcrumb"', false)
+            ->assertDontSee('Bambodia / Creative workspace')
+            ->assertDontSee('name="arrow-up-right"', false);
+        $this->get('/builder?type=product')->assertOk()
+            ->assertSee('class="studio-breadcrumb"', false)
+            ->assertDontSee('studio-landing-guide');
     }
 
     public function test_html_description_sanitization_preserves_safe_formatting_and_prevents_xss(): void

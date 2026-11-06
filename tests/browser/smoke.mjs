@@ -471,7 +471,19 @@ try {
         throw new Error('Builder Studio must not render inside the Creator/Account workspace');
       if(await admin.locator('.studio-choice').count()!==5)
         throw new Error('Builder Studio did not show all five creator/admin content types');
-      checks+=3;
+      if(!(await admin.locator('.studio-landing-hero').isVisible()))
+        throw new Error('Builder Studio landing Trust-shield hero is missing');
+      if(await admin.locator('.studio-breadcrumb').count())
+        throw new Error('Builder Studio landing still shows the breadcrumb');
+      if(!(await admin.locator('.studio-landing-website svg').isVisible()))
+        throw new Error('Builder Studio Website link is not in the type tabs with an SVG icon');
+      if(!(await admin.getByRole('heading',{name:'Regular License'}).isVisible())
+        || !(await admin.getByRole('heading',{name:'Extended License'}).isVisible()))
+        throw new Error('Builder Studio license guidance missing');
+      const actions=admin.locator('.studio-choice-link svg');
+      if(await actions.count()!==5)
+        throw new Error('Builder Studio listing cards missing correct navigation icons');
+      checks+=8;
       for(const kind of ['product','project','service','freelance','job']){
         const response=await admin.goto(origin+'/en/builder?type='+kind,{waitUntil:'networkidle'});
         if(response?.status()!==200)
