@@ -463,6 +463,57 @@ try {
       if(await admin.locator('.workspace-nav-link').getByText('Digital File Vault').count())
         throw new Error('Developer navigation leaked administration modules');
 
+      // Builder Studio is a public-layout editor, not a private workspace shell.
+      await admin.goto(origin+'/en/builder',{waitUntil:'networkidle'});
+      if(!(await admin.locator('.site-header').isVisible()) || !(await admin.locator('.site-footer').count()))
+        throw new Error('Builder Studio is missing the public Bambodia header and footer');
+      if(await admin.locator('#workspace-shell').count())
+        throw new Error('Builder Studio must not render inside the Creator/Account workspace');
+      if(await admin.locator('.studio-choice').count()!==5)
+        throw new Error('Builder Studio did not show all five creator/admin content types');
+      checks+=3;
+      for(const kind of ['product','project','service','freelance','job']){
+        const response=await admin.goto(origin+'/en/builder?type='+kind,{waitUntil:'networkidle'});
+        if(response?.status()!==200)
+          throw new Error('Builder Studio '+kind+' page failed with '+response?.status());
+        if(!(await admin.locator('.studio-editor-toolbar').isVisible()))
+          throw new Error('Builder Studio '+kind+' rich-text toolbar failed to initialize');
+        if(!(await admin.locator('input#studio-title').isVisible()))
+          throw new Error('Builder Studio '+kind+' has no title input');
+        if(!(await admin.locator('[data-featured-preview]').isVisible()))
+          throw new Error('Builder Studio '+kind+' missing featured media preview');
+        checks+=3;
+      }
+      await admin.goto(origin+'/en/builder?type=product',{waitUntil:'networkidle'});
+      const editable=admin.locator('[data-editor-surface]');
+      await editable.fill('A professionally documented original product with accessible designs, licensing information and maintained deliverables.');
+      if(!(await admin.locator('[data-editor-html]').inputValue()).includes('A professionally documented'))
+        throw new Error('Builder Studio formatted text failed to synchronize');
+      await admin.locator('input[name="featured_kind"][value="color"]').check({force:true});
+      await admin.locator('input[data-featured-color]').fill('#126abc');
+      if(!(await admin.locator('[data-featured-preview]').getByText('#126ABC').isVisible()))
+        throw new Error('Builder Studio chosen color is not visible in preview');
+      if(!(await admin.locator('button[data-builder-copy-url]').isDisabled()))
+        throw new Error('Unsaved builder item should not invent a shareable URL');
+      checks+=3;
+
+      for(const viewport of [{width:1440,height:900},{width:820,height:1180},{width:390,height:844}]){
+        await admin.setViewportSize(viewport);
+        for(const theme of ['light','dark']){
+          await admin.evaluate(value=>document.documentElement.dataset.theme=value,theme);
+          const dimensions=await admin.evaluate(()=>({
+            scroll:document.documentElement.scrollWidth,
+            width:window.innerWidth,
+            editor:!!document.querySelector('.studio-editor-toolbar:not([hidden])'),
+          }));
+          if(!dimensions.editor || dimensions.scroll>dimensions.width+5)
+            throw new Error('Builder Studio overflow/editor regression: '+JSON.stringify({viewport,theme,dimensions}));
+          checks++;
+          if((viewport.width===1440 || viewport.width===390) && theme==='dark')
+            await admin.screenshot({path:out+'/builder-studio-'+viewport.width+'-'+theme+'.png',fullPage:true});
+        }
+      }
+      await admin.setViewportSize(device.viewport);
       // Check visual distinction of the light sidebar and selected menu,
       // then sign out through the real CSRF-protected account dropdown.
       await admin.goto(origin+'/en/dashboard',{waitUntil:'networkidle'});
