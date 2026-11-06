@@ -49,6 +49,7 @@ jobs:
           bash -n support/builder-studio-workflow-upgrade.sh
           bash -n support/builder-ui-hardening-upgrade.sh
           bash -n support/product-license-upgrade.sh
+          bash -n support/license-support-upgrade.sh
           bash -n support/license-tables-upgrade.sh
           php -l examples/license-validation.php
           bash -n support/builder-studio-db-backup.sh
