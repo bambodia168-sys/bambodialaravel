@@ -26,6 +26,23 @@
             @foreach($license->events->take(10) as $event)
               <p class="hint">{{ ucfirst(str_replace('.',' ',$event->action)) }} · {{ $event->created_at->format('d M Y H:i') }}</p>
             @endforeach
+          </details>
+          <details class="license-workflow-panel">
+            <summary>Request administrative review</summary>
+            <form method="post" action="{{ route('studio.licenses.request-review',$license) }}" class="license-workflow-form">
+              @csrf
+              <label for="license-request-action-{{ $license->id }}">Requested action</label>
+              <select id="license-request-action-{{ $license->id }}" name="action" required>
+                <option value="domain_review">Domain transfer assistance</option>
+                <option value="upgrade_review">Review upgrade to Extended</option>
+                <option value="suspension_review">Investigate license suspension</option>
+                <option value="revocation_review">Investigate potential license abuse</option>
+              </select>
+              <label for="license-request-reason-{{ $license->id }}">Explain the issue</label>
+              <textarea id="license-request-reason-{{ $license->id }}" name="reason" rows="3" minlength="20" maxlength="500" required></textarea>
+              <button type="submit" class="btn subtle compact">Request review</button>
+              <p class="hint">This sends an administrator-review request only. It does not change the customer's license, domain or key.</p>
+            </form>
           </details></td>
         </tr>
       @empty<tr><td class="empty-cell" colspan="6">No product licenses have been issued for your downloadable products yet.</td></tr>@endforelse

@@ -163,7 +163,8 @@
                 <div><strong>{{ ucfirst(str_replace('.',' ',$event->action)) }}</strong>
                 <span>{{ $event->previous_domain ? $event->previous_domain.' → ' : '' }}{{ $event->domain }}
                   · {{ $event->created_at->format('d M Y H:i') }}
-                  · {{ $event->actor?->name ?? 'Installer API' }}</span></div>
+                  · {{ $event->actor?->name ?? 'Installer API' }}
+                  @if($event->reason) · {{ $event->reason }} @endif</span></div>
               @empty <p class="hint">No events recorded.</p> @endforelse
             </div>
             <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Close</button></div>

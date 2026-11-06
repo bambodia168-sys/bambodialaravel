@@ -206,6 +206,8 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/products/{product}/releases', [ProductVaultController::class, 'store'])
             ->name('studio.vault.store')->middleware('throttle:5,1');
         Route::get('/licenses', [ProductLicensesController::class,'index'])->name('studio.licenses.index');
+        Route::post('/licenses/{license}/request-review', [ProductLicensesController::class,'requestReview'])
+            ->name('studio.licenses.request-review')->middleware('throttle:3,1');
         Route::get('/products', [CreatorProductController::class, 'index'])->name('studio.products.index');
         Route::post('/products', [CreatorProductController::class, 'store'])->name('studio.products.store')->middleware('throttle:10,1');
         Route::patch('/products/{product}', [CreatorProductController::class, 'update'])->name('studio.products.update')->middleware('throttle:10,1');

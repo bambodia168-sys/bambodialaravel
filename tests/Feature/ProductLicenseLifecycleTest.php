@@ -301,6 +301,16 @@ class ProductLicenseLifecycleTest extends TestCase
         $another=$this->member('freelancer');
         $this->actingAs($another)->get('/studio/licenses')->assertOk()
             ->assertDontSee($license->public_id)->assertDontSee($this->customer->public_id);
+        $this->post('/studio/licenses/'.$license->id.'/request-review',[
+            'action'=>'revocation_review','reason'=>'Attempted modification by unrelated creator.',
+        ])->assertNotFound();
+        $this->actingAs($this->creator)->post('/studio/licenses/'.$license->id.'/request-review',[
+            'action'=>'domain_review','reason'=>'Please help the buyer verify domain migration.',
+        ])->assertRedirect();
+        $this->assertDatabaseHas('product_license_events',[
+            'product_license_id'=>$license->id,'actor_id'=>$this->creator->id,
+            'action'=>'creator.review.requested',
+        ]);
         $this->actingAs($this->customer)->get('/studio/licenses')->assertForbidden();
         $this->get('/dashboard/license-manager')->assertForbidden();
     }

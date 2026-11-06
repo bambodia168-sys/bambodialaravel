@@ -18,6 +18,7 @@ class AccountNotification extends Model
         'vault.access.revoked',
         'license.issued',
         'license.status.changed',
+        'license.creator.review.requested',
         'listing.reviewed',
         'vault.version.reviewed',
         'support.replied',
