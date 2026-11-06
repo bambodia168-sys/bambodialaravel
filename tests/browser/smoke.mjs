@@ -251,6 +251,76 @@ try {
           throw new Error(device.name+' missing opt-in creator');
       }
     }
+    // Real approved Product, Project, Service and Freelance detail routes.
+    // Test the same layout on desktop, tablet and both mobile emulations.
+    for(const kind of ['product','project','service','freelance']){
+      const listPath='/search?type='+kind;
+      const listResponse=await page.goto(origin+listPath,{waitUntil:'networkidle'});
+      if(listResponse?.status()!==200)
+        throw new Error(device.name+' '+kind+' listing search failed with '+listResponse?.status());
+      const filterForm=page.locator('.marketplace-filter-sidebar form.marketplace-filter-form');
+      if(!(await filterForm.isVisible()))
+        throw new Error(device.name+' '+kind+' premium search sidebar missing');
+      const result=page.locator('article.marketplace-card a.marketplace-card-art').first();
+      if(!(await result.isVisible()))
+        throw new Error(device.name+' '+kind+' original approved QA listing not found');
+      const detailHref=await result.getAttribute('href');
+      const detailResponse=await page.goto(detailHref,{waitUntil:'networkidle'});
+      if(detailResponse?.status()!==200)
+        throw new Error(device.name+' '+kind+' detail failed with '+detailResponse?.status());
+      const primary=page.locator('.premium-detail-layout');
+      const preview=primary.locator('.premium-showcase');
+      const aside=primary.locator('aside.premium-detail-sidebar');
+      if(!(await primary.isVisible())||!(await preview.isVisible())||!(await aside.isVisible()))
+        throw new Error(device.name+' '+kind+' premium detail split layout missing');
+      for(const section of ['overview','seller']){
+        if(!(await page.locator('#'+section+'.premium-content-section').isVisible()))
+          throw new Error(device.name+' '+kind+' missing real '+section+' section');
+      }
+      if(await page.getByRole('button',{name:/buy now/i}).count())
+        throw new Error(device.name+' '+kind+' invented checkout button on payment-disabled platform');
+      if(kind==='product'){
+        if(!(await page.locator('#license').isVisible()))
+          throw new Error(device.name+' product license details absent');
+        if(!(await preview.locator('img.premium-showcase-cover').isVisible()))
+          throw new Error(device.name+' product approved preview absent');
+        const image=await preview.locator('img').evaluate(img=>({loaded:img.complete,w:img.naturalWidth}));
+        if(!image.loaded||image.w<=0)
+          throw new Error(device.name+' approved product preview failed to load '+JSON.stringify(image));
+        if(!(await page.getByText('Direct checkout is not enabled').isVisible()))
+          throw new Error(device.name+' product missing truthful checkout restriction');
+      }else{
+        if(!(await page.locator('#workflow').isVisible()))
+          throw new Error(device.name+' '+kind+' missing private inquiry workflow');
+        if(!(await page.getByRole('link',{name:/sign in to contact/i}).isVisible()))
+          throw new Error(device.name+' '+kind+' missing guest sign-in action');
+      }
+      for(const theme of ['light','dark']){
+        await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;},theme);
+        const dimensions=await page.evaluate(()=>{
+          const main=document.querySelector('.premium-detail-main').getBoundingClientRect();
+          const sidebar=document.querySelector('.premium-detail-sidebar').getBoundingClientRect();
+          return {
+            scrollWidth:document.documentElement.scrollWidth,
+            viewport:window.innerWidth,
+            mainLeft:main.left,mainRight:main.right,
+            asideLeft:sidebar.left,asideTop:sidebar.top,mainTop:main.top
+          };
+        });
+        if(dimensions.scrollWidth>dimensions.viewport+5)
+          throw new Error(device.name+' '+kind+' '+theme+' horizontal overflow '+JSON.stringify(dimensions));
+        if(device.viewport.width>=761 && dimensions.asideLeft<dimensions.mainRight-4)
+          throw new Error(device.name+' '+kind+' '+theme+' sidebar overlaps main area '+JSON.stringify(dimensions));
+        if(device.viewport.width<=760 && dimensions.asideTop<dimensions.mainTop)
+          throw new Error(device.name+' '+kind+' '+theme+' sidebar appears before content');
+        checks+=4;
+        if(device.name==='desktop')
+          await page.screenshot({path:out+'/desktop-'+kind+'-'+theme+'-detail.png',fullPage:true});
+      }
+      await page.evaluate(()=>{document.documentElement.dataset.theme=localStorage.getItem('bambodia-theme')||'light';});
+    }
+    checks+=8;
+
     if(device.name==='desktop'){
       await page.goto(origin+'/register',{waitUntil:'networkidle'});
       const colors=await page.evaluate(()=>({
