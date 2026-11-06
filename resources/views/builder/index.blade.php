@@ -1,220 +1,407 @@
-@extends('layouts.workspace')
-@section('workspace', $workspace)
-@section('title', 'Marketplace Builder')
+@extends('layouts.main')
+@section('title', 'Builder Studio')
 @section('content')
 @php
-  $labels = ['product'=>'Product', 'project'=>'Project', 'service'=>'Service', 'freelance'=>'Freelance', 'job'=>'Job'];
-  $icons = ['product'=>'package','project'=>'layers','service'=>'wrench','freelance'=>'briefcase','job'=>'file-text'];
-  $isJob = $type === 'job';
-  $isProduct = $type === 'product';
+  $types = [
+    'product'=>['label'=>'Product','icon'=>'package','text'=>'Licensed digital products and original source files'],
+    'project'=>['label'=>'Project','icon'=>'layers','text'=>'Present your project with scope and deliverables'],
+    'service'=>['label'=>'Service','icon'=>'wrench','text'=>'Offer a professional service to customers'],
+    'freelance'=>['label'=>'Freelance','icon'=>'briefcase','text'=>'Showcase your professional freelance offer'],
+    'job'=>['label'=>'Job','icon'=>'file-text','text'=>'Publish a job brief and receive proposals'],
+  ];
   $editing = $record !== null;
+  $isProduct = $type === 'product';
+  $isJob = $type === 'job';
   $back = $isJob ? route('jobs.mine') : ($isProduct ? route('studio.products.index') : route('studio.listings'));
   $action = $isJob
     ? ($editing ? url('/builder?='.$record->public_id) : route('jobs.store'))
     : ($isProduct
-      ? ($editing ? route('studio.products.update', $record) : route('studio.products.store'))
-      : ($editing ? route('studio.listings.update', $record) : route('studio.listings.store')));
+      ? ($editing ? route('studio.products.update',$record) : route('studio.products.store'))
+      : ($editing ? route('studio.listings.update',$record) : route('studio.listings.store')));
+  $shareUrl = $editing
+    ? ($record->status === 'published' ? $record->publicUrl() : url('/builder?='.$record->public_id))
+    : null;
+  $selectedKind = old('featured_kind', $record?->featured_kind ?? 'none');
+  $selectedMedia = old('featured_media_id', $record?->featured_media_id);
+  $selectedColor = old('featured_color', $record?->featured_color ?: '#c2410c');
+  $returnTo = $editing ? '/builder?='.$record->public_id : ($type ? '/builder?type='.$type : '/builder');
+  $previousHtml = old('description_html', $record?->description_html);
+  $previousText = old('description', $record?->description ?? '');
 @endphp
-<div class="container inner-page marketplace-builder">
-  <div class="page-intro builder-intro">
-    <div class="eyebrow">Bambodia · Unified Marketplace Builder</div>
-    <h1>{{ $type ? ($editing ? 'Manage' : 'Create').' '.strtolower($labels[$type]) : 'What would you like to create?' }}</h1>
-    <p>{{ $type ? 'One workspace for real marketplace submissions, with ownership protection and administrator review.' : 'Choose a content type to start. Your available options follow your account permissions.' }}</p>
-  </div>
+<div class="container inner-page builder-studio" data-builder-studio>
+  <nav class="studio-breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ route('home') }}"><x-icon name="home" size="15"/> Home</a>
+    <x-icon name="chevron-right" size="14"/>
+    <a href="{{ route('builder') }}">Builder Studio</a>
+    @if($type)<x-icon name="chevron-right" size="14"/><span aria-current="page">{{ $types[$type]['label'] }}</span>@endif
+  </nav>
+
+  <header class="studio-hero">
+    <div>
+      <span class="eyebrow">Bambodia / Creative workspace</span>
+      <h1>Builder Studio<span class="studio-hero-period">.</span></h1>
+      <p>{{ $type ? ($editing ? 'Review and manage your '.$types[$type]['label'].' submission.' : 'Create a professional '.$types[$type]['label'].' in one focused workspace.') : 'One professional place to create products, projects, services, freelance offers and job posts.' }}</p>
+    </div>
+    <div class="studio-hero-actions" aria-label="Builder actions">
+      @if($type)
+        <button type="button" class="studio-tool-action" data-builder-preview-toggle>
+          <x-icon name="eye" size="17"/> Preview
+        </button>
+        <a class="studio-tool-action" href="{{ $back }}"><x-icon name="folders" size="17"/> My content</a>
+      @endif
+      <a class="studio-tool-action" href="{{ route('home') }}"><x-icon name="arrow-up-right" size="17"/> Website</a>
+    </div>
+  </header>
+
   @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
   @if($errors->any())
     <div class="notice error" role="alert">
-      <strong>Please review these fields:</strong>
+      <strong>Please correct the following:</strong>
       <ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
     </div>
   @endif
 
-  <nav class="builder-type-nav" aria-label="Create content">
-    @foreach($allowedTypes as $choice)
-      <a href="{{ route('builder', ['type'=>$choice]) }}" class="builder-type-link {{ $type===$choice&&!$editing?'is-current':'' }}"
-         @if($type===$choice&&!$editing)aria-current="page"@endif>
-        <x-icon :name="$icons[$choice]" size="18"/><span>{{ $labels[$choice] }}</span>
+  <nav class="studio-types" aria-label="Builder content type">
+    @foreach($types as $key=>$meta)
+      @continue(!in_array($key, $allowedTypes, true))
+      <a class="studio-type {{ $type===$key?'is-active':'' }}"
+         href="{{ route('builder',['type'=>$key]) }}"
+         @if($type===$key)aria-current="page"@endif>
+        <x-icon :name="$meta['icon']" size="18"/><span>{{ $meta['label'] }}</span>
       </a>
     @endforeach
   </nav>
 
   @if($type === null)
     @if(count($allowedTypes) === 0)
-      <div class="panel builder-panel">
-        <h2>Builder access</h2><p>Creation is available to approved creators and eligible job-posting accounts. You can request creator access from your account.</p>
-        <a class="btn subtle" href="{{ route('account') }}">Go to my account</a>
+      <div class="studio-empty panel">
+        <h2>Choose your access</h2><p>Creator approval is required for marketplace offers. Clients can create job posts from eligible accounts.</p>
+        <a href="{{ route('account') }}" class="btn primary">My account</a>
       </div>
     @else
-      <div class="builder-choice-grid">
-        @foreach($allowedTypes as $choice)
-          <a class="builder-choice" href="{{ route('builder', ['type'=>$choice]) }}">
-            <span class="builder-choice-icon"><x-icon :name="$icons[$choice]" size="25"/></span>
-            <strong>{{ $labels[$choice] }}</strong>
-            <span>{{ $choice==='product' ? 'Licensed files, rights and approved previews' : ($choice==='job' ? 'Recruit freelancers for a scoped assignment' : 'Publish your original '.strtolower($labels[$choice]).' offer') }}</span>
-            <span class="builder-choice-action">Create {{ strtolower($labels[$choice]) }} <x-icon name="arrow-right" size="15"/></span>
+      <div class="studio-choice-grid">
+        @foreach($types as $key=>$meta)
+          @continue(!in_array($key, $allowedTypes, true))
+          <a class="studio-choice" href="{{ route('builder',['type'=>$key]) }}">
+            <span class="studio-choice-icon"><x-icon :name="$meta['icon']" size="24"/></span>
+            <strong>{{ $meta['label'] }}</strong>
+            <span class="studio-choice-description">{{ $meta['text'] }}</span>
+            <span class="studio-choice-link">Create {{ strtolower($meta['label']) }} <x-icon name="arrow-up-right" size="16"/></span>
           </a>
         @endforeach
       </div>
     @endif
   @else
-  <div class="builder-workspace">
-    <div class="builder-main">
-      <section class="panel builder-panel">
-        <div class="builder-panel-head">
-          <div>
-            <div class="eyebrow">{{ $labels[$type] }} details</div>
-            <h2>{{ $editing ? $record->title : 'New '.$labels[$type] }}</h2>
-          </div>
-          @if($editing)<span class="role-pill">{{ ucfirst($record->status) }}</span>@endif
-        </div>
-        @if($editing)<p class="builder-public-id">Public ID: <strong class="mono">{{ $record->public_id }}</strong></p>@endif
-        @if(!$canEdit)
-          <div class="notice">This {{ $labels[$type] }} is {{ $record->status }}. Direct editing is disabled after submission or publication. Review and publication permissions are unchanged.</div>
-        @endif
-        <form method="post" action="{{ $action }}" class="builder-form">
+    <div class="studio-section-heading">
+      <div>
+        <span class="eyebrow">{{ $types[$type]['label'] }} / {{ $editing ? 'Management' : 'New submission' }}</span>
+        <h2>{{ $editing ? 'Edit '.$types[$type]['label'] : 'Create '.$types[$type]['label'] }}</h2>
+        @if($editing)<p>Public ID <span class="mono">{{ $record->public_id }}</span> · {{ ucfirst($record->status) }}</p>@endif
+      </div>
+      @if($editing)<span class="studio-status">{{ ucfirst($record->status) }}</span>@endif
+    </div>
+
+    @if(!$canEdit)
+      <div class="notice">This {{ strtolower($types[$type]['label']) }} is {{ $record->status }}. You can inspect its content but cannot change it directly. Administrator review and publication safeguards remain active.</div>
+    @endif
+
+    <div class="studio-columns">
+      <div class="studio-primary">
+        <form data-builder-form method="post" action="{{ $action }}" class="studio-form">
           @csrf
           @if($editing)@method('PATCH')@else<input type="hidden" name="builder_mode" value="1">@endif
-          @if(!$isJob && !$isProduct && !$editing)<input type="hidden" name="type" value="{{ $type }}">@endif
+          @if(!$editing && !$isJob && !$isProduct)<input type="hidden" name="type" value="{{ $type }}">@endif
           <fieldset @disabled(!$canEdit)>
-            <div class="builder-field">
-              <label for="builder-title">{{ $isJob ? 'Job title' : $labels[$type].' title' }} <span aria-hidden="true">*</span></label>
-              <input id="builder-title" name="title" required minlength="{{ $isJob ? 8 : 4 }}" maxlength="180"
-                     value="{{ old('title',$record?->title) }}" placeholder="Enter a clear, descriptive title">
-              @error('title')<small class="builder-field-error">{{ $message }}</small>@enderror
-            </div>
-            <div class="builder-field">
-              <label for="builder-description">{{ $isJob ? 'Job brief and requirements' : 'Description and deliverables' }} <span aria-hidden="true">*</span></label>
-              <textarea id="builder-description" name="description" rows="9" minlength="{{ $isJob ? 70 : 40 }}" maxlength="10000" required
-                        placeholder="Explain the scope, deliverables and important details.">{{ old('description',$record?->description) }}</textarea>
-              <small class="hint">Minimum {{ $isJob ? 70 : 40 }} characters · Maximum 10,000</small>
+            <section class="studio-card" aria-labelledby="studio-basic-title">
+              <div class="studio-card-heading">
+                <div><span class="studio-step">01</span><h3 id="studio-basic-title">Basic information</h3></div>
+                <span class="studio-step-caption">Essential details</span>
+              </div>
+              <div class="studio-field">
+                <label for="studio-title">{{ $isJob ? 'Job title' : $types[$type]['label'].' title' }} <span class="studio-required">*</span></label>
+                <div class="studio-title-control">
+                  <input id="studio-title" name="title" type="text"
+                         minlength="{{ $isJob ? 8 : 4 }}" maxlength="180" required
+                         value="{{ old('title',$record?->title ?? '') }}"
+                         placeholder="Write a clear and professional title">
+                  <button type="button" class="studio-copy-control" data-builder-copy-url
+                          @if($shareUrl)data-copy-url="{{ $shareUrl }}" title="Copy full {{ $record->status === 'published' ? 'public' : 'builder' }} URL" @else disabled title="Save your {{ strtolower($types[$type]['label']) }} to generate its full URL" @endif
+                          aria-label="Copy full listing URL"><x-icon name="copy" size="18"/></button>
+                </div>
+                <small class="studio-copy-feedback" data-copy-feedback aria-live="polite">{{ $editing ? 'Copy the full item URL using the icon at the end of the title.' : 'A copyable URL is generated once your submission has been saved.' }}</small>
+                @error('title')<small class="builder-field-error">{{ $message }}</small>@enderror
+              </div>
+              <div class="studio-form-grid">
+                <div class="studio-field">
+                  <label for="studio-category">{{ $isJob ? 'Job category' : 'Marketplace category' }}</label>
+                  @if($isJob)
+                    <select name="category" id="studio-category" required>
+                      @foreach(['development','design','writing','marketing','business','other'] as $category)
+                        <option value="{{ $category }}" @selected(old('category',$record?->category)===$category)>{{ ucfirst($category) }}</option>
+                      @endforeach
+                    </select>
+                  @else
+                    <select name="category_id" id="studio-category">
+                      <option value="">Uncategorized</option>
+                      @foreach($categories as $category)
+                        <option value="{{ $category->id }}" @selected((string)old('category_id',$record?->category_id)===(string)$category->id)>{{ $category->name }}</option>
+                      @endforeach
+                    </select>
+                  @endif
+                </div>
+                <div class="studio-field">
+                  <label for="studio-price">{{ $isJob ? 'Budget' : 'Listed price' }} (USD, optional)</label>
+                  <input id="studio-price" name="{{ $isJob ? 'budget' : 'price' }}" type="number" min="0" max="9999999999.99" step="0.01"
+                         value="{{ old($isJob ? 'budget' : 'price',$isJob ? $record?->budget : $record?->price) }}"
+                         placeholder="0.00">
+                </div>
+              </div>
+            </section>
+
+            <section class="studio-card" aria-labelledby="studio-editor-title">
+              <div class="studio-card-heading">
+                <div><span class="studio-step">02</span><h3 id="studio-editor-title">{{ $isJob ? 'Job description' : 'Description & details' }} <span class="studio-required">*</span></h3></div>
+                <span class="studio-step-caption">Rich text editor</span>
+              </div>
+              <div class="studio-editor" data-studio-editor>
+                <div class="studio-editor-toolbar" data-editor-toolbar hidden role="toolbar" aria-label="Rich text formatting">
+                  <select class="studio-editor-format" data-editor-block aria-label="Paragraph format">
+                    <option value="p">Paragraph</option>
+                    <option value="h2">Heading 2</option>
+                    <option value="h3">Heading 3</option>
+                    <option value="h4">Heading 4</option>
+                    <option value="blockquote">Blockquote</option>
+                    <option value="pre">Preformatted</option>
+                  </select>
+                  @foreach([
+                    ['bold','bold','Bold'],['italic','italic','Italic'],['underline','underline','Underline'],
+                    ['strikeThrough','strikethrough','Strikethrough'],['superscript','superscript','Superscript'],
+                    ['subscript','subscript','Subscript'],['insertUnorderedList','list','Bullet list'],
+                    ['insertOrderedList','list-ordered','Numbered list'],['outdent','outdent','Decrease indent'],
+                    ['indent','indent','Increase indent'],['justifyLeft','align-left','Align left'],
+                    ['justifyCenter','align-center','Align center'],['justifyRight','align-right','Align right'],
+                    ['justifyFull','align-justify','Justify text']
+                  ] as [$command,$icon,$label])
+                    <button type="button" class="studio-editor-icon" data-editor-command="{{ $command }}" title="{{ $label }}" aria-label="{{ $label }}"><x-icon :name="$icon" size="17"/></button>
+                  @endforeach
+                  <button type="button" class="studio-editor-icon" data-editor-action="link" title="Insert hyperlink" aria-label="Insert hyperlink"><x-icon name="link" size="17"/></button>
+                  <button type="button" class="studio-editor-icon" data-editor-command="unlink" title="Remove hyperlink" aria-label="Remove hyperlink"><x-icon name="unlink" size="17"/></button>
+                  <button type="button" class="studio-editor-icon" data-editor-action="table" title="Insert table" aria-label="Insert table"><x-icon name="table" size="17"/></button>
+                  <button type="button" class="studio-editor-icon" data-editor-action="rule" title="Insert horizontal rule" aria-label="Insert horizontal rule"><x-icon name="minus" size="17"/></button>
+                  <label class="studio-editor-color" title="Text color" aria-label="Text color"><x-icon name="palette" size="17"/><input data-editor-color="foreColor" type="color" value="#c2410c" aria-label="Text color"></label>
+                  <label class="studio-editor-color" title="Highlight color" aria-label="Highlight color"><x-icon name="highlighter" size="17"/><input data-editor-color="hiliteColor" type="color" value="#fff1a8" aria-label="Highlight color"></label>
+                  @foreach([['undo','undo','Undo'],['redo','redo','Redo'],['removeFormat','eraser','Clear formatting']] as [$command,$icon,$label])
+                    <button type="button" class="studio-editor-icon" data-editor-command="{{ $command }}" title="{{ $label }}" aria-label="{{ $label }}"><x-icon :name="$icon" size="17"/></button>
+                  @endforeach
+                  <button type="button" class="studio-editor-icon" data-editor-action="source" title="View HTML source (read-only)" aria-label="View HTML source"><x-icon name="code" size="17"/></button>
+                </div>
+                <div class="studio-editor-surface" data-editor-surface contenteditable="true" role="textbox"
+                     aria-label="Formatted description" aria-multiline="true" spellcheck="true"
+                     data-placeholder="Describe the scope, benefits, deliverables and requirements" hidden>
+                  @if($previousHtml){!! \App\Support\BuilderContent::sanitize($previousHtml) !!}@else{!! nl2br(e($previousText)) !!}@endif
+                </div>
+                <textarea data-editor-fallback name="description" rows="10"
+                          minlength="{{ $isJob ? 70 : 40 }}" maxlength="10000" required
+                          placeholder="Describe the scope, benefits, deliverables and requirements">{{ $previousText }}</textarea>
+                <input type="hidden" data-editor-html name="description_html" value="{{ $previousHtml }}">
+                <textarea class="studio-editor-source" data-editor-source aria-label="Sanitized HTML source preview" readonly hidden></textarea>
+                <div class="studio-editor-footer">
+                  <span>Headings · Lists · Links · Tables · Formatting</span>
+                  <span data-editor-counter>0 / 10,000</span>
+                </div>
+              </div>
+              <small class="hint">At least {{ $isJob ? 70 : 40 }} characters. Formatting is cleaned securely when saved.</small>
               @error('description')<small class="builder-field-error">{{ $message }}</small>@enderror
-            </div>
-            @if($isJob)
-              <div class="builder-form-grid">
-                <div class="builder-field">
-                  <label for="builder-job-category">Job category <span aria-hidden="true">*</span></label>
-                  <select id="builder-job-category" name="category" required>
-                    @foreach(['development','design','writing','marketing','business','other'] as $category)
-                      <option value="{{ $category }}" @selected(old('category',$record?->category)===$category)>{{ ucfirst($category) }}</option>
+            </section>
+
+            <section class="studio-card" aria-labelledby="studio-featured-title">
+              <div class="studio-card-heading">
+                <div><span class="studio-step">03</span><h3 id="studio-featured-title">Featured media</h3></div>
+                <span class="studio-step-caption">Cover your {{ strtolower($types[$type]['label']) }}</span>
+              </div>
+              <p class="studio-help">Choose an approved image, animated GIF, video, or a solid color. Media remains private until it passes review.</p>
+              <div class="studio-media-types" role="group" aria-label="Featured media type">
+                @foreach([
+                  'none'=>['label'=>'None','icon'=>'slash'],
+                  'image'=>['label'=>'Image','icon'=>'image'],
+                  'video'=>['label'=>'Video','icon'=>'video'],
+                  'animated'=>['label'=>'Animate','icon'=>'sparkles'],
+                  'color'=>['label'=>'Color','icon'=>'palette']
+                ] as $kind=>$meta)
+                  <label class="studio-media-option">
+                    <input type="radio" name="featured_kind" value="{{ $kind }}" @checked($selectedKind === $kind)>
+                    <span><x-icon :name="$meta['icon']" size="17"/>{{ $meta['label'] }}</span>
+                  </label>
+                @endforeach
+              </div>
+              <div class="studio-media-chooser" data-featured-media-select>
+                <div class="studio-field">
+                  <label for="studio-featured-media">Select reviewed media from your library</label>
+                  <select id="studio-featured-media" name="featured_media_id" data-featured-media>
+                    <option value="">Choose approved media</option>
+                    @foreach($assets as $asset)
+                      <option value="{{ $asset->id }}" data-media-mime="{{ $asset->mime_type }}" data-media-url="{{ $asset->previewUrl() }}"
+                              data-media-alt="{{ $asset->alt_text }}" @selected((string)$selectedMedia===(string)$asset->id)>
+                        {{ $asset->alt_text }} · {{ $asset->public_id }} ({{ strtoupper(explode('/',$asset->mime_type)[1] ?? 'media') }})
+                      </option>
                     @endforeach
                   </select>
                 </div>
-                <div class="builder-field">
-                  <label for="builder-budget">Budget (USD, optional)</label>
-                  <input id="builder-budget" type="number" name="budget" min="0" max="9999999999.99" step="0.01"
-                         value="{{ old('budget',$record?->budget) }}" placeholder="0.00">
+                <button class="studio-tool-action" type="button" data-modal-open="studio-media-upload"><x-icon name="upload" size="16"/> Upload new media</button>
+                <small class="hint">Files uploaded here must pass rights review before they can be selected.</small>
+              </div>
+              <div class="studio-field studio-media-color" data-featured-color-wrap>
+                <label for="studio-color">Featured background color</label>
+                <div class="studio-color-control">
+                  <input id="studio-color" name="featured_color" type="color" data-featured-color
+                         value="{{ preg_match('/^#[a-fA-F0-9]{6}$/',$selectedColor) ? $selectedColor : '#c2410c' }}">
+                  <span data-featured-color-label>{{ $selectedColor }}</span>
                 </div>
               </div>
-            @else
-              <div class="builder-form-grid">
-                <div class="builder-field">
-                  <label for="builder-category">Marketplace category</label>
-                  <select id="builder-category" name="category_id">
-                    <option value="">Uncategorized</option>
-                    @foreach($categories as $category)
-                      <option value="{{ $category->id }}" @selected((string)old('category_id',$record?->category_id)===(string)$category->id)>{{ $category->name }}</option>
-                    @endforeach
-                  </select>
-                  @error('category_id')<small class="builder-field-error">{{ $message }}</small>@enderror
-                </div>
-                <div class="builder-field">
-                  <label for="builder-price">Listed price (USD, optional)</label>
-                  <input id="builder-price" type="number" name="price" min="0" max="9999999999.99" step="0.01"
-                         value="{{ old('price',$record?->price) }}" placeholder="0.00">
-                  @error('price')<small class="builder-field-error">{{ $message }}</small>@enderror
-                </div>
+              <div class="studio-featured-preview" data-featured-preview aria-label="Selected featured media preview">
+                <span><x-icon name="image" size="25"/> Featured media preview</span>
               </div>
-              @if($isProduct)
-                <div class="builder-form-grid">
-                  <div class="builder-field">
-                    <label for="builder-license">Active product license</label>
-                    <select id="builder-license" name="license_definition_id">
-                      <option value="">Not selected</option>
+              @error('featured_media_id')<small class="builder-field-error">{{ $message }}</small>@enderror
+            </section>
+
+            @if($isProduct)
+              <section class="studio-card" aria-labelledby="studio-license-title">
+                <div class="studio-card-heading">
+                  <div><span class="studio-step">04</span><h3 id="studio-license-title">Product license and preview</h3></div>
+                  <span class="studio-step-caption">Publishing requirements</span>
+                </div>
+                <div class="studio-form-grid">
+                  <div class="studio-field">
+                    <label for="studio-license">Active product license</label>
+                    <select id="studio-license" name="license_definition_id">
+                      <option value="">Select an active license</option>
                       @foreach($licenses as $license)
                         <option value="{{ $license->id }}" @selected((string)old('license_definition_id',$record?->license_definition_id)===(string)$license->id)>{{ $license->name }} · {{ $license->version }}</option>
                       @endforeach
                     </select>
-                    @error('license_definition_id')<small class="builder-field-error">{{ $message }}</small>@enderror
                   </div>
-                  <div class="builder-field">
-                    <label for="builder-cover">Approved preview image</label>
-                    <select id="builder-cover" name="cover_media_id">
-                      <option value="">Not selected</option>
+                  <div class="studio-field">
+                    <label for="studio-cover">Required static product preview</label>
+                    <select id="studio-cover" name="cover_media_id">
+                      <option value="">Select an approved static image</option>
                       @foreach($assets as $asset)
-                        <option value="{{ $asset->id }}" @selected((string)old('cover_media_id',$record?->cover_media_id)===(string)$asset->id)>{{ $asset->alt_text }} · {{ $asset->public_id }}</option>
+                        @if(in_array($asset->mime_type,['image/jpeg','image/png','image/webp'],true))
+                          <option value="{{ $asset->id }}" @selected((string)old('cover_media_id',$record?->cover_media_id)===(string)$asset->id)>{{ $asset->alt_text }} · {{ $asset->public_id }}</option>
+                        @endif
                       @endforeach
                     </select>
-                    @error('cover_media_id')<small class="builder-field-error">{{ $message }}</small>@enderror
                   </div>
                 </div>
-                <p class="hint">Product submission requires an active license and an approved image from your own Media Library.</p>
-              @endif
-              <div class="builder-field">
-                <label for="builder-terms">{{ $isProduct ? 'Additional product terms' : 'Supplemental terms' }} (optional)</label>
-                <textarea id="builder-terms" name="license_terms" rows="4" maxlength="20000">{{ old('license_terms',$record?->license_terms) }}</textarea>
-                @if($isProduct)<small class="hint">Additional terms cannot expand the rights granted by the active license.</small>@endif
-              </div>
+                <p class="hint">A product can feature video, animation or color, but still requires an active license and approved static preview to submit for publication.</p>
+              </section>
             @endif
+
+            @unless($isJob)
+              <section class="studio-card" aria-labelledby="studio-terms-title">
+                <div class="studio-card-heading">
+                  <div><span class="studio-step">{{ $isProduct ? '05' : '04' }}</span><h3 id="studio-terms-title">Supplemental terms</h3></div>
+                  <span class="studio-step-caption">Optional</span>
+                </div>
+                <div class="studio-field">
+                  <label for="studio-terms">Additional usage and delivery conditions</label>
+                  <textarea id="studio-terms" name="license_terms" rows="4" maxlength="20000"
+                            placeholder="Additional rights, usage limitations or delivery details">{{ old('license_terms',$record?->license_terms ?? '') }}</textarea>
+                </div>
+                @if($isProduct)<p class="hint">These terms cannot expand the rights granted by the active product license.</p>@endif
+              </section>
+            @endunless
+
             @if($isProduct)
-              <div class="builder-field">
-                <label for="builder-status">Next action</label>
-                <select id="builder-status" name="status">
+              <section class="studio-card studio-final-action">
+                <label for="studio-next-status">Next action</label>
+                <select id="studio-next-status" name="status">
                   <option value="draft" @selected(old('status','draft')==='draft')>Save draft</option>
-                  <option value="pending" @selected(old('status','draft')==='pending')>Submit for administrator review</option>
+                  <option value="pending" @selected(old('status','draft')==='pending')>Submit for review</option>
                 </select>
-              </div>
+              </section>
             @endif
           </fieldset>
-          @if($canEdit)
-            <div class="builder-actions">
-              <a class="btn subtle" href="{{ $back }}">Cancel</a>
-              <button class="btn primary" type="submit">
-                <x-icon name="save" size="17"/> {{ $isProduct ? 'Save product' : ($editing ? 'Save and submit for review' : 'Submit for review') }}
-              </button>
+          <div class="studio-submit-bar">
+            <span><x-icon name="shield-check" size="17"/> Your work is protected by account ownership and content review.</span>
+            <div class="studio-submit-actions">
+              <a class="studio-tool-action" href="{{ $back }}">Cancel</a>
+              @if($canEdit)
+                <button class="btn primary" type="submit"><x-icon name="save" size="17"/> {{ $isProduct ? 'Save product' : ($editing ? 'Save changes' : 'Submit for review') }}</button>
+              @endif
             </div>
-          @else
-            <div class="builder-actions"><a class="btn subtle" href="{{ $back }}">Back to manager</a></div>
-          @endif
+          </div>
         </form>
-      </section>
+      </div>
+
+      <aside class="studio-aside" aria-label="Builder tools and publishing guidance">
+        <section class="studio-aside-card">
+          <span class="eyebrow">Workspace summary</span>
+          <h3>{{ $editing ? $record->title : 'New '.$types[$type]['label'] }}</h3>
+          <dl class="studio-summary">
+            <div><dt>Type</dt><dd>{{ $types[$type]['label'] }}</dd></div>
+            <div><dt>Status</dt><dd>{{ $editing ? ucfirst($record->status) : 'Not saved' }}</dd></div>
+            <div><dt>Visibility</dt><dd>Private until approved</dd></div>
+          </dl>
+          @if($editing && $record->status === 'published')<a class="studio-tool-action" href="{{ $record->publicUrl() }}"><x-icon name="external-link" size="16"/> View published page</a>@endif
+        </section>
+        <section class="studio-aside-card">
+          <span class="eyebrow">Publishing checklist</span>
+          <h3>Ready to publish?</h3>
+          <div class="studio-checklist">
+            <div><x-icon name="check-circle" size="18"/> Clear title and description</div>
+            <div><x-icon name="image" size="18"/> Approved media and rights</div>
+            <div><x-icon name="shield" size="18"/> Follow platform policies</div>
+            <div><x-icon name="clipboard-check" size="18"/> Administrator review</div>
+          </div>
+          <p class="hint">Creating a listing or job does not charge a customer, enable checkout or fund escrow.</p>
+        </section>
+        @if($editing && $isProduct && $record->status==='published')
+          <a class="studio-tool-action" href="{{ route('studio.vault.index',$record) }}"><x-icon name="archive" size="17"/> Manage secure file releases</a>
+        @endif
+        @if($editing && $isJob)
+          <a class="studio-tool-action" href="{{ route('jobs.proposals',$record) }}"><x-icon name="users" size="17"/> Review job proposals</a>
+        @endif
+      </aside>
     </div>
-    <aside class="builder-aside">
-      <section class="panel builder-panel">
-        <h3>Publication workflow</h3>
-        <ol class="builder-checklist">
-          <li><x-icon name="check-circle" size="17"/> Add original, accurate details</li>
-          <li><x-icon name="shield-check" size="17"/> Verify rights and platform policies</li>
-          <li><x-icon name="clipboard-check" size="17"/> Submit for administrator review</li>
-          <li><x-icon name="eye" size="17"/> Publication after approval only</li>
-        </ol>
-        <p class="hint">No checkout, payment collection, job escrow or entitlement is created by this form.</p>
-      </section>
-      @if($isProduct)
-        <section class="panel builder-panel">
-          <h3>Product resources</h3>
-          <a class="btn subtle builder-full-link" href="{{ route('studio.media.index') }}">Open Media Library</a>
-          @if($editing && $record->status==='published')
-            <a class="btn subtle builder-full-link" href="{{ route('studio.vault.index',$record) }}">Manage product releases</a>
-          @endif
-        </section>
-      @endif
-      @if($isJob && $editing)
-        <section class="panel builder-panel">
-          <h3>Job management</h3>
-          <a class="btn subtle builder-full-link" href="{{ route('jobs.proposals',$record) }}">View incoming proposals</a>
-          @if(in_array($record->status,['pending','published'],true))
-            <form method="post" action="{{ route('jobs.close',$record) }}">
-              @csrf @method('PATCH')
-              <button class="btn danger builder-full-link" type="submit">Close job to new proposals</button>
-            </form>
-          @endif
-        </section>
-      @endif
-      @if($editing && $record->status==='published')
-        <a class="btn subtle builder-full-link" href="{{ $record->publicUrl() }}">View published {{ strtolower($labels[$type]) }}</a>
-      @endif
-    </aside>
-  </div>
+
+    <section class="studio-preview-panel" data-studio-preview hidden aria-label="Draft preview">
+      <div class="studio-card-heading"><h3>Editor preview</h3><button type="button" class="studio-tool-action" data-builder-preview-toggle><x-icon name="x" size="16"/> Close</button></div>
+      <h2 data-preview-title></h2>
+      <div data-preview-description class="studio-preview-description"></div>
+      <p class="hint">Preview only. Content remains private until reviewed and published.</p>
+    </section>
+
+    <dialog id="studio-media-upload" class="studio-upload-dialog">
+      <form method="post" action="{{ route('builder.media.store') }}" enctype="multipart/form-data">
+        @csrf
+        <input type="hidden" name="return_to" value="{{ $returnTo }}">
+        <div class="studio-card-heading"><h3>Upload featured media</h3><button type="button" class="studio-editor-icon" data-modal-close title="Close"><x-icon name="x" size="19"/></button></div>
+        <p>Files stay private until approved. Static image: 4 MB · GIF: 8 MB · MP4/WebM: 20 MB.</p>
+        <div class="studio-field">
+          <label for="studio-upload-file">Image, animation or video</label>
+          <input id="studio-upload-file" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" required>
+        </div>
+        <div class="studio-field">
+          <label for="studio-upload-alt">Description</label>
+          <input id="studio-upload-alt" name="alt_text" type="text" minlength="4" maxlength="180" required>
+        </div>
+        <div class="studio-form-grid">
+          <div class="studio-field">
+            <label for="studio-upload-rights">Basis of rights</label>
+            <select id="studio-upload-rights" name="rights_basis"><option value="owned">I own this media</option><option value="licensed">I have a license</option></select>
+          </div>
+          <div class="studio-field">
+            <label for="studio-upload-holder">Rights holder</label>
+            <input id="studio-upload-holder" name="rights_holder" minlength="2" maxlength="180" required>
+          </div>
+        </div>
+        <div class="studio-field">
+          <label for="studio-upload-note">Rights evidence or permission details</label>
+          <textarea id="studio-upload-note" name="rights_note" rows="3" maxlength="3000"></textarea>
+        </div>
+        <div class="studio-submit-actions"><button class="studio-tool-action" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit"><x-icon name="upload" size="16"/> Upload privately</button></div>
+      </form>
+    </dialog>
   @endif
 </div>
 @endsection
