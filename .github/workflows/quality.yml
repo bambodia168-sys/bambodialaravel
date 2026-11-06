@@ -43,6 +43,7 @@ jobs:
           bash -n support/operations-upgrade.sh
           bash -n support/frontend-layout-upgrade.sh
           bash -n support/builder-upgrade.sh
+          bash -n support/builder-studio-upgrade.sh
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
