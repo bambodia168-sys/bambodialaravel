@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
 use App\Support\BuilderContent;
+use App\Support\BuilderGallery;
+use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
 use App\Models\MarketplaceListing;
 use App\Models\FeatureFlag;
@@ -33,12 +35,14 @@ class ListingController extends Controller
     public function store(Request $request): RedirectResponse
     {
         abort_unless(FeatureFlag::isEnabled('creator_submissions'), 403);
+        $termsHash = BuilderSubmissionTerms::requireAcceptance($request);
         BuilderContent::prepare($request);
         $data = $request->validate([
             'type' => ['required', Rule::in(['project', 'freelance', 'service'])],
             'title' => ['required', 'string', 'min:4', 'max:180'],
             'description' => ['required', 'string', 'min:40', 'max:10000'],
             ...BuilderFeaturedMedia::rules(),
+            ...BuilderGallery::rules(),
             'description_html' => ['nullable', 'string', 'max:60000'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'license_terms' => ['nullable', 'string', 'max:20000'],
@@ -47,6 +51,7 @@ class ListingController extends Controller
 
         $this->checkCategory($data);
         BuilderFeaturedMedia::check($data, (int)$request->user()->id);
+        BuilderGallery::check($data, $request);
         $listing = MarketplaceListing::query()->create([
             ...$data,
             'user_id' => $request->user()->id,
@@ -54,6 +59,7 @@ class ListingController extends Controller
             'status' => 'pending',
         ]);
 
+        BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, $listing->type, (int)$listing->id);
         if ($request->boolean('builder_mode')) {
             return redirect('/builder?='.$listing->public_id)->with('status', 'Listing submitted for review.');
         }
@@ -74,14 +80,17 @@ class ListingController extends Controller
             'license_terms'=>['nullable','string','max:20000'],
             'category_id'=>['nullable','integer',Rule::exists('marketplace_categories','id')],
         ]);
-        DB::transaction(function()use($request,$listing,$data){
+        $termsHash = BuilderSubmissionTerms::requireAcceptance($request);
+        DB::transaction(function()use($request,$listing,$data,$termsHash){
             $locked=MarketplaceListing::query()->lockForUpdate()->findOrFail($listing->id);
             abort_unless((int)$locked->user_id===(int)$request->user()->id
                 && in_array($locked->type,['project','freelance','service'],true),404);
             abort_unless(in_array($locked->status,['draft','rejected'],true),409);
             $this->checkCategory([...$data,'type'=>$locked->type]);
             BuilderFeaturedMedia::check($data, (int)$request->user()->id);
+            BuilderGallery::check($data, $request);
             $locked->update([...$data,'status'=>'pending']);
+            BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, $locked->type, (int)$locked->id);
             AuditEvent::record('listing.resubmitted',$request->user(),$request);
         });
         return back()->with('status','Listing changes resubmitted for review.');

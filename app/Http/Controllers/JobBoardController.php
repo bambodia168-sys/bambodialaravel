@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Support\BuilderContent;
+use App\Support\BuilderGallery;
+use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
 use App\Models\AuditEvent;
 use App\Models\AccountNotification;
@@ -70,17 +72,21 @@ class JobBoardController extends Controller
     public function store(Request $request): RedirectResponse
     {
         abort_unless(in_array($request->user()->role,['customer','subscriber','super_admin'],true),403);
+        $termsHash = BuilderSubmissionTerms::requireAcceptance($request);
         BuilderContent::prepare($request);
         $data=$request->validate([
             'title'=>['required','string','min:8','max:180'],
             'description'=>['required','string','min:70','max:10000'],
             ...BuilderFeaturedMedia::rules(),
+            ...BuilderGallery::rules(),
             'description_html'=>['nullable','string','max:60000'],
             'category'=>['required',Rule::in(['development','design','writing','marketing','business','other'])],
             'budget'=>['nullable','numeric','min:0','max:9999999999.99'],
         ]);
         BuilderFeaturedMedia::check($data,(int)$request->user()->id);
+        BuilderGallery::check($data, $request);
         $job = MarketplaceJob::query()->create([...$data, 'client_id'=>$request->user()->id,'currency'=>'USD','status'=>'pending']);
+        BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, 'job', (int)$job->id);
         AuditEvent::record('job.submitted',$request->user(),$request);
         if ($request->boolean('builder_mode')) {
             return redirect('/builder?='.$job->public_id)->with('status', 'Job submitted for administrator review.');

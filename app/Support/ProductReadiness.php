@@ -35,6 +35,14 @@ final class ProductReadiness
         if ($listing->type !== 'product') {
             return;
         }
+        if ($listing->extended_price !== null) {
+            $extended = $listing->extendedLicenseDefinition;
+            if (! $extended || $extended->status !== 'active') {
+                throw ValidationException::withMessages([
+                    'extended_license_definition_id' => 'The Extended License must remain administrator-approved.',
+                ]);
+            }
+        }
         self::assertReady(
             (int) $listing->user_id,
             $listing->license_definition_id === null ? null : (int) $listing->license_definition_id,

@@ -40,6 +40,7 @@ class AuditEvent extends Model
         'media.deleted',
         'media.review.approved',
         'media.review.rejected',
+        'builder.terms.accepted',
         'product.created',
         'product.updated',
         'resume.updated',

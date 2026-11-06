@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Support\BuilderContent;
+use App\Support\BuilderGallery;
+use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
 use App\Models\AuditEvent;
 use App\Models\FeatureFlag;
@@ -63,17 +65,27 @@ class BuilderController extends Controller
             ? MarketplaceCategory::query()->where('type', $type)->where('is_active', true)
                 ->orderBy('sort_order')->orderBy('name')->get(['id', 'type', 'name'])
             : collect();
+        $termsPublications = BuilderSubmissionTerms::publications();
+        $termsSha256 = BuilderSubmissionTerms::digest($termsPublications);
+        $suggestedTerms = BuilderSubmissionTerms::suggestedTerms($termsPublications);
         $licenses = $type === 'product'
             ? LicenseDefinition::query()->where('status', 'active')
                 ->orderBy('name')->get(['id', 'name', 'version'])
             : collect();
         $assets = $type !== null
             ? MediaAsset::query()->where('user_id', $request->user()->id)
-                ->where('review_status', 'approved')->latest()->get(['id', 'public_id', 'alt_text', 'mime_type'])
+                ->whereIn('review_status', ['approved', 'pending'])->latest()
+                ->get(['id', 'public_id', 'alt_text', 'mime_type', 'review_status'])
+            : collect();
+
+        $productVersions = $type === 'product' && $record
+            ? \App\Models\ProductFileVersion::query()
+                ->where('marketplace_listing_id', $record->id)->latest('id')->get()
             : collect();
 
         return view('builder.index', compact(
-            'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'licenses', 'assets'
+            'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'licenses', 'assets',
+            'termsPublications', 'termsSha256', 'suggestedTerms', 'productVersions'
         ));
     }
 
@@ -84,17 +96,20 @@ class BuilderController extends Controller
         abort_unless(preg_match('/^=([0-9]{9})$/D', $raw, $match) === 1, 404);
 
         BuilderContent::prepare($request);
+        $termsHash = BuilderSubmissionTerms::requireAcceptance($request);
         $data = $request->validate([
             'title' => ['required', 'string', 'min:8', 'max:180'],
             'description' => ['required', 'string', 'min:70', 'max:10000'],
             'description_html' => ['nullable', 'string', 'max:60000'],
             ...BuilderFeaturedMedia::rules(),
+            ...BuilderGallery::rules(),
             'category' => ['required', Rule::in(self::JOB_CATEGORIES)],
             'budget' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
         ]);
 
         BuilderFeaturedMedia::check($data, (int)$request->user()->id);
-        DB::transaction(function () use ($request, $match, $data): void {
+        BuilderGallery::check($data, $request);
+        DB::transaction(function () use ($request, $match, $data, $termsHash): void {
             $job = MarketplaceJob::query()->where('public_id', $match[1])
                 ->lockForUpdate()->firstOrFail();
             abort_unless((int) $job->client_id === (int) $request->user()->id, 404);
@@ -106,6 +121,7 @@ class BuilderController extends Controller
                 'reviewed_by' => null,
                 'reviewed_at' => null,
             ]);
+            BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, 'job', (int)$job->id);
             AuditEvent::record('job.updated', $request->user(), $request);
         });
 
