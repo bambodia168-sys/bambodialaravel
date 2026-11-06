@@ -359,7 +359,7 @@ try {
         throw new Error('Admin menu lacks real controls');
       await admin.screenshot({path:out+'/desktop-admin-workspace.png',fullPage:false});
       await admin.goto(origin+'/en/developer',{waitUntil:'networkidle'});
-      if(!(await admin.getByText('Your API credential health').count()))
+      if(!(await admin.locator('[aria-label="Your API credential health"]').count()))
         throw new Error('Developer token-health overview missing');
       if(await admin.locator('.workspace-token-filters a').count()!==5)
         throw new Error('Developer token filters missing');
