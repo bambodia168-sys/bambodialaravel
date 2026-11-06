@@ -71,7 +71,6 @@
       <p>Keys are bound to real downloadable products and their approved file entitlements. License definitions alone never generate customer keys.</p>
     </div>
   </div>
-  <div class="notice">Automatic paid-purchase issuance is disabled until verified payment events and order fulfillment are integrated. Existing manual entitlements do not automatically become purchases. Revocation is permanent; it preserves audit history rather than deleting records.</div>
   @if(auth()->user()->role === 'super_admin')
     <details class="license-workflow-panel">
       <summary><x-icon name="plus" size="17"/> Issue a complimentary license from an approved download entitlement</summary>

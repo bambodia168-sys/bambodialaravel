@@ -5,7 +5,6 @@
 <div class="container inner-page">
   <div class="page-intro"><div class="eyebrow">Creator Studio · Product Licensing</div><h1>Product Licenses</h1>
     <p>View licenses issued for your published downloadable products, their activation status and release history. Customer keys remain private.</p></div>
-  <div class="notice">Creators cannot mint, revoke, rotate or upgrade customer keys. Bambodia verifies the product, its file entitlement and reviewed licensing terms before issuance. Automatic purchase issuance is not enabled yet.</div>
   <section class="panel">
     <div class="panel-head"><h2>Licenses for your products <span class="count">{{ $licenses->total() }}</span></h2></div>
     <div class="table-scroll"><table class="data-table">

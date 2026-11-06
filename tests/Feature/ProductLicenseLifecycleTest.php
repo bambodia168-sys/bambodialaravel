@@ -331,4 +331,34 @@ class ProductLicenseLifecycleTest extends TestCase
             'product_license_id'=>$license->id,'action'=>'issued',
         ]);
     }
+
+    public function test_customer_licenses_render_as_a_table_with_clear_empty_state_and_no_placeholder_notices(): void
+    {
+        $this->actingAs($this->customer)->get('/account/licenses')->assertOk()
+            ->assertSee('license-account-table')
+            ->assertSee('Product licenses')
+            ->assertSee('Active domain')
+            ->assertSee('No licenses yet')
+            ->assertDontSee('Automatic purchase issuance awaits verified checkout integration.')
+            ->assertDontSee('Uploads, unpaid orders and license definitions alone');
+
+        $this->actingAs($this->admin)->get('/dashboard/license-manager')->assertOk()
+            ->assertDontSee('Automatic paid-purchase issuance is disabled until verified payment events');
+
+        $this->actingAs($this->creator)->get('/studio/licenses')->assertOk()
+            ->assertDontSee('Creators cannot mint, revoke, rotate or upgrade customer keys.');
+
+        $license = $this->issue();
+        $response = $this->actingAs($this->customer)->get('/account/licenses')->assertOk()
+            ->assertSee('license-account-table')
+            ->assertSee($this->product->title)
+            ->assertSee($license->maskedKey())
+            ->assertSee($license->public_id)
+            ->assertSee('data-modal-open="account-license-'.$license->id.'"', false)
+            ->assertSee('Change installed domain')
+            ->assertSee('Reveal installer license key')
+            ->assertDontSee($license->key_ciphertext);
+
+        $this->assertSame(1, substr_count($response->getContent(), 'id="account-license-'.$license->id.'"'));
+    }
 }
