@@ -115,7 +115,7 @@ final class ProductLicenseSupport
             ProductLicenseEvent::query()->create([
                 'product_license_id'=>$license->id,'actor_id'=>$administrator->id,
                 'action'=>'support.'.$newStatus,
-                'reason'=>self::TERMS[$renewal->term].' · '.$reason,
+                'reason'=>mb_substr(self::TERMS[$renewal->term].' · '.$reason,0,500),
                 'created_at'=>now(),
             ]);
             AccountNotification::deliver(
