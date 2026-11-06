@@ -145,7 +145,8 @@ DB_BACKUP="${BAMBODIA_DB_BACKUP_FILE:-}"
 [[ "$DB_BACKUP" == /root/* && ! -L "$DB_BACKUP" ]] || stop 'Database backup must be a root-private regular file'
 (( $(date +%s) - $(stat -c %Y "$DB_BACKUP") < 3600 )) || stop 'Database backup must be less than one hour old'
 gzip -t "$DB_BACKUP" || stop 'Database backup gzip integrity failed'
-(( $(stat -c %a "$DB_BACKUP") <= 600 )) || stop 'Database backup permissions must be 600 or more restrictive'
+BACKUP_MODE="$(stat -c %a "$DB_BACKUP")"
+(( (8#$BACKUP_MODE & 077) == 0 )) || stop 'Database snapshot must not be accessible by group or others'
 
 install -d -m 0700 "$BACKUPS"
 BACKUP="$(mktemp -d "$BACKUPS/release-XXXXXXXX")"
