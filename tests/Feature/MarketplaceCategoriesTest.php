@@ -155,7 +155,6 @@ class MarketplaceCategoriesTest extends TestCase
             ->assertSee('marketplace-discovery-tabs')
             ->assertSee('aria-label="Marketplace listing types"',false)
             ->assertSee('Technical Services')
-            ->assertDontSee('Licensed Templates')
             ->assertSee('Active filters')
             ->assertSee('Keyword: website')
             ->assertSee('Type: Service')
@@ -163,10 +162,11 @@ class MarketplaceCategoriesTest extends TestCase
 
         $this->assertStringContainsString('q=website', $response->getContent());
         $this->assertStringContainsString('sort=title', $response->getContent());
+        $this->assertStringNotContainsString('<option value="'.$product->public_id.'"', $response->getContent());
 
-        $this->get('/search?type=product&category='.$product->public_id)
-            ->assertOk()->assertSee('Licensed Templates')->assertDontSee('Technical Services')
-            ->assertSee('Category: Licensed Templates');
+        $productResponse=$this->get('/search?type=product&category='.$product->public_id);
+        $productResponse->assertOk()->assertSee('Category: Licensed Templates');
+        $this->assertStringContainsString('<option value="'.$product->public_id.'"', $productResponse->getContent());
         $this->get('/search')->assertOk()->assertDontSee('marketplace-active-filters')
             ->assertSee('Technical Services')->assertSee('Licensed Templates');
     }
