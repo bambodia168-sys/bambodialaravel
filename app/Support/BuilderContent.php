@@ -164,7 +164,6 @@ final class BuilderContent
                 'youtube.com', 'www.youtube.com',
                 'youtube-nocookie.com', 'www.youtube-nocookie.com',
             ], true)
-            || isset($parts['port'], $parts['user'])
             || isset($parts['port']) || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment'])
             || ! preg_match('~^/embed/([A-Za-z0-9_-]{11})$~D', $parts['path'] ?? '', $matches)) {
             return null;
