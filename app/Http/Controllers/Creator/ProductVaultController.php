@@ -34,9 +34,25 @@ class ProductVaultController extends Controller
 
     public function store(Request $request, MarketplaceListing $product): RedirectResponse
     {
+        return $this->upload($request, $product, false);
+    }
+
+    public function storeFromBuilder(Request $request, MarketplaceListing $product): RedirectResponse
+    {
+        return $this->upload($request, $product, true);
+    }
+
+    private function upload(Request $request, MarketplaceListing $product, bool $fromBuilder): RedirectResponse
+    {
         abort_unless(FeatureFlag::isEnabled('creator_submissions'), 403);
         $product = $this->ownedProduct($request, $product);
-        abort_unless($product->status === 'published', 409, 'Publish the product catalog listing before uploading releases.');
+        if ($fromBuilder) {
+            abort_unless(in_array($product->status, ['draft', 'rejected'], true), 409,
+                'Save an editable product draft before uploading files.');
+        } else {
+            abort_unless($product->status === 'published', 409,
+                'Publish the product catalog listing before uploading releases.');
+        }
 
         $data = $request->validate([
             'version' => ['required', 'string', 'max:32', 'regex:/^[0-9]+\.[0-9]+\.[0-9]+$/'],
@@ -62,12 +78,14 @@ class ProductVaultController extends Controller
                 throw ValidationException::withMessages(['artifact' => 'The private file failed its integrity check.']);
             }
 
-            DB::transaction(function () use ($product, $request, $file, $path, $data, $inspection): void {
+            DB::transaction(function () use ($product, $request, $file, $path, $data, $inspection, $fromBuilder): void {
                 // Serializable version labels: unique(product,version) also blocks concurrent duplicates.
                 $locked = MarketplaceListing::query()->lockForUpdate()->findOrFail($product->id);
                 abort_unless($locked->type === 'product'
                     && (int) $locked->user_id === (int) $request->user()->id
-                    && $locked->status === 'published', 409, 'The product is not currently publishable.');
+                    && ($fromBuilder
+                        ? in_array($locked->status, ['draft', 'rejected'], true)
+                        : $locked->status === 'published'), 409, 'The product is not currently editable.');
 
                 $name = basename(str_replace('\\', '/', $file->getClientOriginalName()));
                 $name = preg_replace('/[\x00-\x1f\x7f]/', '', $name) ?: 'product-file.'.$inspection['type'];
@@ -96,8 +114,10 @@ class ProductVaultController extends Controller
             throw $error;
         }
 
-        return redirect()->route('studio.vault.index', $product)
-            ->with('status', 'Release uploaded privately. An administrator must verify it before downloads are possible.');
+        return ($fromBuilder
+            ? redirect('/builder?='.$product->public_id)
+            : redirect()->route('studio.vault.index', $product))
+            ->with('status', 'Original file uploaded privately. Rights and malware review are required before any downloads.');
     }
 
     public function evidence(Request $request, MarketplaceListing $product, ProductFileVersion $version): RedirectResponse

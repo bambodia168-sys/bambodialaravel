@@ -7,6 +7,7 @@ use App\Models\MediaAsset;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceJob;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -29,7 +30,7 @@ class MediaLibraryController extends Controller
         return view('media.index', compact('assets', 'studio'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $fromBuilder = $request->routeIs('builder.media.store');
         $studio = $request->routeIs('studio.media.*') || $fromBuilder;
@@ -79,7 +80,7 @@ class MediaLibraryController extends Controller
         }
 
         try {
-            MediaAsset::query()->create([
+            $asset = MediaAsset::query()->create([
                 ...$data,
                 'user_id' => $request->user()->id,
                 'original_name' => mb_substr(basename(str_replace('\\', '/', $file->getClientOriginalName())), 0, 180),
@@ -96,6 +97,18 @@ class MediaLibraryController extends Controller
         }
 
         AuditEvent::record('media.uploaded', $request->user(), $request);
+
+        if ($fromBuilder && $request->expectsJson()) {
+            return response()->json([
+                'id' => $asset->id,
+                'public_id' => $asset->public_id,
+                'alt_text' => $asset->alt_text,
+                'mime_type' => $asset->mime_type,
+                'review_status' => $asset->review_status,
+                'preview_url' => $asset->previewUrl(),
+                'message' => 'Media stored privately and queued for rights review.',
+            ], 201);
+        }
 
         return $fromBuilder
             ? redirect($returnTo)->with('status', 'Media uploaded privately. Choose it here after administrator rights review.')
@@ -121,7 +134,10 @@ class MediaLibraryController extends Controller
         $path = DB::transaction(function () use ($asset): string {
             $asset = MediaAsset::query()->lockForUpdate()->findOrFail($asset->id);
             abort_if($asset->coverListings()->exists() || $asset->featuredListings()->exists()
-                || $asset->featuredJobs()->exists(), 409, 'This media is attached to a listing or job and cannot be deleted.');
+                || $asset->featuredJobs()->exists()
+                || MarketplaceListing::query()->whereJsonContains('gallery_media_ids', $asset->id)->exists()
+                || MarketplaceJob::query()->whereJsonContains('gallery_media_ids', $asset->id)->exists(),
+                409, 'This media is attached to a listing or job and cannot be deleted.');
             $path = $asset->storage_path;
             $asset->delete();
             return $path;
@@ -173,6 +189,12 @@ class MediaLibraryController extends Controller
                 ->where('status', 'published')->exists()
             || MarketplaceJob::query()
                 ->where('featured_media_id', $asset->id)
+                ->where('status', 'published')->exists()
+            || MarketplaceListing::query()
+                ->whereJsonContains('gallery_media_ids', $asset->id)
+                ->where('status', 'published')->exists()
+            || MarketplaceJob::query()
+                ->whereJsonContains('gallery_media_ids', $asset->id)
                 ->where('status', 'published')->exists()
         );
 
