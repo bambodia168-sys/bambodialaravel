@@ -14,7 +14,7 @@ The License Manager at /dashboard/license-manager can suspend, reactivate, perma
 
 ## Creator and customer
 
-Creators: /studio/licenses displays only their own product licenses, customer public identifiers, domains, release versions, tiers, statuses and nonsecret events. Creators cannot mint, revoke, rotate or reveal keys.
+Creators: /studio/licenses displays only their own product licenses, customer public identifiers, domains, release versions, tiers, statuses and nonsecret events. Creators may submit an auditable administrator-review request for domain assistance, manual upgrade, suspension investigation or suspected abuse. The request notifies administrators but never changes buyer rights directly. Creators cannot mint, revoke, rotate or reveal keys.
 
 Customers: /account/licenses shows only their issued licenses. The secret is encrypted in storage, and a password-confirmed POST reveals it with a private no-store response. Transfer deactivates the current domain; the new installation must prove possession of the key at activation time. The old domain and event history remain visible.
 
