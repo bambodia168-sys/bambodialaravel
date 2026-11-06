@@ -579,6 +579,7 @@ class ProductVaultFulfillmentTest extends TestCase
     public function test_builder_accepts_a_private_zip_original_for_owned_product_draft_only(): void
     {
         $draft=$this->product->replicate();
+        $draft->public_id=null;
         $draft->title='Original Developer ZIP Draft';
         $draft->status='draft';
         $draft->save();
