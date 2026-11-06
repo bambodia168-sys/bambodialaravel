@@ -1331,3 +1331,29 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .studio-editor-surface{overflow:auto;min-height:270px;resize:vertical}
 .studio-editor-source{max-height:800px}
 @media(max-width:650px){.studio-release-fields{grid-template-columns:1fr}.studio-editor-surface iframe,.studio-preview-description iframe,.listing-body iframe{min-height:185px}}
+
+
+/* Product-backed license manager — compact admin, creator and account workspaces. */
+.license-cards{display:grid;gap:18px}
+.license-customer-card{min-width:0}
+.license-key-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:13px;margin:14px 0}
+.license-key-summary>div{min-width:0;display:grid;gap:6px;padding:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px}
+.license-key-summary small{font-size:11px;color:var(--muted)}
+.license-key-summary strong{font-size:12px;overflow-wrap:anywhere}
+.license-workflow-panel{margin:14px 0;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px}
+.license-workflow-panel>summary{cursor:pointer;font-size:13px;font-weight:750;display:flex;align-items:center;gap:8px}
+.license-workflow-panel>summary svg{color:var(--accent)}
+.license-workflow-form,.license-admin-actions form{display:grid;gap:10px;padding-top:15px}
+.license-workflow-form label,.license-admin-actions form label{font-size:12px;font-weight:650}
+.license-workflow-form input,.license-workflow-form select,.license-workflow-form textarea,
+.license-admin-actions form input,.license-admin-actions form select,.license-admin-actions form textarea{max-width:100%;width:100%;padding:10px;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;color:var(--text)}
+.license-workflow-form .btn,.license-admin-actions .btn{justify-self:start}
+.license-admin-actions{display:grid;gap:14px;margin:16px 0}
+.license-admin-actions form{padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.license-history{margin:15px 0;display:grid;gap:8px}
+.license-history h3{font-size:14px;margin:12px 0 3px}
+.license-history>div{padding:9px 0;border-bottom:1px solid var(--line);display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;font-size:12px}
+.license-history span{color:var(--muted);overflow-wrap:anywhere}
+.license-secret-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:15px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;margin:16px 0}
+.license-secret-row code{font-size:14px;font-weight:700;overflow-wrap:anywhere}
+@media(max-width:600px){.license-secret-row{align-items:stretch;flex-direction:column}}
