@@ -30,27 +30,14 @@
 @endphp
 <div class="container inner-page builder-studio" data-builder-studio data-builder-readonly="{{ $canEdit ? '0' : '1' }}">
   @if($type !== null)
-    <nav class="studio-breadcrumb" aria-label="Breadcrumb">
-      <a href="{{ route('home') }}"><x-icon name="home" size="15"/> Home</a>
-      <x-icon name="chevron-right" size="14"/>
-      <a href="{{ route('builder') }}">Builder Studio</a>
-      <x-icon name="chevron-right" size="14"/><span aria-current="page">{{ $types[$type]['label'] }}</span>
-    </nav>
-
-    <header class="studio-hero">
-      <div>
-        <span class="eyebrow">Bambodia / Creative workspace</span>
-        <h1>Builder Studio<span class="studio-hero-period">.</span></h1>
+    <section class="studio-landing-hero studio-editor-hero" aria-labelledby="studio-editor-heading">
+      <span class="studio-landing-shield" aria-hidden="true"><x-icon name="shield" size="256"/></span>
+      <div class="studio-landing-hero-content">
+        <span class="studio-landing-eyebrow"><x-icon name="shield" size="16"/> Creative workspace</span>
+        <h1 id="studio-editor-heading">Builder Studio</h1>
         <p>{{ $editing ? 'Review and manage your '.$types[$type]['label'].' submission.' : 'Create a professional '.$types[$type]['label'].' in one focused workspace.' }}</p>
       </div>
-      <div class="studio-hero-actions" aria-label="Builder actions">
-        <button type="button" class="studio-tool-action" data-builder-preview-toggle>
-          <x-icon name="eye" size="17"/> Preview
-        </button>
-        <a class="studio-tool-action" href="{{ $back }}"><x-icon name="folders" size="17"/> My content</a>
-        <a class="studio-tool-action" href="{{ route('home') }}"><x-icon name="arrow-up-right" size="17"/> Website</a>
-      </div>
-    </header>
+    </section>
   @else
     <section class="studio-landing-hero" aria-labelledby="studio-landing-heading">
       <span class="studio-landing-shield" aria-hidden="true"><x-icon name="shield" size="256"/></span>
@@ -83,6 +70,14 @@
       <a class="studio-landing-website" href="{{ route('home') }}">
         <x-icon name="globe" size="17"/> Website
       </a>
+    @else
+      <div class="studio-type-actions" role="group" aria-label="Builder tools">
+        <button type="button" class="studio-tool-action" data-builder-preview-toggle>
+          <x-icon name="eye" size="17"/> Preview
+        </button>
+        <a class="studio-tool-action" href="{{ $back }}"><x-icon name="folders" size="17"/> My Content</a>
+        <a class="studio-tool-action" href="{{ route('home') }}"><x-icon name="globe" size="17"/> Website</a>
+      </div>
     @endif
   </nav>
 

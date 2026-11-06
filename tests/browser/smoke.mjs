@@ -494,7 +494,18 @@ try {
           throw new Error('Builder Studio '+kind+' has no title input');
         if(!(await admin.locator('[data-featured-preview]').isVisible()))
           throw new Error('Builder Studio '+kind+' missing featured media preview');
-        checks+=3;
+        if(await admin.locator('.studio-breadcrumb').count())
+          throw new Error('Builder Studio '+kind+' still has a breadcrumb');
+        if(!(await admin.locator('.studio-editor-hero .studio-landing-shield').isVisible()))
+          throw new Error('Builder Studio '+kind+' is missing the centered Trust Shield hero');
+        if(!(await admin.getByRole('heading',{name:'Builder Studio',exact:true}).isVisible()))
+          throw new Error('Builder Studio '+kind+' centered heading is missing');
+        if(!(await admin.locator('.studio-type-actions [data-builder-preview-toggle]').isVisible())
+          || !(await admin.locator('.studio-type-actions').getByRole('link',{name:'My Content'}).isVisible())
+          || !(await admin.locator('.studio-type-actions').getByRole('link',{name:'Website'}).isVisible())
+          || !(await admin.locator('.studio-type-actions a svg').last().isVisible()))
+          throw new Error('Builder Studio '+kind+' tools are not in the right-side type tabs');
+        checks+=7;
       }
       await admin.goto(origin+'/en/builder?type=product',{waitUntil:'networkidle'});
       const editable=admin.locator('[data-editor-surface]');

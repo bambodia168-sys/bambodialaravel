@@ -155,9 +155,20 @@ class UnifiedBuilderTest extends TestCase
             ->assertDontSee('class="studio-breadcrumb"', false)
             ->assertDontSee('Bambodia / Creative workspace')
             ->assertDontSee('name="arrow-up-right"', false);
-        $this->get('/builder?type=product')->assertOk()
-            ->assertSee('class="studio-breadcrumb"', false)
-            ->assertDontSee('studio-landing-guide');
+        foreach (['product', 'project', 'service', 'freelance', 'job'] as $type) {
+            $this->get('/builder?type='.$type)->assertOk()
+                ->assertDontSee('class="studio-breadcrumb"', false)
+                ->assertDontSee('Bambodia / Creative workspace')
+                ->assertSee('class="studio-landing-hero studio-editor-hero"', false)
+                ->assertSee('Creative workspace')
+                ->assertSee('id="studio-editor-heading"', false)
+                ->assertSee('Create a professional '.ucfirst($type).' in one focused workspace.')
+                ->assertSee('class="studio-type-actions"', false)
+                ->assertSee('data-builder-preview-toggle', false)
+                ->assertSee('My Content')
+                ->assertSee('name="globe"', false)
+                ->assertDontSee('studio-landing-guide');
+        }
     }
 
     public function test_html_description_sanitization_preserves_safe_formatting_and_prevents_xss(): void
