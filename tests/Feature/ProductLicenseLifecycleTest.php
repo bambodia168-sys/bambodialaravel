@@ -8,6 +8,8 @@ use App\Models\MediaAsset;
 use App\Models\ProductEntitlement;
 use App\Models\ProductFileVersion;
 use App\Models\ProductLicense;
+use App\Models\ProductLicenseSupportRequest;
+use App\Support\ProductLicenseSupport;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -114,7 +116,7 @@ class ProductLicenseLifecycleTest extends TestCase
     private function issue(string $tier='regular'): ProductLicense
     {
         $this->actingAs($this->admin)->post('/dashboard/license-manager/issue',[
-            'product_entitlement_id'=>$this->entitlement->id,'tier'=>$tier,
+            'product_entitlement_id'=>$this->entitlement->id,'tier'=>$tier,'support_term'=>'six_months',
             'reason'=>'Complimentary product licensing for authorized quality assurance.',
             'confirm_complimentary'=>'1',
         ])->assertRedirect();
@@ -125,7 +127,7 @@ class ProductLicenseLifecycleTest extends TestCase
     {
         $request=[
             'product_entitlement_id'=>$this->entitlement->id,
-            'tier'=>'regular','reason'=>'Complimentary verified product review allocation.',
+            'tier'=>'regular','support_term'=>'six_months','reason'=>'Complimentary verified product review allocation.',
             'confirm_complimentary'=>'1',
         ];
         $this->actingAs($this->creator)->post('/dashboard/license-manager/issue',$request)->assertForbidden();
@@ -361,4 +363,118 @@ class ProductLicenseLifecycleTest extends TestCase
 
         $this->assertSame(1, substr_count($response->getContent(), 'id="account-license-'.$license->id.'"'));
     }
+
+    public function test_lifetime_license_does_not_expire_with_support_or_original_download_expiry(): void
+    {
+        $license=$this->issue();
+        $this->assertNull($license->expires_at);
+        $this->assertSame('six_months',$license->support_term);
+        $this->assertSame('Active',$license->supportStatus());
+        $this->assertTrue($license->isActive());
+
+        $license->forceFill([
+            'support_expires_at'=>now()->subDay(),
+        ])->save();
+        $this->entitlement->forceFill(['expires_at'=>now()->subDay()])->save();
+
+        $this->assertSame('Expired',$license->fresh()->supportStatus());
+        $this->assertTrue($license->fresh()->isActive());
+        $this->actingAs($this->customer)->get('/account/licenses')
+            ->assertOk()->assertSee('Lifetime')->assertSee('Expired')
+            ->assertSee('Request support renewal');
+        $this->actingAs($this->customer)->get('/account/downloads')
+            ->assertOk()->assertSee('Unavailable')->assertSee('Lifetime')->assertSee('Expired');
+    }
+
+    public function test_customer_renewal_is_pending_until_super_admin_reviews_it(): void
+    {
+        $license=$this->issue();
+        $license->forceFill(['support_expires_at'=>now()->subDay()])->save();
+
+        $url='/account/licenses/'.$license->id.'/support-renewals';
+        $this->actingAs($this->stranger)->post($url,[
+            'term'=>'twelve_months',
+        ])->assertNotFound();
+        $this->actingAs($this->customer)->post($url,[
+            'term'=>'twelve_months',
+        ])->assertRedirect();
+        $renewal=ProductLicenseSupportRequest::query()->sole();
+        $this->assertSame('pending',$renewal->status);
+        $this->assertSame('Expired',$license->fresh()->supportStatus());
+        $this->post($url,['term'=>'five_years'])->assertStatus(409);
+        $this->post($url,['term'=>'999_years'])->assertSessionHasErrors('term');
+
+        $review='/dashboard/license-manager/support-renewals/'.$renewal->id.'/review';
+        $fields=['decision'=>'approve','reason'=>'Authorized complimentary support extension, reviewed by owner.',
+            'confirm_manual'=>'1'];
+        $this->actingAs($this->staff)->post($review,$fields)->assertForbidden();
+        $this->assertSame('pending',$renewal->fresh()->status);
+        $this->actingAs($this->admin)->post($review,$fields)->assertRedirect();
+        $this->assertSame('approved',$renewal->fresh()->status);
+        $this->assertSame('twelve_months',$license->fresh()->support_term);
+        $this->assertSame('Active',$license->fresh()->supportStatus());
+        $this->assertNull($license->fresh()->expires_at);
+        $this->assertTrue($license->fresh()->isActive());
+        $this->post($review,$fields)->assertStatus(409);
+        $this->assertDatabaseHas('product_license_events',[
+            'product_license_id'=>$license->id,'action'=>'support.approved',
+        ]);
+        $this->assertDatabaseHas('account_notifications',[
+            'user_id'=>$this->customer->id,'event'=>'license.support.reviewed',
+        ]);
+        $this->actingAs($this->customer)->get('/account/licenses')->assertOk()
+            ->assertSee('12-month support')->assertSee('Lifetime');
+    }
+
+    public function test_support_is_separate_from_lifetime_license_and_lifetime_support_needs_no_renewal(): void
+    {
+        $license=$this->issue();
+        $this->actingAs($this->customer)->post('/account/licenses/'.$license->id.'/support-renewals',[
+            'term'=>'lifetime',
+        ])->assertRedirect();
+        $renewal=ProductLicenseSupportRequest::query()->sole();
+        $this->actingAs($this->admin)->post('/dashboard/license-manager/support-renewals/'.$renewal->id.'/review',[
+            'decision'=>'approve','reason'=>'Complimentary permanent support approved after review.',
+            'confirm_manual'=>'1',
+        ])->assertRedirect();
+        $this->assertSame('Lifetime',$license->fresh()->supportStatus());
+        $this->assertNull($license->fresh()->support_expires_at);
+        $this->assertNull($license->fresh()->expires_at);
+        $this->actingAs($this->customer)->post('/account/licenses/'.$license->id.'/support-renewals',[
+            'term'=>'six_months',
+        ])->assertStatus(409);
+        $this->get('/account/licenses')->assertOk()->assertSee('Lifetime support');
+    }
+
+    public function test_license_pagination_go_to_uses_the_respective_table_query_parameter(): void
+    {
+        // Eleven independent entitlement rows for the same approved original.
+        // They are allowed because each license is bound to its own entitlement.
+        for ($i=0;$i<11;$i++) {
+            $grant=ProductEntitlement::query()->create([
+                'user_id'=>$this->customer->id,
+                'product_file_version_id'=>$this->release->id,
+                'granted_by'=>$this->admin->id,'grant_reason'=>'Complimentary QA entitlement for pagination test.',
+                'status'=>'active','expires_at'=>now()->addDays(30),
+            ]);
+            \App\Support\ProductLicenseLifecycle::issueManual(
+                $grant,'regular',$this->admin,'Approved manual issuance for paged license test.','six_months'
+            );
+        }
+        $this->actingAs($this->customer)->get('/account/licenses')->assertOk()
+            ->assertSee('Showing 1–10 of 11')->assertSee('name="page"',false);
+        $this->get('/account/licenses?page=2')->assertOk()
+            ->assertSee('Showing 11–11 of 11');
+
+        $this->actingAs($this->creator)->get('/studio/licenses')->assertOk()
+            ->assertSee('Showing 1–10 of 11')->assertSee('name="page"',false);
+        $this->get('/studio/licenses?page=2')->assertOk()
+            ->assertSee('Showing 11–11 of 11');
+
+        $this->actingAs($this->admin)->get('/dashboard/license-manager')->assertOk()
+            ->assertSee('name="issued_page"',false);
+        $this->get('/dashboard/license-manager?issued_page=2')->assertOk()
+            ->assertSee('Showing 11–11 of 11');
+    }
+
 }
