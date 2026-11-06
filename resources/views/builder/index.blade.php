@@ -168,8 +168,10 @@
       <div class="studio-primary">
         <form data-builder-form method="post" action="{{ $action }}" class="studio-form">
           @csrf
-          @if($editing)@method('PATCH')@else<input type="hidden" name="builder_mode" value="1">@endif
+          @if($editing)@method('PATCH')@endif
+          <input type="hidden" name="builder_mode" value="1">
           @if(!$editing && !$isJob && !$isProduct)<input type="hidden" name="type" value="{{ $type }}">@endif
+          <input type="hidden" name="terms_sha256" value="{{ $termsSha256 }}">
           <fieldset>
             <section class="studio-card" aria-labelledby="studio-basic-title">
               <div class="studio-card-heading">
@@ -208,19 +210,21 @@
                     </select>
                   @endif
                 </div>
+                @unless($isProduct)
                 <div class="studio-field">
                   <label for="studio-price">{{ $isJob ? 'Budget' : 'Listed price' }} (USD, optional)</label>
                   <input id="studio-price" name="{{ $isJob ? 'budget' : 'price' }}" type="number" @readonly(!$canEdit) min="0" max="9999999999.99" step="0.01"
                          value="{{ old($isJob ? 'budget' : 'price',$isJob ? $record?->budget : $record?->price) }}"
                          placeholder="0.00">
                 </div>
+                @endunless
               </div>
             </section>
 
             <section class="studio-card" aria-labelledby="studio-editor-title">
               <div class="studio-card-heading">
                 <div><span class="studio-step">02</span><h3 id="studio-editor-title">{{ $isJob ? 'Job description' : 'Description & details' }} <span class="studio-required">*</span></h3></div>
-                <span class="studio-step-caption">Rich text editor</span>
+                <span class="studio-step-caption"></span>
               </div>
               <div class="studio-editor" data-studio-editor>
                 <div class="studio-editor-toolbar" data-editor-toolbar hidden role="toolbar" aria-label="Rich text formatting">
@@ -265,7 +269,7 @@
                 <input type="hidden" data-editor-html name="description_html" value="{{ $previousHtml }}">
                 <textarea class="studio-editor-source" data-editor-source aria-label="Sanitized HTML source preview" readonly hidden></textarea>
                 <div class="studio-editor-footer">
-                  <span>Headings · Lists · Links · Tables · Formatting</span>
+                  <span aria-hidden="true"></span>
                   <span data-editor-counter>0 / 10,000</span>
                 </div>
               </div>
@@ -299,6 +303,7 @@
                   <select id="studio-featured-media" name="featured_media_id" data-featured-media @disabled(!$canEdit)>
                     <option value="">Choose approved media</option>
                     @foreach($assets as $asset)
+                      @continue($asset->review_status !== 'approved')
                       <option value="{{ $asset->id }}" data-media-mime="{{ $asset->mime_type }}" data-media-url="{{ $asset->previewUrl() }}"
                               data-media-alt="{{ $asset->alt_text }}" @selected((string)$selectedMedia===(string)$asset->id)>
                         {{ $asset->alt_text }} · {{ $asset->public_id }} ({{ strtoupper(explode('/',$asset->mime_type)[1] ?? 'media') }})
@@ -321,37 +326,91 @@
                 <span><x-icon name="image" size="25"/> Featured media preview</span>
               </div>
               @error('featured_media_id')<small class="builder-field-error">{{ $message }}</small>@enderror
+              <div class="studio-gallery" data-builder-gallery>
+                <div class="studio-gallery-heading">
+                  <div>
+                    <h4>Images & screenshots</h4>
+                    <p class="hint">Choose up to eight images from your Media Library. Upload screenshots here without leaving the builder. New uploads await administrator rights review.</p>
+                  </div>
+                  @if($canEdit)<button type="button" class="studio-tool-action" data-modal-open="studio-media-upload"><x-icon name="upload" size="17"/> Upload screenshots</button>@endif
+                </div>
+                <div class="studio-gallery-grid" data-gallery-grid>
+                  @foreach($assets as $asset)
+                    @continue(!in_array($asset->mime_type, ['image/jpeg','image/png','image/webp','image/gif'], true))
+                    <label class="studio-gallery-item">
+                      <input type="checkbox" name="gallery_media_ids[]" value="{{ $asset->id }}"
+                        @checked(in_array((int)$asset->id, array_map('intval', old('gallery_media_ids', $record?->gallery_media_ids ?? []))))
+                        @disabled(!$canEdit)>
+                      <img src="{{ $asset->previewUrl() }}" alt="{{ $asset->alt_text }}" loading="lazy">
+                      <span>{{ $asset->alt_text }}</span>
+                      <small>{{ ucfirst($asset->review_status) }}</small>
+                    </label>
+                  @endforeach
+                </div>
+                <p class="hint" data-gallery-count>Up to eight images and screenshots can be attached to this {{ strtolower($types[$type]['label']) }}.</p>
+                @error('gallery_media_ids')<small class="builder-field-error">{{ $message }}</small>@enderror
+              </div>
             </section>
 
             @if($isProduct)
               <section class="studio-card" aria-labelledby="studio-license-title">
                 <div class="studio-card-heading">
-                  <div><span class="studio-step">04</span><h3 id="studio-license-title">Product license and preview</h3></div>
-                  <span class="studio-step-caption">Publishing requirements</span>
+                  <div><span class="studio-step">04</span><h3 id="studio-license-title">Product license</h3></div>
+                  <span class="studio-step-caption">License options & pricing</span>
                 </div>
-                <div class="studio-form-grid">
-                  <div class="studio-field">
-                    <label for="studio-license">Active product license</label>
-                    <select id="studio-license" name="license_definition_id" @disabled(!$canEdit)>
-                      <option value="">Select an active license</option>
-                      @foreach($licenses as $license)
-                        <option value="{{ $license->id }}" @selected((string)old('license_definition_id',$record?->license_definition_id)===(string)$license->id)>{{ $license->name }} · {{ $license->version }}</option>
-                      @endforeach
-                    </select>
+                <p class="studio-help">Set the selling price for each license tier. Link each tier to a published, administrator-reviewed license definition. A different license may grant different usage rights.</p>
+                <div class="studio-license-tiers">
+                  <div class="studio-license-tier">
+                    <h4><x-icon name="file-check" size="19"/> Regular License</h4>
+                    <p class="hint">Usage rights are governed by the selected Regular License definition.</p>
+                    <div class="studio-field">
+                      <label for="studio-license">Regular License definition</label>
+                      <select id="studio-license" name="license_definition_id" @disabled(!$canEdit)>
+                        <option value="">Choose an active definition</option>
+                        @foreach($licenses as $license)
+                          <option value="{{ $license->id }}" @selected((string)old('license_definition_id',$record?->license_definition_id)===(string)$license->id)>{{ $license->name }} · {{ $license->version }}</option>
+                        @endforeach
+                      </select>
+                    </div>
+                    <div class="studio-field">
+                      <label for="studio-regular-price">Regular License price (USD)</label>
+                      <input id="studio-regular-price" name="regular_price" type="number" min="0" step="0.01" max="9999999999.99"
+                        value="{{ old('regular_price',$record?->regular_price ?? $record?->price) }}" placeholder="0.00" @readonly(!$canEdit)>
+                      @error('regular_price')<small class="builder-field-error">{{ $message }}</small>@enderror
+                    </div>
                   </div>
-                  <div class="studio-field">
-                    <label for="studio-cover">Required static product preview</label>
-                    <select id="studio-cover" name="cover_media_id" @disabled(!$canEdit)>
-                      <option value="">Select an approved static image</option>
-                      @foreach($assets as $asset)
-                        @if(in_array($asset->mime_type,['image/jpeg','image/png','image/webp'],true))
-                          <option value="{{ $asset->id }}" @selected((string)old('cover_media_id',$record?->cover_media_id)===(string)$asset->id)>{{ $asset->alt_text }} · {{ $asset->public_id }}</option>
-                        @endif
-                      @endforeach
-                    </select>
+                  <div class="studio-license-tier">
+                    <h4><x-icon name="shield" size="19"/> Extended License</h4>
+                    <p class="hint">Optional broader permissions, only when the approved definition grants them.</p>
+                    <div class="studio-field">
+                      <label for="studio-extended-license">Extended License definition</label>
+                      <select id="studio-extended-license" name="extended_license_definition_id" @disabled(!$canEdit)>
+                        <option value="">No Extended License offered</option>
+                        @foreach($licenses as $license)
+                          <option value="{{ $license->id }}" @selected((string)old('extended_license_definition_id',$record?->extended_license_definition_id)===(string)$license->id)>{{ $license->name }} · {{ $license->version }}</option>
+                        @endforeach
+                      </select>
+                    </div>
+                    <div class="studio-field">
+                      <label for="studio-extended-price">Extended License price (USD, optional)</label>
+                      <input id="studio-extended-price" name="extended_price" type="number" min="0" step="0.01" max="9999999999.99"
+                        value="{{ old('extended_price',$record?->extended_price) }}" placeholder="0.00" @readonly(!$canEdit)>
+                      @error('extended_price')<small class="builder-field-error">{{ $message }}</small>@enderror
+                    </div>
                   </div>
                 </div>
-                <p class="hint">A product can feature video, animation or color, but still requires an active license and approved static preview to submit for publication.</p>
+                <div class="studio-field">
+                  <label for="studio-cover">Required static product preview</label>
+                  <select id="studio-cover" name="cover_media_id" @disabled(!$canEdit)>
+                    <option value="">Select an approved static image</option>
+                    @foreach($assets as $asset)
+                      @if($asset->review_status === 'approved' && in_array($asset->mime_type,['image/jpeg','image/png','image/webp'],true))
+                        <option value="{{ $asset->id }}" @selected((string)old('cover_media_id',$record?->cover_media_id)===(string)$asset->id)>{{ $asset->alt_text }} · {{ $asset->public_id }}</option>
+                      @endif
+                    @endforeach
+                  </select>
+                </div>
+                <p class="hint">A valid active license and approved static image are required before submitting a product for publication. After verified checkout is enabled, the purchased license tier is intended to be issued automatically; checkout and issuance are not live.</p>
               </section>
             @endif
 
@@ -363,15 +422,32 @@
                 </div>
                 <div class="studio-field">
                   <label for="studio-terms">Additional usage and delivery conditions</label>
-                  <textarea id="studio-terms" name="license_terms" rows="4" maxlength="20000" @readonly(!$canEdit)
-                            placeholder="Additional rights, usage limitations or delivery details">{{ old('license_terms',$record?->license_terms ?? '') }}</textarea>
+                  <p class="hint">Editable starting terms are drawn from Bambodia's current published terms and commerce policies when available. You may revise them or replace them with your own supplemental terms, where allowed by the governing license and platform policies.</p>
+                  <textarea id="studio-terms" name="license_terms" rows="9" maxlength="20000" @readonly(!$canEdit)
+                            placeholder="Describe additional delivery, usage and support conditions">{{ old('license_terms',$record?->license_terms ?? $suggestedTerms) }}</textarea>
                 </div>
-                @if($isProduct)<p class="hint">These terms cannot expand the rights granted by the active product license.</p>@endif
+                @if($canEdit)
+                  <div class="studio-terms-helpers">
+                    <button type="button" class="studio-tool-action" data-use-platform-terms @disabled($suggestedTerms==='')><x-icon name="file-check" size="16"/> Use published terms</button>
+                    <button type="button" class="studio-tool-action" data-clear-platform-terms><x-icon name="eraser" size="16"/> Write my own terms</button>
+                  </div>
+                  <script type="application/json" data-suggested-terms>@json($suggestedTerms)</script>
+                @endif
+                @if($termsPublications->isNotEmpty())
+                  <p class="hint">Current policy sources:
+                    @foreach($termsPublications as $publication)
+                      <a href="{{ $publication->policy->publicUrl() }}" target="_blank" rel="noopener noreferrer">{{ $publication->title }} (revision {{ $publication->revision }})</a>@if(!$loop->last), @endif
+                    @endforeach
+                  </p>
+                @else
+                  <p class="hint">No administrator-published Terms or Commerce policy snapshot is available. Write supplemental terms as appropriate; the platform's basic submission rules still apply.</p>
+                @endif
+                @if($isProduct)<p class="hint">Supplemental terms cannot grant rights beyond the selected published license definitions.</p>@endif
               </section>
             @endunless
 
             @if($isProduct)
-              <section class="studio-card studio-final-action">
+              <section class="studio-final-action">
                 <label for="studio-next-status">Next action</label>
                 <select id="studio-next-status" name="status" @disabled(!$canEdit)>
                   <option value="draft" @selected(old('status','draft')==='draft')>Save draft</option>
@@ -380,6 +456,18 @@
               </section>
             @endif
           </fieldset>
+          @if($canEdit)
+            <div class="studio-accept-block">
+              <label class="studio-accept-check">
+                <input type="checkbox" name="accept_terms" value="1" data-builder-terms-check required>
+                <span>I have reviewed and accept the Bambodia submission terms for this {{ strtolower($types[$type]['label']) }}.</span>
+              </label>
+              <button type="button" class="studio-tool-action" data-builder-terms-open>
+                <x-icon name="shield" size="17"/> Read and accept terms
+              </button>
+              @error('accept_terms')<small class="builder-field-error">{{ $message }}</small>@enderror
+            </div>
+          @endif
           <div class="studio-submit-bar">
             <span><x-icon name="shield-check" size="17"/> Your work is protected by account ownership and content review.</span>
             <div class="studio-submit-actions">
@@ -390,6 +478,44 @@
             </div>
           </div>
         </form>
+        @if($isProduct)
+          <section class="studio-card studio-product-original" aria-labelledby="studio-original-title">
+            <div class="studio-card-heading">
+              <div><span class="studio-step">06</span><h3 id="studio-original-title">Original downloadable product</h3></div>
+              <span class="studio-step-caption">Private file vault</span>
+            </div>
+            @if(!$editing)
+              <p>Save your product as a draft first. Your private Builder ID will then allow you to upload its original ZIP, PPTX, or PDF file.</p>
+            @elseif($canEdit)
+              <p>Upload an original ZIP containing your PHP or Laravel source code, or a supported PPTX/PDF deliverable. Files remain private until distribution rights, malware scanning, and administrator approval have passed.</p>
+              <form method="post" action="{{ route('builder.product.files.store',$record) }}" enctype="multipart/form-data" class="studio-original-upload">
+                @csrf
+                <div class="studio-form-grid">
+                  <div class="studio-field"><label for="studio-archive-version">Version</label><input id="studio-archive-version" type="text" name="version" pattern="[0-9]+\.[0-9]+\.[0-9]+" maxlength="32" placeholder="1.0.0" required></div>
+                  <div class="studio-field"><label for="studio-archive-file">ZIP, PPTX or PDF (25 MiB maximum)</label><input id="studio-archive-file" type="file" name="artifact" accept=".zip,.pptx,.pdf" required></div>
+                </div>
+                <div class="studio-field"><label for="studio-archive-notes">Release notes</label><textarea id="studio-archive-notes" name="release_notes" rows="3" minlength="20" maxlength="3000" required></textarea></div>
+                <div class="studio-field"><label for="studio-archive-rights">Ownership, distribution rights and provenance</label><textarea id="studio-archive-rights" name="rights_evidence" rows="4" minlength="30" maxlength="3000" required></textarea></div>
+                <div class="studio-field"><label for="studio-archive-rights-url">Evidence URL (optional HTTPS)</label><input id="studio-archive-rights-url" name="rights_source_url" type="url" maxlength="500" placeholder="https://"></div>
+                <label class="studio-accept-check"><input type="checkbox" name="rights_attested" value="1" required><span>I own or am authorized to distribute all contents under the approved product license.</span></label>
+                <button type="submit" class="btn primary"><x-icon name="upload" size="17"/> Upload original privately</button>
+              </form>
+            @else
+              <p>This product is already submitted or published. Existing files remain review-controlled. Use the secure release manager where permitted.</p>
+              @if($record->status==='published')<a class="studio-tool-action" href="{{ route('studio.vault.index',$record) }}">Manage approved releases</a>@endif
+            @endif
+            @if($editing)
+              <div class="studio-original-history">
+                <h4>Uploaded file versions</h4>
+                @forelse($productVersions as $file)
+                  <div><span class="mono">v{{ $file->version }}</span> · {{ $file->original_filename }} <span>{{ ucfirst($file->status) }} · Rights: {{ ucfirst($file->rights_review_status) }} · Malware: {{ ucfirst($file->malware_scan_status) }}</span></div>
+                @empty
+                  <p class="hint">No original product files uploaded.</p>
+                @endforelse
+              </div>
+            @endif
+          </section>
+        @endif
       </div>
 
       <aside class="studio-aside" aria-label="Builder tools and publishing guidance">
@@ -430,15 +556,39 @@
       <p class="hint">Preview only. Content remains private until reviewed and published.</p>
     </section>
 
+
+    <dialog id="studio-terms-popup" class="studio-upload-dialog studio-terms-dialog" aria-labelledby="studio-terms-dialog-heading">
+      <div class="studio-card-heading">
+        <div><x-icon name="shield" size="22"/><h3 id="studio-terms-dialog-heading">Bambodia submission terms</h3></div>
+        <button type="button" class="studio-editor-icon" data-builder-terms-close aria-label="Close terms"><x-icon name="x" size="19"/></button>
+      </div>
+      <div class="studio-terms-policy-scroll">
+        <p>{{ \App\Support\BuilderSubmissionTerms::basis() }}</p>
+        @forelse($termsPublications as $publication)
+          <section>
+            <h4>{{ $publication->title }} · Revision {{ $publication->revision }}</h4>
+            <div class="studio-terms-body">{{ $publication->body_snapshot }}</div>
+          </section>
+        @empty
+          <p class="hint">There is no current administrator-published Terms or Commerce policy snapshot. The Bambodia Builder submission rules above still apply.</p>
+        @endforelse
+      </div>
+      <p class="hint">This records an agreement to the identified submission rules. It does not represent a verified legal e-signature or authorize payments.</p>
+      <div class="studio-submit-actions">
+        <button type="button" class="studio-tool-action" data-builder-terms-close>Cancel</button>
+        <button type="button" class="btn primary" data-builder-terms-accept><x-icon name="check-circle" size="17"/> Accept terms</button>
+      </div>
+    </dialog>
     <dialog id="studio-media-upload" class="studio-upload-dialog">
-      <form method="post" action="{{ route('builder.media.store') }}" enctype="multipart/form-data">
+      <form method="post" action="{{ route('builder.media.store') }}" enctype="multipart/form-data" data-builder-media-form>
         @csrf
         <input type="hidden" name="return_to" value="{{ $returnTo }}">
-        <div class="studio-card-heading"><h3>Upload featured media</h3><button type="button" class="studio-editor-icon" data-modal-close title="Close"><x-icon name="x" size="19"/></button></div>
+        <div class="studio-card-heading"><h3>Upload media or screenshots</h3><button type="button" class="studio-editor-icon" data-modal-close title="Close"><x-icon name="x" size="19"/></button></div>
         <p>Files stay private until approved. Static image: 4 MB · GIF: 8 MB · MP4/WebM: 20 MB.</p>
         <div class="studio-field">
-          <label for="studio-upload-file">Image, animation or video</label>
-          <input id="studio-upload-file" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" required>
+          <label for="studio-upload-file">Image, screenshots, animation or video</label>
+          <input id="studio-upload-file" name="image" type="file" data-builder-upload-files accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" required>
+          <small class="hint">You can select multiple files when JavaScript is available; each is reviewed individually and stored in your Media Library.</small>
         </div>
         <div class="studio-field">
           <label for="studio-upload-alt">Description</label>
@@ -458,6 +608,7 @@
           <label for="studio-upload-note">Rights evidence or permission details</label>
           <textarea id="studio-upload-note" name="rights_note" rows="3" maxlength="3000"></textarea>
         </div>
+        <p class="hint" role="status" data-builder-upload-status aria-live="polite"></p>
         <div class="studio-submit-actions"><button class="studio-tool-action" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit"><x-icon name="upload" size="16"/> Upload privately</button></div>
       </form>
     </dialog>
