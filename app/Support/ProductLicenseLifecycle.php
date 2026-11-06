@@ -182,8 +182,11 @@ final class ProductLicenseLifecycle
             } elseif ($action === 'activate') {
                 abort_unless($locked->status === 'suspended',409);
                 $locked->load(['entitlement','definition','product','version']);
-                abort_unless($locked->entitlement?->isActive(),409,'Download entitlement is no longer active.');
                 $locked->update(['status'=>'active','suspended_at'=>null]);
+                // Transaction rollback restores suspension if any product,
+                // entitlement, scanner, rights or file integrity gate fails.
+                abort_unless(self::eligible($locked),409,
+                    'The approved file, definition and entitlement must be valid before reactivation.');
             } elseif ($action === 'revoke') {
                 $locked->update(['status'=>'revoked','revoked_at'=>now()]);
                 ProductLicenseActivation::query()->where('product_license_id',$locked->id)
@@ -198,6 +201,8 @@ final class ProductLicenseLifecycle
         DB::transaction(function () use ($license,$administrator,$reason): void {
             $locked = ProductLicense::query()->lockForUpdate()->findOrFail($license->id);
             abort_unless($locked->status === 'active' && $locked->tier === 'regular',409);
+            $locked->load(['entitlement','definition','product','version']);
+            abort_unless(self::eligible($locked),409,'The original license must still be valid for upgrade.');
             $product = $locked->product()->firstOrFail();
             abort_unless($product->type === 'product' && $product->extended_price !== null,409);
             $extended = $product->extendedLicenseDefinition;
