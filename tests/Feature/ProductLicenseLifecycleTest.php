@@ -156,34 +156,34 @@ class ProductLicenseLifecycleTest extends TestCase
         $license=$this->issue();
         $key=$license->key_ciphertext;
         $this->postJson('/api/v1/licenses/validate',[
-            'license_key'=>$key,'domain'=>'example.com',
+            'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'example.com',
         ])->assertStatus(403)->assertJsonPath('valid',false);
 
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$key,'domain'=>'https://example.com',
+            'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'https://example.com',
         ])->assertOk()->assertJsonPath('domain','example.com')->assertJsonPath('tier','regular');
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$key,'domain'=>'example.com',
+            'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'example.com',
         ])->assertOk();
         $this->assertDatabaseCount('product_license_activations',1);
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$key,'domain'=>'another.example.com',
+            'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'another.example.com',
         ])->assertStatus(409);
         $this->postJson('/api/v1/licenses/validate',[
-            'license_key'=>$key,'domain'=>'another.example.com',
+            'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'another.example.com',
         ])->assertStatus(403);
         $this->postJson('/api/v1/licenses/validate',[
-            'license_key'=>$key,'domain'=>'EXAMPLE.COM',
+            'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'EXAMPLE.COM',
         ])->assertOk()->assertJsonPath('status','valid');
 
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$key,'domain'=>'http://example.com',
+            'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'http://example.com',
         ])->assertUnprocessable()->assertJsonValidationErrors('domain');
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$key,'domain'=>'127.0.0.1',
+            'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'127.0.0.1',
         ])->assertUnprocessable()->assertJsonValidationErrors('domain');
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$key,'domain'=>'example.com.evil.test/path',
+            'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'example.com.evil.test/path',
         ])->assertUnprocessable()->assertJsonValidationErrors('domain');
     }
 
@@ -191,7 +191,7 @@ class ProductLicenseLifecycleTest extends TestCase
     {
         $license=$this->issue();
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$license->key_ciphertext,'domain'=>'original.example.com',
+            'license_key'=>$license->key_ciphertext,'product_id'=>$this->product->public_id,'domain'=>'original.example.com',
         ])->assertOk();
 
         $this->actingAs($this->stranger)->get('/account/licenses')->assertOk()
@@ -217,16 +217,16 @@ class ProductLicenseLifecycleTest extends TestCase
             'product_license_id'=>$license->id,'domain'=>'original.example.com','status'=>'deactivated',
         ]);
         $this->postJson('/api/v1/licenses/validate',[
-            'license_key'=>$license->key_ciphertext,'domain'=>'original.example.com',
+            'license_key'=>$license->key_ciphertext,'product_id'=>$this->product->public_id,'domain'=>'original.example.com',
         ])->assertStatus(403);
         $this->postJson('/api/v1/licenses/validate',[
-            'license_key'=>$license->key_ciphertext,'domain'=>'replacement.example.com',
+            'license_key'=>$license->key_ciphertext,'product_id'=>$this->product->public_id,'domain'=>'replacement.example.com',
         ])->assertStatus(403);
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$license->key_ciphertext,'domain'=>'unapproved.example.com',
+            'license_key'=>$license->key_ciphertext,'product_id'=>$this->product->public_id,'domain'=>'unapproved.example.com',
         ])->assertStatus(409);
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$license->key_ciphertext,'domain'=>'replacement.example.com',
+            'license_key'=>$license->key_ciphertext,'product_id'=>$this->product->public_id,'domain'=>'replacement.example.com',
         ])->assertOk();
         $this->assertDatabaseHas('product_license_events',[
             'product_license_id'=>$license->id,'action'=>'domain.changed','domain'=>'replacement.example.com',
@@ -247,7 +247,7 @@ class ProductLicenseLifecycleTest extends TestCase
             'action'=>'suspend','reason'=>'Temporarily suspended for compliance review.','confirm_change'=>'1',
         ])->assertRedirect();
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$original,'domain'=>'example.com',
+            'license_key'=>$original,'product_id'=>$this->product->public_id,'domain'=>'example.com',
         ])->assertStatus(403);
         $this->release->update(['status'=>'disabled']);
         $this->patch('/dashboard/license-manager/issued/'.$license->id.'/status',[
@@ -265,10 +265,10 @@ class ProductLicenseLifecycleTest extends TestCase
         $next=$license->fresh()->key_ciphertext;
         $this->assertNotSame($original,$next);
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$original,'domain'=>'example.com',
+            'license_key'=>$original,'product_id'=>$this->product->public_id,'domain'=>'example.com',
         ])->assertStatus(403);
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$next,'domain'=>'example.com',
+            'license_key'=>$next,'product_id'=>$this->product->public_id,'domain'=>'example.com',
         ])->assertOk();
 
         $this->patch('/dashboard/license-manager/issued/'.$license->id.'/status',[
@@ -277,7 +277,7 @@ class ProductLicenseLifecycleTest extends TestCase
         ])->assertRedirect();
         $this->assertSame('revoked',$license->fresh()->status);
         $this->postJson('/api/v1/licenses/validate',[
-            'license_key'=>$next,'domain'=>'example.com',
+            'license_key'=>$next,'product_id'=>$this->product->public_id,'domain'=>'example.com',
         ])->assertStatus(403);
         $this->patch('/dashboard/license-manager/issued/'.$license->id.'/status',[
             'action'=>'activate','reason'=>'Attempted reactivation after permanent revocation.',
@@ -303,11 +303,11 @@ class ProductLicenseLifecycleTest extends TestCase
         $license=$this->issue();
         $key=$license->key_ciphertext;
         $this->postJson('/api/v1/licenses/activate',[
-            'license_key'=>$key,'domain'=>'example.com',
+            'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'example.com',
         ])->assertOk();
         $this->entitlement->update(['status'=>'revoked','revoked_at'=>now()]);
         $this->postJson('/api/v1/licenses/validate',[
-            'license_key'=>$key,'domain'=>'example.com',
+            'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'example.com',
         ])->assertStatus(403);
         $this->assertDatabaseCount('product_licenses',1);
         $this->assertDatabaseHas('product_license_events',[

@@ -29,7 +29,7 @@ function bambodiaVerifyInstalledProduct(
     try {
         curl_setopt_array($curl, [
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode(['license_key'=>$key,'domain'=>$domain], JSON_THROW_ON_ERROR),
+            CURLOPT_POSTFIELDS => json_encode(['license_key'=>$key,'product_id'=>$expectedProductId,'domain'=>$domain], JSON_THROW_ON_ERROR),
             CURLOPT_HTTPHEADER => ['Content-Type: application/json','Accept: application/json'],
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 5,

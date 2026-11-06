@@ -27,9 +27,9 @@ Over verified HTTPS, installed scripts POST JSON to:
 - https://bambodia.com/api/v1/licenses/validate
 
 Request JSON (both endpoints):
-    {"license_key":"BAM-<48 uppercase hexadecimal characters>","domain":"store.example.com"}
+    {"license_key":"BAM-<48 uppercase hexadecimal characters>","product_id":"123456789","domain":"store.example.com"}
 
-Activate once before attempting validate. A valid 200 response includes valid=true, status, license_id, product_id, tier, release_version, license_version, domain, expires_at, checked_at and check_again_after_seconds=21600. Compare product_id and domain to the expected installed product and configured application host. Wrong domain or invalid/revoked/expired/blocked licenses fail. A second concurrent domain is rejected until the customer releases the old activation. These are POST-only, throttled and HTTPS-only in production. Do not log secret request bodies.
+Activate once before attempting validate. A valid 200 response includes valid=true, status, license_id, product_id, tier, release_version, license_version, domain, expires_at, checked_at and check_again_after_seconds=21600. The server requires product_id to match the key. Compare product_id and domain to the expected installed product and configured application host. Wrong domain or invalid/revoked/expired/blocked licenses fail. A second concurrent domain is rejected until the customer releases the old activation. These are POST-only, throttled and HTTPS-only in production. Do not log secret request bodies.
 
 An installed PHP/Laravel product must integrate the license client itself. Bambodia's own marketplace installer is separate. An optional portable PHP reference implementation is in examples/license-validation.php. This is a reference, not an installed product plugin. Live external TLS and domain acceptance, cPanel and aaPanel testing remain release gates.
 

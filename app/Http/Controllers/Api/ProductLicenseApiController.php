@@ -18,10 +18,12 @@ class ProductLicenseApiController extends Controller
         $data = $request->validate([
             'license_key'=>['required','string','regex:/^BAM-[A-F0-9]{48}$/'],
             'domain'=>['required','string','max:253'],
+            'product_id'=>['required','digits:9'],
         ]);
         $domain = ProductLicenseLifecycle::domain($data['domain']);
         $license = ProductLicenseLifecycle::byKey($data['license_key']);
-        if (! $license || ! ProductLicenseLifecycle::eligible($license)) {
+        if (! $license || ! ProductLicenseLifecycle::eligible($license)
+            || ! hash_equals((string)$license->product->public_id, (string)$data['product_id'])) {
             return $this->invalid();
         }
         $activation = ProductLicenseLifecycle::activate($license, $domain);
@@ -34,10 +36,12 @@ class ProductLicenseApiController extends Controller
         $data = $request->validate([
             'license_key'=>['required','string','regex:/^BAM-[A-F0-9]{48}$/'],
             'domain'=>['required','string','max:253'],
+            'product_id'=>['required','digits:9'],
         ]);
         $domain = ProductLicenseLifecycle::domain($data['domain']);
         $license = ProductLicenseLifecycle::byKey($data['license_key']);
-        if (! $license || ! ProductLicenseLifecycle::eligible($license)) return $this->invalid();
+        if (! $license || ! ProductLicenseLifecycle::eligible($license)
+            || ! hash_equals((string)$license->product->public_id, (string)$data['product_id'])) return $this->invalid();
         $activation = ProductLicenseActivation::query()
             ->where('product_license_id',$license->id)
             ->where('domain',$domain)->where('status','active')->first();
