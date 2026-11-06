@@ -34,8 +34,67 @@ try {
       }));
       if(measured.documentWidth>measured.viewport+5)
         throw new Error(device.name+' '+path+' horizontal overflow '+JSON.stringify(measured));
+      const typeSize=await page.evaluate(()=>parseFloat(getComputedStyle(document.body).fontSize));
+      if(typeSize!==14)
+        throw new Error(device.name+' '+path+' body font must use 14px platform token, saw '+typeSize);
       checks++;
       if(path==='/'){
+        // Validate readable type sizing and WCAG AA color tokens on both theme palettes.
+        const textMetrics=await page.evaluate(()=>{
+          const heading=document.querySelector('.hero h1');
+          const style=getComputedStyle(heading);
+          const heroButton=document.querySelector('.hero-search .btn');
+          const placeholder=document.querySelector('.hero-search input');
+          return {
+            fontSize:parseFloat(style.fontSize),
+            lineHeight:parseFloat(style.lineHeight),
+            letterSpacing:style.letterSpacing,
+            headingWidth:heading.scrollWidth,
+            availableWidth:heading.clientWidth,
+            buttonSize:heroButton?parseFloat(getComputedStyle(heroButton).fontSize):14,
+            placeholderSize:placeholder?parseFloat(getComputedStyle(placeholder,'::placeholder').fontSize):12,
+          };
+        });
+        if(textMetrics.fontSize>56 || textMetrics.lineHeight<textMetrics.fontSize*1.17
+            || (textMetrics.letterSpacing!=='normal' && parseFloat(textMetrics.letterSpacing)<-.25)
+            || textMetrics.headingWidth>textMetrics.availableWidth+3
+            || textMetrics.buttonSize!==14 || textMetrics.placeholderSize>12)
+          throw new Error(device.name+' inconsistent or overlapping hero typography: '+JSON.stringify(textMetrics));
+        for(const theme of ['light','dark']){
+          const ratios=await page.evaluate(theme=>{
+            const root=document.documentElement;
+            const originalTheme=root.dataset.theme;
+            root.dataset.theme=theme;
+            const style=getComputedStyle(root);
+            const color=key=>style.getPropertyValue(key).trim();
+            const lum=hex=>{
+              const channels=[1,3,5].map(i=>{
+                const c=parseInt(hex.slice(i,i+2),16)/255;
+                return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;
+              });
+              return .2126*channels[0]+.7152*channels[1]+.0722*channels[2];
+            };
+            const ratio=(a,b)=>{
+              const x=lum(color(a)),y=lum(color(b));
+              return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);
+            };
+            const result={
+              bodyOnSurface:ratio('--text','--surface'),
+              bodyOnBackground:ratio('--text','--bg'),
+              helperOnSurface:ratio('--muted','--surface'),
+              helperOnBackground:ratio('--muted','--bg'),
+              accentOnSurface:ratio('--accent','--surface'),
+              primaryButton:ratio('--accent-contrast','--accent'),
+              secondaryButton:ratio('--secondary-contrast','--secondary'),
+            };
+            root.dataset.theme=originalTheme;
+            return result;
+          },theme);
+          for(const [name,value] of Object.entries(ratios)){
+            if(value<4.5)
+              throw new Error(device.name+' '+theme+' '+name+' insufficient contrast ratio '+value.toFixed(2));
+          }
+        }
         if(!(await page.getByText('Browser QA Published Service').first().isVisible()))
           throw new Error(device.name+' homepage missing approved listing');
         if(!(await page.getByText('Browser QA Published Freelance Job').first().isVisible()))
