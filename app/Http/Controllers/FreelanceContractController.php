@@ -20,6 +20,8 @@ class FreelanceContractController extends Controller
 {
     public function index(Request $request): View
     {
+        $status=(string)$request->query('status','all');
+        abort_unless(in_array($status,['all','draft','offered','active','disputed','completed','declined','cancelled'],true),404);
         $contracts=FreelanceContract::query()
             ->where(function($q)use($request){
                 $q->where('client_id',$request->user()->id)
@@ -29,8 +31,9 @@ class FreelanceContractController extends Controller
                     });
             })
             ->with(['client:id,name,public_id','freelancer:id,name,public_id'])
-            ->latest()->paginate(10);
-        return view('contracts.index',compact('contracts'));
+            ->when($status!=='all',fn($q)=>$q->where('status',$status))
+            ->latest()->paginate(10)->withQueryString();
+        return view('contracts.index',compact('contracts','status'));
     }
 
     public function store(Request $request): RedirectResponse

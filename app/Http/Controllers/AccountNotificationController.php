@@ -12,12 +12,19 @@ class AccountNotificationController extends Controller
     public function index(Request $request): View
     {
         $filter=(string)$request->query('filter','all');
-        abort_unless(in_array($filter,['all','unread'],true),404);
-        $notifications=AccountNotification::query()->where('user_id',$request->user()->id)
+        abort_unless(in_array($filter,['all','unread','read'],true),404);
+        $event=(string)$request->query('event','all');
+        abort_unless($event==='all' || in_array($event,AccountNotification::EVENTS,true),404);
+        $owned=AccountNotification::query()->where('user_id',$request->user()->id);
+        $notifications=(clone $owned)
             ->when($filter==='unread',fn($q)=>$q->whereNull('read_at'))
+            ->when($filter==='read',fn($q)=>$q->whereNotNull('read_at'))
+            ->when($event!=='all',fn($q)=>$q->where('event',$event))
             ->latest()->paginate(10)->withQueryString();
-        $unread=AccountNotification::query()->where('user_id',$request->user()->id)->whereNull('read_at')->count();
-        return view('account.notifications',compact('notifications','unread','filter'));
+        $unread=(clone $owned)->whereNull('read_at')->count();
+        $events=(clone $owned)->selectRaw('event, COUNT(*) as total')
+            ->groupBy('event')->orderBy('event')->pluck('total','event');
+        return view('account.notifications',compact('notifications','unread','filter','event','events'));
     }
 
     public function read(Request $request, AccountNotification $notification): RedirectResponse

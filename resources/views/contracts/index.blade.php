@@ -8,7 +8,20 @@
   </div>
   <section class="panel">
     <div class="panel-head"><h2>Agreement records <span class="count">{{ $contracts->total() }}</span></h2>
-      <a class="btn subtle" href="{{ route('jobs.mine') }}">My posted jobs</a>
+      <div class="toolbar-actions">
+        <form method="get" class="table-search" aria-label="Filter private agreements">
+          <select name="status" class="table-select" aria-label="Agreement status">
+            @foreach(['all'=>'All agreements','draft'=>'Draft','offered'=>'Offered','active'=>'Active','disputed'=>'Disputed','completed'=>'Completed','declined'=>'Declined','cancelled'=>'Cancelled'] as $value=>$label)
+              <option value="{{ $value }}" @selected($status===$value)>{{ $label }}</option>
+            @endforeach
+          </select>
+          <button type="submit" class="btn subtle compact">Filter</button>
+        </form>
+        @if($status!=='all')<a class="btn subtle compact" href="{{ route('contracts.index') }}">Clear</a>@endif
+        @if(in_array(auth()->user()->role,['customer','subscriber','super_admin'],true))
+          <a class="btn subtle compact" href="{{ route('jobs.mine') }}">My posted jobs</a>
+        @endif
+      </div>
     </div>
     <div class="table-scroll"><table class="data-table">
       <thead><tr><th>Contract ID</th><th>Title</th><th>Client</th><th>Freelancer</th><th>Estimated USD</th><th>State</th><th>Action</th></tr></thead>
