@@ -298,6 +298,13 @@ try {
 
       // The Account shell must keep its sidebar and content scroll independent.
       await page.goto(origin+'/en/account',{waitUntil:'networkidle'});
+      if(!(await page.getByRole('heading',{name:'Agreements needing attention'}).isVisible()))
+        throw new Error('Account operational agreements section missing');
+      if(!(await page.locator('a.account-metric').first().isVisible()))
+        throw new Error('Account personal activity cards missing');
+      if(await page.locator('.workspace-overview-columns').count())
+        throw new Error('Account workspace unexpectedly renders creator private operations');
+      checks+=3;
       if(await page.locator('body').getAttribute('data-workspace')!=='account')
         throw new Error('Account workspace did not use shared premium shell');
       if(!(await page.locator('.workspace-menu-search input').isVisible()))
@@ -331,6 +338,13 @@ try {
       }));
       if(adminHeader.height>64 || adminHeader.logos!==2)
         throw new Error('Admin workspace header is not compact or has missing theme logos '+JSON.stringify(adminHeader));
+      if(!(await admin.getByRole('heading',{name:'Queues requiring attention'}).isVisible()))
+        throw new Error('Admin operational queues missing');
+      if(!(await admin.locator('.workspace-overview-metric[href*="user-manager"]').count()))
+        throw new Error('Super-admin account metrics do not lead to User Manager');
+      if(!(await admin.getByText('Latest pending marketplace submissions').isVisible()))
+        throw new Error('Pending moderation overview missing');
+      checks+=3;
       if(await admin.locator('body').getAttribute('data-workspace')!=='admin')
         throw new Error('Admin shell missing');
       const sidebar=admin.locator('#workspace-sidebar');
@@ -345,6 +359,15 @@ try {
         throw new Error('Admin menu lacks real controls');
       await admin.screenshot({path:out+'/desktop-admin-workspace.png',fullPage:false});
       await admin.goto(origin+'/en/developer',{waitUntil:'networkidle'});
+      if(!(await admin.getByText('Your API credential health').count()))
+        throw new Error('Developer token-health overview missing');
+      if(await admin.locator('.workspace-token-filters a').count()!==5)
+        throw new Error('Developer token filters missing');
+      await admin.locator('.workspace-token-filters a[href*="status=active"]').click();
+      await admin.waitForLoadState('networkidle');
+      if(!admin.url().includes('status=active'))
+        throw new Error('Developer active-token filter did not navigate');
+      checks+=3;
       if(await admin.locator('body').getAttribute('data-workspace')!=='developer')
         throw new Error('Developer workspace is not distinct');
       if(await admin.locator('.workspace-nav-link').getByText('Digital File Vault').count())
@@ -390,6 +413,13 @@ try {
       await creator.locator('form.auth-form button[type="submit"]').click();
       await creator.waitForURL(/\/account\?/,{timeout:15000});
       await creator.goto(origin+'/en/creator',{waitUntil:'networkidle'});
+      if(!(await creator.getByRole('heading',{name:'Your recent submissions'}).isVisible()))
+        throw new Error('Creator private submissions overview missing');
+      if(!(await creator.getByRole('heading',{name:'Open client conversations'}).isVisible()))
+        throw new Error('Creator private client conversation overview missing');
+      if(await creator.locator('.workspace-overview-metric').count()<5)
+        throw new Error('Creator dashboard stats incomplete');
+      checks+=3;
       if(await creator.locator('body').getAttribute('data-workspace')!=='creator')
         throw new Error('Creator workspace route did not render correctly');
       await creator.screenshot({path:out+'/desktop-creator-workspace.png',fullPage:false});

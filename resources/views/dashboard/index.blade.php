@@ -9,9 +9,12 @@
 
 @if(!$isStaff)
   <div class="workspace-overview-grid" aria-label="Platform account totals">
-    <x-workspace-metric label="Registered accounts" :value="$stats['totalUsers']" icon="users" :href="route('dashboard')" action="Platform total"/>
-    <x-workspace-metric label="Approved freelancers" :value="$stats['creators']" icon="user-round-check" :href="route('dashboard')" action="Creator accounts"/>
-    <x-workspace-metric label="Customers and subscribers" :value="$stats['customers']" icon="user" :href="route('dashboard')" action="Customer accounts"/>
+    <x-workspace-metric label="Registered accounts" :value="$stats['totalUsers']" icon="users"
+      :href="auth()->user()->role==='super_admin' ? route('dashboard.users') : null" action="Manage accounts"/>
+    <x-workspace-metric label="Approved freelancers" :value="$stats['creators']" icon="user-round-check"
+      :href="auth()->user()->role==='super_admin' ? route('dashboard.users') : null" action="Manage accounts"/>
+    <x-workspace-metric label="Customers and subscribers" :value="$stats['customers']" icon="user"
+      :href="auth()->user()->role==='super_admin' ? route('dashboard.users') : null" action="Manage accounts"/>
   </div>
 @endif
 
