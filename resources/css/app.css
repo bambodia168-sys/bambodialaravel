@@ -1304,3 +1304,30 @@ svg{flex-shrink:0}
 }
 
 .studio-gallery-empty{grid-column:1/-1;margin:0;padding:19px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:12px;line-height:1.7}
+
+
+/* Shared accessible dialog centering across storefront and all workspaces.
+   Tailwind's reset must not remove native dialog auto margins. */
+dialog[open] {
+  position:fixed;
+  inset:0;
+  margin:auto;
+  max-width:calc(100vw - 24px);
+  max-height:calc(100dvh - 24px);
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
+@media(max-width:580px){dialog[open]{max-width:calc(100vw - 18px);max-height:calc(100dvh - 18px)}}
+
+/* The acceptance control is part of the form, not a separate card. */
+.studio-accept-block{border:0;background:transparent;border-radius:0;padding:6px 0 12px;box-shadow:none}
+.studio-release-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
+.studio-editor-resize-handle{border:0;background:transparent;display:inline-flex;align-items:center;gap:5px;padding:2px 5px;color:var(--muted);cursor:ns-resize;touch-action:none;font-size:11px}
+.studio-editor-resize-handle:hover,.studio-editor-resize-handle:focus-visible{color:var(--accent)}
+.studio-editor-source-status{font-size:12px;color:var(--muted);padding:8px 15px;border-top:1px solid var(--line);margin:0}
+.studio-editor-source-status[hidden]{display:none}
+.studio-editor-surface iframe,.studio-preview-description iframe,.listing-body iframe{display:block;aspect-ratio:16/9;width:100%;max-width:800px;height:auto;min-height:220px;border:0;border-radius:11px;background:var(--surface-2);margin:13px 0}
+.studio-editor-surface{overflow:auto;min-height:270px;resize:vertical}
+.studio-editor-source{max-height:800px}
+@media(max-width:650px){.studio-release-fields{grid-template-columns:1fr}.studio-editor-surface iframe,.studio-preview-description iframe,.listing-body iframe{min-height:185px}}

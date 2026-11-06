@@ -28,7 +28,7 @@
   $previousHtml = old('description_html', $record?->description_html);
   $previousText = old('description', $record?->description ?? '');
 @endphp
-<div class="container inner-page builder-studio" data-builder-studio data-builder-readonly="{{ $canEdit ? '0' : '1' }}">
+<div class="container inner-page builder-studio" data-builder-studio data-builder-readonly="{{ $canEdit ? '0' : '1' }}" data-editor-preview-url="{{ route('builder.content.preview') }}">
   @if($type !== null)
     <section class="studio-landing-hero studio-editor-hero" aria-labelledby="studio-editor-heading">
       <span class="studio-landing-shield" aria-hidden="true"><x-icon name="shield" size="256"/></span>
@@ -219,6 +219,30 @@
                 </div>
                 @endunless
               </div>
+              @if($isProduct)
+                <div class="studio-release-fields">
+                  <div class="studio-field">
+                    <label for="studio-software-version">Version</label>
+                    <input id="studio-software-version" name="software_version" type="text"
+                      maxlength="48" placeholder="1.0.0" @readonly(!$canEdit)
+                      value="{{ old('software_version',$record?->software_version) }}">
+                    @error('software_version')<small class="builder-field-error">{{ $message }}</small>@enderror
+                  </div>
+                  <div class="studio-field">
+                    <label for="studio-software-published">Published Date</label>
+                    <input id="studio-software-published" name="software_published_on" type="date" max="{{ now()->toDateString() }}"
+                      value="{{ old('software_published_on',$record?->software_published_on?->format('Y-m-d')) }}" @readonly(!$canEdit)>
+                    @error('software_published_on')<small class="builder-field-error">{{ $message }}</small>@enderror
+                  </div>
+                  <div class="studio-field">
+                    <label for="studio-software-updated">Updated Date</label>
+                    <input id="studio-software-updated" name="software_updated_on" type="date" max="{{ now()->toDateString() }}"
+                      value="{{ old('software_updated_on',$record?->software_updated_on?->format('Y-m-d')) }}" @readonly(!$canEdit)>
+                    @error('software_updated_on')<small class="builder-field-error">{{ $message }}</small>@enderror
+                  </div>
+                </div>
+                <p class="hint">Provide your script's release version and dates. Updated Date must not be earlier than Published Date. These are creator-reported release details, not verified automatic-update events.</p>
+              @endif
             </section>
 
             <section class="studio-card" aria-labelledby="studio-editor-title">
@@ -247,6 +271,7 @@
                   ] as [$command,$icon,$label])
                     <button type="button" class="studio-editor-icon" data-editor-command="{{ $command }}" title="{{ $label }}" aria-label="{{ $label }}"><x-icon :name="$icon" size="17"/></button>
                   @endforeach
+                  <button type="button" class="studio-editor-icon" data-editor-action="youtube" title="Embed YouTube video" aria-label="Embed YouTube video"><x-icon name="video" size="17"/></button>
                   <button type="button" class="studio-editor-icon" data-editor-action="link" title="Insert hyperlink" aria-label="Insert hyperlink"><x-icon name="link" size="17"/></button>
                   <button type="button" class="studio-editor-icon" data-editor-command="unlink" title="Remove hyperlink" aria-label="Remove hyperlink"><x-icon name="unlink" size="17"/></button>
                   <button type="button" class="studio-editor-icon" data-editor-action="table" title="Insert table" aria-label="Insert table"><x-icon name="table" size="17"/></button>
@@ -256,7 +281,8 @@
                   @foreach([['undo','undo','Undo'],['redo','redo','Redo'],['removeFormat','eraser','Clear formatting']] as [$command,$icon,$label])
                     <button type="button" class="studio-editor-icon" data-editor-command="{{ $command }}" title="{{ $label }}" aria-label="{{ $label }}"><x-icon :name="$icon" size="17"/></button>
                   @endforeach
-                  <button type="button" class="studio-editor-icon" data-editor-action="source" title="View HTML source (read-only)" aria-label="View HTML source"><x-icon name="code" size="17"/></button>
+                  <button type="button" class="studio-editor-icon" data-editor-action="source" title="Edit HTML source safely" aria-label="Edit HTML source"><x-icon name="code" size="17"/></button>
+                  <button type="button" class="studio-editor-icon" data-editor-action="apply-source" title="Apply sanitized HTML" aria-label="Apply sanitized HTML" hidden><x-icon name="check" size="17"/></button>
                 </div>
                 <div class="studio-editor-surface" data-editor-surface contenteditable="true" role="textbox"
                      aria-label="Formatted description" aria-multiline="true" spellcheck="true"
@@ -267,13 +293,17 @@
                           minlength="{{ $isJob ? 70 : 40 }}" maxlength="10000" required
                           placeholder="Describe the scope, benefits, deliverables and requirements">{{ $previousText }}</textarea>
                 <input type="hidden" data-editor-html name="description_html" value="{{ $previousHtml }}">
-                <textarea class="studio-editor-source" data-editor-source aria-label="Sanitized HTML source preview" readonly hidden></textarea>
+                <textarea class="studio-editor-source" data-editor-source aria-label="Edit HTML source" @readonly(!$canEdit) spellcheck="false" maxlength="100000" hidden></textarea>
+                <p class="studio-editor-source-status" data-editor-source-status role="status" aria-live="polite" hidden></p>
                 <div class="studio-editor-footer">
-                  <span aria-hidden="true"></span>
+                  <button type="button" class="studio-editor-resize-handle" data-editor-resize-handle
+                    title="Drag vertically or use arrow keys to resize editor" aria-label="Drag or use arrow keys to expand the text editor">
+                    <x-icon name="grip-horizontal" size="19"/><span>Resize editor</span>
+                  </button>
                   <span data-editor-counter>0 / 10,000</span>
                 </div>
               </div>
-              <small class="hint">At least {{ $isJob ? 70 : 40 }} characters. Formatting is cleaned securely when saved.</small>
+              <small class="hint">At least {{ $isJob ? 70 : 40 }} characters. Paste a YouTube link to preview it, or use the HTML button to edit source safely. HTML and video embeds are sanitized on the server before preview and save.</small>
               @error('description')<small class="builder-field-error">{{ $message }}</small>@enderror
             </section>
 

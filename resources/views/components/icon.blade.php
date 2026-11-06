@@ -9,6 +9,7 @@ $paths = [
     'key-round' => '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m11 12 9-9 2 2-3 3 1.5 1.5-3 3-1.5-1.5-2 2"/>',
     'clipboard-check' => '<rect x="5" y="4" width="14" height="18" rx="2"/><path d="M9 4.5V3h6v1.5M9 13l2 2 4-4M9 18h6"/>',
     'user-round-check' => '<circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 11-5.7M16 18l2 2 4-5"/>',
+    'grip-horizontal' => '<circle cx="6" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="18" cy="10" r="1"/><circle cx="6" cy="15" r="1"/><circle cx="12" cy="15" r="1"/><circle cx="18" cy="15" r="1"/>',
     'file-text' => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h7"/>',
     'newspaper' => '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h6M7 12h6M7 16h10M16 8h2v4h-2z"/>',
     'scale' => '<path d="M12 3v18M5 6h14M8 6 4 14h8L8 6zm8 0-4 8h8l-4-8zM8 21h8"/>',
