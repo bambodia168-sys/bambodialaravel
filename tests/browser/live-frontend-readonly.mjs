@@ -21,6 +21,7 @@ const devices = [
 const results = [];
 const notes = [];
 const failures = [];
+const blocked = [];
 let browser;
 await fs.mkdir(screenshotFolder, { recursive: true });
 
@@ -28,6 +29,7 @@ function item(name, status, detail = '') {
   results.push({ name, status, detail });
   console.log(status.toUpperCase() + ': ' + name + (detail ? ' — ' + detail : ''));
   if (status === 'fail') failures.push(name + ': ' + detail);
+  if (status === 'blocked') blocked.push(name + ': ' + detail);
 }
 function expect(condition, message) {
   if (!condition) throw new Error(message);
@@ -219,7 +221,13 @@ async function inspectThemeToggle(browser) {
 }
 
 try {
-  browser = await chromium.launch({ headless: true });
+  const browserChannel = (process.env.BAMBODIA_BROWSER_CHANNEL || '').trim();
+  // On a user's own computer, channel=chrome tests their installed Chrome.
+  // No anti-bot evasion, custom headers, credentials or production writes.
+  browser = await chromium.launch({
+    headless: process.env.BAMBODIA_HEADLESS !== 'false',
+    ...(browserChannel ? { channel: browserChannel } : {})
+  });
   await inspectThemeToggle(browser);
   const listingPaths = {};
   for (const device of devices) {
@@ -282,7 +290,13 @@ try {
   if (Object.values(listingPaths).every(arr => arr.every(r => r.count === 0)))
     notes.push('All public listing categories currently empty; real-product media, cards and private inquiry actions require a populated approved QA host or real published items.');
 } catch (error) {
-  item('Runner infrastructure', 'fail', String(error.message).slice(0,450));
+  const message = String(error?.message || error).slice(0,450);
+  if (message.includes('GET / returned HTTP 403')) {
+    item('Origin access for automated browser', 'blocked',
+      'The production site returned HTTP 403 to this browser/network. Respect access controls; run from your authorized local Chrome session. This is not proof of a UI layout defect.');
+  } else {
+    item('Runner infrastructure', 'fail', message);
+  }
 } finally {
   const summary = {
     checkedOrigin: origin,
@@ -295,6 +309,7 @@ try {
     statuses: {
       passed: results.filter(x => x.status === 'pass').length,
       failed: results.filter(x => x.status === 'fail').length,
+      blocked: results.filter(x => x.status === 'blocked').length,
       skipped: results.filter(x => x.status === 'skip').length
     },
     productionContentLimitations: [
@@ -309,5 +324,5 @@ try {
     JSON.stringify(summary, null, 2), 'utf8');
   await browser?.close();
   console.log('LIVE FRONTEND: ' + JSON.stringify(summary.statuses));
-  if (failures.length) process.exitCode = 1;
+  if (failures.length || blocked.length) process.exitCode = 1;
 }
