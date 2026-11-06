@@ -3,7 +3,7 @@
 ## Gate status and boundaries
 
 This is an **operator-run acceptance protocol**. CI browser journeys in
-\`.github/workflows/isolated-authenticated-journeys.yml\` use a disposable
+`.github/workflows/isolated-authenticated-journeys.yml` use a disposable
 loopback HTTP application, isolated MySQL 8.0 and six simulated **role-real**
 account sessions. This is a different acceptance layer from an external
 operator logging in to a deployed aaPanel QA host or a physical phone.
@@ -17,10 +17,10 @@ seeding against the installed Bambodia database.
 Use an independently installed **QA** Bambodia instance with:
 
 - Its own origin, dedicated vhost and document root pointing to that QA
-  application's \`public/\` directory. Never reuse the live site's origin.
-- A **new empty MySQL database**, new \`.env\`, unique \`APP_KEY\`, separate
-  private \`storage/\` and separate session/cache namespace. Never copy the
-  live \`.env\`, session keys, customer tables or vault files.
+  application's `public/` directory. Never reuse the live site's origin.
+- A **new empty MySQL database**, new `.env`, unique `APP_KEY`, separate
+  private `storage/` and separate session/cache namespace. Never copy the
+  live `.env`, session keys, customer tables or vault files.
 - The exact GitHub release SHA under acceptance and its compiled build.
 - Registration restricted as needed, test-only outbound emails routed to
   a private capture sink, and all external payment/escrow/payout connectors
@@ -30,9 +30,9 @@ Use an independently installed **QA** Bambodia instance with:
   private URLs or tokens into ChatGPT or CI artifacts.
 
 **Stop if isolation cannot be demonstrated.** The repository UAT seed script
-\`tests/browser/uat-seed.php\` is intentionally **not** suitable for a shared
+`tests/browser/uat-seed.php` is intentionally **not** suitable for a shared
 QA database or an aaPanel production installation; it is locked to empty
-localhost-only MySQL \`bambodia_uat\`, \`APP_ENV=testing\`, and a GitHub
+localhost-only MySQL `bambodia_uat`, `APP_ENV=testing`, and a GitHub
 runner's local HTTP app. Do not bypass the guards.
 
 ## 2. Dedicated QA identities
@@ -60,7 +60,7 @@ Do not mark PASS based only on a screenshot or an existing CI test.
 
 | ID | Actual authenticated action | Required proof |
 | --- | --- | --- |
-| MOD-01 | Creator submits a valid service; moderator publishes it | Published visibility, \`listing.review.published\` audit, creator \`listing.reviewed\` notification |
+| MOD-01 | Creator submits a valid service; moderator publishes it | Published visibility, `listing.review.published` audit, creator `listing.reviewed` notification |
 | MOD-02 | Moderator rejects a different pending item | No public listing; rejection audit/notification; repeat decision denied |
 | MOD-03 | Staff/customer attempt moderation | HTTP 403; no status, audit, or notification mutation |
 | PRD-01 | Creator creates draft product, selects approved owned image and active license, submits | Pending product in moderator queue; cross-owner preview denied |
@@ -87,15 +87,15 @@ client messages or real merchant transactions.
 
 Run **read-only** web checks against the separately deployed QA origin:
 
-\`\`\`bash
+```bash
 php support/http-release-probe.php --url=https://your-qa-origin.example --strict --json
-\`\`\`
+```
 
 Check the real scanner on the **isolated QA host**:
 
-\`\`\`bash
+```bash
 php support/vault-scan-acceptance.php --scanner=/usr/bin/clamscan
-\`\`\`
+```
 
 The second probe uses a harmless EICAR test marker and deletes the
 temporary fixture. Confirm the actual PHP-FPM worker can invoke the
