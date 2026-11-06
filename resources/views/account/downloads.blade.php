@@ -5,6 +5,7 @@
 <div class="container inner-page">
   <div class="page-intro"><div class="eyebrow">Account · Secure Fulfillment</div><h1>My Downloads</h1>
     <p>Only approved versions explicitly licensed to your account appear here. Download access is checked again for every request.</p></div>
+  <p><a class="btn subtle" href="{{ route('account.licenses.index') }}"><x-icon name="key-round" size="16"/> My Product Licenses &amp; Domain Activations</a></p>
   <section class="panel">
     <div class="panel-head"><h2>Licensed file access <span class="count">{{ $entitlements->total() }}</span></h2></div>
     <div class="table-scroll"><table class="data-table">

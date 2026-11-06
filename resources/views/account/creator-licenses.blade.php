@@ -16,7 +16,8 @@
           <td><strong>{{ $license->product?->title }}</strong><div class="text-muted">Product {{ $license->product?->public_id }}</div></td>
           <td>v{{ $license->version?->version }}</td>
           <td class="mono">{{ $license->customer?->public_id }}</td>
-          <td>{{ ucfirst($license->tier) }} · {{ $license->definition?->name }}</td>
+          <td>{{ ucfirst($license->tier) }} · {{ $license->definition?->name }}
+            <div class="text-muted mono">License {{ $license->public_id }}</div></td>
           <td><span class="role-pill">{{ ucfirst($license->status) }}</span></td>
           <td><details><summary>Review history</summary>
             @forelse($license->activations as $domain)

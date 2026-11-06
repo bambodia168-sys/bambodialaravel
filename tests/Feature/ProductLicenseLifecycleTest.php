@@ -30,6 +30,10 @@ class ProductLicenseLifecycleTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Isolate business authorization and lifecycle assertions from the
+        // shared in-memory rate-limit bucket. Throttling remains enabled in
+        // real environments and is tested separately.
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         Storage::fake('local');
         $this->admin=$this->member('super_admin');
         $this->staff=$this->member('admin');

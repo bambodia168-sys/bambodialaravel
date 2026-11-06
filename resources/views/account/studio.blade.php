@@ -24,6 +24,7 @@
         <a class="btn primary" href="{{ route('builder', ['type'=>'product']) }}"><x-icon name="plus" size="17"/> Open Builder</a>
       @endif
       <a class="btn primary" href="{{ route('studio.products.index') }}"><x-icon name="package" size="17"/> Product Manager &amp; Releases</a>
+      <a class="btn subtle" href="{{ route('studio.licenses.index') }}"><x-icon name="key-round" size="17"/> Product Licenses</a>
       <a class="btn subtle" href="{{ route('studio.listings') }}"><x-icon name="layers" size="17"/> Listings &amp; Services</a>
       <a class="btn subtle" href="{{ route('studio.media.index') }}"><x-icon name="image" size="17"/> Media Library</a>
       <a class="btn subtle" href="{{ route('studio.profile.edit') }}"><x-icon name="user" size="17"/> Creator Profile</a>
