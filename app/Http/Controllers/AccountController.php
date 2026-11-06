@@ -46,7 +46,18 @@ class AccountController extends Controller
             $stats['client_inquiries']=ServiceInquiry::query()->where('creator_id',$user->id)->where('status','open')->count();
         }
         $activity=AccountNotification::query()->where('user_id',$user->id)->latest()->limit(5)->get();
-        return view('account.index', compact('user','stats','activity'));
+
+        // Only agreements in which this account participates appear in the overview.
+        // A freelancer cannot see the counterparty's private draft.
+        $agreements=FreelanceContract::query()->where(function($query)use($user){
+            $query->where('client_id',$user->id)
+                ->orWhere(function($other)use($user){
+                    $other->where('freelancer_id',$user->id)->where('status','!=','draft');
+                });
+        })->whereIn('status',['offered','active','disputed'])
+          ->latest('updated_at')->limit(4)->get(['id','public_id','title','status','updated_at']);
+
+        return view('account.index', compact('user','stats','activity','agreements'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -78,6 +89,16 @@ class AccountController extends Controller
             'pending'=>MarketplaceListing::query()->where('user_id',$user->id)->where('status','pending')->count(),
             'inquiries'=>ServiceInquiry::query()->where('creator_id',$user->id)->where('status','open')->count(),
         ];
-        return view('account.studio',compact('user','stats'));
+        $stats['products']=MarketplaceListing::query()->where('user_id',$user->id)
+            ->where('type','product')->count();
+        $stats['drafts']=MarketplaceListing::query()->where('user_id',$user->id)
+            ->whereIn('status',['draft','rejected'])->count();
+        $recentListings=MarketplaceListing::query()->where('user_id',$user->id)
+            ->latest()->limit(5)->get(['id','type','title','status','updated_at']);
+        $openInquiries=ServiceInquiry::query()->where('creator_id',$user->id)
+            ->where('status','open')->latest('updated_at')->limit(4)
+            ->get(['id','subject','updated_at']);
+
+        return view('account.studio',compact('user','stats','recentListings','openInquiries'));
     }
 }

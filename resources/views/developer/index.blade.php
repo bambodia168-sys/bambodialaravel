@@ -7,6 +7,21 @@
   <h1>Developer Dashboard</h1>
   <p>Issue scoped access credentials for Bambodia's implemented read-only endpoints. Tokens are shown only once and stored as hashes.</p>
 </div>
+<div class="workspace-overview-grid" aria-label="Your API credential health">
+  <x-workspace-metric label="Active tokens" :value="$tokenStats['active']" icon="key-round"
+    :href="route('developer.index',['status'=>'active'])" action="View active"/>
+  <x-workspace-metric label="Expiring within 7 days" :value="$tokenStats['expiring']" icon="alert"
+    :href="route('developer.index',['status'=>'expiring'])" action="Review expiry"/>
+  <x-workspace-metric label="Expired tokens" :value="$tokenStats['expired']" icon="clock"
+    :href="route('developer.index',['status'=>'expired'])" action="View expired"/>
+  <x-workspace-metric label="Revoked tokens" :value="$tokenStats['revoked']" icon="shield"
+    :href="route('developer.index',['status'=>'revoked'])" action="Review revoked"/>
+</div>
+@if($tokenStats['expiring']>0)
+  <p class="workspace-overview-alert"><x-icon name="alert" size="17"/>
+    {{ $tokenStats['expiring'] }} active {{ $tokenStats['expiring']===1?'token expires':'tokens expire' }} within 7 days.
+    Review your integration and create a new scoped token before it expires.</p>
+@endif
 @if(session('issued_token'))
 <section class="panel issued-token">
   <div class="panel-head"><h2>New access token — copy now</h2></div>
@@ -14,10 +29,17 @@
   <p class="hint">This token will not be shown again after you leave or refresh this page. Store it in your server-side secrets manager, never in public JavaScript.</p>
 </section>
 @endif
-<section class="panel">
+<section class="panel workspace-overview-block" id="api-token-list">
   <div class="panel-head"><div><h2>API access tokens <span class="count">{{ $tokens->total() }}</span></h2><p>Tokens automatically expire and can be revoked immediately.</p></div>
     <div class="toolbar-actions"><a class="btn subtle" href="{{ route('developer.docs') }}"><x-icon name="book" size="16"/> API documentation</a><button type="button" class="btn primary" data-modal-open="new-api-token"><x-icon name="key" size="16"/> Create token</button></div>
   </div>
+  <nav class="workspace-token-filters" aria-label="Filter API tokens">
+    @foreach(['all'=>'All tokens','active'=>'Active','expiring'=>'Expiring soon','expired'=>'Expired','revoked'=>'Revoked'] as $filter=>$label)
+      <a class="{{ $status===$filter ? 'is-active' : '' }}"
+         href="{{ route('developer.index',$filter==='all'?[]:['status'=>$filter]) }}#api-token-list"
+         @if($status===$filter)aria-current="page"@endif>{{ $label }}</a>
+    @endforeach
+  </nav>
   <div class="table-scroll">
     <table class="data-table"><thead><tr><th>Token name</th><th>Identifier</th><th>Permissions</th><th>Expires</th><th>Last used</th><th>Status</th><th>Action</th></tr></thead><tbody>
     @forelse($tokens as $token)
@@ -47,7 +69,7 @@
         </td>
       </tr>
     @empty
-      <tr><td class="empty-cell" colspan="7">No API tokens have been issued.</td></tr>
+      <tr><td class="empty-cell" colspan="7">{{ $status==='all' ? 'No API tokens have been issued.' : 'No tokens match this status.' }}</td></tr>
     @endforelse
     </tbody></table>
   </div>

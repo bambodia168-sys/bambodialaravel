@@ -14,12 +14,36 @@ class DeveloperController extends Controller
 {
     public function index(Request $request): Response
     {
-        $tokens = ApiToken::query()
-            ->where('user_id', $request->user()->id)
-            ->latest()->paginate(10);
+        $status = (string) $request->query('status', 'all');
+        abort_unless(in_array($status, ['all', 'active', 'expiring', 'expired', 'revoked'], true), 404);
+
+        $ownerTokens = ApiToken::query()->where('user_id', $request->user()->id);
+        $now = now();
+        $soon = $now->copy()->addDays(7);
+
+        // Mutually exclusive revoked/expired counts; expiring is a subset of active.
+        $tokenStats = [
+            'active' => (clone $ownerTokens)->whereNull('revoked_at')
+                ->where('expires_at', '>', $now)->count(),
+            'expiring' => (clone $ownerTokens)->whereNull('revoked_at')
+                ->where('expires_at', '>', $now)->where('expires_at', '<=', $soon)->count(),
+            'expired' => (clone $ownerTokens)->whereNull('revoked_at')
+                ->where('expires_at', '<=', $now)->count(),
+            'revoked' => (clone $ownerTokens)->whereNotNull('revoked_at')->count(),
+        ];
+
+        $tokens = (clone $ownerTokens)
+            ->when($status === 'active', fn ($q) => $q->whereNull('revoked_at')->where('expires_at', '>', $now))
+            ->when($status === 'expiring', fn ($q) => $q->whereNull('revoked_at')
+                ->where('expires_at', '>', $now)->where('expires_at', '<=', $soon))
+            ->when($status === 'expired', fn ($q) => $q->whereNull('revoked_at')->where('expires_at', '<=', $now))
+            ->when($status === 'revoked', fn ($q) => $q->whereNotNull('revoked_at'))
+            ->latest()->paginate(10)->withQueryString();
 
         return response()->view('developer.index', [
             'tokens' => $tokens,
+            'tokenStats' => $tokenStats,
+            'status' => $status,
             'scopes' => ApiToken::SCOPES,
         ])->header('Cache-Control', 'private, no-store');
     }

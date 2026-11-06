@@ -51,6 +51,23 @@
   </div>
   @if($user->isCreator())<a class="btn subtle" href="{{ url('/studio?='.$user->public_id) }}">Creator Studio</a><a class="btn subtle" href="{{ route('studio.profile.edit') }}">Edit Creator Profile</a>
   @elseif(in_array($user->role, ['customer','subscriber'], true))<a class="btn subtle" href="{{ route('creator.apply') }}">Become a creator</a>@endif
+  <section class="panel workspace-overview-block" aria-labelledby="account-agreements">
+    <div class="panel-head"><div><h2 id="account-agreements">Agreements needing attention</h2>
+      <p>Only active, offered or disputed agreements you participate in.</p></div>
+      <a class="btn subtle compact" href="{{ route('contracts.index') }}">All contracts</a>
+    </div>
+    <div class="workspace-overview-list">
+      @forelse($agreements as $agreement)
+        <a class="workspace-overview-row" href="{{ route('contracts.show',$agreement->public_id) }}">
+          <span class="workspace-overview-row-main"><strong>{{ $agreement->title }}</strong>
+            <small>{{ ucfirst($agreement->status) }} · {{ $agreement->updated_at->format('d M Y') }}</small>
+          </span>
+          <span class="workspace-overview-row-action">View contract <x-icon name="chevron-right" size="15"/></span>
+        </a>
+      @empty<p class="workspace-overview-empty">No active agreements need attention.</p>
+      @endforelse
+    </div>
+  </section>
   <section class="panel account-recent-activity">
     <div class="panel-head"><h2>Recent notifications</h2><a href="{{ route('account.notifications') }}" class="btn subtle compact">View all</a></div>
     @forelse($activity as $entry)
@@ -58,7 +75,7 @@
         <div><strong>{{ $entry->title }}</strong><p>{{ $entry->message }}</p><small>{{ $entry->created_at->format('d M Y H:i') }}</small></div>
         <form method="post" action="{{ route('account.notifications.read',$entry) }}">
           @csrf @method('PATCH')
-          <button class="btn subtle compact" type="submit">View update</button>
+          <button class="btn subtle compact" type="submit">Open update</button>
         </form>
       </div>
     @empty
