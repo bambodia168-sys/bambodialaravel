@@ -34,7 +34,7 @@ class ListingController extends Controller
         abort_if($type !== '' && ! in_array($type, MarketplaceListing::TYPES, true), 404);
 
         $listings = MarketplaceListing::query()
-            ->with(['creator:id,name,public_id', 'creator.creatorProfile:user_id,is_public',
+            ->with(['creator:id,name,public_id', 'creator.creatorProfile:user_id,is_public,headline',
                 'coverAsset:id,public_id,review_status,alt_text', 'category:id,name,type'])
             ->publiclyAvailable()
             ->when($type !== '', fn ($builder) => $builder->where('type', $type))
@@ -70,7 +70,7 @@ class ListingController extends Controller
         abort_unless(preg_match('/^=(\d{9})-([a-z0-9-]+)$/', $raw, $match) === 1, 404);
 
         $listing = MarketplaceListing::query()
-            ->with(['creator:id,name,public_id','creator.creatorProfile:user_id,is_public',
+            ->with(['creator:id,name,public_id','creator.creatorProfile:user_id,is_public,headline',
                 'licenseDefinition','coverAsset','category:id,name,type'])
             ->where('public_id', $match[1])
             ->where('slug', $match[2])
@@ -90,7 +90,7 @@ class ListingController extends Controller
             ->whereKeyNot($listing->id)->where('type',$listing->type)
             ->when($listing->category_id!==null,
                 fn($q)=>$q->where('category_id',$listing->category_id))
-            ->with(['creator:id,name,public_id','creator.creatorProfile:user_id,is_public',
+            ->with(['creator:id,name,public_id','creator.creatorProfile:user_id,is_public,headline',
                 'coverAsset:id,public_id,alt_text,review_status','category:id,name'])
             ->latest('id')->limit(3)->get();
         $savedRelatedIds=$request->user()
