@@ -1,0 +1,40 @@
+name: Bambodia Live Public Visual Acceptance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/live-public-visual-acceptance.yml
+      - tests/browser/live-frontend-readonly.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-readonly-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      LIVE_VISUAL_REPORT_DIR: live-frontend-evidence
+    steps:
+      - name: Checkout read-only acceptance source
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare browser without app credentials or production database
+        run: |
+          npm install --no-save --ignore-scripts playwright
+          npx playwright install --with-deps chromium
+      - name: Check public live pages on desktop, tablet and phone viewport sizes
+        run: node tests/browser/live-frontend-readonly.mjs
+      - name: Upload screenshots and report (public pages only)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bambodia-Live-Frontend-Visual-Evidence
+          path: live-frontend-evidence/
+          retention-days: 7
+          if-no-files-found: error
