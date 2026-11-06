@@ -25,7 +25,8 @@
             <th scope="col">License</th>
             <th scope="col">Status</th>
             <th scope="col">Active domain</th>
-            <th scope="col">Expires</th>
+            <th scope="col">License period</th>
+            <th scope="col">Support</th>
             <th scope="col">Action</th>
           </tr>
         </thead>
@@ -55,7 +56,14 @@
                   <span class="text-muted">Not activated</span>
                 @endif
               </td>
-              <td>{{ $license->expires_at?->format('d M Y') ?? 'No expiry' }}</td>
+              <td><strong class="license-table-primary">Lifetime</strong></td>
+              <td>
+                <span class="role-pill {{ $license->supportStatus() === 'Expired' ? 'license-support-expired' : '' }}">{{ $license->supportStatus() }}</span>
+                <span class="license-table-secondary">{{ $license->supportName() }}</span>
+                @if($license->support_expires_at)
+                  <span class="license-table-secondary">Until {{ $license->support_expires_at->format('d M Y') }}</span>
+                @endif
+              </td>
               <td>
                 <button type="button" class="btn subtle compact" data-modal-open="account-license-{{ $license->id }}" aria-haspopup="dialog" aria-controls="account-license-{{ $license->id }}">
                   <x-icon name="settings" size="16"/> {{ $license->status === 'revoked' ? 'Details' : 'Manage' }}
@@ -72,7 +80,9 @@
                     <div><small>License ID</small><strong class="mono">{{ $license->public_id }}</strong></div>
                     <div><small>License key</small><strong class="mono">{{ $license->maskedKey() }}</strong></div>
                     <div><small>License source</small><strong>{{ $license->source === 'admin_complimentary' ? 'Complimentary grant' : ($license->source === 'verified_purchase' ? 'Verified purchase' : 'Pending review') }}</strong></div>
-                    <div><small>Expires</small><strong>{{ $license->expires_at?->format('d M Y') ?? 'No fixed expiration' }}</strong></div>
+                    <div><small>License period</small><strong>Lifetime</strong></div>
+                    <div><small>Product support</small><strong>{{ $license->supportName() }} · {{ $license->supportStatus() }}</strong></div>
+                    <div><small>Support ends</small><strong>{{ $license->support_expires_at?->format('d M Y') ?? ($license->support_term === 'lifetime' ? 'Never' : 'Not set') }}</strong></div>
                   </div>
                   @if($license->status !== 'revoked')
                     <details class="license-workflow-panel">
@@ -84,6 +94,27 @@
                         <button class="btn primary compact" type="submit">Reveal license key</button>
                       </form>
                     </details>
+                    @if($license->support_term !== 'lifetime')
+                    <details class="license-workflow-panel">
+                      <summary><x-icon name="calendar-clock" size="16"/> {{ $license->supportStatus() === 'Expired' ? 'Renew expired support' : 'Support renewal options' }}</summary>
+                      @php($pendingRenewal = $license->supportRequests->firstWhere('status','pending'))
+                      @if($pendingRenewal)
+                        <p class="hint">Your {{ \App\Support\ProductLicenseSupport::TERMS[$pendingRenewal->term] ?? 'support' }} renewal request is pending review.</p>
+                      @else
+                        <form method="post" action="{{ route('account.licenses.support.request',$license) }}" class="license-workflow-form">
+                          @csrf
+                          <label for="support-term-{{ $license->id }}">Choose a support period</label>
+                          <select id="support-term-{{ $license->id }}" name="term" required>
+                            @foreach(\App\Support\ProductLicenseSupport::TERMS as $term=>$name)
+                              <option value="{{ $term }}">{{ $name }}</option>
+                            @endforeach
+                          </select>
+                          <p class="hint">Request review of your support extension. Choosing a period does not charge you or activate support.</p>
+                          <button class="btn primary compact" type="submit">Request support renewal</button>
+                        </form>
+                      @endif
+                    </details>
+                    @endif
                     <details class="license-workflow-panel">
                       <summary><x-icon name="globe" size="16"/> Change installed domain</summary>
                       <p class="hint">Your current domain will be released. Activate the replacement installation with your license key.</p>
@@ -128,7 +159,7 @@
             </tr>
           @empty
             <tr>
-              <td class="empty-cell license-table-empty-cell" colspan="6">
+              <td class="empty-cell license-table-empty-cell" colspan="7">
                 <div class="license-empty-state">
                   <span class="license-empty-state-icon"><x-icon name="key-round" size="24"/></span>
                   <strong>No licenses yet</strong>

@@ -1387,3 +1387,10 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 /* Empty license tables remain centered and legible at narrow screen widths. */
 .license-account-table.is-empty{min-width:0}
 @media(max-width:640px){.license-account-table.is-empty thead{display:none}.license-account-table.is-empty .license-empty-state{padding:36px 16px 42px}}
+
+/* Lifetime product-license and separately expiring customer support */
+.license-support-expired{border-color:color-mix(in srgb,var(--accent),var(--line) 55%);color:var(--accent);font-weight:800}
+.license-table-secondary{line-height:1.5}
+.license-account-panel .license-account-table{min-width:990px}
+.license-account-panel .license-account-table.is-empty{min-width:0}
+.license-workflow-panel .license-workflow-form select{max-width:480px}

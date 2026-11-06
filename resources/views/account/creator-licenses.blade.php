@@ -8,7 +8,7 @@
   <section class="panel">
     <div class="panel-head"><h2>Licenses for your products <span class="count">{{ $licenses->total() }}</span></h2></div>
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Product</th><th>Release</th><th>Customer ID</th><th>License</th><th>Status</th><th>Domains & activity</th></tr></thead>
+      <thead><tr><th>Product</th><th>Release</th><th>Customer ID</th><th>License</th><th>License period</th><th>Support</th><th>Status</th><th>Domains & activity</th></tr></thead>
       <tbody>
       @forelse($licenses as $license)
         <tr>
@@ -17,6 +17,12 @@
           <td class="mono">{{ $license->customer?->public_id }}</td>
           <td>{{ ucfirst($license->tier) }} · {{ $license->definition?->name }}
             <div class="text-muted mono">License {{ $license->public_id }}</div></td>
+          <td><strong>Lifetime</strong></td>
+          <td>
+            <span class="role-pill {{ $license->supportStatus() === 'Expired' ? 'license-support-expired' : '' }}">{{ $license->supportStatus() }}</span>
+            <div class="license-table-secondary">{{ $license->supportName() }}</div>
+            @if($license->support_expires_at)<div class="license-table-secondary">Until {{ $license->support_expires_at->format('d M Y') }}</div>@endif
+          </td>
           <td><span class="role-pill">{{ ucfirst($license->status) }}</span></td>
           <td><details><summary>Review history</summary>
             @forelse($license->activations as $domain)
@@ -44,7 +50,7 @@
             </form>
           </details></td>
         </tr>
-      @empty<tr><td class="empty-cell" colspan="6">No product licenses have been issued for your downloadable products yet.</td></tr>@endforelse
+      @empty<tr><td class="empty-cell" colspan="8">No product licenses have been issued for your downloadable products yet.</td></tr>@endforelse
       </tbody>
     </table></div>
     <x-pagination :paginator="$licenses"/>

@@ -9,7 +9,7 @@
   <section class="panel">
     <div class="panel-head"><h2>Licensed file access <span class="count">{{ $entitlements->total() }}</span></h2></div>
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Product</th><th>Version</th><th>File type</th><th>Access</th><th>Expires</th><th>Action</th></tr></thead>
+      <thead><tr><th>Product</th><th>Version</th><th>File type</th><th>Access</th><th>License</th><th>Support</th><th>Download grant expires</th><th>Action</th></tr></thead>
       <tbody>
       @forelse($entitlements as $entitlement)
         @php
@@ -23,16 +23,23 @@
           <td><strong>{{ $product?->title ?? 'Unavailable product' }}</strong><div class="text-muted">ID {{ $product?->public_id }}</div></td>
           <td class="mono">{{ $version?->version }}</td><td>{{ strtoupper($version?->file_type ?? '—') }}</td>
           <td><span class="role-pill">{{ $available ? 'Available' : 'Unavailable' }}</span></td>
-          <td>{{ $entitlement->expires_at?->format('d M Y') ?? '—' }}</td>
+          <td>{{ $entitlement->license ? 'Lifetime' : 'Not issued' }}</td>
+          <td>
+            @if($entitlement->license)
+              <span class="role-pill {{ $entitlement->license->supportStatus() === 'Expired' ? 'license-support-expired' : '' }}">{{ $entitlement->license->supportStatus() }}</span>
+              <span class="license-table-secondary">{{ $entitlement->license->supportName() }}</span>
+            @else <span class="text-muted">—</span> @endif
+          </td>
+          <td>{{ $entitlement->expires_at?->format('d M Y') ?? 'No expiry' }}</td>
           <td>
           @if($available)
             <a class="btn primary compact" href="{{ route('account.downloads.file',$entitlement) }}"><x-icon name="download" size="15"/> Download</a>
           @else<span class="text-muted">Download unavailable</span>@endif
           </td>
         </tr>
-      @empty<tr><td class="empty-cell" colspan="6">No verified product versions have been granted to this account.</td></tr>@endforelse
+      @empty<tr><td class="empty-cell" colspan="8">No verified product versions have been granted to this account.</td></tr>@endforelse
       </tbody></table></div><x-pagination :paginator="$entitlements"/>
   </section>
-  <p class="hint">Downloads additionally require a current clean antivirus scan, independent distribution rights review and intact SHA-256 file content. An old/missing scan blocks previously approved releases until rescreened. No checkout or payment acceptance is active.</p>
+  <p class="hint">Download access follows its separately issued grant and ongoing file-security checks. Product licenses remain lifetime even when a support period expires.</p>
 </div>
 @endsection
