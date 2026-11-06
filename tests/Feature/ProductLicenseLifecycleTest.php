@@ -448,12 +448,15 @@ class ProductLicenseLifecycleTest extends TestCase
 
     public function test_license_pagination_go_to_uses_the_respective_table_query_parameter(): void
     {
-        // Eleven independent entitlement rows for the same approved original.
-        // They are allowed because each license is bound to its own entitlement.
+        // Distinct approved versions are required because a customer cannot
+        // receive duplicate entitlements for the exact same downloadable version.
         for ($i=0;$i<11;$i++) {
+            $version=$this->release->replicate();
+            $version->version='1.'.($i+1).'.0';
+            $version->save();
             $grant=ProductEntitlement::query()->create([
                 'user_id'=>$this->customer->id,
-                'product_file_version_id'=>$this->release->id,
+                'product_file_version_id'=>$version->id,
                 'granted_by'=>$this->admin->id,'grant_reason'=>'Complimentary QA entitlement for pagination test.',
                 'status'=>'active','expires_at'=>now()->addDays(30),
             ]);
