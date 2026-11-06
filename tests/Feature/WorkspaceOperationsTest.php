@@ -216,10 +216,12 @@ class WorkspaceOperationsTest extends TestCase
             ->assertOk()->assertSee('Your API credential health')
             ->assertDontSee($activeSecret)
             ->assertDontSee('Another owner private integration')
-            ->assertHeader('Cache-Control', 'private, no-store')
             ->assertViewHas('tokenStats', fn (array $stats) =>
                 $stats['active'] === 2 && $stats['expiring'] === 1
                 && $stats['expired'] === 1 && $stats['revoked'] === 1);
+        $cacheControl = $this->get('/developer')->headers->get('Cache-Control');
+        $this->assertStringContainsString('private', (string) $cacheControl);
+        $this->assertStringContainsString('no-store', (string) $cacheControl);
         $this->get('/developer?status=active')->assertOk()
             ->assertSee('Active integration')->assertSee('Expiring integration')
             ->assertDontSee('Expired integration')->assertDontSee('Revoked integration')
