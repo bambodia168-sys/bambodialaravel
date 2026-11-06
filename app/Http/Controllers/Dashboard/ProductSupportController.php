@@ -22,6 +22,8 @@ class ProductSupportController extends Controller
         ]);
         ProductLicenseSupport::review($renewal,$request->user(),$data['decision'],$data['reason']);
         AuditEvent::record('license.support.reviewed',$request->user(),$request);
-        return back()->with('status','Support request '.$data['decision'].'d and recorded in license history.');
+        return back()->with('status',$data['decision'] === 'approve'
+            ? 'Support renewal approved and recorded in license history.'
+            : 'Support renewal rejected and recorded in license history.');
     }
 }
