@@ -32,6 +32,14 @@ class DeveloperController extends Controller
             'revoked' => (clone $ownerTokens)->whereNotNull('revoked_at')->count(),
         ];
 
+        $tokenStats['unused'] = (clone $ownerTokens)->whereNull('revoked_at')
+            ->where('expires_at','>',$now)->whereNull('last_used_at')->count();
+        // Only the authenticated owner's event type and timestamp are shown.
+        $recentActivity = AuditEvent::query()
+            ->where('actor_id',$request->user()->id)
+            ->where('event','like','developer.%')
+            ->latest('created_at')->limit(8)->get(['id','event','created_at']);
+
         $tokens = (clone $ownerTokens)
             ->when($status === 'active', fn ($q) => $q->whereNull('revoked_at')->where('expires_at', '>', $now))
             ->when($status === 'expiring', fn ($q) => $q->whereNull('revoked_at')
@@ -43,6 +51,7 @@ class DeveloperController extends Controller
         return response()->view('developer.index', [
             'tokens' => $tokens,
             'tokenStats' => $tokenStats,
+            'recentActivity' => $recentActivity,
             'status' => $status,
             'scopes' => ApiToken::SCOPES,
         ])->header('Cache-Control', 'private, no-store');

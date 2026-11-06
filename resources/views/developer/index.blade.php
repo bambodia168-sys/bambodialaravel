@@ -17,6 +17,14 @@
   <x-workspace-metric label="Revoked tokens" :value="$tokenStats['revoked']" icon="shield"
     :href="route('developer.index',['status'=>'revoked'])" action="Review revoked"/>
 </div>
+<div class="workspace-quick-actions">
+  <a class="btn subtle compact" href="{{ route('developer.docs') }}"><x-icon name="book" size="16"/> API endpoints and scope reference</a>
+  <a class="btn subtle compact" href="{{ route('developer.index',['status'=>'active']) }}#api-token-list">
+    <x-icon name="key" size="16"/> Review active credentials ({{ $tokenStats['active'] }})
+  </a>
+</div>
+<p class="hint">Credential diagnostics: {{ $tokenStats['unused'] }} active {{ $tokenStats['unused']===1?'token has':'tokens have' }} never been used.
+  Only token prefixes, scopes and usage timestamps are shown. Credentials are not tested using their secrets here.</p>
 @if($tokenStats['expiring']>0)
   <p class="workspace-overview-alert"><x-icon name="alert" size="17"/>
     {{ $tokenStats['expiring'] }} active {{ $tokenStats['expiring']===1?'token expires':'tokens expire' }} within 7 days.
@@ -74,6 +82,21 @@
     </tbody></table>
   </div>
   <x-pagination :paginator="$tokens"/>
+</section>
+<section class="panel workspace-overview-block" aria-labelledby="developer-event-title">
+  <div class="panel-head"><div><h2 id="developer-event-title">Credential activity history</h2>
+    <p>Recent scoped token issuance, revocation and API usage events for your administrator account.</p></div></div>
+  <div class="workspace-overview-list">
+    @forelse($recentActivity as $activity)
+      <div class="workspace-overview-row">
+        <span class="workspace-overview-row-main">
+          <strong>{{ str_replace('.',' / ',$activity->event) }}</strong>
+          <small>{{ $activity->created_at->format('d M Y H:i') }}</small>
+        </span><span class="role-pill">Recorded</span>
+      </div>
+    @empty<p class="workspace-overview-empty">No recorded credential activity yet.</p>
+    @endforelse
+  </div>
 </section>
 <dialog id="new-api-token" class="config-dialog">
   <form method="post" action="{{ route('developer.store') }}">
