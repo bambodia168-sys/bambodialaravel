@@ -1,0 +1,151 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\CreatorProfile;
+use App\Models\LicenseDefinition;
+use App\Models\MarketplaceListing;
+use App\Models\MediaAsset;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class PublicFrontendLayoutTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Storage::fake('local');
+    }
+
+    private function creator(): User
+    {
+        $user=User::query()->create([
+            'name'=>'Original Public Creator',
+            'email'=>'original-public-creator@example.test',
+            'password'=>'StrongOriginalCreatorPassword123!',
+            'role'=>'freelancer',
+        ]);
+        CreatorProfile::query()->create([
+            'user_id'=>$user->id,
+            'headline'=>'Independent original design and engineering',
+            'biography'=>str_repeat('This public creator independently offers original work. ',3),
+            'is_public'=>true,
+        ]);
+        return $user;
+    }
+
+    private function listing(User $creator,string $type): MarketplaceListing
+    {
+        $attributes=[
+            'user_id'=>$creator->id,
+            'type'=>$type,
+            'title'=>'Original '.ucfirst($type).' Listing Layout',
+            'description'=>str_repeat('A real approved marketplace listing with independent original content. ',3),
+            'status'=>'published',
+            'price'=>'75.00',
+            'currency'=>'USD',
+        ];
+        if($type==='product'){
+            $license=LicenseDefinition::query()->create([
+                'code'=>'ORIGINAL_LAYOUT','name'=>'Original QA Layout License','version'=>'1.0.0',
+                'permissions'=>str_repeat('Authorized original QA testing only. ',3),
+                'restrictions'=>str_repeat('No fake license transactions. ',3),
+                'status'=>'active','published_at'=>now(),'created_by'=>$creator->id,
+            ]);
+            $asset=MediaAsset::query()->create([
+                'user_id'=>$creator->id,'original_name'=>'original-qa.png',
+                'storage_path'=>'qa-original.png','mime_type'=>'image/png','bytes'=>68,
+                'width'=>1,'height'=>1,'alt_text'=>'Approved creator-owned original product screenshot',
+                'rights_basis'=>'owned','rights_holder'=>'Original Public Creator',
+                'review_status'=>'approved','reviewed_at'=>now(),
+            ]);
+            $attributes['license_definition_id']=$license->id;
+            $attributes['cover_media_id']=$asset->id;
+            $attributes['license_terms']='Independent original license terms.';
+        }
+        return MarketplaceListing::query()->create($attributes);
+    }
+
+    public function test_homepage_type_directory_links_to_real_published_results(): void
+    {
+        $creator=$this->creator();
+        foreach(MarketplaceListing::TYPES as $type){
+            $this->listing($creator,$type);
+        }
+        $this->get('/')->assertOk()
+            ->assertSee('marketplace-type-directory')
+            ->assertSee('Find the work that fits')
+            ->assertSee('4',false);
+        foreach(MarketplaceListing::TYPES as $type){
+            $this->get('/search?type='.$type)->assertOk()
+                ->assertSee('marketplace-browse-layout')
+                ->assertSee('marketplace-filter-sidebar')
+                ->assertSee('Original '.ucfirst($type).' Listing Layout')
+                ->assertDontSee('Original '.ucfirst(
+                    $type==='product'?'service':'product'
+                ).' Listing Layout');
+        }
+    }
+
+    public function test_all_four_detail_types_render_shared_premium_layout_with_real_sidebar_data(): void
+    {
+        $creator=$this->creator();
+        foreach(MarketplaceListing::TYPES as $type){
+            $listing=$this->listing($creator,$type);
+            $response=$this->get($listing->publicUrl());
+            $response->assertOk()
+                ->assertSee('premium-detail-layout')
+                ->assertSee('premium-detail-tabs')
+                ->assertSee('premium-detail-sidebar')
+                ->assertSee('Listing #'.$listing->public_id)
+                ->assertSee('Original Public Creator')
+                ->assertSee('Independent original design and engineering')
+                ->assertSee('USD')
+                ->assertSee('Information')
+                ->assertDontSee('Buy Now')
+                ->assertDontSee('Quality checked by Codester')
+                ->assertDontSee('Lowest price guarantee');
+            if($type==='product'){
+                $response->assertSee('premium-showcase-cover')
+                    ->assertSee('Product license')
+                    ->assertSee('Original QA Layout License')
+                    ->assertSee('Read full license')
+                    ->assertSee('Direct checkout is not enabled')
+                    ->assertDontSee('request-service');
+            } else {
+                $response->assertSee('premium-showcase-placeholder')
+                    ->assertSee('How it works')
+                    ->assertSee('Sign in to contact');
+                $client=User::query()->create([
+                    'name'=>'Original Customer '.$type,
+                    'email'=>'public-customer-'.$type.'@example.test',
+                    'password'=>'TestCustomerPassword123!',
+                    'role'=>'customer',
+                ]);
+                $this->actingAs($client)->get($listing->publicUrl())->assertOk()
+                    ->assertSee('id="request-service"',false)
+                    ->assertSee('route',false); // route-derived inquiry action remains server-rendered
+                $this->post('/logout')->assertRedirect();
+            }
+        }
+    }
+
+    public function test_unapproved_product_never_enters_public_detail_or_search(): void
+    {
+        $creator=$this->creator();
+        $private=MarketplaceListing::query()->create([
+            'user_id'=>$creator->id,'type'=>'product',
+            'title'=>'Unlicensed Restricted Product Private',
+            'description'=>str_repeat('Private unlicensed content must remain hidden. ',3),
+            'status'=>'published','price'=>'15.00',
+        ]);
+        $this->get($private->publicUrl())->assertNotFound();
+        $this->get('/search?type=product')->assertOk()
+            ->assertDontSee('Unlicensed Restricted Product Private');
+        $this->get('/')->assertOk()->assertDontSee('Unlicensed Restricted Product Private');
+    }
+}
