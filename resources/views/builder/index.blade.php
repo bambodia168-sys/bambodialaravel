@@ -335,6 +335,9 @@
                   @if($canEdit)<button type="button" class="studio-tool-action" data-modal-open="studio-media-upload"><x-icon name="upload" size="17"/> Upload screenshots</button>@endif
                 </div>
                 <div class="studio-gallery-grid" data-gallery-grid>
+                  @if($assets->whereIn('mime_type',['image/jpeg','image/png','image/webp','image/gif'])->isEmpty())
+                    <p class="studio-gallery-empty" data-gallery-empty>No screenshots yet. Upload original images here and they will remain private until review.</p>
+                  @endif
                   @foreach($assets as $asset)
                     @continue(!in_array($asset->mime_type, ['image/jpeg','image/png','image/webp','image/gif'], true))
                     <label class="studio-gallery-item">

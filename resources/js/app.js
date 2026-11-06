@@ -543,6 +543,7 @@ function initializeBuilderStudio() {
                     // Pending media can be included in screenshot selections.
                     // It will not become public until its rights review passes.
                     if (payload.mime_type?.startsWith('image/') && gallery && studio.dataset.builderReadonly !== '1') {
+                        gallery.querySelector('[data-gallery-empty]')?.remove();
                         const item = document.createElement('label');
                         item.className = 'studio-gallery-item';
                         const checkbox = document.createElement('input');
