@@ -520,14 +520,49 @@ try {
       await admin.locator('[data-builder-terms-check]').click();
       if(!(await admin.locator('#studio-terms-popup').isVisible()))
         throw new Error('Clicking the terms checkbox did not open the professional terms dialog');
+      const popup=await admin.locator('#studio-terms-popup').boundingBox();
+      const viewportSize=admin.viewportSize();
+      if(!popup || Math.abs(popup.x+popup.width/2-viewportSize.width/2)>32
+        || Math.abs(popup.y+popup.height/2-viewportSize.height/2)>32)
+        throw new Error('Builder Studio Terms dialog is not centered: '+JSON.stringify({popup,viewportSize}));
       await admin.locator('[data-builder-terms-accept]').click();
       if(!(await admin.locator('[data-builder-terms-check]').isChecked()))
         throw new Error('Accepting terms failed to check the required consent control');
       checks+=4;
+      if(!(await admin.locator('input#studio-software-version').isVisible())
+        || !(await admin.locator('input#studio-software-published').isVisible())
+        || !(await admin.locator('input#studio-software-updated').isVisible()))
+        throw new Error('Product release version and date metadata missing from Basic Information');
+      if(!(await admin.locator('[data-editor-resize-handle]').isVisible()))
+        throw new Error('Lower-left editor resize grip missing');
+      const grip=admin.locator('[data-editor-resize-handle]');
+      const originalEditorHeight=await admin.locator('[data-editor-surface]').evaluate(el=>el.getBoundingClientRect().height);
+      await grip.focus();
+      await grip.press('ArrowDown');
+      const resizedEditorHeight=await admin.locator('[data-editor-surface]').evaluate(el=>el.getBoundingClientRect().height);
+      if(resizedEditorHeight<=originalEditorHeight)
+        throw new Error('Keyboard resize did not expand rich-text editor');
+      checks+=2;
       const editable=admin.locator('[data-editor-surface]');
       await editable.fill('A professionally documented original product with accessible designs, licensing information and maintained deliverables.');
       if(!(await admin.locator('[data-editor-html]').inputValue()).includes('A professionally documented'))
         throw new Error('Builder Studio formatted text failed to synchronize');
+      admin.once('dialog', dialog=>dialog.accept('https://www.youtube.com/watch?v=dQw4w9WgXcQ'));
+      await admin.locator('[data-editor-action="youtube"]').click();
+      const video=admin.locator('[data-editor-surface] iframe');
+      if(!(await video.count()) || !(await video.getAttribute('src')).includes('youtube-nocookie.com/embed/dQw4w9WgXcQ'))
+        throw new Error('YouTube link did not produce an allowlisted embedded preview');
+      await admin.locator('[data-editor-action="source"]').click();
+      await admin.locator('[data-editor-source]').fill(
+        '<p>Professionally documented original software application for verified customers and owners.</p>'
+        +'<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ"></iframe>'
+        +'<script>alert(1)</script>');
+      await admin.locator('[data-editor-action="apply-source"]').click();
+      if(!(await admin.locator('[data-editor-surface]').isVisible())
+        || await admin.locator('[data-editor-surface] script').count()
+        || !(await admin.locator('[data-editor-surface] iframe').count()))
+        throw new Error('HTML source apply did not safely sanitize and preview the YouTube frame');
+      checks+=3;
       await admin.locator('input[name="featured_kind"][value="color"]').check({force:true});
       await admin.locator('input[data-featured-color]').evaluate(el=>{el.value='#126abc';el.dispatchEvent(new Event('input',{bubbles:true}));});
       if(!(await admin.locator('[data-featured-preview]').getByText('#126ABC').isVisible()))
@@ -550,6 +585,30 @@ try {
           checks++;
           if((viewport.width===1440 || viewport.width===390) && theme==='dark')
             await admin.screenshot({path:out+'/builder-studio-'+viewport.width+'-'+theme+'.png',fullPage:true});
+        }
+      }
+      await admin.setViewportSize(device.viewport);
+      // Verify the same native modal positioning in every public/private layout.
+      // These temporary dialogs never change application data.
+      for(const workspacePath of ['/en','/en/dashboard','/en/account','/en/developer','/en/studio']){
+        await admin.goto(origin+workspacePath,{waitUntil:'networkidle'});
+        for(const width of [1440,390]){
+          await admin.setViewportSize({width,height:900});
+          const bounds=await admin.evaluate(()=>{
+            const dialog=document.createElement('dialog');
+            dialog.className='config-dialog';
+            dialog.innerHTML='<h2>Modal alignment check</h2><p>Dialog should remain centered in the viewport.</p>';
+            document.body.appendChild(dialog);
+            dialog.showModal();
+            const box=dialog.getBoundingClientRect();
+            const value={centerX:box.x+box.width/2,centerY:box.y+box.height/2,screenX:innerWidth/2,screenY:innerHeight/2};
+            dialog.close();
+            dialog.remove();
+            return value;
+          });
+          if(Math.abs(bounds.centerX-bounds.screenX)>32 || Math.abs(bounds.centerY-bounds.screenY)>32)
+            throw new Error('Dialog off-center in '+workspacePath+': '+JSON.stringify(bounds));
+          checks++;
         }
       }
       await admin.setViewportSize(device.viewport);

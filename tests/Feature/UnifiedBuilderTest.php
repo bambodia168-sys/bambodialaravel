@@ -407,4 +407,66 @@ class UnifiedBuilderTest extends TestCase
             'rights_basis'=>'owned','rights_holder'=>'Creator',
         ])->assertUnprocessable()->assertJsonValidationErrors('image');
     }
+
+    public function test_product_release_metadata_is_saved_in_draft_and_shown_in_builder(): void
+    {
+        $creator=$this->member('freelancer');
+        $fields=[
+            ...$this->agreed(),
+            'title'=>'Licensed Laravel Module Release',
+            'description'=>str_repeat('An original documented digital product with deployment guidance. ',2),
+            'software_version'=>'v2.4.1-beta.2',
+            'software_published_on'=>'2026-01-12',
+            'software_updated_on'=>'2026-02-17',
+            'status'=>'draft',
+        ];
+        $this->actingAs($creator)->post('/studio/products',$fields)->assertRedirect();
+        $product=MarketplaceListing::query()->where('type','product')->firstOrFail();
+        $this->assertSame('v2.4.1-beta.2',$product->software_version);
+        $this->assertSame('2026-01-12',$product->software_published_on->format('Y-m-d'));
+        $this->assertSame('2026-02-17',$product->software_updated_on->format('Y-m-d'));
+        $this->get('/builder?='.$product->public_id)->assertOk()
+            ->assertSee('name="software_version"',false)
+            ->assertSee('name="software_published_on"',false)
+            ->assertSee('name="software_updated_on"',false)
+            ->assertSee('v2.4.1-beta.2');
+
+        $this->post('/studio/products',[
+            ...$fields,
+            'software_published_on'=>'2026-04-01',
+            'software_updated_on'=>'2026-03-01',
+        ])->assertSessionHasErrors('software_updated_on');
+
+        $this->post('/studio/products',[
+            ...$fields,
+            'software_version'=>'../../unsafe-release',
+        ])->assertSessionHasErrors('software_version');
+    }
+
+    public function test_html_preview_endpoint_only_allows_canonical_youtube_embeds(): void
+    {
+        $creator=$this->member('freelancer');
+        $this->actingAs($creator);
+        $html='<h2>Professional complete application documentation and validated deliverables</h2>'
+            .'<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" onload="alert(1)"></iframe>'
+            .'<iframe src="https://www.youtube.com.evil.test/embed/dQw4w9WgXcQ"></iframe>'
+            .'<iframe src="javascript:alert(1)"></iframe>'
+            .'<img src=x onerror=alert(1)><script>alert(1)</script>';
+        $response=$this->postJson('/builder/content/preview',['html'=>$html])->assertOk();
+        $safe=$response->json('html');
+        $this->assertStringContainsString('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',$safe);
+        $this->assertStringContainsString('sandbox="allow-scripts allow-same-origin allow-presentation"',$safe);
+        $this->assertSame(1,substr_count($safe,'<iframe'));
+        $this->assertStringNotContainsString('evil.test',$safe);
+        $this->assertStringNotContainsString('<script',$safe);
+        $this->assertStringNotContainsString('onload',$safe);
+        $this->assertStringNotContainsString('<img',$safe);
+        $this->assertStringContainsString('Professional complete application',$response->json('text'));
+
+        $this->postJson('/builder/content/preview',['html'=>'<iframe src="http://youtube.com/embed/dQw4w9WgXcQ"></iframe><p>Only text remains</p>'])
+            ->assertOk()->assertJsonPath('html','<p>Only text remains</p>');
+        $this->actingAs($this->member('staff'))->postJson('/builder/content/preview',['html'=>'<p>Restricted</p>'])
+            ->assertForbidden();
+        $this->postJson('/builder/content/preview',['html'=>''])->assertForbidden();
+    }
 }
