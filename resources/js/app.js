@@ -247,6 +247,10 @@ function initializeBuilderStudio() {
     const toolbar = editor?.querySelector('[data-editor-toolbar]');
     const counter = editor?.querySelector('[data-editor-counter]');
     const source = editor?.querySelector('[data-editor-source]');
+    const sourceStatus = editor?.querySelector('[data-editor-source-status]');
+    const applySourceButton = editor?.querySelector('[data-editor-action="apply-source"]');
+    const resizeHandle = editor?.querySelector('[data-editor-resize-handle]');
+    const readonly = studio.dataset.builderReadonly === '1';
     const rich = typeof document.execCommand === 'function' && area && fallback && html && toolbar;
 
     function updateEditor() {
@@ -262,13 +266,93 @@ function initializeBuilderStudio() {
         }
     }
 
+    const youtubeSource = (raw) => {
+        let urlText = String(raw || '').trim();
+        if (urlText.startsWith('<iframe')) {
+            const doc = new DOMParser().parseFromString(urlText, 'text/html');
+            urlText = doc.querySelector('iframe')?.getAttribute('src') || '';
+        }
+        try {
+            const parsed = new URL(urlText);
+            if (parsed.protocol !== 'https:' || parsed.port || parsed.username || parsed.password) return null;
+            const host = parsed.hostname.toLowerCase();
+            let id = '';
+            if (['youtu.be', 'www.youtu.be'].includes(host)) {
+                id = parsed.pathname.slice(1);
+            } else if (['youtube.com','www.youtube.com','m.youtube.com','youtube-nocookie.com','www.youtube-nocookie.com'].includes(host)) {
+                if (parsed.pathname === '/watch') id = parsed.searchParams.get('v') || '';
+                else {
+                    const match = parsed.pathname.match(/^\/(embed|shorts|live)\/([A-Za-z0-9_-]{11})$/);
+                    if (match) id = match[2];
+                }
+            }
+            if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return null;
+            const time = parsed.searchParams.get('start') || parsed.searchParams.get('t') || '';
+            const seconds = /^\d{1,5}$/.test(time) ? Number(time) : null;
+            return 'https://www.youtube-nocookie.com/embed/' + id
+                + (seconds && seconds <= 99999 ? '?start=' + seconds : '');
+        } catch (_) {
+            return null;
+        }
+    };
+    const videoHtml = (src) =>
+        '<div><iframe src="' + src + '" title="YouTube video preview" loading="lazy" '
+        + 'referrerpolicy="strict-origin-when-cross-origin" '
+        + 'sandbox="allow-scripts allow-same-origin allow-presentation" '
+        + 'allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div><p></p>';
+    const showSourceStatus = (message, error = false) => {
+        if (!sourceStatus) return;
+        sourceStatus.hidden = !message;
+        sourceStatus.textContent = message;
+        sourceStatus.classList.toggle('studio-editor-counter-error', error);
+    };
+    async function applySourceHtml() {
+        if (readonly || !source || !area || !html) return false;
+        if (!studio.dataset.editorPreviewUrl || !form) return false;
+        applySourceButton.disabled = true;
+        showSourceStatus('Checking and sanitizing HTML preview…');
+        try {
+            const response = await fetch(studio.dataset.editorPreviewUrl, {
+                method:'POST',
+                headers:{
+                    'Accept':'application/json',
+                    'Content-Type':'application/json',
+                    'X-CSRF-TOKEN': form.querySelector('[name="_token"]')?.value || '',
+                },
+                credentials:'same-origin',
+                body:JSON.stringify({html:source.value}),
+            });
+            const payload = await response.json();
+            if (!response.ok || typeof payload.html !== 'string') {
+                throw new Error(payload.message || 'HTML could not be validated.');
+            }
+            // Never mount untrusted HTML directly: only render the server's
+            // stripped and canonicalized allowlist output.
+            area.innerHTML = payload.html;
+            source.value = payload.html;
+            html.value = payload.html;
+            if (fallback) fallback.value = payload.text || '';
+            area.hidden = false;
+            source.hidden = true;
+            if (applySourceButton) applySourceButton.hidden = true;
+            toolbar.querySelector('[data-editor-action="source"]')?.setAttribute('aria-pressed','false');
+            showSourceStatus('HTML sanitized successfully. Unsupported scripts and frames were removed.');
+            updateEditor();
+            return true;
+        } catch (error) {
+            showSourceStatus(error.message || 'Could not preview HTML. Please try again.', true);
+            return false;
+        } finally {
+            if (applySourceButton) applySourceButton.disabled = false;
+        }
+    }
+
     if (rich) {
         area.hidden = false;
         area.contentEditable = studio.dataset.builderReadonly === '1' ? 'false' : 'true';
         fallback.hidden = true;
         fallback.required = false;
         toolbar.hidden = false;
-        const readonly = studio.dataset.builderReadonly === '1';
         if (readonly) {
             toolbar.querySelectorAll('button,input,select').forEach(control => { control.disabled = true; });
         }
@@ -276,7 +360,11 @@ function initializeBuilderStudio() {
         area.addEventListener('paste', (event) => {
             event.preventDefault();
             const text = event.clipboardData?.getData('text/plain') || '';
-            document.execCommand('insertText', false, text);
+            if (readonly) return;
+            const video = youtubeSource(text);
+            document.execCommand(video ? 'insertHTML' : 'insertText', false,
+                video ? videoHtml(video) : text);
+            updateEditor();
         });
         area.addEventListener('drop', (event) => event.preventDefault());
         area.addEventListener('input', updateEditor);
@@ -305,14 +393,29 @@ function initializeBuilderStudio() {
             });
         });
         toolbar.querySelectorAll('[data-editor-action]').forEach((button) => {
-            button.addEventListener('click', () => {
+            button.addEventListener('click', async () => {
                 const action = button.dataset.editorAction;
                 if (action === 'source') {
-                    const show = source.hidden;
-                    source.hidden = !show;
-                    area.hidden = show;
-                    if (show) source.value = area.innerHTML;
-                    button.setAttribute('aria-pressed', String(show));
+                    if (source.hidden) {
+                        updateEditor();
+                        source.value = area.innerHTML;
+                        source.hidden = false;
+                        area.hidden = true;
+                        button.setAttribute('aria-pressed', 'true');
+                        if (applySourceButton) applySourceButton.hidden = readonly;
+                        showSourceStatus(readonly ? 'HTML preview (read-only)' : 'Edit source and select Apply HTML to preview safely.');
+                    } else if (readonly) {
+                        source.hidden = true;
+                        area.hidden = false;
+                        button.setAttribute('aria-pressed', 'false');
+                        showSourceStatus('');
+                    } else {
+                        await applySourceHtml();
+                    }
+                    return;
+                }
+                if (action === 'apply-source') {
+                    await applySourceHtml();
                     return;
                 }
                 if (readonly || !source.hidden) return;
@@ -320,6 +423,15 @@ function initializeBuilderStudio() {
                     execute('insertHorizontalRule');
                 } else if (action === 'table') {
                     execute('insertHTML', '<table><tbody><tr><th>Heading 1</th><th>Heading 2</th></tr><tr><td>Cell 1</td><td>Cell 2</td></tr></tbody></table><p></p>');
+                } else if (action === 'youtube') {
+                    const value = window.prompt('Paste a YouTube URL or its embed link:');
+                    if (!value) return;
+                    const video = youtubeSource(value);
+                    if (!video) {
+                        window.alert('Only valid HTTPS YouTube watch, share and embed links can be inserted.');
+                        return;
+                    }
+                    execute('insertHTML', videoHtml(video));
                 } else if (action === 'link') {
                     const value = window.prompt('Enter the full HTTPS link:');
                     if (!value) return;
@@ -340,6 +452,12 @@ function initializeBuilderStudio() {
     }
 
     form?.addEventListener('submit', (event) => {
+        if (rich && !source.hidden) {
+            event.preventDefault();
+            showSourceStatus('Apply and preview the sanitized HTML before saving.', true);
+            source.focus();
+            return;
+        }
         updateEditor();
         if (!rich) return;
         const plain = fallback.value.trim();
@@ -351,6 +469,39 @@ function initializeBuilderStudio() {
             area.focus();
             if (feedback) feedback.textContent = 'Check description length before submitting.';
         }
+    });
+
+    // Accessible lower-left drag grip. Pointer and arrow-key resizing work
+    // in formatted, plain-text and HTML-source modes.
+    const visibleEditor = () => !source?.hidden ? source : (rich ? area : fallback);
+    resizeHandle?.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        const target = visibleEditor();
+        if (!target) return;
+        event.preventDefault();
+        const startY = event.clientY;
+        const startHeight = target.getBoundingClientRect().height;
+        resizeHandle.setPointerCapture(event.pointerId);
+        const move = (moveEvent) => {
+            const height = Math.max(240, Math.min(1100, startHeight + moveEvent.clientY - startY));
+            target.style.height = height + 'px';
+        };
+        const end = () => {
+            resizeHandle.removeEventListener('pointermove', move);
+            resizeHandle.removeEventListener('pointerup', end);
+            resizeHandle.removeEventListener('pointercancel', end);
+        };
+        resizeHandle.addEventListener('pointermove', move);
+        resizeHandle.addEventListener('pointerup', end);
+        resizeHandle.addEventListener('pointercancel', end);
+    });
+    resizeHandle?.addEventListener('keydown', (event) => {
+        if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        event.preventDefault();
+        const target = visibleEditor();
+        if (!target) return;
+        const delta = event.key === 'ArrowDown' ? 32 : -32;
+        target.style.height = Math.max(240, Math.min(1100, target.getBoundingClientRect().height + delta)) + 'px';
     });
 
     const preview = studio.querySelector('[data-studio-preview]');
