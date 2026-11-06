@@ -205,3 +205,242 @@ document.addEventListener('keydown', (event) => {
         categoryMenu.querySelector('summary')?.focus();
     }
 });
+
+
+/* Builder Studio: rich editing, secure featured-media selection and URL sharing. */
+function initializeBuilderStudio() {
+    const studio = document.querySelector('[data-builder-studio]');
+    if (!studio) return;
+
+    const copy = studio.querySelector('[data-builder-copy-url]');
+    const feedback = studio.querySelector('[data-copy-feedback]');
+    copy?.addEventListener('click', async () => {
+        const fullUrl = copy.dataset.copyUrl;
+        if (!fullUrl) return;
+        let successful = false;
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(fullUrl);
+                successful = true;
+            }
+        } catch (_) {
+            successful = false;
+        }
+        if (!successful) {
+            const input = document.createElement('textarea');
+            input.value = fullUrl;
+            input.style.position = 'fixed';
+            input.style.opacity = '0';
+            document.body.appendChild(input);
+            input.select();
+            successful = document.execCommand('copy');
+            input.remove();
+        }
+        if (feedback) feedback.textContent = successful ? 'Full URL copied to clipboard.' : fullUrl;
+    });
+
+    const editor = studio.querySelector('[data-studio-editor]');
+    const form = studio.querySelector('[data-builder-form]');
+    const area = editor?.querySelector('[data-editor-surface]');
+    const fallback = editor?.querySelector('[data-editor-fallback]');
+    const html = editor?.querySelector('[data-editor-html]');
+    const toolbar = editor?.querySelector('[data-editor-toolbar]');
+    const counter = editor?.querySelector('[data-editor-counter]');
+    const source = editor?.querySelector('[data-editor-source]');
+    const rich = typeof document.execCommand === 'function' && area && fallback && html && toolbar;
+
+    function updateEditor() {
+        if (!fallback || !html) return;
+        const text = rich ? (area.innerText || '').trim() : fallback.value.trim();
+        if (rich) {
+            fallback.value = text;
+            html.value = area.innerHTML;
+        }
+        if (counter) {
+            counter.textContent = text.length.toLocaleString() + ' / 10,000';
+            counter.classList.toggle('studio-editor-counter-error', text.length > 10000);
+        }
+    }
+
+    if (rich) {
+        area.hidden = false;
+        area.contentEditable = form?.querySelector('fieldset[disabled]') ? 'false' : 'true';
+        fallback.hidden = true;
+        fallback.required = false;
+        toolbar.hidden = false;
+        const readonly = area.contentEditable === 'false';
+        if (readonly) {
+            toolbar.querySelectorAll('button,input,select').forEach(control => { control.disabled = true; });
+        }
+
+        area.addEventListener('paste', (event) => {
+            event.preventDefault();
+            const text = event.clipboardData?.getData('text/plain') || '';
+            document.execCommand('insertText', false, text);
+        });
+        area.addEventListener('drop', (event) => event.preventDefault());
+        area.addEventListener('input', updateEditor);
+        toolbar.addEventListener('mousedown', (event) => {
+            if (event.target.closest('button[data-editor-command],button[data-editor-action]')) {
+                event.preventDefault(); // Keep text selection when clicking formatting buttons.
+            }
+        });
+        const execute = (command, value = null) => {
+            if (readonly || !source.hidden) return;
+            area.focus();
+            document.execCommand(command, false, value);
+            updateEditor();
+        };
+        toolbar.querySelectorAll('[data-editor-command]').forEach((button) => {
+            button.addEventListener('click', () => execute(button.dataset.editorCommand));
+        });
+        toolbar.querySelector('[data-editor-block]')?.addEventListener('change', (event) => {
+            execute('formatBlock', event.target.value);
+        });
+        toolbar.querySelectorAll('[data-editor-color]').forEach((input) => {
+            input.addEventListener('change', () => {
+                if (readonly || !source.hidden) return;
+                document.execCommand('styleWithCSS', false, true);
+                execute(input.dataset.editorColor, input.value);
+            });
+        });
+        toolbar.querySelectorAll('[data-editor-action]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const action = button.dataset.editorAction;
+                if (action === 'source') {
+                    const show = source.hidden;
+                    source.hidden = !show;
+                    area.hidden = show;
+                    if (show) source.value = area.innerHTML;
+                    button.setAttribute('aria-pressed', String(show));
+                    return;
+                }
+                if (readonly || !source.hidden) return;
+                if (action === 'rule') {
+                    execute('insertHorizontalRule');
+                } else if (action === 'table') {
+                    execute('insertHTML', '<table><tbody><tr><th>Heading 1</th><th>Heading 2</th></tr><tr><td>Cell 1</td><td>Cell 2</td></tr></tbody></table><p></p>');
+                } else if (action === 'link') {
+                    const value = window.prompt('Enter the full HTTPS link:');
+                    if (!value) return;
+                    try {
+                        const url = new URL(value);
+                        if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Unsafe link');
+                        execute('createLink', url.href);
+                    } catch (_) {
+                        window.alert('Enter a valid HTTPS or HTTP address.');
+                    }
+                }
+            });
+        });
+        updateEditor();
+    } else {
+        fallback?.addEventListener('input', updateEditor);
+        updateEditor();
+    }
+
+    form?.addEventListener('submit', (event) => {
+        updateEditor();
+        if (!rich) return;
+        const plain = fallback.value.trim();
+        const minimum = Number(fallback.getAttribute('minlength') || '40');
+        if (plain.length < minimum || plain.length > 10000 || html.value.length > 60000) {
+            event.preventDefault();
+            source.hidden = true;
+            area.hidden = false;
+            area.focus();
+            if (feedback) feedback.textContent = 'Check description length before submitting.';
+        }
+    });
+
+    const preview = studio.querySelector('[data-studio-preview]');
+    studio.querySelectorAll('[data-builder-preview-toggle]').forEach((button) => {
+        button.addEventListener('click', () => {
+            if (!preview) return;
+            preview.hidden = !preview.hidden;
+            if (!preview.hidden) {
+                const title = studio.querySelector('[name="title"]');
+                const previewTitle = preview.querySelector('[data-preview-title]');
+                const body = preview.querySelector('[data-preview-description]');
+                if (previewTitle) previewTitle.textContent = title?.value || 'Untitled';
+                if (body) {
+                    if (rich) body.innerHTML = area.innerHTML;
+                    else body.textContent = fallback?.value || '';
+                }
+                preview.scrollIntoView({behavior:'smooth', block:'start'});
+            }
+        });
+    });
+
+    const mediaType = studio.querySelectorAll('[name="featured_kind"]');
+    const mediaSelect = studio.querySelector('[data-featured-media]');
+    const chooser = studio.querySelector('[data-featured-media-select]');
+    const colorWrap = studio.querySelector('[data-featured-color-wrap]');
+    const color = studio.querySelector('[data-featured-color]');
+    const colorLabel = studio.querySelector('[data-featured-color-label]');
+    const mediaPreview = studio.querySelector('[data-featured-preview]');
+
+    function currentKind() {
+        return Array.from(mediaType).find(option => option.checked)?.value || 'none';
+    }
+    function showMediaPreview() {
+        if (!mediaPreview) return;
+        const kind = currentKind();
+        mediaPreview.replaceChildren();
+        if (kind === 'color' && color) {
+            const swatch = document.createElement('div');
+            swatch.className = 'studio-color-swatch';
+            swatch.style.backgroundColor = color.value;
+            swatch.style.color = '#fff';
+            swatch.textContent = color.value.toUpperCase();
+            mediaPreview.appendChild(swatch);
+            if (colorLabel) colorLabel.textContent = color.value;
+            return;
+        }
+        const option = mediaSelect?.selectedOptions?.[0];
+        if (kind !== 'none' && option?.dataset.mediaUrl) {
+            const media = document.createElement(kind === 'video' ? 'video' : 'img');
+            media.src = option.dataset.mediaUrl;
+            if (kind === 'video') {
+                media.controls = true;
+                media.playsInline = true;
+                media.preload = 'metadata';
+            } else {
+                media.alt = option.dataset.mediaAlt || 'Featured media preview';
+                media.loading = 'lazy';
+            }
+            mediaPreview.appendChild(media);
+            return;
+        }
+        const empty = document.createElement('span');
+        empty.textContent = kind === 'none' ? 'No featured media selected' : 'Select approved ' + kind + ' media above';
+        mediaPreview.appendChild(empty);
+    }
+
+    function toggleMedia() {
+        const kind = currentKind();
+        if (chooser) chooser.hidden = !['image','animated','video'].includes(kind);
+        if (colorWrap) colorWrap.hidden = kind !== 'color';
+        if (mediaSelect) {
+            let selectedValid = mediaSelect.value === '';
+            Array.from(mediaSelect.options).forEach((option) => {
+                if (!option.value) return;
+                const mime = option.dataset.mediaMime || '';
+                const matches = kind === 'image'
+                    ? ['image/jpeg','image/png','image/webp'].includes(mime)
+                    : kind === 'animated' ? mime === 'image/gif'
+                    : kind === 'video' ? ['video/mp4','video/webm'].includes(mime) : false;
+                option.hidden = !matches;
+                option.disabled = !matches;
+                if (option.selected && !matches) selectedValid = false;
+            });
+            if (!selectedValid) mediaSelect.value = '';
+        }
+        showMediaPreview();
+    }
+    mediaType.forEach(input => input.addEventListener('change', toggleMedia));
+    mediaSelect?.addEventListener('change', showMediaPreview);
+    color?.addEventListener('input', showMediaPreview);
+    toggleMedia();
+}
+document.addEventListener('DOMContentLoaded', initializeBuilderStudio);
