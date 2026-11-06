@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ProductEntitlement extends Model
 {
@@ -36,6 +37,11 @@ class ProductEntitlement extends Model
     public function actions(): HasMany
     {
         return $this->hasMany(ProductEntitlementAction::class, 'product_entitlement_id')->latest('id');
+    }
+
+    public function license(): HasOne
+    {
+        return $this->hasOne(ProductLicense::class,'product_entitlement_id');
     }
 
     public function isActive(): bool

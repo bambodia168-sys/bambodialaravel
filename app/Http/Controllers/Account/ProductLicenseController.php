@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
+use Illuminate\Http\Response;
 
 class ProductLicenseController extends Controller
 {
@@ -24,7 +25,7 @@ class ProductLicenseController extends Controller
         return view('account.licenses',compact('licenses'));
     }
 
-    public function reveal(Request $request, ProductLicense $license): View
+    public function reveal(Request $request, ProductLicense $license): Response
     {
         $this->owner($request,$license);
         $request->validate(['password'=>['required','string']]);

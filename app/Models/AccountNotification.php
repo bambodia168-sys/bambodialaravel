@@ -16,6 +16,8 @@ class AccountNotification extends Model
         'inquiry.closed',
         'vault.access.granted',
         'vault.access.revoked',
+        'license.issued',
+        'license.status.changed',
         'listing.reviewed',
         'vault.version.reviewed',
         'support.replied',

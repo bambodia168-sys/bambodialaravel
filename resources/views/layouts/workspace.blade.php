@@ -78,6 +78,7 @@
       ]],
       ['heading'=>'Products & Resources','items'=>[
         ['route'=>'studio.products.index','label'=>'Product Releases','icon'=>'package'],
+        ['route'=>'studio.licenses.index','label'=>'Product Licenses','icon'=>'key-round'],
         ['route'=>'studio.media.index','label'=>'Media Library','icon'=>'image'],
       ]],
       ['heading'=>'Client Work','items'=>[
@@ -109,6 +110,7 @@
         ['route'=>'account','label'=>'Account Overview','icon'=>'layout-dashboard'],
         ['route'=>'account.notifications','label'=>'Notifications','icon'=>'bell'],
         ['route'=>'account.downloads','label'=>'My Downloads','icon'=>'download'],
+        ['route'=>'account.licenses.index','label'=>'My Licenses','icon'=>'key-round'],
         ['route'=>'account.saved-listings','label'=>'Saved Listings','icon'=>'star'],
         ['route'=>'account.saved-jobs','label'=>'Saved Jobs','icon'=>'bookmark'],
       ]],
