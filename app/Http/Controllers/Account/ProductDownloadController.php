@@ -19,7 +19,8 @@ class ProductDownloadController extends Controller
     {
         $entitlements = ProductEntitlement::query()
             ->where('user_id', $request->user()->id)
-            ->with(['version.product:id,public_id,user_id,type,title,status,license_definition_id,cover_media_id'])
+            ->with(['version.product:id,public_id,user_id,type,title,status,license_definition_id,cover_media_id',
+                'license.entitlement:id,status,expires_at,revoked_at'])
             ->latest()->paginate(10);
 
         return view('account.downloads', compact('entitlements'));

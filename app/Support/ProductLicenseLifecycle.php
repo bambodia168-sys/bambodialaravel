@@ -20,11 +20,12 @@ final class ProductLicenseLifecycle
      * complimentary manual grant, not proof of a purchase or processed payment.
      * Do not wire order creation or browser-submitted "paid" flags here.
      */
-    public static function issueManual(ProductEntitlement $entitlement, string $tier, User $administrator, string $reason): ProductLicense
+    public static function issueManual(ProductEntitlement $entitlement, string $tier, User $administrator, string $reason, string $supportTerm = 'six_months'): ProductLicense
     {
         abort_unless($administrator->role === 'super_admin', 403);
 
-        return DB::transaction(function () use ($entitlement, $tier, $administrator, $reason): ProductLicense {
+        ProductLicenseSupport::assertTerm($supportTerm);
+        return DB::transaction(function () use ($entitlement, $tier, $administrator, $reason, $supportTerm): ProductLicense {
             $grant = ProductEntitlement::query()->lockForUpdate()->findOrFail($entitlement->id);
             abort_unless($grant->isActive(), 409, 'A current download entitlement is required.');
             abort_if(ProductLicense::query()->where('product_entitlement_id',$grant->id)->exists(), 409,
@@ -62,9 +63,10 @@ final class ProductLicenseLifecycle
                 'key_ciphertext' => $secret,
                 'status' => 'active',
                 'max_domains' => 1,
-                'expires_at' => $grant->expires_at,
+                'expires_at' => null,
+                ...ProductLicenseSupport::issuePeriod($supportTerm),
             ]);
-            self::event($license,'issued',$administrator->id,null,null,$reason);
+            self::event($license,'issued',$administrator->id,null,null,$reason.' · '.ProductLicenseSupport::TERMS[$supportTerm]);
             return $license;
         });
     }

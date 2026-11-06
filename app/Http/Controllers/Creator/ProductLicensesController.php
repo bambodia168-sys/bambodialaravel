@@ -51,8 +51,9 @@ class ProductLicensesController extends Controller
                 'definition:id,name,version',
                 'customer:id,public_id',
                 'activations:id,product_license_id,domain,status,activated_at',
-                'events:id,product_license_id,action,domain,created_at'])
-            ->latest()->paginate(12);
+                'events:id,product_license_id,action,domain,created_at',
+                'supportRequests:id,product_license_id,term,status,created_at'])
+            ->latest()->paginate(10);
         return view('account.creator-licenses',compact('licenses'));
     }
 }

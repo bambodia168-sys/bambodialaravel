@@ -33,6 +33,7 @@ use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\Account\ProductLicenseController;
 use App\Http\Controllers\Creator\ProductLicensesController;
 use App\Http\Controllers\Dashboard\IssuedLicenseController;
+use App\Http\Controllers\Dashboard\ProductSupportController;
 use App\Http\Controllers\MediaLibraryController;
 use App\Http\Controllers\Creator\ProductController as CreatorProductController;
 use App\Http\Controllers\Dashboard\LicenseManagerController;
@@ -175,6 +176,8 @@ Route::middleware('auth')->group(function (): void {
         ->name('account.licenses.reveal')->middleware('throttle:5,1');
     Route::patch('/account/licenses/{license}/domain', [ProductLicenseController::class, 'changeDomain'])
         ->name('account.licenses.domain')->middleware('throttle:4,1');
+    Route::post('/account/licenses/{license}/support-renewals', [ProductLicenseController::class,'requestSupport'])
+        ->name('account.licenses.support.request')->middleware('throttle:3,1');
     Route::get('/account/downloads', [ProductDownloadController::class, 'index'])->name('account.downloads');
     Route::get('/account/downloads/{entitlement}/file', [ProductDownloadController::class, 'download'])
         ->name('account.downloads.file')->middleware('throttle:10,1');
@@ -264,6 +267,8 @@ Route::middleware('auth')->group(function (): void {
                 ->name('dashboard.licenses.issued.domain')->middleware('throttle:10,1');
             Route::post('/license-manager/issued/{license}/rotate', [IssuedLicenseController::class,'rotate'])
                 ->name('dashboard.licenses.issued.rotate')->middleware('throttle:5,1');
+            Route::post('/license-manager/support-renewals/{renewal}/review', [ProductSupportController::class,'review'])
+                ->name('dashboard.licenses.support.review')->middleware('throttle:6,1');
             Route::get('/media-library', [MediaLibraryController::class, 'index'])->name('dashboard.media.index');
             Route::post('/media-library', [MediaLibraryController::class, 'store'])->name('dashboard.media.store')->middleware('throttle:10,1');
             Route::patch('/media-library/{asset}', [MediaLibraryController::class, 'update'])->name('dashboard.media.update');

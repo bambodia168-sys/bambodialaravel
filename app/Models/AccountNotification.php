@@ -19,6 +19,8 @@ class AccountNotification extends Model
         'license.issued',
         'license.status.changed',
         'license.creator.review.requested',
+        'license.support.requested',
+        'license.support.reviewed',
         'listing.reviewed',
         'vault.version.reviewed',
         'support.replied',

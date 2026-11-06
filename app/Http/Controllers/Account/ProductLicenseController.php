@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
 use App\Models\ProductLicense;
 use App\Support\ProductLicenseLifecycle;
+use App\Support\ProductLicenseSupport;
+use App\Models\AccountNotification;
+use App\Models\User;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -20,7 +24,7 @@ class ProductLicenseController extends Controller
             ->with(['product:id,title,type,user_id,public_id,status',
                 'version:id,marketplace_listing_id,version,status',
                 'definition:id,name,version','entitlement:id,status,expires_at,revoked_at',
-                'activations','events.actor:id,name'])
+                'activations','events.actor:id,name','supportRequests:id,product_license_id,term,status,created_at'])
             ->latest()->paginate(10);
         return view('account.licenses',compact('licenses'));
     }
@@ -51,6 +55,22 @@ class ProductLicenseController extends Controller
         ProductLicenseLifecycle::changeDomain($license,$domain,$request->user(),'Customer-initiated transfer');
         AuditEvent::record('license.instance.domain.changed',$request->user(),$request);
         return back()->with('status','Previous domain deactivated. Activate the new installation using your license key.');
+    }
+
+    public function requestSupport(Request $request, ProductLicense $license): RedirectResponse
+    {
+        $this->owner($request,$license);
+        $data=$request->validate(['term'=>['required',Rule::in(array_keys(ProductLicenseSupport::TERMS))]]);
+        $renewal=ProductLicenseSupport::request($license,$request->user(),$data['term']);
+        foreach (User::query()->where('role','super_admin')->limit(20)->get(['id']) as $reviewer) {
+            AccountNotification::deliver(
+                (int)$reviewer->id,'license.support.requested','Product support renewal requested',
+                'A customer requested renewal of support for an issued product license.',
+                '/dashboard/license-manager'
+            );
+        }
+        AuditEvent::record('license.support.requested',$request->user(),$request);
+        return back()->with('status','Support request submitted for review. Your license remains lifetime.');
     }
 
     private function owner(Request $request, ProductLicense $license): void

@@ -8,6 +8,7 @@ use App\Models\LicenseDefinition;
 use App\Models\MarketplaceListing;
 use App\Models\ProductLicense;
 use App\Models\ProductEntitlement;
+use App\Models\ProductLicenseSupportRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -31,6 +32,9 @@ class LicenseManagerController extends Controller
                 'entitlement:id,status,expires_at,revoked_at',
                 'activations','events.actor:id,name'])
             ->latest()->paginate(10,['*'],'issued_page')->withQueryString();
+        $supportRenewals=ProductLicenseSupportRequest::query()
+            ->with(['license.product:id,title,public_id,type','license.customer:id,public_id','requester:id,public_id'])
+            ->latest()->paginate(10,['*'],'support_page')->withQueryString();
         $issuable = $request->user()->role === 'super_admin'
             ? ProductEntitlement::query()->where('status','active')
                 ->whereDoesntHave('license')
@@ -41,7 +45,7 @@ class LicenseManagerController extends Controller
                 ->latest()->limit(100)->get()
             : collect();
 
-        return view('dashboard.licenses', compact('licenses', 'search','issued','issuable'));
+        return view('dashboard.licenses', compact('licenses', 'search','issued','issuable','supportRenewals'));
     }
 
     public function store(Request $request): RedirectResponse

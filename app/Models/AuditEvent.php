@@ -42,6 +42,8 @@ class AuditEvent extends Model
         'license.instance.domain.changed',
         'license.instance.key.rotated',
         'license.creator.review.requested',
+        'license.support.requested',
+        'license.support.reviewed',
         'media.uploaded',
         'media.deleted',
         'media.review.approved',

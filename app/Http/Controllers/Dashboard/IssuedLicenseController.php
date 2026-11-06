@@ -8,6 +8,7 @@ use App\Models\AccountNotification;
 use App\Models\ProductEntitlement;
 use App\Models\ProductLicense;
 use App\Support\ProductLicenseLifecycle;
+use App\Support\ProductLicenseSupport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,13 +24,14 @@ class IssuedLicenseController extends Controller
         $data=$request->validate([
             'product_entitlement_id'=>['required','integer',Rule::exists('product_entitlements','id')],
             'tier'=>['required',Rule::in(['regular','extended'])],
+            'support_term'=>['required',Rule::in(array_keys(ProductLicenseSupport::TERMS))],
             'reason'=>['required','string','min:15','max:500'],
             'confirm_complimentary'=>['required','accepted'],
         ]);
 
         $license=ProductLicenseLifecycle::issueManual(
             ProductEntitlement::query()->findOrFail($data['product_entitlement_id']),
-            $data['tier'], $request->user(), $data['reason']
+            $data['tier'], $request->user(), $data['reason'], $data['support_term']
         );
         AccountNotification::deliver(
             (int)$license->user_id,'license.issued','Product license issued',
