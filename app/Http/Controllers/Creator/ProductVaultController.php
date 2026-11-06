@@ -20,11 +20,16 @@ class ProductVaultController extends Controller
     public function index(Request $request, MarketplaceListing $product): View
     {
         $product = $this->ownedProduct($request, $product);
-        $versions = ProductFileVersion::query()
-            ->where('marketplace_listing_id', $product->id)
-            ->latest('id')->paginate(10);
+        $status = (string)$request->query('status','all');
+        abort_unless(in_array($status,['all','pending','approved','rejected','disabled'],true),404);
+        $ownedVersions = ProductFileVersion::query()->where('marketplace_listing_id',$product->id);
+        $counts = (clone $ownedVersions)->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')->pluck('total','status');
+        $versions = (clone $ownedVersions)
+            ->when($status!=='all',fn($q)=>$q->where('status',$status))
+            ->latest('id')->paginate(10)->withQueryString();
 
-        return view('account.product-versions', compact('product', 'versions'));
+        return view('account.product-versions',compact('product','versions','status','counts'));
     }
 
     public function store(Request $request, MarketplaceListing $product): RedirectResponse

@@ -15,6 +15,22 @@
         @if(\App\Models\FeatureFlag::isEnabled('creator_submissions'))<button type="button" class="btn primary" data-modal-open="product-new">Create product</button>@endif
       </div>
     </div>
+    <div class="workspace-queue-toolbar">
+      <nav class="workspace-queue-tabs" aria-label="Your products by status">
+        @foreach(['all'=>'All','draft'=>'Draft','pending'=>'Pending','published'=>'Published','rejected'=>'Rejected'] as $value=>$label)
+          <a href="{{ route('studio.products.index',array_merge(request()->except('status','page'),$value==='all'?[]:['status'=>$value])) }}"
+             class="{{ $status===$value?'is-active':'' }}" @if($status===$value)aria-current="page"@endif>
+            {{ $label }} <span>{{ $value==='all'?$counts->sum():(int)$counts->get($value,0) }}</span>
+          </a>
+        @endforeach
+      </nav>
+      <form method="get" role="search" class="table-search" aria-label="Search your product catalog">
+        @if($status!=='all')<input type="hidden" name="status" value="{{ $status }}">@endif
+        <input name="q" value="{{ $search }}" maxlength="120" aria-label="Find your product" placeholder="Product title or ID">
+        <button type="submit" class="btn subtle compact">Search</button>
+        @if($search!=='')<a class="btn subtle compact" href="{{ route('studio.products.index',$status==='all'?[]:['status'=>$status]) }}">Clear</a>@endif
+      </form>
+    </div>
     <div class="table-scroll"><table class="data-table">
       <thead><tr><th>Product ID</th><th>Title</th><th>License</th><th>Preview</th><th>Status</th><th>Submitted</th><th>Action</th></tr></thead>
       <tbody>

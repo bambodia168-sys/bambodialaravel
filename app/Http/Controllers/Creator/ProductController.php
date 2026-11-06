@@ -21,11 +21,22 @@ class ProductController extends Controller
 {
     public function index(Request $request): View
     {
-        $products = MarketplaceListing::query()
-            ->where('type', 'product')
-            ->where('user_id', $request->user()->id)
-            ->with(['licenseDefinition:id,name,version', 'coverAsset:id,public_id,alt_text,review_status'])
-            ->latest()->paginate(10);
+        $status = (string)$request->query('status','all');
+        abort_unless(in_array($status,['all','draft','pending','published','rejected'],true),404);
+        $search = trim((string)$request->query('q',''));
+        abort_unless(mb_strlen($search)<=120,404);
+        $owned = MarketplaceListing::query()->where('type','product')
+            ->where('user_id',$request->user()->id);
+        $counts = (clone $owned)->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')->pluck('total','status');
+        $products = (clone $owned)
+            ->with(['licenseDefinition:id,name,version','coverAsset:id,public_id,alt_text,review_status'])
+            ->when($status!=='all',fn($q)=>$q->where('status',$status))
+            ->when($search!=='',fn($q)=>$q->where(function($inner)use($search){
+                $inner->where('title','like','%'.$search.'%')
+                    ->orWhere('public_id','like','%'.$search.'%');
+            }))
+            ->latest()->paginate(10)->withQueryString();
 
         $licenses = LicenseDefinition::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'version']);
         $assets = MediaAsset::query()->where('user_id', $request->user()->id)
@@ -34,7 +45,7 @@ class ProductController extends Controller
 
         $categories=MarketplaceCategory::query()->where('type','product')
             ->where('is_active',true)->orderBy('sort_order')->orderBy('name')->get(['id','name']);
-        return view('account.products', compact('products', 'licenses', 'assets','categories'));
+        return view('account.products', compact('products', 'licenses', 'assets','categories','status','search','counts'));
     }
 
     public function store(Request $request): RedirectResponse

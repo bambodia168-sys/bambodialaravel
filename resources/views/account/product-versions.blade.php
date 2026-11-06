@@ -16,6 +16,14 @@
       <h2>File versions <span class="count">{{ $versions->total() }}</span></h2>
       <button class="btn primary" type="button" data-modal-open="upload-release"><x-icon name="upload" size="16"/> Upload new version</button>
     </div>
+    <nav class="workspace-queue-toolbar workspace-queue-tabs" aria-label="Your file version statuses">
+      @foreach(['all'=>'All','pending'=>'Pending','approved'=>'Approved','rejected'=>'Rejected','disabled'=>'Disabled'] as $value=>$label)
+        <a href="{{ route('studio.vault.index',array_merge(['product'=>$product],$value==='all'?[]:['status'=>$value])) }}"
+          class="{{ $status===$value?'is-active':'' }}" @if($status===$value)aria-current="page"@endif>
+          {{ $label }} <span>{{ $value==='all'?$counts->sum():(int)$counts->get($value,0) }}</span>
+        </a>
+      @endforeach
+    </nav>
     <div class="table-scroll"><table class="data-table">
       <thead><tr><th>Version</th><th>File</th><th>Size</th><th>Integrity</th><th>Review</th><th>Submitted</th><th>Action</th></tr></thead>
       <tbody>
