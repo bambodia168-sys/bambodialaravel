@@ -238,4 +238,18 @@ class UnifiedBuilderTest extends TestCase
             'image'=>\Illuminate\Http\UploadedFile::fake()->image('cover.png'),
         ])->assertForbidden();
     }
+
+    public function test_rich_editor_preserves_safe_color_alignment_and_rejects_unsafe_css(): void
+    {
+        $html = '<p style="text-align:center;color:rgb(194, 65, 12);background-color:#fff1a8;position:fixed">'
+            .'Carefully formatted marketplace content for international buyers.</p>'
+            .'<p style="background-color:url(javascript:alert(1));color:rgb(999,0,0)">No dangerous styles</p>';
+        $safe = \App\Support\BuilderContent::sanitize($html);
+        $this->assertStringContainsString('text-align:center', $safe);
+        $this->assertStringContainsString('color:#c2410c', $safe);
+        $this->assertStringContainsString('background-color:#fff1a8', $safe);
+        $this->assertStringNotContainsString('position:fixed', $safe);
+        $this->assertStringNotContainsString('javascript:', $safe);
+        $this->assertStringNotContainsString('rgb(999', $safe);
+    }
 }

@@ -143,12 +143,28 @@ final class BuilderContent
             $key = strtolower($key);
             if ($key === 'text-align' && in_array(strtolower($value), ['left', 'center', 'right', 'justify'], true)) {
                 $allowed[] = 'text-align:'.strtolower($value);
-            } elseif (in_array($key, ['color', 'background-color'], true)
-                && preg_match('/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i', $value)) {
-                $allowed[] = $key.':'.$value;
+            } elseif (in_array($key, ['color', 'background-color'], true)) {
+                $color = self::normalizeColor($value);
+                if ($color !== null) {
+                    $allowed[] = $key.':'.$color;
+                }
             }
         }
 
         return implode(';', $allowed);
+    }
+
+    private static function normalizeColor(string $value): ?string
+    {
+        if (preg_match('/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i', $value)) {
+            return strtolower($value);
+        }
+        if (preg_match('/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i', $value, $m)) {
+            if ((int)$m[1] <= 255 && (int)$m[2] <= 255 && (int)$m[3] <= 255) {
+                return sprintf('#%02x%02x%02x', (int)$m[1], (int)$m[2], (int)$m[3]);
+            }
+        }
+
+        return null;
     }
 }
