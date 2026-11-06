@@ -136,7 +136,7 @@
         <div class="premium-side-card-heading"><h2>Information</h2></div>
         <dl class="premium-info-list">
           <div><dt>Category</dt><dd>{{ ucfirst($job->category) }}</dd></div>
-          <div><dt>Posted</dt><dd>{{ $job->created_at->format('d M Y') }}</dd></div>
+          <div><dt>Created</dt><dd>{{ $job->created_at->format('d M Y') }}</dd></div>
           <div><dt>Last updated</dt><dd>{{ $job->updated_at->format('d M Y') }}</dd></div>
           <div><dt>Currency</dt><dd>{{ $job->currency ?: 'USD' }}</dd></div>
           <div><dt>Reference</dt><dd>{{ $job->public_id }}</dd></div>
