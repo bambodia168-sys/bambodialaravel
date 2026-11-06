@@ -44,6 +44,7 @@ class AuditEvent extends Model
         'product.updated',
         'resume.updated',
         'job.submitted',
+        'job.updated',
         'job.closed',
         'job.review.published',
         'job.review.rejected',
