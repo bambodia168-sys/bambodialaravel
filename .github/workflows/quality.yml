@@ -48,6 +48,8 @@ jobs:
           bash -n support/builder-studio-types-upgrade.sh
           bash -n support/builder-studio-workflow-upgrade.sh
           bash -n support/builder-ui-hardening-upgrade.sh
+          bash -n support/product-license-upgrade.sh
+          php -l examples/license-validation.php
           bash -n support/builder-studio-db-backup.sh
       - name: Check PHP syntax
         run: |
