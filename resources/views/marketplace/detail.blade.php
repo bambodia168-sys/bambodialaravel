@@ -112,6 +112,21 @@
         <a class="premium-action-link" href="{{ route('marketplace.search',['type'=>$kind]) }}">More {{ $kindTitle }} listings <x-icon name="chevron-right" size="15"/></a>
       </div>
 
+
+      @if($screenshots->isNotEmpty())
+        <section class="panel premium-content-section" id="screenshots">
+          <div class="panel-head"><div><span class="eyebrow">Approved visual resources</span><h2>Screenshots &amp; gallery</h2></div></div>
+          <div class="builder-public-gallery">
+            @foreach($screenshots as $shot)
+              <a href="{{ $shot->previewUrl() }}" target="_blank" rel="noopener noreferrer"
+                 aria-label="View screenshot: {{ $shot->alt_text }}">
+                <img src="{{ $shot->previewUrl() }}" alt="{{ $shot->alt_text }}" loading="lazy">
+              </a>
+            @endforeach
+          </div>
+        </section>
+      @endif
+
       <section class="panel premium-content-section" id="overview">
         <div class="panel-head"><div><span class="eyebrow">About this {{ $kind }}</span><h2>Overview</h2></div></div>
         <div class="listing-body premium-description">{!! $listing->description_html ? \App\Support\BuilderContent::sanitize($listing->description_html) : nl2br(e($listing->description)) !!}</div>
@@ -128,8 +143,20 @@
           <div class="listing-body premium-description">
             @if($listing->licenseDefinition)
               <div class="premium-license-summary"><x-icon name="file-check" size="22"/>
-                <div><strong>{{ $listing->licenseDefinition->name }}</strong><span>Version {{ $listing->licenseDefinition->version }}</span></div>
+                <div><strong>Regular License · {{ $listing->licenseDefinition->name }}</strong>
+                  <span>Version {{ $listing->licenseDefinition->version }}
+                    @if($listing->regular_price !== null) · USD &#36;{{ number_format((float)$listing->regular_price, 2) }} @endif
+                  </span></div>
               </div>
+            @endif
+            @if($listing->extendedLicenseDefinition && $listing->extended_price !== null)
+              <div class="premium-license-summary"><x-icon name="shield" size="22"/>
+                <div><strong>Extended License · {{ $listing->extendedLicenseDefinition->name }}</strong>
+                  <span>Version {{ $listing->extendedLicenseDefinition->version }}
+                    · USD &#36;{{ number_format((float)$listing->extended_price, 2) }}
+                  </span></div>
+              </div>
+              <p><a href="{{ $listing->extendedLicenseDefinition->publicUrl() }}">Read the Extended License terms</a></p>
             @endif
             @if($listing->license_terms)<p>{!! nl2br(e($listing->license_terms)) !!}</p>@endif
             <p class="hint">Licensing rights are governed by the linked published license definition. File delivery requires a verified entitlement; direct checkout and payments are not available yet.</p>

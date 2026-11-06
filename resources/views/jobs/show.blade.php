@@ -70,6 +70,21 @@
         </div>
         <a class="premium-action-link" href="{{ route('jobs') }}">Browse more opportunities <x-icon name="chevron-right" size="15"/></a>
       </div>
+
+      @if($screenshots->isNotEmpty())
+        <section class="panel premium-content-section" id="screenshots">
+          <div class="panel-head"><div><span class="eyebrow">Approved visual resources</span><h2>Screenshots &amp; gallery</h2></div></div>
+          <div class="builder-public-gallery">
+            @foreach($screenshots as $shot)
+              <a href="{{ $shot->previewUrl() }}" target="_blank" rel="noopener noreferrer"
+                 aria-label="View screenshot: {{ $shot->alt_text }}">
+                <img src="{{ $shot->previewUrl() }}" alt="{{ $shot->alt_text }}" loading="lazy">
+              </a>
+            @endforeach
+          </div>
+        </section>
+      @endif
+
       <section class="panel premium-content-section" id="overview">
         <div class="panel-head"><div><span class="eyebrow">Published client brief</span><h2>Job brief</h2></div></div>
         <div class="listing-body premium-description">{!! $job->description_html ? \App\Support\BuilderContent::sanitize($job->description_html) : nl2br(e($job->description)) !!}</div>

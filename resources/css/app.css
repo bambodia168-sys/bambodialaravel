@@ -1252,3 +1252,10 @@ svg{flex-shrink:0}
   .studio-type-actions{gap:9px;justify-content:space-between}
   .studio-type-actions .studio-tool-action{font-size:11px;gap:5px}
 }
+
+
+/* Published screenshot gallery (only independently approved, owner-scoped assets). */
+.builder-public-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px}
+.builder-public-gallery a{display:block;aspect-ratio:4/3;overflow:hidden;border-radius:12px;border:1px solid var(--line);background:var(--surface-2)}
+.builder-public-gallery img{width:100%;height:100%;object-fit:cover;transition:transform .2s}
+.builder-public-gallery a:hover img{transform:scale(1.03)}
