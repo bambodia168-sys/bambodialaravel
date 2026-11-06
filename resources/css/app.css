@@ -2,7 +2,7 @@
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
-:root{font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;font-synthesis:none;--font-body:14px;--font-button:14px;--font-helper:12px;--font-heading-spacing:normal;--accent:#c2410c;--accent-hover:#9a3412;--accent-contrast:#fff;--secondary:#1d4ed8;--secondary-hover:#1e40af;--secondary-contrast:#fff;--bg:#f7f9fd;--surface:#fff;--surface-2:#edf3fb;--text:#17253b;--muted:#53657e;--line:#d7e2f0;--shadow:0 18px 48px rgba(17,41,68,.08);--danger:#b23d51;--hero:#102b52;color-scheme:light}
+:root{font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;font-synthesis:none;--font-body:14px;--font-button:14px;--font-helper:12px;--header-height:60px;--font-heading-spacing:normal;--accent:#c2410c;--accent-hover:#9a3412;--accent-contrast:#fff;--secondary:#1d4ed8;--secondary-hover:#1e40af;--secondary-contrast:#fff;--bg:#f7f9fd;--surface:#fff;--surface-2:#edf3fb;--text:#17253b;--muted:#53657e;--line:#d7e2f0;--shadow:0 18px 48px rgba(17,41,68,.08);--danger:#b23d51;--hero:#102b52;color-scheme:light}
 :root[data-theme="dark"]{--accent:#fb923c;--accent-hover:#fdba74;--accent-contrast:#221609;--secondary:#93c5fd;--secondary-hover:#bfdbfe;--secondary-contrast:#10233e;--bg:#0b1424;--surface:#101f36;--surface-2:#1a2d47;--text:#f6f9ff;--muted:#b3c2d8;--line:#314762;--shadow:0 18px 55px rgba(0,0,0,.3);--hero:#10294a;color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -33,7 +33,7 @@ svg{flex-shrink:0}
 .notice.success{border-color:#319e81;color:var(--text)}
 .notice.error{border-color:#c56a74;color:var(--text)}
 .site-header{position:sticky;top:0;z-index:40;background:var(--surface);border-bottom:1px solid var(--line);backdrop-filter:blur(20px)}
-.site-nav{display:flex;align-items:center;gap:24px;min-height:76px}
+.site-nav{display:flex;align-items:center;gap:24px;min-height:var(--header-height)}
 .nav-search{display:flex;align-items:center;flex:1;min-width:150px;max-width:600px;gap:10px;padding:4px 6px 4px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2);color:var(--muted)}
 .nav-search input{min-width:0;width:100%;border:0;background:transparent;outline:none;color:var(--text);padding:9px 0}
 .nav-search button{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 13px;font-weight:700;font-size:var(--font-button)}
@@ -480,7 +480,7 @@ svg{flex-shrink:0}
 .workspace-main{height:100dvh;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;background:var(--bg);scroll-behavior:smooth}
 .workspace-topbar{
   position:sticky;top:0;z-index:55;display:flex;align-items:center;gap:13px;
-  min-height:76px;padding:12px clamp(16px,2.5vw,36px);background:var(--surface);
+  min-height:var(--header-height);padding:7px clamp(16px,2.5vw,36px);background:var(--surface);
   border-bottom:1px solid var(--line);box-shadow:0 4px 18px rgba(12,33,58,.035);
 }
 .workspace-sidebar-toggle{flex:none}
@@ -492,7 +492,7 @@ svg{flex-shrink:0}
 .workspace-menu-search{
   display:flex;align-items:center;gap:10px;flex:1;min-width:155px;max-width:540px;
   border:1px solid var(--line);border-radius:12px;background:var(--surface-2);padding:0 12px;
-  height:43px;color:var(--muted);
+  height:39px;color:var(--muted);
 }
 .workspace-menu-search:focus-within{border-color:var(--secondary);box-shadow:0 0 0 3px color-mix(in srgb,var(--secondary),transparent 86%)}
 .workspace-menu-search input{border:0!important;outline:0!important;min-width:0;flex:1;width:100%;height:100%;padding:0;background:transparent;color:var(--text);font-size:var(--font-body)}
@@ -722,3 +722,42 @@ svg{flex-shrink:0}
 .marketplace-active-filters a:hover{border-color:var(--accent);color:var(--accent)}
 .marketplace-active-filters .marketplace-clear-filters{background:transparent;border-color:transparent;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:640px){.marketplace-discovery-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.marketplace-discovery-tab{padding:9px 8px}.marketplace-discovery-tab:first-child{grid-column:span 2}.marketplace-active-filters{gap:7px}}
+
+
+/* Consistent compact headers, theme-specific brand assets and accessible profile controls. */
+.brand-logo-pair{display:inline-flex;align-items:center;justify-content:flex-start;min-width:0;flex:0 0 auto}
+.brand-logo-pair img{display:block;width:clamp(125px,12vw,158px);height:auto;max-height:42px;object-fit:contain}
+:root[data-theme="dark"] .brand-logo-pair .brand-logo-light{display:none}
+:root:not([data-theme="dark"]) .brand-logo-pair .brand-logo-dark{display:none}
+.workspace-brand-pair img{width:158px;max-width:100%}
+.workspace-brand-mini{display:none}
+.workspace-collapsed .workspace-brand-mini{display:grid}
+.workspace-collapsed .workspace-brand-pair{display:none}
+.workspace-topbar .workspace-menu-search{height:39px}
+.workspace-topbar .icon-button,.workspace-topbar .workspace-profile{height:36px;width:36px;min-width:36px}
+.workspace-topbar .language-trigger{min-height:36px;padding-block:7px}
+.site-body .site-nav{min-height:var(--header-height)}
+.site-body .nav-search{min-height:40px;padding-block:2px}
+.site-body .nav-search input{padding-block:6px}
+.site-body .nav-search button{padding-block:6px}
+.site-body .profile-trigger{width:36px;height:36px}
+.site-body .profile-panel{min-width:266px;max-width:min(92vw,320px);padding:9px;max-height:min(76vh,750px)}
+.site-body .profile-panel a,.site-body .profile-panel form button{
+  display:flex;align-items:center;gap:11px;min-height:39px;padding:9px 10px;
+  font-family:inherit;font-size:var(--font-body);font-weight:650;line-height:1.35;white-space:nowrap;
+}
+.site-body .profile-panel a svg,.site-body .profile-panel button svg{flex:0 0 16px}
+.site-body .profile-theme-toggle{min-height:39px;font-size:var(--font-body);font-weight:650;white-space:nowrap;padding:9px 10px}
+.site-body .profile-theme-toggle [data-theme-label]{white-space:nowrap;display:inline-block;min-width:0}
+@media(max-width:960px){
+  .site-body .site-nav{padding-block:8px;row-gap:5px}
+  .workspace-topbar{padding-block:7px}
+}
+@media(max-width:850px){
+  .workspace-collapsed .workspace-brand-pair{display:inline-flex}
+  .workspace-collapsed .workspace-brand-mini{display:none}
+}
+@media(max-width:475px){
+  .site-body .site-nav{padding-block:6px;row-gap:4px}
+  .site-body .nav-marketplace-links a{font-size:12px}
+}

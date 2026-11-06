@@ -99,4 +99,38 @@ class PublicNavigationTest extends TestCase
             ->assertSee('category='.$category->public_id)
             ->assertSee('aria-label="Marketplace"',false);
     }
+
+    public function test_guest_account_menu_has_consistent_icon_links_and_compact_labels(): void
+    {
+        $html=$this->get('/en')->assertOk()
+            ->assertSee('Sign In')
+            ->assertSee('Sign Up')
+            ->assertDontSee('Join Bambodia')
+            ->assertSee('brand-logo-dark')
+            ->assertSee('brand-logo-light')
+            ->getContent();
+        $menu=explode('<div class="dropdown-panel profile-panel">',$html,2)[1]??'';
+        $this->assertMatchesRegularExpression('/<a[^>]+href="[^"]*login"[^>]*>\s*<svg /',$menu);
+        $this->assertMatchesRegularExpression('/<a[^>]+href="[^"]*register"[^>]*>\s*<svg /',$menu);
+        $this->assertStringContainsString('profile-theme-toggle',$menu);
+    }
+
+    public function test_signed_in_account_menu_has_an_icon_before_each_action(): void
+    {
+        $user=User::query()->create([
+            'name'=>'Icon Menu Client',
+            'email'=>'icon-menu-client@example.test',
+            'password'=>'AReallyLongPassword123!',
+            'role'=>'customer',
+        ]);
+        $html=$this->actingAs($user)->get('/en')->assertOk()->getContent();
+        $menu=explode('<div class="dropdown-panel profile-panel">',$html,2)[1]??'';
+        $menu=explode('<div class="profile-theme-row">',$menu,2)[0];
+        $this->assertMatchesRegularExpression('/My Service Requests/',$menu);
+        $this->assertMatchesRegularExpression('/<a[^>]*>\s*<svg[^>]*>.*?<\/svg>/s',$menu);
+        $this->assertSame(
+            preg_match_all('/<a\s[^>]*href=/',$menu),
+            preg_match_all('/<a\s[^>]*href=[^>]*>\s*<svg\b/s',$menu)
+        );
+    }
 }

@@ -100,6 +100,50 @@ try {
         if(!(await page.getByText('Browser QA Published Freelance Job').first().isVisible()))
           throw new Error(device.name+' homepage missing approved job');
         await page.screenshot({path:out+'/'+device.name+'-homepage.png',fullPage:true});
+        const compactHeader=await page.locator('.site-header').evaluate(el=>{
+          const logo=el.querySelector('.brand-logo-pair');
+          return {
+            height:el.getBoundingClientRect().height,
+            logoCount:logo?.querySelectorAll('img').length ?? 0,
+          };
+        });
+        if(compactHeader.logoCount!==2 || (device.name==='desktop' && compactHeader.height>64))
+          throw new Error(device.name+' inconsistent compact header or logo pair '+JSON.stringify(compactHeader));
+        const publicMenu=page.locator('.site-header .profile-dropdown');
+        await publicMenu.locator('summary').click();
+        const menuLinks=publicMenu.locator('.profile-panel > a');
+        if((await menuLinks.count())!==2)
+          throw new Error(device.name+' guest profile links are missing');
+        for(const name of ['Sign In','Sign Up']){
+          const entry=publicMenu.getByRole('link',{name});
+          if(!(await entry.isVisible()) || !(await entry.locator('svg').isVisible()))
+            throw new Error(device.name+' icon or label missing for '+name);
+        }
+        for(const theme of ['light','dark']){
+          const metrics=await page.evaluate(theme=>{
+            document.documentElement.dataset.theme=theme;
+            const pair=document.querySelector('.site-header .brand-logo-pair');
+            const asset=pair?.querySelector(theme==='dark'?'.brand-logo-dark':'.brand-logo-light');
+            const other=pair?.querySelector(theme==='dark'?'.brand-logo-light':'.brand-logo-dark');
+            const label=document.querySelector('.profile-panel [data-theme-label]');
+            const s=getComputedStyle(label);
+            return {
+              assetVisible:asset && getComputedStyle(asset).display!=='none',
+              loaded:asset && asset.complete && asset.naturalWidth>0,
+              otherHidden:other && getComputedStyle(other).display==='none',
+              labelHeight:label.getBoundingClientRect().height,
+              lineHeight:parseFloat(s.lineHeight),
+              whiteSpace:s.whiteSpace,
+            };
+          },theme);
+          if(!metrics.assetVisible || !metrics.loaded || !metrics.otherHidden ||
+             metrics.whiteSpace!=='nowrap' || metrics.labelHeight>metrics.lineHeight+2)
+            throw new Error(device.name+' theme logo/label issue '+theme+' '+JSON.stringify(metrics));
+        }
+        // Restore the persisted theme before continuing the existing browser tests.
+        await page.evaluate(()=>{document.documentElement.dataset.theme=localStorage.getItem('bambodia-theme')||'light';});
+        await publicMenu.locator('summary').click();
+
         // Real active categories, category-first header, and live listing filter.
         if(await page.locator('.site-header .language-menu').count())
           throw new Error(device.name+' language selector must be in footer');
@@ -255,6 +299,12 @@ try {
       await admin.locator('form.auth-form button[type="submit"]').click();
       await admin.waitForURL(/\/dashboard/,{timeout:15000});
       await admin.goto(origin+'/en/dashboard',{waitUntil:'networkidle'});
+      const adminHeader=await admin.locator('.workspace-topbar').evaluate(el=>({
+        height:el.getBoundingClientRect().height,
+        logos:document.querySelectorAll('.workspace-brand-pair img').length
+      }));
+      if(adminHeader.height>64 || adminHeader.logos!==2)
+        throw new Error('Admin workspace header is not compact or has missing theme logos '+JSON.stringify(adminHeader));
       if(await admin.locator('body').getAttribute('data-workspace')!=='admin')
         throw new Error('Admin shell missing');
       const sidebar=admin.locator('#workspace-sidebar');

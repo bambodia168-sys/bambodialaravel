@@ -148,7 +148,11 @@
   <aside class="workspace-sidebar" id="workspace-sidebar" aria-label="{{ $workspaceTitles[$workspace] }} navigation">
     <div class="workspace-sidebar-head">
       <a class="workspace-brand" href="{{ $workspaceRoot }}" title="{{ $workspaceTitles[$workspace] }}">
-        <span class="brand-mark" aria-hidden="true">B</span><span class="workspace-brand-name">Bambodia</span>
+        <span class="workspace-brand-name brand-logo-pair workspace-brand-pair">
+          <img class="brand-logo-light" src="{{ asset('images/bambodia-logo.webp') }}" alt="Bambodia" width="550" height="144" decoding="async">
+          <img class="brand-logo-dark" src="{{ asset('images/bambodia-logo-dark.svg') }}" alt="Bambodia" width="550" height="144" decoding="async">
+        </span>
+        <span class="brand-mark workspace-brand-mini" aria-hidden="true">B</span>
       </a>
       <span class="workspace-kind"><x-icon name="circle-dot" size="14"/><span>{{ $workspaceTitles[$workspace] }}</span></span>
     </div>

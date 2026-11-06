@@ -14,7 +14,12 @@
 <body class="site-body">
 <header class="site-header">
   <div class="site-nav container">
-    <a class="brand" href="{{ route('home') }}" aria-label="Bambodia home"><img src="{{ asset('images/bambodia-logo.webp') }}" alt="Bambodia" width="170" height="45" style="display:block;width:clamp(118px,14vw,170px);height:auto;max-height:48px;object-fit:contain" decoding="async"></a>
+    <a class="brand" href="{{ route('home') }}" aria-label="Bambodia home">
+      <span class="brand-logo-pair">
+        <img class="brand-logo-light" src="{{ asset('images/bambodia-logo.webp') }}" alt="Bambodia" width="550" height="144" decoding="async">
+        <img class="brand-logo-dark" src="{{ asset('images/bambodia-logo-dark.svg') }}" alt="Bambodia" width="550" height="144" decoding="async">
+      </span>
+    </a>
     @if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))
     @php
       $categoryGroups = \App\Models\MarketplaceCategory::query()
@@ -80,7 +85,7 @@
         <div class="dropdown-panel profile-panel">
           <strong>{{ auth()->user()->name }}</strong>
           <span class="text-muted">ID {{ auth()->user()->public_id }}</span>
-          <a href="{{ url('/account?='.auth()->user()->public_id) }}">{{ __('ui.my_account') }}</a>
+          <a href="{{ url('/account?='.auth()->user()->public_id) }}"><x-icon name="user" size="16"/> {{ __('ui.my_account') }}</a>
           <a href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
           <a href="{{ route('account.saved-listings') }}"><x-icon name="star" size="16"/> Saved Listings</a>
           <a href="{{ route('account.saved-jobs') }}"><x-icon name="briefcase" size="16"/> Saved Jobs</a>
@@ -88,12 +93,12 @@
           <a href="{{ route('account.policy-receipts') }}"><x-icon name="book" size="16"/> My Policy Receipts</a>
           <a href="{{ route('privacy.index') }}"><x-icon name="shield" size="16"/> Privacy Requests</a>
           <a href="{{ route('contracts.index') }}"><x-icon name="briefcase" size="16"/> My Contracts</a>
-          @if(in_array(auth()->user()->role,['customer','subscriber'],true))<a href="{{ route('account.inquiries') }}">My Service Requests</a>@endif
-          @if(auth()->user()->isCreator())<a href="{{ route('studio.inquiries') }}">Creator Inquiries</a>@endif
-          @if(auth()->user()->role==='freelancer')<a href="{{ route('resume.edit') }}">Resume Builder</a><a href="{{ route('jobs.applied') }}">My Proposals</a>@endif
-          @if(in_array(auth()->user()->role,['customer','subscriber','super_admin'],true))<a href="{{ route('jobs.mine') }}">My Jobs</a>@endif
-          @if(auth()->user()->isCreator())<a href="{{ route('studio.profile.edit') }}"><x-icon name="user" size="16"/> Creator Profile</a><a href="{{ url('/studio?='.auth()->user()->public_id) }}">{{ __('ui.creator_studio') }}</a>@elseif(in_array(auth()->user()->role, ['customer','subscriber'], true))<a href="{{ route('creator.apply') }}">Become a creator</a>@endif
-          @if(auth()->user()->isAdministrator())<a href="{{ route('dashboard') }}">{{ __('ui.administration') }}</a>@endif
+          @if(in_array(auth()->user()->role,['customer','subscriber'],true))<a href="{{ route('account.inquiries') }}"><x-icon name="message" size="16"/> My Service Requests</a>@endif
+          @if(auth()->user()->isCreator())<a href="{{ route('studio.inquiries') }}"><x-icon name="message" size="16"/> Creator Inquiries</a>@endif
+          @if(auth()->user()->role==='freelancer')<a href="{{ route('resume.edit') }}"><x-icon name="file-text" size="16"/> Resume Builder</a><a href="{{ route('jobs.applied') }}"><x-icon name="send" size="16"/> My Proposals</a>@endif
+          @if(in_array(auth()->user()->role,['customer','subscriber','super_admin'],true))<a href="{{ route('jobs.mine') }}"><x-icon name="briefcase" size="16"/> My Jobs</a>@endif
+          @if(auth()->user()->isCreator())<a href="{{ route('studio.profile.edit') }}"><x-icon name="user" size="16"/> Creator Profile</a><a href="{{ url('/studio?='.auth()->user()->public_id) }}"><x-icon name="palette" size="16"/> {{ __('ui.creator_studio') }}</a>@elseif(in_array(auth()->user()->role, ['customer','subscriber'], true))<a href="{{ route('creator.apply') }}"><x-icon name="user-round-check" size="16"/> Become a creator</a>@endif
+          @if(auth()->user()->isAdministrator())<a href="{{ route('dashboard') }}"><x-icon name="layout-dashboard" size="16"/> {{ __('ui.administration') }}</a>@endif
           <form action="{{ route('logout') }}" method="post">@csrf<button type="submit"><x-icon name="logout" size="16"/>{{ __('ui.sign_out') }}</button></form>
           <div class="profile-theme-row">
             <button type="button" class="profile-theme-toggle" data-theme-toggle>
@@ -108,8 +113,8 @@
       <details class="dropdown profile-dropdown">
         <summary class="profile-trigger" aria-label="Account menu"><x-icon name="user" size="19"/></summary>
         <div class="dropdown-panel profile-panel">
-          <a href="{{ route('login') }}">{{ __('ui.sign_in') }}</a>
-          @if(\App\Models\FeatureFlag::isEnabled('registration'))<a href="{{ route('register') }}">{{ __('ui.join') }}</a>@endif
+          <a href="{{ route('login') }}"><x-icon name="log-in" size="16"/> {{ __('ui.sign_in') }}</a>
+          @if(\App\Models\FeatureFlag::isEnabled('registration'))<a href="{{ route('register') }}"><x-icon name="user-plus" size="16"/> {{ __('ui.join') }}</a>@endif
           <div class="profile-theme-row">
             <button type="button" class="profile-theme-toggle" data-theme-toggle>
               <span class="theme-icon-moon"><x-icon name="moon" size="17"/></span>
