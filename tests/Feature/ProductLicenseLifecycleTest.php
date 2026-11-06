@@ -453,6 +453,9 @@ class ProductLicenseLifecycleTest extends TestCase
         for ($i=0;$i<11;$i++) {
             $version=$this->release->replicate();
             $version->version='1.'.($i+1).'.0';
+            $version->storage_path='marketplace/originals/'.$this->creator->id.'/'.$this->product->id
+                .'/'.str_pad(dechex($i+1),64,'0',STR_PAD_LEFT).'.zip';
+            Storage::disk('local')->copy($this->release->storage_path,$version->storage_path);
             $version->save();
             $grant=ProductEntitlement::query()->create([
                 'user_id'=>$this->customer->id,
