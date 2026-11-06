@@ -133,6 +133,17 @@
       </section>
 
       @if($isProduct)
+        @if($listing->software_version || $listing->software_published_on || $listing->software_updated_on)
+          <section class="panel premium-content-section" id="software-release">
+            <div class="panel-head"><div><span class="eyebrow">Creator-provided release information</span><h2>Software details</h2></div></div>
+            <dl class="premium-info-list">
+              @if($listing->software_version)<div><dt>Software version</dt><dd>{{ $listing->software_version }}</dd></div>@endif
+              @if($listing->software_published_on)<div><dt>Published date</dt><dd>{{ $listing->software_published_on->format('d M Y') }}</dd></div>@endif
+              @if($listing->software_updated_on)<div><dt>Updated date</dt><dd>{{ $listing->software_updated_on->format('d M Y') }}</dd></div>@endif
+            </dl>
+            <p class="hint">Release dates and version are provided by the creator; they do not independently verify automatic updates or file approval.</p>
+          </section>
+        @endif
         <section class="panel premium-content-section" id="license">
           <div class="panel-head">
             <div><span class="eyebrow">Published terms</span><h2>Product license</h2></div>

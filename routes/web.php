@@ -86,6 +86,8 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/builder', [BuilderController::class, 'show'])->name('builder');
+    Route::post('/builder/content/preview', [BuilderController::class, 'previewContent'])
+        ->name('builder.content.preview')->middleware('throttle:30,1');
     Route::post('/builder/media', [MediaLibraryController::class, 'store'])
         ->name('builder.media.store')->middleware('throttle:30,1');
     Route::post('/builder/products/{product}/files', [ProductVaultController::class, 'storeFromBuilder'])

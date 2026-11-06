@@ -14,11 +14,11 @@ final class BuilderContent
         'p', 'div', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'del', 'mark',
         'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
         'a', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'span',
-        'sup', 'sub', 'font',
+        'sup', 'sub', 'font', 'iframe',
     ];
 
     private const DISCARDED = [
-        'script', 'style', 'iframe', 'object', 'embed', 'form',
+        'script', 'style', 'object', 'embed', 'form',
         'input', 'textarea', 'button', 'svg', 'math', 'img',
         'audio', 'video', 'source', 'template',
     ];
@@ -96,7 +96,26 @@ final class BuilderContent
             $next = $node->nextSibling;
             if ($node instanceof DOMElement) {
                 $tag = strtolower($node->tagName);
-                if (in_array($tag, self::DISCARDED, true)) {
+                if ($tag === 'iframe') {
+                    $src = self::verifiedYoutubeEmbed((string) $node->getAttribute('src'));
+                    if ($src === null) {
+                        $parent->removeChild($node);
+                    } else {
+                        while ($node->attributes->length) {
+                            $node->removeAttributeNode($node->attributes->item(0));
+                        }
+                        while ($node->firstChild) {
+                            $node->removeChild($node->firstChild);
+                        }
+                        $node->setAttribute('src', $src);
+                        $node->setAttribute('title', 'YouTube video preview');
+                        $node->setAttribute('loading', 'lazy');
+                        $node->setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+                        $node->setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation');
+                        $node->setAttribute('allow', 'encrypted-media; picture-in-picture; fullscreen');
+                        $node->setAttribute('allowfullscreen', 'allowfullscreen');
+                    }
+                } elseif (in_array($tag, self::DISCARDED, true)) {
                     $parent->removeChild($node);
                 } elseif (! in_array($tag, self::ALLOWED, true)) {
                     // Unwrap unknown structural elements, but keep their readable text.
@@ -130,6 +149,32 @@ final class BuilderContent
             }
             $node = $next;
         }
+    }
+
+    /**
+     * Only the canonical HTTPS YouTube embed path is executable content.
+     * Raw third-party iframes, attributes, query strings and scripts are removed.
+     */
+    private static function verifiedYoutubeEmbed(string $source): ?string
+    {
+        $parts = parse_url(trim($source));
+        if (! is_array($parts)
+            || strtolower($parts['scheme'] ?? '') !== 'https'
+            || ! in_array(strtolower($parts['host'] ?? ''), [
+                'youtube.com', 'www.youtube.com',
+                'youtube-nocookie.com', 'www.youtube-nocookie.com',
+            ], true)
+            || isset($parts['port'], $parts['user'])
+            || isset($parts['port']) || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment'])
+            || ! preg_match('~^/embed/([A-Za-z0-9_-]{11})$~D', $parts['path'] ?? '', $matches)) {
+            return null;
+        }
+        $query = $parts['query'] ?? '';
+        if ($query !== '' && ! preg_match('/^start=([0-9]{1,5})$/D', $query, $time)) {
+            return null;
+        }
+        return 'https://www.youtube-nocookie.com/embed/'.$matches[1]
+            .($query !== '' ? '?start='.(int)$time[1] : '');
     }
 
     private static function safeStyle(string $input): string

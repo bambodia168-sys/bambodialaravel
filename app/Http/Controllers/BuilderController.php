@@ -14,6 +14,7 @@ use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\MediaAsset;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -87,6 +88,22 @@ class BuilderController extends Controller
             'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'licenses', 'assets',
             'termsPublications', 'termsSha256', 'suggestedTerms', 'productVersions'
         ));
+    }
+
+    public function previewContent(Request $request): JsonResponse
+    {
+        abort_unless(count($this->allowedTypes($request)) > 0, 403);
+        $values = $request->validate([
+            'html' => ['required', 'string', 'max:100000'],
+        ]);
+        $safe = BuilderContent::sanitize($values['html']) ?? '';
+        if (mb_strlen($safe) > 60000) {
+            return response()->json(['message' => 'Formatted HTML exceeds the 60,000-character limit.'], 422);
+        }
+        return response()->json([
+            'html' => $safe,
+            'text' => BuilderContent::plainText($safe),
+        ]);
     }
 
     public function updateJob(Request $request): RedirectResponse

@@ -121,6 +121,9 @@ class ProductController extends Controller
             'description_html' => ['nullable', 'string', 'max:60000'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'regular_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'software_version' => ['nullable', 'string', 'max:48', 'regex:/^v?[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z][0-9A-Za-z.-]{0,24})?$/'],
+            'software_published_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today', 'required_with:software_updated_on'],
+            'software_updated_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today', 'after_or_equal:software_published_on'],
             'extended_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'extended_license_definition_id' => ['nullable', 'integer', Rule::exists('license_definitions', 'id')],
             'license_terms' => ['nullable', 'string', 'max:20000'],
@@ -163,7 +166,8 @@ class ProductController extends Controller
                 $data['extended_license_definition_id'] = null;
             }
         } else {
-            unset($data['regular_price'], $data['extended_price'], $data['extended_license_definition_id']);
+            unset($data['regular_price'], $data['extended_price'], $data['extended_license_definition_id'],
+                $data['software_version'], $data['software_published_on'], $data['software_updated_on']);
         }
         return $data;
     }
