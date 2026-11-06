@@ -66,7 +66,8 @@ final class ProductLicenseLifecycle
                 'expires_at' => null,
                 ...ProductLicenseSupport::issuePeriod($supportTerm),
             ]);
-            self::event($license,'issued',$administrator->id,null,null,$reason.' · '.ProductLicenseSupport::TERMS[$supportTerm]);
+            self::event($license,'issued',$administrator->id,null,null,
+                mb_substr($reason.' · '.ProductLicenseSupport::TERMS[$supportTerm],0,500));
             return $license;
         });
     }
