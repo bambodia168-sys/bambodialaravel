@@ -128,7 +128,7 @@ class PublicFrontendLayoutTest extends TestCase
                 ]);
                 $this->actingAs($client)->get($listing->publicUrl())->assertOk()
                     ->assertSee('id="request-service"',false)
-                    ->assertSee('route',false); // route-derived inquiry action remains server-rendered
+                    ->assertSee(route('inquiries.store',$listing),false); // working private inquiry action
                 $this->post('/logout')->assertRedirect();
             }
         }
