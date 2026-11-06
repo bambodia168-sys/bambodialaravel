@@ -1,0 +1,81 @@
+name: Bambodia Operational Acceptance
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  operational-acceptance:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: operational-root-only
+          MYSQL_DATABASE: bambodia_operations
+          MYSQL_USER: bambodia_operations
+          MYSQL_PASSWORD: operational-only-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      DB_CONNECTION: mysql
+      DB_URL: ''
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: bambodia_operations
+      DB_USERNAME: bambodia_operations
+      DB_PASSWORD: operational-only-password
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+    steps:
+      - name: Checkout isolated GitHub commit
+        uses: actions/checkout@v4
+      - name: Configure PHP for MySQL acceptance
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, dom, pdo_mysql, fileinfo, xml, curl, zip
+          coverage: none
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install test dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Configure isolated Laravel test application
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          mkdir -p database
+      - name: Compile real frontend assets for view rendering
+        run: |
+          npm install --ignore-scripts
+          npm run build
+      - name: Check operational workflow acceptance on MySQL
+        run: |
+          set -Eeuo pipefail
+          for suite in \
+            ContentAndSupportTest \
+            ProductMediaLicenseTest \
+            ProductVaultFulfillmentTest \
+            ServiceInquiriesTest \
+            NotificationsTest \
+            FreelanceContractsTest \
+            DeveloperApiTest \
+            WorkflowDepthTest \
+            WorkspaceOperationsTest; do
+            echo "========== ${suite} =========="
+            php artisan test "tests/Feature/${suite}.php" --stop-on-failure
+          done
+          echo "PASS: operational state transitions, privacy, notifications, audit, rights gates and credential revocation."
