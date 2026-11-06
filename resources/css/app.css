@@ -706,3 +706,16 @@ svg{flex-shrink:0}
   .site-body .footer-actions .language-trigger{min-width:96px;padding-inline:8px}
   .site-body .footer-actions .language-current{max-width:68px}
 }
+
+/* Marketplace discovery navigation and removable search filters */
+.marketplace-discovery-tabs{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:0 0 18px;padding:7px;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.marketplace-discovery-tab{display:inline-flex;align-items:center;justify-content:center;min-height:41px;padding:9px 18px;border-radius:11px;color:var(--muted);font-size:13px;font-weight:750;transition:background .16s,color .16s}
+.marketplace-discovery-tab:hover{background:var(--surface-2);color:var(--text)}
+.marketplace-discovery-tab.is-active{background:var(--accent);color:var(--accent-contrast)}
+.marketplace-discovery-tab:focus-visible,.marketplace-active-filters a:focus-visible{outline:3px solid var(--secondary);outline-offset:2px}
+.marketplace-active-filters{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin:18px 0 30px}
+.marketplace-active-filters-label{font-size:12px;font-weight:750;color:var(--muted)}
+.marketplace-active-filters a{display:inline-flex;align-items:center;gap:11px;max-width:100%;overflow-wrap:anywhere;padding:7px 11px;border:1px solid var(--line);border-radius:100px;background:var(--surface);font-size:12px;font-weight:650}
+.marketplace-active-filters a:hover{border-color:var(--accent);color:var(--accent)}
+.marketplace-active-filters .marketplace-clear-filters{background:transparent;border-color:transparent;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:640px){.marketplace-discovery-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.marketplace-discovery-tab{padding:9px 8px}.marketplace-discovery-tab:first-child{grid-column:span 2}.marketplace-active-filters{gap:7px}}

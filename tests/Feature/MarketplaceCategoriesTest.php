@@ -144,4 +144,31 @@ class MarketplaceCategoriesTest extends TestCase
         $this->actingAs($admin)->get('/dashboard/category-manager')
             ->assertOk()->assertViewHas('categories',fn($page)=>$page->count()===10 && $page->total()===13);
     }
+    public function test_discovery_tabs_preserve_search_and_filter_categories_by_type(): void
+    {
+        $admin=$this->user('admin');
+        $this->createCategory($admin,'service','Technical Services');
+        $product=$this->createCategory($admin,'product','Licensed Templates');
+
+        $response=$this->get('/search?type=service&q=website&sort=title');
+        $response->assertOk()
+            ->assertSee('marketplace-discovery-tabs')
+            ->assertSee('aria-label="Marketplace listing types"',false)
+            ->assertSee('Technical Services')
+            ->assertDontSee('Licensed Templates')
+            ->assertSee('Active filters')
+            ->assertSee('Keyword: website')
+            ->assertSee('Type: Service')
+            ->assertSee('Clear all');
+
+        $this->assertStringContainsString('q=website', $response->getContent());
+        $this->assertStringContainsString('sort=title', $response->getContent());
+
+        $this->get('/search?type=product&category='.$product->public_id)
+            ->assertOk()->assertSee('Licensed Templates')->assertDontSee('Technical Services')
+            ->assertSee('Category: Licensed Templates');
+        $this->get('/search')->assertOk()->assertDontSee('marketplace-active-filters')
+            ->assertSee('Technical Services')->assertSee('Licensed Templates');
+    }
+
 }

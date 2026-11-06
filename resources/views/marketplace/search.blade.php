@@ -6,6 +6,13 @@
     <p>Explore approved digital products, services, projects and freelance offers. Listings displayed here reflect current publication checks.</p>
   </div>
   @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
+  <nav class="marketplace-discovery-tabs" aria-label="Marketplace listing types">
+    @foreach([''=>'All listings','product'=>'Products','project'=>'Projects','service'=>'Services','freelance'=>'Freelance'] as $tabType=>$tabLabel)
+      <a href="{{ route('marketplace.search',array_merge(request()->except('type','category','page'),$tabType!==''?['type'=>$tabType]:[])) }}"
+         class="marketplace-discovery-tab {{ $type===$tabType?'is-active':'' }}"
+         @if($type===$tabType)aria-current="page"@endif>{{ $tabLabel }}</a>
+    @endforeach
+  </nav>
   <section class="marketplace-filter-panel">
     <form method="get" action="{{ route('marketplace.search') }}" class="marketplace-filter-form">
       <div class="marketplace-filter-field marketplace-filter-search">
@@ -26,7 +33,9 @@
         <select name="category" id="marketplace-category">
           <option value="">All categories</option>
           @foreach($categories as $category)
-            <option value="{{ $category->public_id }}" @selected($selectedCategory===$category->public_id)>{{ ucfirst($category->type) }} · {{ $category->name }}</option>
+            @if($type==='' || $category->type===$type)
+              <option value="{{ $category->public_id }}" @selected($selectedCategory===$category->public_id)>{{ ucfirst($category->type) }} · {{ $category->name }}</option>
+            @endif
           @endforeach
         </select>
       </div>
@@ -52,6 +61,30 @@
       </div>
     </form>
   </section>
+  @if($query!=='' || $type!=='' || $selectedCategory!=='' || $minPrice!=='' || $maxPrice!=='' || $sort!=='recent')
+    <nav class="marketplace-active-filters" aria-label="Active search filters">
+      <span class="marketplace-active-filters-label">Active filters</span>
+      @if($query!=='')
+        <a href="{{ route('marketplace.search',request()->except('q','page')) }}" aria-label="Remove keyword filter">Keyword: {{ $query }} <span aria-hidden="true">×</span></a>
+      @endif
+      @if($type!=='')
+        <a href="{{ route('marketplace.search',request()->except('type','category','page')) }}" aria-label="Remove listing type filter">Type: {{ ucfirst($type) }} <span aria-hidden="true">×</span></a>
+      @endif
+      @if($selectedCategory!=='')
+        <a href="{{ route('marketplace.search',request()->except('category','page')) }}" aria-label="Remove category filter">Category: {{ $categories->firstWhere('public_id',$selectedCategory)?->name ?? 'Selected' }} <span aria-hidden="true">×</span></a>
+      @endif
+      @if($minPrice!=='')
+        <a href="{{ route('marketplace.search',request()->except('min_price','page')) }}" aria-label="Remove minimum price filter">Minimum: USD {{ $minPrice }} <span aria-hidden="true">×</span></a>
+      @endif
+      @if($maxPrice!=='')
+        <a href="{{ route('marketplace.search',request()->except('max_price','page')) }}" aria-label="Remove maximum price filter">Maximum: USD {{ $maxPrice }} <span aria-hidden="true">×</span></a>
+      @endif
+      @if($sort!=='recent')
+        <a href="{{ route('marketplace.search',request()->except('sort','page')) }}" aria-label="Remove sorting preference">Sort: {{ str_replace('_',' ',ucfirst($sort)) }} <span aria-hidden="true">×</span></a>
+      @endif
+      <a class="marketplace-clear-filters" href="{{ route('marketplace.search') }}">Clear all</a>
+    </nav>
+  @endif
   <section class="marketplace-section">
     <div class="marketplace-section-heading">
       <div><span class="eyebrow">Current public listings</span>
