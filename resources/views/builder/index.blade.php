@@ -152,7 +152,7 @@
             <p>Designed for products whose published terms grant broader commercial or monetized use. Extended rights are not assumed: only the permissions expressly stated in the selected license apply.</p>
           </article>
         </div>
-        <p class="studio-landing-license-note"><x-icon name="info" size="17"/> After verified purchases become available, the platform is intended to generate the corresponding product license automatically. Checkout and automatic license delivery are not currently enabled.</p>
+        <p class="studio-landing-license-note"><x-icon name="shield" size="17"/> After verified purchases become available, the platform is intended to generate the corresponding product license automatically. Checkout and automatic license delivery are not currently enabled.</p>
       </section>
     </section>
   @else

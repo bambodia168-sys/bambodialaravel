@@ -44,6 +44,7 @@ jobs:
           bash -n support/frontend-layout-upgrade.sh
           bash -n support/builder-upgrade.sh
           bash -n support/builder-studio-upgrade.sh
+          bash -n support/builder-studio-landing-upgrade.sh
           bash -n support/builder-studio-db-backup.sh
       - name: Check PHP syntax
         run: |
