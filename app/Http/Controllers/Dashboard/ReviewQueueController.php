@@ -15,14 +15,30 @@ use Illuminate\View\View;
 
 class ReviewQueueController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $listings = MarketplaceListing::query()
-            ->with('creator:id,name,public_id')
-            ->where('status', 'pending')
-            ->oldest()->paginate(10);
+        $type = (string) $request->query('type', 'all');
+        abort_unless(in_array($type, ['all','product','project','service','freelance'], true), 404);
+        $search = trim((string) $request->query('q', ''));
+        abort_unless(mb_strlen($search) <= 120, 404);
 
-        return view('dashboard.reviews', ['listings' => $listings]);
+        $listings = MarketplaceListing::query()
+            ->with('creator:id,name,public_id')->where('status','pending')
+            ->when($type !== 'all', fn ($q) => $q->where('type', $type))
+            ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
+                $inner->where('title','like','%'.$search.'%')
+                    ->orWhere('public_id','like','%'.$search.'%');
+            }))
+            ->oldest()->paginate(10)->withQueryString();
+
+        $counts = MarketplaceListing::query()->where('status','pending')
+            ->selectRaw('type, COUNT(*) as total')->groupBy('type')->pluck('total','type');
+        $recentReviews = AuditEvent::query()
+            ->whereIn('event',['listing.review.published','listing.review.rejected'])
+            ->with('actor:id,name')->latest('created_at')->limit(6)
+            ->get(['id','actor_id','event','created_at']);
+
+        return view('dashboard.reviews',compact('listings','type','search','counts','recentReviews'));
     }
 
     public function decide(Request $request, MarketplaceListing $listing): RedirectResponse

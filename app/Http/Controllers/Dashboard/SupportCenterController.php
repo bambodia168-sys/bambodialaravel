@@ -16,11 +16,18 @@ class SupportCenterController extends Controller
     {
         $status = (string) $request->query('status', '');
         abort_if($status !== '' && ! in_array($status, ['open', 'in_progress', 'resolved'], true), 404);
+        $search = trim((string) $request->query('q',''));
+        abort_unless(mb_strlen($search) <= 120, 404);
         $tickets = SupportTicket::query()->with('owner:id,name,email')
-            ->when($status !== '', fn ($query) => $query->where('status', $status))
+            ->when($status !== '', fn ($q) => $q->where('status', $status))
+            ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
+                $inner->where('subject','like','%'.$search.'%')
+                    ->orWhere('public_id','like','%'.$search.'%');
+            }))
             ->latest()->paginate(10)->withQueryString();
-
-        return view('dashboard.support', compact('tickets', 'status'));
+        $counts = SupportTicket::query()->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')->pluck('total','status');
+        return view('dashboard.support', compact('tickets','status','search','counts'));
     }
 
     public function show(string $ticket): View
