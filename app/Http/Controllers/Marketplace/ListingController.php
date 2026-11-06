@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
+use App\Support\BuilderGallery;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceCategory;
 use App\Models\MediaAsset;
@@ -99,6 +100,7 @@ class ListingController extends Controller
                 ->pluck('marketplace_listing_id')->map(fn($id)=>(int)$id)->all()
             : [];
 
-        return view('marketplace.detail',compact('listing','isSaved','relatedListings','savedRelatedIds'));
+        $screenshots = BuilderGallery::approvedFor($listing->gallery_media_ids, (int)$listing->user_id);
+        return view('marketplace.detail',compact('listing','isSaved','relatedListings','savedRelatedIds','screenshots'));
     }
 }

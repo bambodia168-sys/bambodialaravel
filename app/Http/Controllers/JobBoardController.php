@@ -6,6 +6,7 @@ use App\Support\BuilderContent;
 use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
+use App\Support\BuilderGallery;
 use App\Models\AuditEvent;
 use App\Models\AccountNotification;
 use App\Models\FreelancerResume;
@@ -58,7 +59,8 @@ class JobBoardController extends Controller
             ? SavedJob::query()->where('user_id',$request->user()->id)
                 ->where('marketplace_job_id',$listing->id)->exists()
             : false;
-        return view('jobs.show',['job'=>$listing,'applied'=>$applied,'isSaved'=>$isSaved]);
+        $screenshots = BuilderGallery::approvedFor($listing->gallery_media_ids, (int)$listing->client_id);
+        return view('jobs.show',['job'=>$listing,'applied'=>$applied,'isSaved'=>$isSaved,'screenshots'=>$screenshots]);
     }
 
     public function mine(Request $request): View
