@@ -123,7 +123,7 @@ class WorkspaceOperationsTest extends TestCase
             ->assertViewHas('queues', function (array $queues): bool {
                 $mapped = collect($queues)->keyBy('route');
                 return $mapped['dashboard.creator-applications']['count'] === 1
-                    && $mapped['dashboard.reviews']['count'] === 1
+                    && $mapped['dashboard.reviews']['count'] === 2
                     && $mapped['dashboard.products.index']['count'] === 1
                     && $mapped['dashboard.jobs.index']['count'] === 1;
             });
@@ -168,7 +168,8 @@ class WorkspaceOperationsTest extends TestCase
             ->assertSee('Drafts and rejections')
             ->assertViewHas('stats', fn (array $stats) =>
                 $stats['pending'] === 1 && $stats['products'] === 1
-                && $stats['drafts'] === 1 && $stats['inquiries'] === 1)
+                && $stats['drafts'] === 0 && $stats['product_drafts'] === 1
+                && $stats['product_pending'] === 0 && $stats['inquiries'] === 1)
             ->assertViewHas('recentListings', fn ($items) => $items->count() === 2)
             ->assertViewHas('openInquiries', fn ($items) => $items->count() === 1);
         $this->actingAs($client)->get('/creator')->assertRedirect('/creator/apply');

@@ -11,6 +11,8 @@
     <x-workspace-metric label="Pending review" :value="$stats['pending']" icon="clipboard-check" :href="route('studio.listings')" action="Review status"/>
     <x-workspace-metric label="Drafts and rejections" :value="$stats['drafts']" icon="edit" :href="route('studio.listings')" action="Edit submissions"/>
     <x-workspace-metric label="Digital products" :value="$stats['products']" icon="package" :href="route('studio.products.index')" action="Manage products"/>
+    <x-workspace-metric label="Product drafts and rejections" :value="$stats['product_drafts']" icon="edit" :href="route('studio.products.index')" action="Edit products"/>
+    <x-workspace-metric label="Products awaiting review" :value="$stats['product_pending']" icon="clipboard-check" :href="route('studio.products.index')" action="Review status"/>
     <x-workspace-metric label="Open client inquiries" :value="$stats['inquiries']" icon="message" :href="route('studio.inquiries')" action="Reply to clients"/>
   </div>
 

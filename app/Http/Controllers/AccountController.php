@@ -85,14 +85,20 @@ class AccountController extends Controller
 
         $user=$request->user();
         $stats=[
-            'published'=>MarketplaceListing::query()->publiclyAvailable()->where('user_id',$user->id)->count(),
-            'pending'=>MarketplaceListing::query()->where('user_id',$user->id)->where('status','pending')->count(),
+            'published'=>MarketplaceListing::query()->publiclyAvailable()->where('user_id',$user->id)
+                ->where('type','!=','product')->count(),
+            'pending'=>MarketplaceListing::query()->where('user_id',$user->id)
+                ->where('type','!=','product')->where('status','pending')->count(),
             'inquiries'=>ServiceInquiry::query()->where('creator_id',$user->id)->where('status','open')->count(),
         ];
         $stats['products']=MarketplaceListing::query()->where('user_id',$user->id)
             ->where('type','product')->count();
         $stats['drafts']=MarketplaceListing::query()->where('user_id',$user->id)
-            ->whereIn('status',['draft','rejected'])->count();
+            ->where('type','!=','product')->whereIn('status',['draft','rejected'])->count();
+        $stats['product_drafts']=MarketplaceListing::query()->where('user_id',$user->id)
+            ->where('type','product')->whereIn('status',['draft','rejected'])->count();
+        $stats['product_pending']=MarketplaceListing::query()->where('user_id',$user->id)
+            ->where('type','product')->where('status','pending')->count();
         $recentListings=MarketplaceListing::query()->where('user_id',$user->id)
             ->latest()->limit(5)->get(['id','type','title','status','updated_at']);
         $openInquiries=ServiceInquiry::query()->where('creator_id',$user->id)
