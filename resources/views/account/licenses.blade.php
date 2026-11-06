@@ -96,7 +96,7 @@
                     </details>
                     @if($license->support_term !== 'lifetime')
                     <details class="license-workflow-panel">
-                      <summary><x-icon name="calendar-clock" size="16"/> {{ $license->supportStatus() === 'Expired' ? 'Renew expired support' : 'Support renewal options' }}</summary>
+                      <summary><x-icon name="clock" size="16"/> {{ $license->supportStatus() === 'Expired' ? 'Renew expired support' : 'Support renewal options' }}</summary>
                       @php($pendingRenewal = $license->supportRequests->firstWhere('status','pending'))
                       @if($pendingRenewal)
                         <p class="hint">Your {{ \App\Support\ProductLicenseSupport::TERMS[$pendingRenewal->term] ?? 'support' }} renewal request is pending review.</p>
