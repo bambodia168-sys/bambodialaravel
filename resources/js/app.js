@@ -264,11 +264,11 @@ function initializeBuilderStudio() {
 
     if (rich) {
         area.hidden = false;
-        area.contentEditable = form?.querySelector('fieldset[disabled]') ? 'false' : 'true';
+        area.contentEditable = studio.dataset.builderReadonly === '1' ? 'false' : 'true';
         fallback.hidden = true;
         fallback.required = false;
         toolbar.hidden = false;
-        const readonly = area.contentEditable === 'false';
+        const readonly = studio.dataset.builderReadonly === '1';
         if (readonly) {
             toolbar.querySelectorAll('button,input,select').forEach(control => { control.disabled = true; });
         }

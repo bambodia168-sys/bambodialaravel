@@ -20,7 +20,7 @@ final class ProductReadiness
 
         $cover = $coverId ? MediaAsset::query()->find($coverId) : null;
         if (! $cover || (int) $cover->user_id !== $ownerId || ! $cover->isApproved()
-            || ! in_array($cover->mime_type, MediaAsset::ALLOWED_MIME, true)
+            || ! in_array($cover->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true)
             || ! Storage::disk('local')->exists($cover->storage_path)) {
             $errors['cover_media_id'] = 'Select an approved, available preview image belonging to this creator.';
         }

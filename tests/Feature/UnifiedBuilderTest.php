@@ -122,7 +122,7 @@ class UnifiedBuilderTest extends TestCase
         ]);
         $this->actingAs($other)->get('/builder?='.$listing->public_id)->assertNotFound();
         $this->actingAs($owner)->get('/builder?='.$listing->public_id)
-            ->assertOk()->assertSee('Direct editing is disabled');
+            ->assertOk()->assertSee('cannot change it directly');
     }
 
 

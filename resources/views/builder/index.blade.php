@@ -28,7 +28,7 @@
   $previousHtml = old('description_html', $record?->description_html);
   $previousText = old('description', $record?->description ?? '');
 @endphp
-<div class="container inner-page builder-studio" data-builder-studio>
+<div class="container inner-page builder-studio" data-builder-studio data-builder-readonly="{{ $canEdit ? '0' : '1' }}">
   <nav class="studio-breadcrumb" aria-label="Breadcrumb">
     <a href="{{ route('home') }}"><x-icon name="home" size="15"/> Home</a>
     <x-icon name="chevron-right" size="14"/>
@@ -111,7 +111,7 @@
           @csrf
           @if($editing)@method('PATCH')@else<input type="hidden" name="builder_mode" value="1">@endif
           @if(!$editing && !$isJob && !$isProduct)<input type="hidden" name="type" value="{{ $type }}">@endif
-          <fieldset @disabled(!$canEdit)>
+          <fieldset>
             <section class="studio-card" aria-labelledby="studio-basic-title">
               <div class="studio-card-heading">
                 <div><span class="studio-step">01</span><h3 id="studio-basic-title">Basic information</h3></div>
@@ -120,7 +120,7 @@
               <div class="studio-field">
                 <label for="studio-title">{{ $isJob ? 'Job title' : $types[$type]['label'].' title' }} <span class="studio-required">*</span></label>
                 <div class="studio-title-control">
-                  <input id="studio-title" name="title" type="text"
+                  <input id="studio-title" name="title" type="text" @readonly(!$canEdit)
                          minlength="{{ $isJob ? 8 : 4 }}" maxlength="180" required
                          value="{{ old('title',$record?->title ?? '') }}"
                          placeholder="Write a clear and professional title">
@@ -135,13 +135,13 @@
                 <div class="studio-field">
                   <label for="studio-category">{{ $isJob ? 'Job category' : 'Marketplace category' }}</label>
                   @if($isJob)
-                    <select name="category" id="studio-category" required>
+                    <select name="category" id="studio-category" required @disabled(!$canEdit)>
                       @foreach(['development','design','writing','marketing','business','other'] as $category)
                         <option value="{{ $category }}" @selected(old('category',$record?->category)===$category)>{{ ucfirst($category) }}</option>
                       @endforeach
                     </select>
                   @else
-                    <select name="category_id" id="studio-category">
+                    <select name="category_id" id="studio-category" @disabled(!$canEdit)>
                       <option value="">Uncategorized</option>
                       @foreach($categories as $category)
                         <option value="{{ $category->id }}" @selected((string)old('category_id',$record?->category_id)===(string)$category->id)>{{ $category->name }}</option>
@@ -151,7 +151,7 @@
                 </div>
                 <div class="studio-field">
                   <label for="studio-price">{{ $isJob ? 'Budget' : 'Listed price' }} (USD, optional)</label>
-                  <input id="studio-price" name="{{ $isJob ? 'budget' : 'price' }}" type="number" min="0" max="9999999999.99" step="0.01"
+                  <input id="studio-price" name="{{ $isJob ? 'budget' : 'price' }}" type="number" @readonly(!$canEdit) min="0" max="9999999999.99" step="0.01"
                          value="{{ old($isJob ? 'budget' : 'price',$isJob ? $record?->budget : $record?->price) }}"
                          placeholder="0.00">
                 </div>
@@ -200,7 +200,7 @@
                      data-placeholder="Describe the scope, benefits, deliverables and requirements" hidden>
                   @if($previousHtml){!! \App\Support\BuilderContent::sanitize($previousHtml) !!}@else{!! nl2br(e($previousText)) !!}@endif
                 </div>
-                <textarea data-editor-fallback name="description" rows="10"
+                <textarea data-editor-fallback name="description" rows="10" @readonly(!$canEdit)
                           minlength="{{ $isJob ? 70 : 40 }}" maxlength="10000" required
                           placeholder="Describe the scope, benefits, deliverables and requirements">{{ $previousText }}</textarea>
                 <input type="hidden" data-editor-html name="description_html" value="{{ $previousHtml }}">
@@ -229,7 +229,7 @@
                   'color'=>['label'=>'Color','icon'=>'palette']
                 ] as $kind=>$meta)
                   <label class="studio-media-option">
-                    <input type="radio" name="featured_kind" value="{{ $kind }}" @checked($selectedKind === $kind)>
+                    <input type="radio" name="featured_kind" value="{{ $kind }}" @checked($selectedKind === $kind) @disabled(!$canEdit)>
                     <span><x-icon :name="$meta['icon']" size="17"/>{{ $meta['label'] }}</span>
                   </label>
                 @endforeach
@@ -237,7 +237,7 @@
               <div class="studio-media-chooser" data-featured-media-select>
                 <div class="studio-field">
                   <label for="studio-featured-media">Select reviewed media from your library</label>
-                  <select id="studio-featured-media" name="featured_media_id" data-featured-media>
+                  <select id="studio-featured-media" name="featured_media_id" data-featured-media @disabled(!$canEdit)>
                     <option value="">Choose approved media</option>
                     @foreach($assets as $asset)
                       <option value="{{ $asset->id }}" data-media-mime="{{ $asset->mime_type }}" data-media-url="{{ $asset->previewUrl() }}"
@@ -247,13 +247,13 @@
                     @endforeach
                   </select>
                 </div>
-                <button class="studio-tool-action" type="button" data-modal-open="studio-media-upload"><x-icon name="upload" size="16"/> Upload new media</button>
+                @if($canEdit)<button class="studio-tool-action" type="button" data-modal-open="studio-media-upload"><x-icon name="upload" size="16"/> Upload new media</button>@endif
                 <small class="hint">Files uploaded here must pass rights review before they can be selected.</small>
               </div>
               <div class="studio-field studio-media-color" data-featured-color-wrap>
                 <label for="studio-color">Featured background color</label>
                 <div class="studio-color-control">
-                  <input id="studio-color" name="featured_color" type="color" data-featured-color
+                  <input id="studio-color" name="featured_color" type="color" data-featured-color @disabled(!$canEdit)
                          value="{{ preg_match('/^#[a-fA-F0-9]{6}$/',$selectedColor) ? $selectedColor : '#c2410c' }}">
                   <span data-featured-color-label>{{ $selectedColor }}</span>
                 </div>
@@ -273,7 +273,7 @@
                 <div class="studio-form-grid">
                   <div class="studio-field">
                     <label for="studio-license">Active product license</label>
-                    <select id="studio-license" name="license_definition_id">
+                    <select id="studio-license" name="license_definition_id" @disabled(!$canEdit)>
                       <option value="">Select an active license</option>
                       @foreach($licenses as $license)
                         <option value="{{ $license->id }}" @selected((string)old('license_definition_id',$record?->license_definition_id)===(string)$license->id)>{{ $license->name }} · {{ $license->version }}</option>
@@ -282,7 +282,7 @@
                   </div>
                   <div class="studio-field">
                     <label for="studio-cover">Required static product preview</label>
-                    <select id="studio-cover" name="cover_media_id">
+                    <select id="studio-cover" name="cover_media_id" @disabled(!$canEdit)>
                       <option value="">Select an approved static image</option>
                       @foreach($assets as $asset)
                         @if(in_array($asset->mime_type,['image/jpeg','image/png','image/webp'],true))
@@ -304,7 +304,7 @@
                 </div>
                 <div class="studio-field">
                   <label for="studio-terms">Additional usage and delivery conditions</label>
-                  <textarea id="studio-terms" name="license_terms" rows="4" maxlength="20000"
+                  <textarea id="studio-terms" name="license_terms" rows="4" maxlength="20000" @readonly(!$canEdit)
                             placeholder="Additional rights, usage limitations or delivery details">{{ old('license_terms',$record?->license_terms ?? '') }}</textarea>
                 </div>
                 @if($isProduct)<p class="hint">These terms cannot expand the rights granted by the active product license.</p>@endif
@@ -314,7 +314,7 @@
             @if($isProduct)
               <section class="studio-card studio-final-action">
                 <label for="studio-next-status">Next action</label>
-                <select id="studio-next-status" name="status">
+                <select id="studio-next-status" name="status" @disabled(!$canEdit)>
                   <option value="draft" @selected(old('status','draft')==='draft')>Save draft</option>
                   <option value="pending" @selected(old('status','draft')==='pending')>Submit for review</option>
                 </select>
