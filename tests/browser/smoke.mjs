@@ -444,9 +444,11 @@ try {
       await creator.goto(origin+'/en/studio/products?status=draft',{waitUntil:'networkidle'});
       if(!(await creator.locator('[aria-label="Your products by status"] a[aria-current="page"]').count()))
         throw new Error('Creator product status filter missing');
-      await creator.goto(origin+'/en/studio/inquiries?status=open',{waitUntil:'networkidle'});
+      const inboxResponse=await creator.goto(origin+'/en/studio/inquiries?status=open',{waitUntil:'networkidle'});
+      if(inboxResponse?.status()!==200)
+        throw new Error('Localized creator inquiry inbox failed: HTTP '+inboxResponse?.status()+' at '+creator.url());
       if(!(await creator.locator('[aria-label="Private conversation status"] a[aria-current="page"]').count()))
-        throw new Error('Creator inquiry inbox filter missing');
+        throw new Error('Creator inquiry inbox filter missing at '+creator.url());
       checks+=4;
       await creatorContext.close();
     }

@@ -191,4 +191,34 @@ class ServiceInquiriesTest extends TestCase
         $this->actingAs($otherClient)->get('/account/inquiries')->assertOk()
             ->assertDontSee('Private Laravel migration request');
     }
+
+    public function test_localized_inquiry_routes_keep_the_same_creator_and_client_permissions(): void
+    {
+        $client = $this->user('customer');
+        $creator = $this->user('freelancer');
+        $other = $this->user('customer');
+        $listing = $this->listing($creator);
+        $inquiry = $this->send($client, $listing);
+        $this->assertSame('open', $inquiry->status);
+
+        // The English route has a different *name*, not a different user role.
+        $this->actingAs($creator)->get('/en/studio/inquiries?status=open')
+            ->assertOk()
+            ->assertSee('Client Inquiries')
+            ->assertSee($inquiry->subject)
+            ->assertSee('Private conversation status');
+        $this->get('/en/studio/inquiries?status=closed')
+            ->assertOk()->assertDontSee($inquiry->subject);
+        $this->get('/en/account/inquiries')->assertForbidden();
+
+        $this->actingAs($client)->get('/en/account/inquiries?status=open')
+            ->assertOk()
+            ->assertSee('My Service Requests')
+            ->assertSee($inquiry->subject);
+        $this->get('/en/studio/inquiries')->assertForbidden();
+
+        $this->actingAs($other)->get('/en/account/inquiries')
+            ->assertOk()->assertDontSee($inquiry->subject);
+        $this->get('/en/inquiries/'.$inquiry->id)->assertNotFound();
+    }
 }

@@ -17,7 +17,9 @@ class ServiceInquiryController extends Controller
 {
     public function index(Request $request): View
     {
-        $creator = $request->routeIs('studio.inquiries');
+        // Localized copies of named routes carry the "localized.{locale}." prefix.
+        // Keep the creator/client authorization boundary identical on every locale.
+        $creator = $request->routeIs('studio.inquiries', 'localized.*.studio.inquiries');
         abort_unless($creator
             ? $request->user()->isCreator()
             : in_array($request->user()->role, ['customer','subscriber'],true),403);
