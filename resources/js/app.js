@@ -453,7 +453,11 @@ function initializeBuilderStudio() {
         }
     };
     termsCheck?.addEventListener('click', (event) => {
-        if (termsCheck.checked || !termsDialog?.showModal) return;
+        if (!termsDialog?.showModal) return;
+        if (termsCheck.dataset.confirmed === 'true') {
+            termsCheck.dataset.confirmed = 'false';
+            return; // Clicking an accepted checkbox revokes acceptance.
+        }
         event.preventDefault();
         openTerms();
     });
@@ -462,7 +466,10 @@ function initializeBuilderStudio() {
         button.addEventListener('click', () => termsDialog?.close());
     });
     studio.querySelector('[data-builder-terms-accept]')?.addEventListener('click', () => {
-        if (termsCheck) termsCheck.checked = true;
+        if (termsCheck) {
+            termsCheck.checked = true;
+            termsCheck.dataset.confirmed = 'true';
+        }
         termsDialog?.close();
     });
 

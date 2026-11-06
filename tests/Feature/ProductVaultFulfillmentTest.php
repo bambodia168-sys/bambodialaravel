@@ -575,4 +575,38 @@ class ProductVaultFulfillmentTest extends TestCase
         $this->assertDatabaseCount('product_download_events',1);
     }
 
+
+    public function test_builder_accepts_a_private_zip_original_for_owned_product_draft_only(): void
+    {
+        $draft=$this->product->replicate();
+        $draft->title='Original Developer ZIP Draft';
+        $draft->status='draft';
+        $draft->save();
+
+        $values=[
+            'version'=>'0.1.0',
+            'release_notes'=>'Original draft files, documentation and installation details.',
+            'artifact'=>$this->zip(['app/ExampleController.php'=>'<?php echo "test";','README.txt'=>'Original code authored by creator.']),
+            'rights_evidence'=>'I authored the full application and grant distribution rights under the approved license.',
+            'rights_attested'=>'1',
+        ];
+        $this->actingAs($this->creator)->post('/builder/products/'.$draft->id.'/files',$values)
+            ->assertRedirect('/builder?='.$draft->public_id);
+        $file=ProductFileVersion::query()->where('marketplace_listing_id',$draft->id)->firstOrFail();
+        $this->assertSame('pending',$file->status);
+        $this->assertSame('pending',$file->malware_scan_status);
+        $this->assertSame('pending',$file->rights_review_status);
+        $this->assertSame('zip',$file->file_type);
+        $this->assertDatabaseCount('product_entitlements',0);
+        Storage::disk('local')->assertExists($file->storage_path);
+
+        $this->actingAs($this->stranger)->post('/builder/products/'.$draft->id.'/files',[
+            ...$values,'artifact'=>$this->zip(),
+        ])->assertForbidden();
+
+        $draft->update(['status'=>'published']);
+        $this->actingAs($this->creator)->post('/builder/products/'.$draft->id.'/files',[
+            ...$values,'artifact'=>$this->zip(),
+        ])->assertStatus(409);
+    }
 }

@@ -498,6 +498,10 @@ try {
           throw new Error('Builder Studio '+kind+' still has a breadcrumb');
         if(!(await admin.locator('.studio-editor-hero .studio-landing-shield').isVisible()))
           throw new Error('Builder Studio '+kind+' is missing the centered Trust Shield hero');
+        if(!(await admin.locator('#studio-terms-popup').count()) || !(await admin.locator('[data-builder-terms-check]').count()))
+          throw new Error('Builder Studio '+kind+' terms confirmation is missing');
+        if(await admin.getByText('Headings · Lists · Links · Tables · Formatting').count())
+          throw new Error('Builder Studio editor still shows redundant formatting text');
         if(!(await admin.getByRole('heading',{name:'Builder Studio',exact:true}).isVisible()))
           throw new Error('Builder Studio '+kind+' centered heading is missing');
         if(!(await admin.locator('.studio-type-actions [data-builder-preview-toggle]').isVisible())
@@ -508,6 +512,18 @@ try {
         checks+=7;
       }
       await admin.goto(origin+'/en/builder?type=product',{waitUntil:'networkidle'});
+      if(!(await admin.locator('#studio-regular-price').isVisible())
+        || !(await admin.locator('#studio-extended-price').isVisible())
+        || !(await admin.locator('#studio-original-title').isVisible())
+        || !(await admin.locator('[data-gallery-grid]').isVisible()))
+        throw new Error('Product license pricing, screenshot gallery or original upload instructions missing');
+      await admin.locator('[data-builder-terms-check]').click();
+      if(!(await admin.locator('#studio-terms-popup').isVisible()))
+        throw new Error('Clicking the terms checkbox did not open the professional terms dialog');
+      await admin.locator('[data-builder-terms-accept]').click();
+      if(!(await admin.locator('[data-builder-terms-check]').isChecked()))
+        throw new Error('Accepting terms failed to check the required consent control');
+      checks+=4;
       const editable=admin.locator('[data-editor-surface]');
       await editable.fill('A professionally documented original product with accessible designs, licensing information and maintained deliverables.');
       if(!(await admin.locator('[data-editor-html]').inputValue()).includes('A professionally documented'))
