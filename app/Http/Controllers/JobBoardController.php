@@ -6,7 +6,6 @@ use App\Support\BuilderContent;
 use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
-use App\Support\BuilderGallery;
 use App\Models\AuditEvent;
 use App\Models\AccountNotification;
 use App\Models\FreelancerResume;
