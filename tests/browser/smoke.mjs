@@ -490,7 +490,7 @@ try {
       if(!(await admin.locator('[data-editor-html]').inputValue()).includes('A professionally documented'))
         throw new Error('Builder Studio formatted text failed to synchronize');
       await admin.locator('input[name="featured_kind"][value="color"]').check({force:true});
-      await admin.locator('input[data-featured-color]').fill('#126abc');
+      await admin.locator('input[data-featured-color]').evaluate(el=>{el.value='#126abc';el.dispatchEvent(new Event('input',{bubbles:true}));});
       if(!(await admin.locator('[data-featured-preview]').getByText('#126ABC').isVisible()))
         throw new Error('Builder Studio chosen color is not visible in preview');
       if(!(await admin.locator('button[data-builder-copy-url]').isDisabled()))
