@@ -86,6 +86,8 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/builder', [BuilderController::class, 'show'])->name('builder');
+    Route::post('/builder/media', [MediaLibraryController::class, 'store'])
+        ->name('builder.media.store')->middleware('throttle:5,1');
     Route::patch('/builder', [BuilderController::class, 'updateJob'])
         ->name('builder.job.update')->middleware('throttle:10,1');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

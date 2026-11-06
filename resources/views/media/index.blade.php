@@ -2,8 +2,8 @@
 @section('title','Media Library')
 @section('content')
 <div class="{{ $studio ? 'container inner-page' : '' }}">
-  <div class="page-intro"><div class="eyebrow">Rights-aware image management</div><h1>Media Library</h1>
-    <p>Upload genuine JPEG, PNG or WebP product previews. Images stay private until reviewed and attached to an approved published product.</p></div>
+  <div class="page-intro"><div class="eyebrow">Rights-aware media management</div><h1>Media Library</h1>
+    <p>Upload JPEG, PNG, WebP, GIF animation, MP4 or WebM. Media stays private until administrator review and authorized publication.</p></div>
   @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
   @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
   <section class="panel">
@@ -15,9 +15,9 @@
         <tbody>
           @forelse($assets as $asset)
           <tr>
-            <td><img class="media-thumb" src="{{ $asset->previewUrl() }}" alt="{{ $asset->alt_text }}" loading="lazy" width="56" height="56"></td>
+            <td>@if(str_starts_with($asset->mime_type,'video/'))<video class="media-thumb" src="{{ $asset->previewUrl() }}" preload="none" muted playsinline width="56" height="56" aria-label="{{ $asset->alt_text }}"></video>@else<img class="media-thumb" src="{{ $asset->previewUrl() }}" alt="{{ $asset->alt_text }}" loading="lazy" width="56" height="56">@endif</td>
             <td class="mono">{{ $asset->public_id }}</td>
-            <td><strong>{{ $asset->original_name }}</strong><div class="text-muted">{{ $asset->alt_text }}</div><div class="text-muted">{{ $asset->width }} × {{ $asset->height }} · {{ number_format($asset->bytes / 1024) }} KB</div></td>
+            <td><strong>{{ $asset->original_name }}</strong><div class="text-muted">{{ $asset->alt_text }}</div><div class="text-muted">{{ $asset->width && $asset->height ? $asset->width.' × '.$asset->height.' · ' : '' }}{{ number_format($asset->bytes / 1024) }} KB</div></td>
             @unless($studio)<td>{{ $asset->owner?->name }}</td>@endunless
             <td>{{ ucfirst($asset->rights_basis) }}<div class="text-muted">{{ $asset->rights_holder }}</div></td>
             <td><span class="role-pill">{{ ucfirst($asset->review_status) }}</span></td><td>{{ $asset->cover_listings_count }}</td>
@@ -25,7 +25,7 @@
               <button class="btn subtle compact" type="button" data-modal-open="media-{{ $asset->id }}"><x-icon name="settings" size="16"/> Configure</button>
               <dialog id="media-{{ $asset->id }}" class="config-dialog wide-dialog">
                 <div class="dialog-heading"><h2>{{ $asset->original_name }}</h2><p>ID {{ $asset->public_id }} · {{ $asset->mime_type }}</p></div>
-                <img class="media-dialog-preview" src="{{ $asset->previewUrl() }}" alt="{{ $asset->alt_text }}" loading="lazy">
+                @if(str_starts_with($asset->mime_type,'video/'))<video class="media-dialog-preview" src="{{ $asset->previewUrl() }}" controls preload="metadata" playsinline></video>@else<img class="media-dialog-preview" src="{{ $asset->previewUrl() }}" alt="{{ $asset->alt_text }}" loading="lazy">@endif
                 <p><strong>Rights holder:</strong> {{ $asset->rights_holder }} · {{ ucfirst($asset->rights_basis) }}</p>
                 @if($asset->rights_note)<p class="review-text">{{ $asset->rights_note }}</p>@endif
                 @if($asset->review_note)<p><strong>Review feedback:</strong> {{ $asset->review_note }}</p>@endif
@@ -53,13 +53,13 @@
                     </form>
                   @endif
                 @endunless
-                @if($asset->cover_listings_count === 0)
+                @if($asset->cover_listings_count === 0 && !$asset->featuredListings()->exists() && !$asset->featuredJobs()->exists())
                   <form method="post" action="{{ route($studio ? 'studio.media.destroy' : 'dashboard.media.destroy', $asset) }}">
                     @csrf @method('DELETE')
                     <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn danger" type="submit">Delete unlinked image</button></div>
                   </form>
                 @else
-                  <p class="hint">This image is linked to products; deletion is disabled.</p>
+                  <p class="hint">This media is linked to a product, listing or job; deletion is disabled.</p>
                   <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Close</button></div>
                 @endif
               </dialog>
@@ -74,14 +74,14 @@
   <dialog id="media-new" class="config-dialog wide-dialog">
     <form method="post" action="{{ route($studio ? 'studio.media.store' : 'dashboard.media.store') }}" enctype="multipart/form-data">
       @csrf
-      <h2>Upload product preview</h2>
-      <p>Accepted: JPEG, PNG or WebP, up to 4 MB and 24 megapixels. No SVG or executable files.</p>
-      <label for="preview-upload">Image file</label><input id="preview-upload" type="file" name="image" accept="image/jpeg,image/png,image/webp" required>
+      <h2>Upload marketplace media</h2>
+      <p>JPEG, PNG, WebP (4 MB), animated GIF (8 MB), or MP4/WebM (20 MB). Images are limited to 24 megapixels. No SVG or executable files.</p>
+      <label for="preview-upload">Media file</label><input id="preview-upload" type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" required>
       <label for="preview-alt">Accessible image description</label><input id="preview-alt" name="alt_text" minlength="4" maxlength="180" required>
       <label for="preview-basis">Basis of rights</label><select id="preview-basis" name="rights_basis"><option value="owned">Owned by uploader</option><option value="licensed">Licensed with permission</option></select>
       <label for="preview-holder">Legal rights holder</label><input id="preview-holder" name="rights_holder" minlength="2" maxlength="180" required>
       <label for="preview-note">License evidence or permission summary (required for licensed assets)</label><textarea id="preview-note" name="rights_note" rows="4" maxlength="3000"></textarea>
-      <p class="hint">Uploading an image does not publish it. Administrator review is required before use as a product preview.</p>
+      <p class="hint">Uploading media does not publish it. Administrator review is required before use as a featured asset.</p>
       <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit">Upload privately</button></div>
     </form>
   </dialog>

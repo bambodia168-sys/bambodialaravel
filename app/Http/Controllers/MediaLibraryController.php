@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditEvent;
 use App\Models\MediaAsset;
 use App\Models\MarketplaceListing;
+use App\Models\MarketplaceJob;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,17 +31,47 @@ class MediaLibraryController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $studio = $request->routeIs('studio.media.*');
+        $fromBuilder = $request->routeIs('builder.media.store');
+        $studio = $request->routeIs('studio.media.*') || $fromBuilder;
+        if ($fromBuilder) {
+            abort_unless(in_array($request->user()->role, [
+                'freelancer', 'super_admin', 'customer', 'subscriber',
+            ], true), 403);
+            $returnTo = (string) $request->input('return_to', '/builder');
+            abort_unless(preg_match('~^/builder(?:\?type=(?:product|project|service|freelance|job)|\?=[0-9]{9})?$~D', $returnTo) === 1, 422);
+        }
         $data = $this->validateMetadata($request, true);
         $file = $request->file('image');
-        $info = @getimagesize($file->getRealPath());
-        if ($info === false || ! in_array($info['mime'], MediaAsset::ALLOWED_MIME, true)
-            || $info[0] < 1 || $info[1] < 1 || ($info[0] * $info[1]) > 24000000) {
+        $mime = $file->getMimeType();
+        $video = in_array($mime, ['video/mp4', 'video/webm'], true);
+        $info = $video ? null : @getimagesize($file->getRealPath());
+
+        if ($video) {
+            $handle = fopen($file->getRealPath(), 'rb');
+            $header = $handle ? fread($handle, 16) : '';
+            if ($handle) {
+                fclose($handle);
+            }
+            $signatureValid = $mime === 'video/mp4'
+                ? (is_string($header) && substr($header, 4, 4) === 'ftyp')
+                : (is_string($header) && str_starts_with($header, "\x1a\x45\xdf\xa3"));
+            if (! $signatureValid) {
+                throw ValidationException::withMessages(['image' => 'The video container is invalid.']);
+            }
+        } elseif ($info === false || ! in_array($info['mime'], [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+        ], true) || $info[0] < 1 || $info[1] < 1 || ($info[0] * $info[1]) > 24000000) {
             throw ValidationException::withMessages(['image' => 'Invalid image or image dimensions exceed the permitted limit.']);
         }
+        $mime = $video ? $mime : $info['mime'];
+        $limit = $video ? 20 * 1024 * 1024 : ($mime === 'image/gif' ? 8 * 1024 * 1024 : 4 * 1024 * 1024);
+        if ($file->getSize() > $limit) {
+            throw ValidationException::withMessages(['image' => 'Media exceeds the size limit for its format.']);
+        }
 
-        $extension = match ($info['mime']) {
+        $extension = match ($mime) {
             'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp',
+            'image/gif' => 'gif', 'video/mp4' => 'mp4', 'video/webm' => 'webm',
         };
         $path = 'marketplace/previews/'.$request->user()->id.'/'.bin2hex(random_bytes(24)).'.'.$extension;
         if (! Storage::disk('local')->putFileAs(dirname($path), $file, basename($path))) {
@@ -53,10 +84,10 @@ class MediaLibraryController extends Controller
                 'user_id' => $request->user()->id,
                 'original_name' => mb_substr(basename(str_replace('\\', '/', $file->getClientOriginalName())), 0, 180),
                 'storage_path' => $path,
-                'mime_type' => $info['mime'],
+                'mime_type' => $mime,
                 'bytes' => $file->getSize(),
-                'width' => $info[0],
-                'height' => $info[1],
+                'width' => $video ? 0 : $info[0],
+                'height' => $video ? 0 : $info[1],
                 'review_status' => 'pending',
             ]);
         } catch (\Throwable $error) {
@@ -66,8 +97,10 @@ class MediaLibraryController extends Controller
 
         AuditEvent::record('media.uploaded', $request->user(), $request);
 
-        return redirect()->route($studio ? 'studio.media.index' : 'dashboard.media.index')
-            ->with('status', 'Private image uploaded for rights review.');
+        return $fromBuilder
+            ? redirect($returnTo)->with('status', 'Media uploaded privately. Choose it here after administrator rights review.')
+            : redirect()->route($studio ? 'studio.media.index' : 'dashboard.media.index')
+                ->with('status', 'Private media uploaded for rights review.');
     }
 
     public function update(Request $request, MediaAsset $asset): RedirectResponse
@@ -87,7 +120,8 @@ class MediaLibraryController extends Controller
 
         $path = DB::transaction(function () use ($asset): string {
             $asset = MediaAsset::query()->lockForUpdate()->findOrFail($asset->id);
-            abort_if($asset->coverListings()->exists(), 409, 'This image is attached to a listing and cannot be deleted.');
+            abort_if($asset->coverListings()->exists() || $asset->featuredListings()->exists()
+                || $asset->featuredJobs()->exists(), 409, 'This media is attached to a listing or job and cannot be deleted.');
             $path = $asset->storage_path;
             $asset->delete();
             return $path;
@@ -129,12 +163,18 @@ class MediaLibraryController extends Controller
         $actor = $request->user();
         $owner = $actor && (int) $actor->id === (int) $asset->user_id;
         $admin = $actor && in_array($actor->role, ['super_admin', 'admin'], true);
-        $public = $asset->review_status === 'approved'
-            && MarketplaceListing::query()
+        $public = $asset->review_status === 'approved' && (
+            MarketplaceListing::query()
                 ->where('cover_media_id', $asset->id)
                 ->where('status', 'published')
-                ->where('type', 'product')
-                ->exists();
+                ->where('type', 'product')->exists()
+            || MarketplaceListing::query()
+                ->where('featured_media_id', $asset->id)
+                ->where('status', 'published')->exists()
+            || MarketplaceJob::query()
+                ->where('featured_media_id', $asset->id)
+                ->where('status', 'published')->exists()
+        );
 
         abort_unless($owner || $admin || $public, 404);
         abort_unless(in_array($asset->mime_type, MediaAsset::ALLOWED_MIME, true), 404);
@@ -168,7 +208,8 @@ class MediaLibraryController extends Controller
             'rights_note' => ['nullable', 'string', 'max:3000', 'required_if:rights_basis,licensed'],
         ];
         if ($withFile) {
-            $rules['image'] = ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'mimetypes:image/jpeg,image/png,image/webp', 'max:4096'];
+            $rules['image'] = ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm',
+                'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm', 'max:20480'];
         }
 
         return $request->validate($rules);

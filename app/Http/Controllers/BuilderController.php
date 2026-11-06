@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\BuilderContent;
+use App\Support\BuilderFeaturedMedia;
 use App\Models\AuditEvent;
 use App\Models\FeatureFlag;
 use App\Models\LicenseDefinition;
@@ -65,16 +67,13 @@ class BuilderController extends Controller
             ? LicenseDefinition::query()->where('status', 'active')
                 ->orderBy('name')->get(['id', 'name', 'version'])
             : collect();
-        $assets = $type === 'product'
+        $assets = $type !== null
             ? MediaAsset::query()->where('user_id', $request->user()->id)
-                ->where('review_status', 'approved')->latest()->get(['id', 'public_id', 'alt_text'])
+                ->where('review_status', 'approved')->latest()->get(['id', 'public_id', 'alt_text', 'mime_type'])
             : collect();
 
-        $workspace = $type === 'job' || ($type === null && ! $request->user()->isCreator())
-            ? 'account' : 'creator';
-
         return view('builder.index', compact(
-            'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'licenses', 'assets', 'workspace'
+            'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'licenses', 'assets'
         ));
     }
 
@@ -84,13 +83,17 @@ class BuilderController extends Controller
         $raw = (string) $request->server('QUERY_STRING', '');
         abort_unless(preg_match('/^=([0-9]{9})$/D', $raw, $match) === 1, 404);
 
+        BuilderContent::prepare($request);
         $data = $request->validate([
             'title' => ['required', 'string', 'min:8', 'max:180'],
             'description' => ['required', 'string', 'min:70', 'max:10000'],
+            'description_html' => ['nullable', 'string', 'max:60000'],
+            ...BuilderFeaturedMedia::rules(),
             'category' => ['required', Rule::in(self::JOB_CATEGORIES)],
             'budget' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
         ]);
 
+        BuilderFeaturedMedia::check($data, (int)$request->user()->id);
         DB::transaction(function () use ($request, $match, $data): void {
             $job = MarketplaceJob::query()->where('public_id', $match[1])
                 ->lockForUpdate()->firstOrFail();
