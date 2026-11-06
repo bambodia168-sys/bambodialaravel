@@ -249,6 +249,12 @@ class ProductLicenseLifecycleTest extends TestCase
         $this->postJson('/api/v1/licenses/activate',[
             'license_key'=>$original,'domain'=>'example.com',
         ])->assertStatus(403);
+        $this->release->update(['status'=>'disabled']);
+        $this->patch('/dashboard/license-manager/issued/'.$license->id.'/status',[
+            'action'=>'activate','reason'=>'Independent compliance review completed.','confirm_change'=>'1',
+        ])->assertStatus(409);
+        $this->assertSame('suspended',$license->fresh()->status);
+        $this->release->update(['status'=>'approved']);
         $this->patch('/dashboard/license-manager/issued/'.$license->id.'/status',[
             'action'=>'activate','reason'=>'Independent compliance review completed.','confirm_change'=>'1',
         ])->assertRedirect();
