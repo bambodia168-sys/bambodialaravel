@@ -117,7 +117,7 @@ svg{flex-shrink:0}
 .admin-brand{padding:0 10px 26px}
 .sidebar-heading{padding:15px 12px 5px;font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:850}
 .side-nav{display:grid;align-content:start;gap:4px}
-.side-nav a,.sidebar-bottom a{display:flex;align-items:center;gap:11px;padding:12px 12px;border-radius:11px;font-size:13px;font-weight:700;color:var(--muted)}
+.side-nav a,.sidebar-bottom a{display:flex;align-items:center;gap:11px;padding:12px 12px;border-radius:11px;font-size:var(--font-body);font-weight:700;color:var(--muted)}
 .side-nav a:hover,.sidebar-bottom a:hover{color:var(--text);background:var(--surface-2)}
 .side-nav a.active{color:var(--accent);background:color-mix(in srgb,var(--accent),transparent 88%)}
 .sidebar-bottom{border-top:1px solid var(--line);margin-top:auto;padding-top:14px}
@@ -136,7 +136,7 @@ svg{flex-shrink:0}
 .metric strong{display:block;font-size:30px;line-height:1.2;letter-spacing:normal;margin-top:13px}
 .config-dialog{border:1px solid var(--line);border-radius:20px;padding:28px;width:min(94vw,450px);color:var(--text);background:var(--surface);box-shadow:0 25px 90px #0005}
 .config-dialog::backdrop{background:#071427b0;backdrop-filter:blur(4px)}
-.config-dialog h2{font-size:21px;letter-spacing:-.04em;margin:0}
+.config-dialog h2{font-size:21px;line-height:1.3;letter-spacing:normal;margin:0}
 .config-dialog p{color:var(--muted);margin:5px 0 20px}
 .config-dialog label,.settings-form label{display:block;font-size:13px;font-weight:750;margin:16px 0 8px}
 .config-dialog select,.config-dialog input,.config-dialog textarea,.settings-form input,.settings-form select,.settings-form textarea{display:block;width:100%;border:1px solid var(--line);border-radius:11px;background:var(--surface-2);color:var(--text);padding:12px;outline:0}
@@ -260,7 +260,7 @@ svg{flex-shrink:0}
 .marketplace-card-type{position:absolute;left:13px;top:13px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;border-radius:20px;padding:5px 11px;color:var(--text);background:var(--surface);border:1px solid var(--line);font-weight:750}
 .marketplace-card-body{display:flex;flex-direction:column;gap:9px;padding:19px;flex:1}
 .marketplace-card-category{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:750}
-.marketplace-card h3{font-size:18px;line-height:1.36;margin:0;letter-spacing:-.02em}
+.marketplace-card h3{font-size:18px;line-height:1.36;margin:0;letter-spacing:normal}
 .marketplace-card h3 a:hover,.marketplace-creator-link:hover{color:var(--accent)}
 .marketplace-card p,.creator-directory-card p,.marketplace-job-card p{font-size:var(--font-body);line-height:1.7;color:var(--muted);margin:0;flex:1}
 .marketplace-card-meta{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:9px;font-size:12px;margin-top:auto;padding-top:9px}
@@ -285,7 +285,7 @@ svg{flex-shrink:0}
 .marketplace-category-tile>svg:first-child{color:var(--accent);flex-shrink:0}
 .marketplace-category-tile>svg:last-child{margin-left:auto;color:var(--muted);flex-shrink:0}
 .marketplace-category-tile span{display:grid;min-width:0;gap:2px}
-.marketplace-category-tile strong{font-size:13px;overflow-wrap:anywhere}
+.marketplace-category-tile strong{font-size:var(--font-body);overflow-wrap:anywhere}
 .marketplace-category-tile small{font-size:11px;color:var(--muted)}
 .marketplace-jobs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .marketplace-job-card{padding:23px;gap:13px}
@@ -579,12 +579,12 @@ svg{flex-shrink:0}
   background:var(--surface);padding:9px;box-shadow:0 24px 70px rgba(4,14,30,.27);
 }
 .workspace-account-identity{display:grid;gap:4px;border-bottom:1px solid var(--line);padding:13px 12px 15px;margin-bottom:5px}
-.workspace-account-identity strong{color:var(--text);font-size:13px;overflow-wrap:anywhere}
+.workspace-account-identity strong{color:var(--text);font-size:var(--font-body);overflow-wrap:anywhere}
 .workspace-account-identity small{color:var(--muted);font-size:11px}
 .workspace-account-panel a,.workspace-account-panel form button{
   display:flex;align-items:center;gap:11px;min-height:40px;width:100%;padding:9px 10px;
   text-align:left;color:var(--text);background:transparent;border:0;border-radius:10px;
-  font-size:12px;font-weight:750;line-height:1.25;
+  font-size:var(--font-button);font-weight:750;line-height:1.35;
 }
 .workspace-account-panel a:hover,.workspace-account-panel form button:hover{background:var(--surface-2);color:var(--accent)}
 .workspace-account-panel form{margin:0;border-top:1px solid var(--line);padding-top:5px;margin-top:5px}
@@ -610,17 +610,17 @@ svg{flex-shrink:0}
 }
 .site-body .nav-category-intro{display:grid;gap:3px;padding:19px 20px 14px;border-bottom:1px solid var(--line)}
 .site-body .nav-category-intro strong{color:var(--text);font-size:17px;letter-spacing:normal}
-.site-body .nav-category-intro span{color:var(--muted);font-size:12px}
+.site-body .nav-category-intro span{color:var(--muted);font-size:var(--font-helper)}
 .site-body .nav-category-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;padding:17px 20px}
 .site-body .nav-category-group{display:flex;flex-direction:column;gap:1px;min-width:0}
 .site-body .nav-category-panel .nav-category-heading{
   display:flex;align-items:center;gap:10px;padding:9px 8px;
-  font-size:13px;font-weight:850;color:var(--text);width:100%;border-radius:8px;
+  font-size:var(--font-body);font-weight:800;color:var(--text);width:100%;border-radius:8px;
 }
 .site-body .nav-category-heading svg:last-child{margin-left:auto;color:var(--muted)}
 .site-body .nav-category-panel .nav-category-entry{
   display:block;width:100%;padding:8px 11px 8px 37px;
-  color:var(--muted);font-size:12.5px;font-weight:550;
+  color:var(--muted);font-size:var(--font-body);font-weight:550;
   overflow-wrap:anywhere;border-radius:8px;
 }
 .site-body .nav-category-panel .nav-category-entry:hover,
@@ -630,7 +630,7 @@ svg{flex-shrink:0}
   display:flex;justify-content:space-between;align-items:center;
   margin:0 20px 17px;padding:13px 16px;border-radius:10px;
   border:1px solid var(--line);color:var(--accent)!important;
-  font-size:12px;font-weight:800;
+  font-size:var(--font-button);font-weight:800;
 }
 .site-body .nav-category-explore:hover{border-color:var(--accent);background:var(--surface-2)}
 .site-body .nav-search{flex:1 1 220px;max-width:500px;min-width:130px;background:transparent;box-shadow:none}
@@ -702,7 +702,7 @@ svg{flex-shrink:0}
   .site-body .nav-category-explore{margin:0 15px 14px}
   .site-body .nav-actions{gap:7px}
   .site-body .nav-marketplace-links{gap:5px}
-  .site-body .nav-marketplace-links a{padding:8px 2px;font-size:11px}
+  .site-body .nav-marketplace-links a{padding:8px 2px;font-size:12px}
   .site-body .footer-bottom{align-items:flex-start}
   .site-body .footer-actions{margin-left:auto;gap:9px}
   .site-body .footer-social{gap:4px}
