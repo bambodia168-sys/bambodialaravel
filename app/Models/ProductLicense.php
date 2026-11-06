@@ -12,7 +12,7 @@ class ProductLicense extends Model
     protected $fillable = [
         'product_entitlement_id', 'marketplace_listing_id', 'product_file_version_id',
         'user_id', 'license_definition_id', 'issued_by', 'tier', 'source',
-        'key_hash', 'key_prefix', 'key_ciphertext', 'status', 'max_domains',
+        'key_hash', 'key_prefix', 'key_ciphertext', 'status', 'max_domains', 'pending_domain',
         'expires_at', 'suspended_at', 'revoked_at',
     ];
 

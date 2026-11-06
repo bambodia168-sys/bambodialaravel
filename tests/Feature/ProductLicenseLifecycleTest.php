@@ -223,6 +223,9 @@ class ProductLicenseLifecycleTest extends TestCase
             'license_key'=>$license->key_ciphertext,'domain'=>'replacement.example.com',
         ])->assertStatus(403);
         $this->postJson('/api/v1/licenses/activate',[
+            'license_key'=>$license->key_ciphertext,'domain'=>'unapproved.example.com',
+        ])->assertStatus(409);
+        $this->postJson('/api/v1/licenses/activate',[
             'license_key'=>$license->key_ciphertext,'domain'=>'replacement.example.com',
         ])->assertOk();
         $this->assertDatabaseHas('product_license_events',[

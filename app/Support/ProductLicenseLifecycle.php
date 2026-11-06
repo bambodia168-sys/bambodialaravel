@@ -128,6 +128,8 @@ final class ProductLicenseLifecycle
                 ->where('product_license_id',$locked->id)->where('domain',$domain)
                 ->lockForUpdate()->first();
             if ($existing && $existing->status === 'active') return $existing;
+            abort_if($locked->pending_domain !== null && $locked->pending_domain !== $domain, 409,
+                'Activate only the replacement domain selected in the customer account.');
 
             $activeCount = ProductLicenseActivation::query()
                 ->where('product_license_id',$locked->id)->where('status','active')->count();
@@ -140,6 +142,9 @@ final class ProductLicenseLifecycle
                 $activation = ProductLicenseActivation::query()->create([
                     'product_license_id'=>$locked->id,'domain'=>$domain,'status'=>'active','activated_at'=>now(),
                 ]);
+            }
+            if ($locked->pending_domain !== null) {
+                $locked->update(['pending_domain'=>null]);
             }
             self::event($locked,'domain.activated',$actor?->id,null,$domain);
             return $activation;
@@ -157,6 +162,7 @@ final class ProductLicenseLifecycle
             foreach ($current as $activation) {
                 $activation->update(['status'=>'deactivated','deactivated_at'=>now()]);
             }
+            $locked->update(['pending_domain'=>$domain]);
             // Admin/customer initiated domain transfers require the script to
             // prove possession of the key at activation time; no bypass.
             self::event($locked,'domain.changed',$actor->id,$previous ?: null,$domain,$reason);

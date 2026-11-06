@@ -24,6 +24,7 @@ return new class extends Migration {
             $table->text('key_ciphertext');
             $table->string('status', 20)->default('active')->index();
             $table->unsignedTinyInteger('max_domains')->default(1);
+            $table->string('pending_domain',253)->nullable();
             $table->timestamp('expires_at')->nullable();
             $table->timestamp('suspended_at')->nullable();
             $table->timestamp('revoked_at')->nullable();

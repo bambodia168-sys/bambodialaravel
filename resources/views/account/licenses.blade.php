@@ -15,7 +15,7 @@
         <div class="license-key-summary">
           <div><small>License ID</small><strong class="mono">{{ $license->public_id }}</strong></div>
           <div><small>Key</small><strong class="mono">{{ $license->maskedKey() }}</strong></div>
-          <div><small>Issued as</small><strong>{{ $license->source === 'admin_complimentary' ? 'Complimentary administrative grant' : 'Verified purchase' }}</strong></div>
+          <div><small>Issued as</small><strong>{{ $license->source === 'admin_complimentary' ? 'Complimentary administrative grant' : ($license->source === 'verified_purchase' ? 'Verified purchase' : 'Source under review') }}</strong></div>
           <div><small>Expires</small><strong>{{ $license->expires_at?->format('d M Y') ?? 'No fixed expiration' }}</strong></div>
         </div>
         <p class="hint">License is {{ $license->isActive() ? 'currently active' : 'not currently valid' }}. A valid key also requires the approved product release and its active download entitlement.</p>
