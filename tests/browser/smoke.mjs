@@ -558,6 +558,12 @@ try {
         +'<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ"></iframe>'
         +'<script>alert(1)</script>');
       await admin.locator('[data-editor-action="apply-source"]').click();
+      try {
+        await admin.locator('[data-editor-source]').waitFor({state:'hidden',timeout:15000});
+      } catch (_) {
+        const failure=await admin.locator('[data-editor-source-status]').textContent();
+        throw new Error('Sanitized HTML preview failed: '+failure);
+      }
       if(!(await admin.locator('[data-editor-surface]').isVisible())
         || await admin.locator('[data-editor-surface] script').count()
         || !(await admin.locator('[data-editor-surface] iframe').count()))
