@@ -71,7 +71,7 @@ class ListingController extends Controller
 
         $listing = MarketplaceListing::query()
             ->with(['creator:id,name,public_id','creator.creatorProfile:user_id,is_public,headline',
-                'licenseDefinition','coverAsset','category:id,name,type'])
+                'licenseDefinition','coverAsset','featuredAsset','category:id,name,type'])
             ->where('public_id', $match[1])
             ->where('slug', $match[2])
             ->where('type', $type)

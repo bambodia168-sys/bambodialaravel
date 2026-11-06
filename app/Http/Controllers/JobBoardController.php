@@ -25,7 +25,7 @@ class JobBoardController extends Controller
         abort_unless($category==='' || in_array($category,['development','design','writing','marketing','business','other'],true),404);
         $sort=(string)$request->query('sort','recent');
         abort_unless(in_array($sort,['recent','budget_low','budget_high'],true),404);
-        $jobs = MarketplaceJob::query()->with('client:id,name,public_id')->withCount('proposals')
+        $jobs = MarketplaceJob::query()->with(['client:id,name,public_id','featuredAsset'])->withCount('proposals')
             ->where('status','published')
             ->when($category!=='',fn($q)=>$q->where('category',$category))
             ->when($search !== '', fn($q)=>$q->where(function($query)use($search){

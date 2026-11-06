@@ -33,12 +33,23 @@
   <div class="premium-detail-layout">
     <main class="premium-detail-main">
       <section class="premium-showcase" aria-label="Job overview">
+        @if($job->featuredAsset?->review_status === 'approved' && in_array($job->featured_kind, ['image','animated'],true))
+          <img class="premium-showcase-cover" src="{{ $job->featuredAsset->previewUrl() }}" alt="{{ $job->featuredAsset->alt_text ?: $job->title }}">
+        @elseif($job->featuredAsset?->review_status === 'approved' && $job->featured_kind === 'video')
+          <video class="premium-showcase-cover studio-showcase-video" src="{{ $job->featuredAsset->previewUrl() }}" controls playsinline preload="metadata" aria-label="{{ $job->featuredAsset->alt_text }}"></video>
+        @elseif($job->featured_kind === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/', $job->featured_color ?? ''))
+          <div class="premium-showcase-placeholder" style="background-color:{{ $job->featured_color }};color:#fff">
+            <span class="premium-showcase-symbol"><x-icon name="briefcase" size="58"/></span>
+            <h2>{{ $job->title }}</h2>
+          </div>
+        @else
         <div class="premium-showcase-placeholder premium-showcase-job">
           <span class="premium-showcase-symbol"><x-icon name="briefcase" size="58"/></span>
           <span class="eyebrow">Approved client opportunity</span>
           <h2>{{ ucfirst($job->category) }}</h2>
           <p>{{ $job->title }}</p>
         </div>
+        @endif
       </section>
       <div class="premium-showcase-actions">
         <div class="marketplace-detail-actions">
@@ -61,7 +72,7 @@
       </div>
       <section class="panel premium-content-section" id="overview">
         <div class="panel-head"><div><span class="eyebrow">Published client brief</span><h2>Job brief</h2></div></div>
-        <div class="listing-body premium-description">{!! nl2br(e($job->description)) !!}</div>
+        <div class="listing-body premium-description">{!! $job->description_html ? \App\Support\BuilderContent::sanitize($job->description_html) : nl2br(e($job->description)) !!}</div>
       </section>
       <section class="panel premium-content-section" id="requirements">
         <div class="panel-head"><div><span class="eyebrow">A controlled application process</span><h2>How proposals work</h2></div></div>

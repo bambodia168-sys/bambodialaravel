@@ -68,7 +68,7 @@ class UnifiedBuilderTest extends TestCase
         $this->assertSame('pending', $listing->status);
         $this->get('/builder?='.$listing->public_id)->assertOk()
             ->assertSee('Professional Laravel security review')
-            ->assertSee('Public ID:');
+            ->assertSee('Public ID');
         $this->get('/studio/listings')->assertSee('/builder?='.$listing->public_id);
 
         $this->post('/studio/products', [
@@ -102,7 +102,7 @@ class UnifiedBuilderTest extends TestCase
         $this->assertSame('An updated and reviewed Laravel marketplace brief', $job->fresh()->title);
 
         $job->update(['status'=>'published']);
-        $this->get('/builder?='.$job->public_id)->assertOk()->assertSee('Direct editing is disabled');
+        $this->get('/builder?='.$job->public_id)->assertOk()->assertSee('cannot change it directly');
         $this->patch('/builder?='.$job->public_id, $this->jobData())->assertStatus(409);
 
         $stranger = $this->member('customer');
@@ -123,5 +123,119 @@ class UnifiedBuilderTest extends TestCase
         $this->actingAs($other)->get('/builder?='.$listing->public_id)->assertNotFound();
         $this->actingAs($owner)->get('/builder?='.$listing->public_id)
             ->assertOk()->assertSee('Direct editing is disabled');
+    }
+
+
+    public function test_builder_studio_uses_public_layout_with_full_editor_and_featured_options(): void
+    {
+        $owner = $this->member('super_admin');
+        $this->actingAs($owner)->get('/builder?type=product')->assertOk()
+            ->assertSee('class="site-header"', false)
+            ->assertSee('class="site-footer"', false)
+            ->assertDontSee('id="workspace-shell"', false)
+            ->assertSee('Builder Studio')
+            ->assertSee('data-editor-command="bold"', false)
+            ->assertSee('data-editor-command="insertOrderedList"', false)
+            ->assertSee('data-editor-action="table"', false)
+            ->assertSee('data-editor-action="source"', false)
+            ->assertSee('name="featured_kind"', false)
+            ->assertSee('value="video"', false)
+            ->assertSee('value="animated"', false)
+            ->assertSee('value="color"', false)
+            ->assertSee('data-builder-copy-url', false);
+        $this->get('/builder')->assertOk()->assertSee('Create service')->assertSee('Create job');
+    }
+
+    public function test_html_description_sanitization_preserves_safe_formatting_and_prevents_xss(): void
+    {
+        $creator = $this->member('freelancer');
+        $html = '<h2>Complete application build</h2><p><strong>Deliver a professional application with documentation and tests.</strong>'
+            .'<a href="javascript:alert(1)" onclick="alert(1)">Unsafe link</a>'
+            .'<a href="https://example.com/docs" onclick="alert(1)">Docs</a></p>'
+            .'<script>alert("injected")</script><img src=x onerror=alert(1)>';
+        $this->actingAs($creator)->post('/studio/listings', [
+            'type'=>'project',
+            'title'=>'Modern and well-documented application',
+            'description'=>'irrelevant',
+            'description_html'=>$html,
+            'featured_kind'=>'color',
+            'featured_color'=>'#123abc',
+            'builder_mode'=>'1',
+        ])->assertRedirect();
+        $listing = MarketplaceListing::query()->firstOrFail();
+        $this->assertSame('pending', $listing->status);
+        $this->assertSame('color', $listing->featured_kind);
+        $this->assertSame('#123abc', $listing->featured_color);
+        $this->assertStringContainsString('<strong>', $listing->description_html);
+        $this->assertStringNotContainsString('javascript:', $listing->description_html);
+        $this->assertStringNotContainsString('onclick', $listing->description_html);
+        $this->assertStringNotContainsString('<script', $listing->description_html);
+        $this->assertStringNotContainsString('<img', $listing->description_html);
+        $this->assertStringContainsString('Deliver a professional application', $listing->description);
+
+        $listing->update(['status'=>'published']);
+        $this->get($listing->publicUrl())->assertOk()
+            ->assertSee('background-color:#123abc', false)
+            ->assertSee('<strong>', false)
+            ->assertDontSee('javascript:');
+    }
+
+    public function test_featured_media_requires_approved_owned_asset_and_matches_kind(): void
+    {
+        $creator = $this->member('freelancer');
+        $other = $this->member('freelancer');
+        $asset = \App\Models\MediaAsset::query()->create([
+            'user_id'=>$creator->id,'original_name'=>'demo.gif','storage_path'=>'media/test-animate.gif',
+            'mime_type'=>'image/gif','bytes'=>1234,'width'=>10,'height'=>10,
+            'alt_text'=>'Original animation','rights_basis'=>'owned','rights_holder'=>'Creator',
+            'review_status'=>'approved',
+        ]);
+        $payload = [
+            'type'=>'service',
+            'title'=>'Original interface animation service',
+            'description'=>str_repeat('Accessible animation with complete deliverables. ',2),
+            'featured_kind'=>'animated',
+            'featured_media_id'=>$asset->id,
+        ];
+
+        $this->actingAs($other)->post('/studio/listings',$payload)
+            ->assertSessionHasErrors('featured_media_id');
+        $this->actingAs($creator)->post('/studio/listings',[
+            ...$payload,'featured_kind'=>'video',
+        ])->assertSessionHasErrors('featured_media_id');
+        $this->post('/studio/listings',$payload)->assertRedirect();
+        $listing=MarketplaceListing::query()->firstOrFail();
+        $this->assertSame('animated',$listing->featured_kind);
+        $this->assertSame($asset->id,(int)$listing->featured_media_id);
+        $this->get('/builder?='.$listing->public_id)
+            ->assertOk()->assertSee('data-media-mime="image/gif"',false);
+    }
+
+    public function test_builder_media_upload_reuses_private_rights_review_and_blocks_external_redirects(): void
+    {
+        $owner=$this->member('customer');
+        $this->actingAs($owner)->post('/builder/media',[
+            'return_to'=>'https://malicious.example/',
+            'alt_text'=>'Artwork for a customer job',
+            'rights_basis'=>'owned','rights_holder'=>'Customer',
+            'image'=>\Illuminate\Http\UploadedFile::fake()->image('cover.png'),
+        ])->assertStatus(422);
+
+        $this->post('/builder/media',[
+            'return_to'=>'/builder?type=job',
+            'alt_text'=>'Artwork for an original customer job',
+            'rights_basis'=>'owned','rights_holder'=>'Customer',
+            'image'=>\Illuminate\Http\UploadedFile::fake()->image('cover.png'),
+        ])->assertRedirect('/builder?type=job');
+        $asset=\App\Models\MediaAsset::query()->firstOrFail();
+        $this->assertSame('pending',$asset->review_status);
+        $this->assertSame($owner->id,$asset->user_id);
+
+        $this->actingAs($this->member('staff'))->post('/builder/media',[
+            'return_to'=>'/builder',
+            'alt_text'=>'Unauthorized media upload',
+            'rights_basis'=>'owned','rights_holder'=>'Staff',
+            'image'=>\Illuminate\Http\UploadedFile::fake()->image('cover.png'),
+        ])->assertForbidden();
     }
 }
