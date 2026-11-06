@@ -45,7 +45,7 @@
           @auth
             @if($isSaved)
               <form method="post" action="{{ route('saved-jobs.destroy',$job) }}">@csrf @method('DELETE')
-                <button type="submit" class="btn subtle"><x-icon name="bookmark" size="16"/> Saved · Remove</button>
+                <button type="submit" class="btn subtle"><x-icon name="bookmark" size="16"/> Saved — remove from list</button>
               </form>
             @else
               <form method="post" action="{{ route('saved-jobs.store',$job) }}">@csrf
