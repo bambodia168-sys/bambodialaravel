@@ -108,6 +108,15 @@ class DeveloperApiTest extends TestCase
             'password' => self::PASSWORD,
         ])->assertRedirect();
         $this->withToken($secret)->getJson('/api/v1/account')->assertUnauthorized();
+        $this->assertNotNull($token->fresh()->revoked_at);
+        $this->assertDatabaseHas('audit_events',[
+            'actor_id'=>$admin->id, 'event'=>'developer.token.revoked',
+        ]);
+        $this->actingAs($admin)->delete('/developer/tokens/'.$token->id,[
+            'password'=>self::PASSWORD,
+        ])->assertRedirect();
+        $this->assertSame(1, \App\Models\AuditEvent::query()
+            ->where('event','developer.token.revoked')->where('actor_id',$admin->id)->count());
 
         [$expired, $expiredSecret] = ApiToken::issue($admin, 'Expired', ['account.read'], 7);
         $expired->update(['expires_at' => now()->subMinute()]);

@@ -82,6 +82,9 @@ class ContentAndSupportTest extends TestCase
         ])->assertRedirect();
 
         $ticket = SupportTicket::firstOrFail();
+        $this->assertDatabaseHas('audit_events', [
+            'actor_id'=>$owner->id, 'event'=>'support.ticket.created',
+        ]);
         $this->actingAs($stranger)->get('/support-center/'.$ticket->public_id)->assertNotFound();
 
         $this->actingAs($staff)->post('/dashboard/support-center/'.$ticket->public_id.'/reply', [
@@ -91,12 +94,70 @@ class ContentAndSupportTest extends TestCase
 
         $this->assertSame('in_progress', $ticket->fresh()->status);
         $this->assertSame(2, $ticket->messages()->count());
-        $this->actingAs($owner)->get('/support-center/'.$ticket->public_id)
+        $this->assertDatabaseHas('audit_events', [
+            'actor_id'=>$staff->id, 'event'=>'support.staff.replied',
+        ]);
+        $this->assertDatabaseHas('account_notifications', [
+            'user_id'=>$owner->id, 'event'=>'support.replied',
+            'target_path'=>'/support-center/'.$ticket->public_id,
+        ]);
+        $this->actingAs($stranger)->get('/account/notifications')
+            ->assertOk()->assertDontSee('Support team replied');
+        $this->actingAs($owner)->get('/account/notifications')
+            ->assertOk()->assertSee('Support team replied');
+        $this->get('/support-center/'.$ticket->public_id)
             ->assertOk()->assertSee('Please use the profile settings form');
     }
 
     public function test_regular_customer_cannot_manage_published_content(): void
     {
         $this->actingAs($this->account())->get('/dashboard/post-manager')->assertForbidden();
+    }
+
+    public function test_support_status_changes_notify_once_and_audit_without_repeating_unchanged_actions(): void
+    {
+        $owner = $this->account();
+        $staff = $this->account('staff');
+        $customer = $this->account();
+        $this->actingAs($owner)->post('/support-center', [
+            'subject'=>'Support status acceptance verification',
+            'message'=>'I need a verified support status change for my account.',
+        ])->assertRedirect();
+        $ticket = SupportTicket::firstOrFail();
+
+        $this->actingAs($customer)->patch(
+            '/dashboard/support-center/'.$ticket->public_id.'/status',
+            ['status'=>'in_progress']
+        )->assertForbidden();
+
+        $this->actingAs($staff)->patch(
+            '/dashboard/support-center/'.$ticket->public_id.'/status',
+            ['status'=>'in_progress']
+        )->assertRedirect();
+        $this->assertSame('in_progress',$ticket->fresh()->status);
+        $this->assertDatabaseHas('account_notifications',[
+            'user_id'=>$owner->id, 'event'=>'support.status_changed',
+        ]);
+        $this->assertDatabaseHas('audit_events',[
+            'actor_id'=>$staff->id, 'event'=>'support.status.changed',
+        ]);
+
+        $this->patch('/dashboard/support-center/'.$ticket->public_id.'/status', [
+            'status'=>'in_progress',
+        ])->assertRedirect();
+        $this->assertSame(1, \App\Models\AccountNotification::query()
+            ->where('user_id',$owner->id)->where('event','support.status_changed')->count());
+        $this->assertSame(1, \App\Models\AuditEvent::query()
+            ->where('actor_id',$staff->id)->where('event','support.status.changed')->count());
+
+        $this->actingAs($owner)->post('/support-center/'.$ticket->public_id.'/reply', [
+            'message'=>'Thank you. The ticket can be reopened for a follow-up.',
+        ])->assertRedirect();
+        $this->assertSame('open',$ticket->fresh()->status);
+        $this->assertDatabaseHas('audit_events',[
+            'actor_id'=>$owner->id, 'event'=>'support.customer.replied',
+        ]);
+        $this->assertSame(1, \App\Models\AccountNotification::query()
+            ->where('user_id',$owner->id)->where('event','support.status_changed')->count());
     }
 }

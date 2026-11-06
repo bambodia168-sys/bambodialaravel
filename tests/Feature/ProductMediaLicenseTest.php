@@ -180,6 +180,18 @@ class ProductMediaLicenseTest extends TestCase
             'decision' => 'published',
         ])->assertRedirect();
         $this->assertSame('published', $product->fresh()->status);
+        $this->assertDatabaseHas('account_notifications', [
+            'user_id' => $creator->id, 'event' => 'listing.reviewed',
+            'target_path' => '/studio/products',
+        ]);
+        $this->assertDatabaseHas('audit_events', [
+            'actor_id' => $admin->id, 'event' => 'listing.review.published',
+        ]);
+        $this->patch('/dashboard/product-manager/'.$product->id, [
+            'decision' => 'published',
+        ])->assertStatus(409);
+        $this->assertSame(1, \App\Models\AccountNotification::query()
+            ->where('user_id', $creator->id)->where('event', 'listing.reviewed')->count());
 
         $this->post('/logout')->assertRedirect();
         $this->get($product->publicUrl())->assertOk()->assertSee('Regular Product License');

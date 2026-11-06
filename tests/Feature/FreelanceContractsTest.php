@@ -184,6 +184,12 @@ class FreelanceContractsTest extends TestCase
         $this->assertSame($digest,ContractConsent::query()->where('action','accepted')->firstOrFail()->terms_sha256);
         $this->assertDatabaseHas('account_notifications',['user_id'=>$this->client->id,'event'=>'contract.accepted']);
         $this->assertDatabaseHas('account_notifications',['user_id'=>$this->freelancer->id,'event'=>'contract.offered']);
+        $this->assertDatabaseHas('audit_events',['actor_id'=>$this->client->id,'event'=>'contract.offered']);
+        $this->assertDatabaseHas('audit_events',['actor_id'=>$this->freelancer->id,'event'=>'contract.accepted']);
+        $this->actingAs($this->freelancer)->get('/account/notifications')
+            ->assertOk()->assertSee('A contract offer requires your review');
+        $this->actingAs($this->client)->get('/account/notifications')
+            ->assertOk()->assertSee('Contract offer accepted');
     }
 
     public function test_decline_and_unaccepted_withdrawal_are_final(): void

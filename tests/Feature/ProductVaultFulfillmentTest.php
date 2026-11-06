@@ -256,6 +256,19 @@ class ProductVaultFulfillmentTest extends TestCase
             'decision' => 'approved', 'confirm_review' => '1',
         ])->assertRedirect();
         $this->assertSame('approved', $version->fresh()->status);
+        $this->assertDatabaseHas('account_notifications', [
+            'user_id'=>$this->creator->id,
+            'event'=>'vault.version.reviewed',
+            'target_path'=>'/studio/products/'.$this->product->id.'/releases',
+        ]);
+        $this->assertDatabaseHas('audit_events', [
+            'event'=>'vault.version.approved', 'actor_id'=>$this->reviewer->id,
+        ]);
+        $this->patch('/dashboard/file-vault/'.$version->id, [
+            'decision'=>'approved', 'confirm_review'=>'1',
+        ])->assertStatus(409);
+        $this->actingAs($this->creator)->get('/account/notifications')
+            ->assertOk()->assertSee('Product file release reviewed');
     }
 
     public function test_only_super_admin_can_issue_non_payment_entitlements(): void
@@ -473,6 +486,10 @@ class ProductVaultFulfillmentTest extends TestCase
             'decision'=>'approved','confirm_review'=>'1',
         ])->assertStatus(409);
         $this->assertDatabaseHas('audit_events',['event'=>'vault.malware.infected']);
+        $this->assertDatabaseHas('account_notifications',[
+            'user_id'=>$this->creator->id, 'event'=>'vault.version.reviewed',
+            'title'=>'Product file release blocked',
+        ]);
     }
 
     public function test_new_release_requires_documented_rights_verification_after_scanned_inspection(): void

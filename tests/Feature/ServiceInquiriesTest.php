@@ -78,10 +78,22 @@ class ServiceInquiriesTest extends TestCase
             'body'=>'I can provide a documented project proposal.',
         ])->assertRedirect();
         $this->assertDatabaseCount('service_inquiry_messages',2);
+        $this->assertDatabaseHas('audit_events',[
+            'actor_id'=>$creator->id, 'event'=>'inquiry.replied',
+        ]);
+        $this->assertDatabaseHas('account_notifications',[
+            'user_id'=>$client->id, 'event'=>'inquiry.replied',
+        ]);
         $this->actingAs($client)->get('/inquiries/'.$inquiry->id)
             ->assertOk()->assertSee('I can provide a documented project proposal.');
         $this->patch('/inquiries/'.$inquiry->id.'/close')->assertRedirect();
         $this->assertSame('closed',$inquiry->fresh()->status);
+        $this->assertDatabaseHas('account_notifications',[
+            'user_id'=>$creator->id, 'event'=>'inquiry.closed',
+        ]);
+        $this->assertDatabaseHas('audit_events',[
+            'actor_id'=>$client->id, 'event'=>'inquiry.closed',
+        ]);
         $this->actingAs($creator)->post('/inquiries/'.$inquiry->id.'/reply',[
             'body'=>'This message cannot be sent to closed inquiries.',
         ])->assertStatus(409);
