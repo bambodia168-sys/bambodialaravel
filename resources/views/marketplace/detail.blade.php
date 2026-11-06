@@ -204,7 +204,7 @@
         <dl class="premium-info-list">
           <div><dt>Type</dt><dd>{{ $kindTitle }}</dd></div>
           <div><dt>Category</dt><dd>{{ $listing->category?->name ?? 'Not categorized' }}</dd></div>
-          <div><dt>Published</dt><dd>{{ $listing->created_at->format('d M Y') }}</dd></div>
+          <div><dt>Created</dt><dd>{{ $listing->created_at->format('d M Y') }}</dd></div>
           <div><dt>Last updated</dt><dd>{{ $listing->updated_at->format('d M Y') }}</dd></div>
           <div><dt>Currency</dt><dd>{{ $listing->currency ?: 'USD' }}</dd></div>
           @if($isProduct && $listing->licenseDefinition)
