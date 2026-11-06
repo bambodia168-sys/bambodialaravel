@@ -30,6 +30,34 @@
 </section>
 
 @if($searchEnabled)
+<section class="container marketplace-type-directory" aria-labelledby="browse-by-type-heading">
+  <div class="marketplace-section-heading">
+    <div><span class="eyebrow">Explore Bambodia</span><h2 id="browse-by-type-heading">Find the work that fits</h2>
+      <p>Browse real, approved marketplace listings by type.</p></div>
+    <a class="btn subtle compact" href="{{ route('marketplace.search') }}">Explore all listings <x-icon name="chevron-right" size="16"/></a>
+  </div>
+  <div class="marketplace-type-directory-grid">
+    @foreach([
+      ['type'=>'product','title'=>'Digital products','icon'=>'package','intro'=>'Licensed digital creations and source files'],
+      ['type'=>'project','title'=>'Projects','icon'=>'layers','intro'=>'Published project offerings and collaboration'],
+      ['type'=>'service','title'=>'Services','icon'=>'settings','intro'=>'Professional services from independent creators'],
+      ['type'=>'freelance','title'=>'Freelance','icon'=>'briefcase','intro'=>'Freelance offers and specialized expertise'],
+    ] as $directory)
+      <a class="marketplace-type-directory-tile" href="{{ route('marketplace.search',['type'=>$directory['type']]) }}">
+        <span class="marketplace-directory-icon"><x-icon :name="$directory['icon']" size="23"/></span>
+        <strong>{{ $directory['title'] }}</strong>
+        <small>{{ $directory['intro'] }}</small>
+        <span class="marketplace-directory-footer">
+          <span>{{ number_format((int)($listingTotals[$directory['type']] ?? 0)) }} approved</span>
+          <x-icon name="chevron-right" size="17"/>
+        </span>
+      </a>
+    @endforeach
+  </div>
+</section>
+@endif
+
+@if($searchEnabled)
 <section class="container marketplace-section">
   <div class="marketplace-section-heading">
     <div><span class="eyebrow">Discover new work</span><h2>Recently published listings</h2><p>Current approved items from actual creator accounts.</p></div>
