@@ -39,6 +39,7 @@ jobs:
           bash -n support/typography-upgrade.sh
           bash -n support/header-upgrade.sh
           bash -n support/dashboard-upgrade.sh
+          bash -n support/workflow-upgrade.sh
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
