@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\SupportTicket;
+use App\Models\AccountNotification;
+use App\Models\AuditEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -48,8 +50,15 @@ class SupportCenterController extends Controller
         ]);
 
         DB::transaction(function () use ($record, $data, $request): void {
-            $record->messages()->create(['user_id' => $request->user()->id, 'body' => $data['message']]);
-            $record->update(['status' => $data['status']]);
+            $locked = SupportTicket::query()->lockForUpdate()->findOrFail($record->id);
+            $locked->messages()->create(['user_id' => $request->user()->id, 'body' => $data['message']]);
+            $locked->update(['status' => $data['status']]);
+            AccountNotification::deliver(
+                (int) $locked->user_id, 'support.replied', 'Support team replied',
+                'Your support request has a new response. Open the ticket to read it.',
+                '/support-center/'.$locked->public_id
+            );
+            AuditEvent::record('support.staff.replied', $request->user(), $request);
         });
 
         return back()->with('status', 'Response recorded.');
@@ -59,7 +68,19 @@ class SupportCenterController extends Controller
     {
         $record = SupportTicket::query()->where('public_id', $ticket)->firstOrFail();
         $data = $request->validate(['status' => ['required', Rule::in(['open', 'in_progress', 'resolved'])]]);
-        $record->update($data);
+        DB::transaction(function () use ($record, $data, $request): void {
+            $locked = SupportTicket::query()->lockForUpdate()->findOrFail($record->id);
+            if ($locked->status === $data['status']) {
+                return;
+            }
+            $locked->update(['status' => $data['status']]);
+            AccountNotification::deliver(
+                (int) $locked->user_id, 'support.status_changed', 'Support ticket updated',
+                'The status of your support request is now '.str_replace('_', ' ', $data['status']).'.',
+                '/support-center/'.$locked->public_id
+            );
+            AuditEvent::record('support.status.changed', $request->user(), $request);
+        });
 
         return back()->with('status', 'Ticket status updated.');
     }

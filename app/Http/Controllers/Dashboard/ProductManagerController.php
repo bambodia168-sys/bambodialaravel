@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
+use App\Models\AccountNotification;
 use App\Models\MarketplaceListing;
 use App\Support\ProductReadiness;
 use Illuminate\Http\RedirectResponse;
@@ -44,6 +45,13 @@ class ProductManagerController extends Controller
                 ProductReadiness::assertListing($product);
             }
             $product->update(['status' => $data['decision']]);
+            AccountNotification::deliver(
+                (int) $product->user_id,
+                'listing.reviewed',
+                'Digital product reviewed',
+                'Your digital product submission was '.($data['decision'] === 'published' ? 'published' : 'rejected').' after review.',
+                '/studio/products'
+            );
             AuditEvent::record('listing.review.'.$data['decision'], $request->user(), $request);
         });
 

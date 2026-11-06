@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SupportTicket;
+use App\Models\AuditEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +37,7 @@ class SupportController extends Controller
                 'user_id' => $request->user()->id,
                 'body' => $data['message'],
             ]);
+            AuditEvent::record('support.ticket.created', $request->user(), $request);
 
             return $ticket;
         });
@@ -64,8 +66,11 @@ class SupportController extends Controller
         $data = $request->validate(['message' => ['required', 'string', 'min:2', 'max:10000']]);
 
         DB::transaction(function () use ($record, $request, $data): void {
-            $record->messages()->create(['user_id' => $request->user()->id, 'body' => $data['message']]);
-            $record->update(['status' => 'open']);
+            $locked = SupportTicket::query()->where('user_id', $request->user()->id)
+                ->lockForUpdate()->findOrFail($record->id);
+            $locked->messages()->create(['user_id' => $request->user()->id, 'body' => $data['message']]);
+            $locked->update(['status' => 'open']);
+            AuditEvent::record('support.customer.replied', $request->user(), $request);
         });
 
         return back()->with('status', 'Your reply was added.');

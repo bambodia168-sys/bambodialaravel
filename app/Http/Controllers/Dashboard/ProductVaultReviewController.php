@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
+use App\Models\AccountNotification;
 use App\Models\ProductFileVersion;
 use App\Support\ProductReadiness;
 use App\Support\ProductVault;
@@ -63,6 +64,15 @@ class ProductVaultReviewController extends Controller
                 $attributes['review_note']='Distribution blocked following antivirus threat detection.';
             }
             $locked->update($attributes);
+            if ($status === 'infected') {
+                AccountNotification::deliver(
+                    (int) $locked->product()->firstOrFail()->user_id,
+                    'vault.version.reviewed',
+                    'Product file release blocked',
+                    'Your uploaded release was blocked after malware screening.',
+                    '/studio/products/'.$locked->marketplace_listing_id.'/releases'
+                );
+            }
             AuditEvent::record('vault.malware.'.$status,$request->user(),$request);
         });
 
@@ -167,6 +177,13 @@ class ProductVaultReviewController extends Controller
                 'reviewed_by'=>$request->user()->id,
                 'review_note'=>$data['review_note']??null,
             ]);
+            AccountNotification::deliver(
+                (int) $locked->product()->firstOrFail()->user_id,
+                'vault.version.reviewed',
+                'Product file release reviewed',
+                'Your product file release was '.$data['decision'].' after review.',
+                '/studio/products/'.$locked->marketplace_listing_id.'/releases'
+            );
             AuditEvent::record('vault.version.'.$data['decision'],$request->user(),$request);
         });
 
