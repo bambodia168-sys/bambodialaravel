@@ -36,3 +36,50 @@ An installed PHP/Laravel product must integrate the license client itself. Bambo
 ## Fail-closed behavior
 
 Online validation depends on an active entitlement and accessible, reviewed product original. A scan may expire under the vault policy and require renewal. No offline signature, unverifiable grace period, paid checkout, chargeback automation or refund-triggered license revocation is implemented. Do not claim these features are live.
+
+
+## Lifetime license and separately renewable support
+
+Product licenses authorize one registered installation for the lifetime of the
+license. No duration-based license expiry applies. Suspension, revocation,
+product rights and integrity checks continue to apply. A time-limited
+download-entitlement grant may separately expire for **new downloads** without
+invalidating the previously issued installed-script license. Explicit
+entitlement revocation still invalidates authentication.
+
+Product support is an independent term:
+- \`six_months\` — 6-month support
+- \`twelve_months\` — 12-month support
+- \`five_years\` — 5-year support
+- \`lifetime\` — lifetime support
+
+New complimentary licenses receive the term explicitly chosen by the super
+administrator. Previously issued licenses retain their existing support
+state as **Not set**, avoiding an unrequested change to historical benefits.
+A support term that reaches its end date displays **Expired** while the license
+remains Lifetime. Support expiration does not, by itself, revoke a domain,
+disable a working script or change its licensed tier.
+
+Customers choose a new term in **My Licenses**. The request stays **Pending**
+until reviewed. The current deployment has no verified payment gateway, so
+neither clicking Renew nor submitting a request extends support or charges
+the customer. A super administrator can grant a documented **complimentary**
+extension or reject the request. Approval starts a new term at the later of
+today and the prior support expiry, preventing overlapping periods from
+removing already-granted time. Once Lifetime support is granted, further
+renewal requests are rejected. Audit events and customer notifications
+record requests and decisions.
+
+When paid renewal support is introduced, only a verified server-side
+payment event should authorize an appropriate renewal grant; a browser
+button or unpaid order must never activate support. Prices, refunds and
+payment processing are not part of this release.
+
+## Tables and pagination
+
+Admin License Definitions, Issued Licenses and Support Renewals are each
+paginated to 10 records with independent \`page\`, \`issued_page\`, and
+\`support_page\` keys. Creator Product Licenses, Customer My Licenses and
+My Downloads each show up to 10 rows. The shared Previous/Next/Go To
+component preserves other filters and page values without overwriting the
+wrong table's page parameter.
