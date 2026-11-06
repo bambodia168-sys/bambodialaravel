@@ -297,6 +297,15 @@ try {
       checks+=3;
 
       // The Account shell must keep its sidebar and content scroll independent.
+      await page.goto(origin+'/en/account/notifications?filter=read',{waitUntil:'networkidle'});
+      if(!(await page.locator('#account-notification-event').isVisible()))
+        throw new Error('Account notification event filter is missing');
+      if(!(await page.getByText('Read notifications').first().isVisible()))
+        throw new Error('Account read-state notification filter failed');
+      await page.goto(origin+'/en/contracts?status=active',{waitUntil:'networkidle'});
+      if(!(await page.locator('select[name="status"] option[value="active"]:checked').count()))
+        throw new Error('Private contract status filter is missing');
+      checks+=3;
       await page.goto(origin+'/en/account',{waitUntil:'networkidle'});
       if(!(await page.getByRole('heading',{name:'Agreements needing attention'}).isVisible()))
         throw new Error('Account operational agreements section missing');
@@ -358,6 +367,15 @@ try {
       if(!(await admin.getByText('Feature Manager').first().count()))
         throw new Error('Admin menu lacks real controls');
       await admin.screenshot({path:out+'/desktop-admin-workspace.png',fullPage:false});
+      await admin.goto(origin+'/en/dashboard/review-queue?type=service',{waitUntil:'networkidle'});
+      if(!(await admin.locator('[aria-label="Pending submissions by type"] a[aria-current="page"]').count()))
+        throw new Error('Admin moderation type filter is missing');
+      if(!(await admin.getByText('Recent moderation audit').isVisible()))
+        throw new Error('Admin moderation audit history missing');
+      await admin.goto(origin+'/en/dashboard/support-center?status=open',{waitUntil:'networkidle'});
+      if(!(await admin.locator('input[aria-label="Search support tickets"]').isVisible()))
+        throw new Error('Support triage search missing');
+      checks+=3;
       await admin.goto(origin+'/en/developer',{waitUntil:'networkidle'});
       if(!(await admin.locator('[aria-label="Your API credential health"]').count()))
         throw new Error('Developer token-health overview missing');
@@ -423,7 +441,13 @@ try {
       if(await creator.locator('body').getAttribute('data-workspace')!=='creator')
         throw new Error('Creator workspace route did not render correctly');
       await creator.screenshot({path:out+'/desktop-creator-workspace.png',fullPage:false});
-      checks+=2;
+      await creator.goto(origin+'/en/studio/products?status=draft',{waitUntil:'networkidle'});
+      if(!(await creator.locator('[aria-label="Your products by status"] a[aria-current="page"]').count()))
+        throw new Error('Creator product status filter missing');
+      await creator.goto(origin+'/en/studio/inquiries?status=open',{waitUntil:'networkidle'});
+      if(!(await creator.locator('[aria-label="Private conversation status"] a[aria-current="page"]').count()))
+        throw new Error('Creator inquiry inbox filter missing');
+      checks+=4;
       await creatorContext.close();
     }
     await context.close();
