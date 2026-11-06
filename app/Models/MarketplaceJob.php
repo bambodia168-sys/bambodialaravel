@@ -9,10 +9,10 @@ use Illuminate\Support\Str;
 
 class MarketplaceJob extends Model
 {
-    protected $fillable = ['client_id', 'title', 'description', 'description_html', 'featured_kind', 'featured_media_id', 'featured_color', 'category', 'budget', 'currency', 'status', 'reviewed_by', 'reviewed_at', 'closed_at'];
+    protected $fillable = ['client_id', 'title', 'description', 'description_html', 'gallery_media_ids', 'featured_kind', 'featured_media_id', 'featured_color', 'category', 'budget', 'currency', 'status', 'reviewed_by', 'reviewed_at', 'closed_at'];
     protected function casts(): array
     {
-        return ['budget' => 'decimal:2', 'reviewed_at' => 'datetime', 'closed_at' => 'datetime'];
+        return ['budget' => 'decimal:2', 'gallery_media_ids' => 'array', 'reviewed_at' => 'datetime', 'closed_at' => 'datetime'];
     }
     protected static function booted(): void
     {
