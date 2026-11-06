@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 
 class MarketplaceJob extends Model
 {
-    protected $fillable = ['client_id', 'title', 'description', 'category', 'budget', 'currency', 'status', 'reviewed_by', 'reviewed_at', 'closed_at'];
+    protected $fillable = ['client_id', 'title', 'description', 'description_html', 'featured_kind', 'featured_media_id', 'featured_color', 'category', 'budget', 'currency', 'status', 'reviewed_by', 'reviewed_at', 'closed_at'];
     protected function casts(): array
     {
         return ['budget' => 'decimal:2', 'reviewed_at' => 'datetime', 'closed_at' => 'datetime'];
@@ -31,6 +31,11 @@ class MarketplaceJob extends Model
     public function savedBy(): HasMany
     {
         return $this->hasMany(SavedJob::class,'marketplace_job_id');
+    }
+
+    public function featuredAsset(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'featured_media_id');
     }
 
     public function client(): BelongsTo { return $this->belongsTo(User::class, 'client_id'); }

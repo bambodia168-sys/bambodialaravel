@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
+use App\Support\BuilderContent;
+use App\Support\BuilderFeaturedMedia;
 use App\Models\AuditEvent;
 use App\Models\FeatureFlag;
 use App\Models\LicenseDefinition;
@@ -104,9 +106,12 @@ class ProductController extends Controller
 
     private function validated(Request $request): array
     {
+        BuilderContent::prepare($request);
         $data = $request->validate([
             'title' => ['required', 'string', 'min:4', 'max:180'],
             'description' => ['required', 'string', 'min:40', 'max:10000'],
+            ...BuilderFeaturedMedia::rules(),
+            'description_html' => ['nullable', 'string', 'max:60000'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'license_terms' => ['nullable', 'string', 'max:20000'],
             'license_definition_id' => ['nullable', 'integer', Rule::exists('license_definitions', 'id')],
@@ -128,6 +133,7 @@ class ProductController extends Controller
             ->whereKey($data['category_id'])->where('type','product')->where('is_active',true)->exists()){
             throw ValidationException::withMessages(['category_id'=>'Select an active product category.']);
         }
+        BuilderFeaturedMedia::check($data, (int)$request->user()->id);
         return $data;
     }
 }

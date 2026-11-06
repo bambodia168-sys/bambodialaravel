@@ -13,7 +13,7 @@ class MarketplaceListing extends Model
     public const TYPES = ['product', 'project', 'freelance', 'service'];
     public const STATUSES = ['draft', 'pending', 'published', 'rejected'];
 
-    protected $fillable = ['user_id', 'type', 'title', 'description', 'price', 'currency', 'license_terms', 'license_definition_id', 'cover_media_id', 'category_id', 'status'];
+    protected $fillable = ['user_id', 'type', 'title', 'description', 'description_html', 'featured_kind', 'featured_media_id', 'featured_color', 'price', 'currency', 'license_terms', 'license_definition_id', 'cover_media_id', 'category_id', 'status'];
 
     protected function casts(): array
     {
@@ -68,6 +68,11 @@ class MarketplaceListing extends Model
     public function licenseDefinition(): BelongsTo
     {
         return $this->belongsTo(LicenseDefinition::class, 'license_definition_id');
+    }
+
+    public function featuredAsset(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'featured_media_id');
     }
 
     public function coverAsset(): BelongsTo

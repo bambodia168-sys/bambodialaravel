@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
+use App\Support\BuilderContent;
+use App\Support\BuilderFeaturedMedia;
 use App\Models\MarketplaceListing;
 use App\Models\FeatureFlag;
 use App\Models\MarketplaceCategory;
@@ -31,16 +33,20 @@ class ListingController extends Controller
     public function store(Request $request): RedirectResponse
     {
         abort_unless(FeatureFlag::isEnabled('creator_submissions'), 403);
+        BuilderContent::prepare($request);
         $data = $request->validate([
             'type' => ['required', Rule::in(['project', 'freelance', 'service'])],
             'title' => ['required', 'string', 'min:4', 'max:180'],
             'description' => ['required', 'string', 'min:40', 'max:10000'],
+            ...BuilderFeaturedMedia::rules(),
+            'description_html' => ['nullable', 'string', 'max:60000'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'license_terms' => ['nullable', 'string', 'max:20000'],
             'category_id' => ['nullable','integer',Rule::exists('marketplace_categories','id')],
         ]);
 
         $this->checkCategory($data);
+        BuilderFeaturedMedia::check($data, (int)$request->user()->id);
         $listing = MarketplaceListing::query()->create([
             ...$data,
             'user_id' => $request->user()->id,
@@ -58,9 +64,12 @@ class ListingController extends Controller
     public function update(Request $request,MarketplaceListing $listing): RedirectResponse
     {
         abort_unless(FeatureFlag::isEnabled('creator_submissions'),403);
+        BuilderContent::prepare($request);
         $data=$request->validate([
             'title'=>['required','string','min:4','max:180'],
             'description'=>['required','string','min:40','max:10000'],
+            ...BuilderFeaturedMedia::rules(),
+            'description_html'=>['nullable','string','max:60000'],
             'price'=>['nullable','numeric','min:0','max:9999999999.99'],
             'license_terms'=>['nullable','string','max:20000'],
             'category_id'=>['nullable','integer',Rule::exists('marketplace_categories','id')],
@@ -71,6 +80,7 @@ class ListingController extends Controller
                 && in_array($locked->type,['project','freelance','service'],true),404);
             abort_unless(in_array($locked->status,['draft','rejected'],true),409);
             $this->checkCategory([...$data,'type'=>$locked->type]);
+            BuilderFeaturedMedia::check($data, (int)$request->user()->id);
             $locked->update([...$data,'status'=>'pending']);
             AuditEvent::record('listing.resubmitted',$request->user(),$request);
         });

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MediaAsset extends Model
 {
-    public const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+    public const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'];
 
     protected $fillable = [
         'user_id', 'original_name', 'storage_path', 'mime_type', 'bytes',
@@ -38,6 +38,16 @@ class MediaAsset extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function featuredListings(): HasMany
+    {
+        return $this->hasMany(MarketplaceListing::class, 'featured_media_id');
+    }
+
+    public function featuredJobs(): HasMany
+    {
+        return $this->hasMany(MarketplaceJob::class, 'featured_media_id');
     }
 
     public function coverListings(): HasMany
