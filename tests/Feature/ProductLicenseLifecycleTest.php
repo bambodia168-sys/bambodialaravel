@@ -175,6 +175,13 @@ class ProductLicenseLifecycleTest extends TestCase
         $this->postJson('/api/v1/licenses/validate',[
             'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'EXAMPLE.COM',
         ])->assertOk()->assertJsonPath('status','valid');
+        $wrongProductId = $this->product->public_id === '123456789' ? '987654321' : '123456789';
+        $this->postJson('/api/v1/licenses/validate',[
+            'license_key'=>$key,'product_id'=>$wrongProductId,'domain'=>'example.com',
+        ])->assertStatus(403);
+        $this->postJson('/api/v1/licenses/validate',[
+            'license_key'=>$key,'domain'=>'example.com',
+        ])->assertUnprocessable()->assertJsonValidationErrors('product_id');
 
         $this->postJson('/api/v1/licenses/activate',[
             'license_key'=>$key,'product_id'=>$this->product->public_id,'domain'=>'http://example.com',
