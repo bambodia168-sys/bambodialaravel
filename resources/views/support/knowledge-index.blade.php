@@ -33,7 +33,7 @@
         'downloads' => 'download',
         'creators' => 'palette',
         'freelance' => 'briefcase',
-        'payments' => 'file-check',
+        'payments' => 'credit-card',
         'policies' => 'scale',
       ];
     @endphp
