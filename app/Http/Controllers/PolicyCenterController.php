@@ -33,12 +33,15 @@ class PolicyCenterController extends Controller
     }
 
     // Historic nine-digit query-style URLs continue working.
-    public function show(Request $request): View
+    public function show(Request $request): View|RedirectResponse
     {
         $raw = (string) $request->server('QUERY_STRING', '');
         abort_unless(preg_match('/^=(\d{9})-([a-z0-9-]+)$/D', $raw, $match) === 1, 404);
         $policy = Policy::query()->where('status', 'published')
-            ->where('public_id', $match[1])->where('slug', $match[2])->firstOrFail();
+            ->where('public_id', $match[1])->firstOrFail();
+        if ($policy->slug !== $match[2]) {
+            return redirect($policy->publicUrl(), 301);
+        }
         return $this->showPolicy($request, $policy);
     }
 
