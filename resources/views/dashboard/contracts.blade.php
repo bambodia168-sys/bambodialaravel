@@ -32,7 +32,9 @@
         <td>{{ $contract->freelancer?->name }}</td>
         <td>{{ $contract->milestones_count }}</td>
         <td><span class="role-pill">{{ ucfirst($contract->status) }}</span></td>
-        <td><button type="button" class="btn subtle compact" data-modal-open="admin-contract-{{ $contract->id }}"><x-icon name="settings" size="15"/> Configure</button>
+        <td><x-row-action-menu :id="'contract-'.$contract->id" :label="$contract->title">
+            <button type="button" data-modal-open="admin-contract-{{ $contract->id }}"><x-icon name="settings" size="16"/> Configure</button>
+          </x-row-action-menu>
           <dialog class="config-dialog" id="admin-contract-{{ $contract->id }}">
             <h2>{{ $contract->title }}</h2>
             <p>Reference {{ $contract->public_id }} · {{ ucfirst($contract->status) }}</p>
