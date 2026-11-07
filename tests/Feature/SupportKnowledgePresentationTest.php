@@ -31,6 +31,23 @@ class SupportKnowledgePresentationTest extends TestCase
         ]);
     }
 
+    public function test_public_support_hero_uses_a_realistic_transparent_webp_asset(): void
+    {
+        $response = $this->get(route('support'));
+        $response->assertOk()
+            ->assertSee('images/support-agent-photo.webp', false)
+            ->assertDontSee('images/support-agent-hero.svg', false);
+        $image = public_path('images/support-agent-photo.webp');
+        $this->assertFileExists($image);
+        $this->assertSame('524c0c8cb8454d3b04adabe5bb4ff812c61c95d4e98303582d8dfc7d0b2bd700',
+            hash_file('sha256', $image));
+        $info = getimagesize($image);
+        $this->assertIsArray($info);
+        $this->assertSame(380, $info[0]);
+        $this->assertSame(319, $info[1]);
+        $this->assertSame('image/webp', $info['mime']);
+    }
+
     public function test_category_cards_have_eight_distinct_svg_icons_and_blended_numbers(): void
     {
         $html = $this->get(route('support'))->assertOk()->getContent();
