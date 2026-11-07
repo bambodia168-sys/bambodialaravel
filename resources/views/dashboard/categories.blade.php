@@ -15,7 +15,9 @@
 <td class="mono">{{ $category->public_id }}</td><td><strong>{{ $category->name }}</strong><div class="text-muted">{{ $category->description }}</div></td>
 <td>{{ ucfirst($category->type) }}</td><td><span class="role-pill">{{ $category->is_active?'On':'Off' }}</span></td>
 <td>{{ $category->sort_order }}</td><td>{{ $category->listings_count }}</td>
-<td><button type="button" class="btn subtle compact" data-modal-open="category-{{ $category->id }}"><x-icon name="settings" size="16"/> Configure</button>
+<td><x-row-action-menu :id="'category-'.$category->id" :label="$category->name">
+    <button type="button" data-modal-open="category-{{ $category->id }}"><x-icon name="settings" size="16"/> Configure</button>
+  </x-row-action-menu>
 <dialog class="config-dialog" id="category-{{ $category->id }}">
 <form method="post" action="{{ route('dashboard.categories.update',$category) }}">@csrf @method('PATCH')
 <h2>Configure category</h2><p>{{ $category->name }} · {{ $category->public_id }}</p>
