@@ -65,6 +65,7 @@ jobs:
             sleep 1
           done
           node tests/browser/smoke.mjs
+          node tests/browser/support-knowledge-layout.mjs
       - name: Keep screenshots for acceptance review
         if: always()
         uses: actions/upload-artifact@v4
