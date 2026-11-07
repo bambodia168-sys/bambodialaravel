@@ -1,7 +1,10 @@
 @extends('layouts.dashboard')
 @section('title','Support Center')
 @section('content')
-<div class="page-intro"><div class="eyebrow">Customer Care</div><h1>Support Center</h1><p>Review and respond to user support requests.</p></div>
+<div class="page-intro"><div class="eyebrow">Customer Care</div><h1>Support Center</h1><p>Review and respond to private user support requests.</p><div class="toolbar-actions">
+  <a class="btn subtle" href="{{ route('support') }}">Public Help Center</a>
+  @if(in_array(auth()->user()->role,['super_admin','admin'],true))<a class="btn primary" href="{{ route('dashboard.knowledge.index') }}">Manage knowledge base</a>@endif
+</div></div>
 <section class="panel">
   <div class="panel-head"><h2>Tickets <span class="count">{{ $tickets->total() }}</span></h2>
     <form method="get" class="table-search"><x-icon name="filter" size="17"/>

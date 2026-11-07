@@ -19,6 +19,6 @@
       <button type="submit" class="btn primary">Send response</button>
     </form>
   </section>
-  <a class="btn subtle" href="{{ $isStaff ? route('dashboard.support') : route('support') }}">Back to tickets</a>
+  <a class="btn subtle" href="{{ $isStaff ? route('dashboard.support') : route('support.tickets') }}">Back to tickets</a>
 </div>
 @endsection

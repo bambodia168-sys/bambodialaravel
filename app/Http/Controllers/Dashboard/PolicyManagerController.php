@@ -9,6 +9,7 @@ use App\Models\Policy;
 use App\Models\PolicyPublication;
 use App\Models\PolicyUpdateNotice;
 use App\Support\LegalPolicyDrafts;
+use App\Support\SupplementalLegalPolicyDrafts;
 use App\Support\PolicyContent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,6 +66,26 @@ class PolicyManagerController extends Controller
         });
         AuditEvent::record('policy.legal_drafts_created', $request->user(), $request);
         return back()->with('status', $created.' new legal policy drafts created. Review and publish individually.');
+    }
+
+    public function seedSupplementalDrafts(Request $request): RedirectResponse
+    {
+        $created = DB::transaction(function (): int {
+            $count = 0;
+            foreach (SupplementalLegalPolicyDrafts::all() as $template) {
+                if (Policy::query()->where('title', $template['title'])->exists()) {
+                    continue;
+                }
+                Policy::query()->create([...$template,
+                    'status' => 'draft', 'version' => '1.0.0',
+                    'body_format' => 'markdown', 'pic_email' => 'legal@bambodia.com']);
+                $count++;
+            }
+            return $count;
+        });
+
+        AuditEvent::record('policy.supplemental_drafts_created', $request->user(), $request);
+        return back()->with('status', $created.' additional legal-review drafts created. No terms were published.');
     }
 
     public function store(Request $request): RedirectResponse

@@ -45,6 +45,7 @@
         ['route'=>'dashboard.pages','label'=>'Page Manager','icon'=>'file-text'],
         ['route'=>'dashboard.posts','label'=>'Post Manager','icon'=>'newspaper'],
         ['route'=>'dashboard.policies','label'=>'Policy Center','icon'=>'scale'],
+        ['route'=>'dashboard.knowledge.index','label'=>'Knowledge Base','icon'=>'book-open'],
       ]];
       $groups[] = ['heading'=>'Marketplace Management','items'=>[
         ['route'=>'dashboard.products.index','label'=>'Digital Products','icon'=>'package'],
@@ -124,6 +125,7 @@
         ['route'=>'account.policy-receipts','label'=>'Policy Receipts','icon'=>'scroll-text'],
         ['route'=>'privacy.index','label'=>'Privacy Requests','icon'=>'shield-check'],
         ['route'=>'support','label'=>'Support Center','icon'=>'life-buoy'],
+        ['route'=>'support.tickets','label'=>'My Tickets','icon'=>'message'],
       ]],
     ];
     if ($user->isCreator()) {

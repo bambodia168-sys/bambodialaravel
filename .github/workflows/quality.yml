@@ -60,6 +60,7 @@ jobs:
           bash -n support/policy-hero-upgrade.sh
           bash -n support/policy-reading-upgrade.sh
           bash -n support/policy-metadata-upgrade.sh
+          bash -n support/knowledge-base-upgrade.sh
           php -l examples/license-validation.php
           bash -n support/builder-studio-db-backup.sh
       - name: Check PHP syntax

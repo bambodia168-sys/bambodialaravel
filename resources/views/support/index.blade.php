@@ -2,7 +2,7 @@
 @section('title','Support Center')
 @section('content')
 <div class="container inner-page">
-  <div class="page-intro"><div class="eyebrow">Customer Care</div><h1>Support Center</h1><p>Open a support request and follow its progress in your account.</p></div>
+  <div class="page-intro"><div class="eyebrow">Customer Care · Private Tickets</div><h1>My support tickets</h1><p>Open a private support request, read replies and track its progress.</p><a href="{{ route('support') }}" class="btn subtle"><x-icon name="book-open" size="16"/> Browse knowledge base</a></div>
   <section class="panel">
     <div class="panel-head"><h2>My tickets <span class="count">{{ $tickets->total() }}</span></h2><button class="btn primary" type="button" data-modal-open="ticket-new">Create ticket</button></div>
     <div class="table-scroll"><table class="data-table"><thead><tr><th>Ticket ID</th><th>Subject</th><th>Status</th><th>Updated</th><th>Action</th></tr></thead><tbody>

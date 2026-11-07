@@ -52,7 +52,9 @@ use App\Http\Controllers\PolicyCenterController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\SupportController;
+use App\Http\Controllers\KnowledgeBaseController;
 use App\Http\Controllers\Dashboard\SupportCenterController;
+use App\Http\Controllers\Dashboard\KnowledgeBaseController as KnowledgeBaseManagerController;
 use App\Http\Controllers\Dashboard\FeatureManagerController;
 use App\Http\Controllers\Dashboard\ContentManagerController;
 use App\Http\Controllers\Dashboard\PolicyManagerController;
@@ -70,6 +72,10 @@ Route::get('/jobs/{job}', [JobBoardController::class, 'show'])->name('jobs.show'
 Route::get('/licenses', [LicenseController::class, 'show'])->name('license.show');
 Route::get('/media/{publicId}/preview', [MediaLibraryController::class, 'preview'])
     ->where('publicId', '[0-9]{9}')->name('media.preview');
+Route::get('/support-center', [KnowledgeBaseController::class, 'index'])->name('support');
+Route::get('/support-center/articles/{reference}-{slug}', [KnowledgeBaseController::class, 'show'])
+    ->where(['reference'=>'[0-9]{8}','slug'=>'[a-z0-9-]+'])->name('support.article.show');
+Route::get('/contact', fn () => redirect()->route('support'))->name('contact');
 Route::get('/policy-center', [PolicyCenterController::class, 'index'])->name('policy-center');
 Route::get('/policies', [PolicyCenterController::class, 'show'])->name('policy.show');
 Route::get('/policies/{reference}-{slug}', [PolicyCenterController::class, 'showByReference'])
@@ -108,8 +114,7 @@ Route::middleware('auth')->group(function (): void {
         Route::delete('/developer/tokens/{token}', [DeveloperController::class, 'revoke'])->name('developer.revoke')->middleware('throttle:10,1');
         Route::get('/security-dashboard', [SecurityDashboardController::class, 'index'])->name('security.index');
     });
-    Route::get('/contact', fn () => redirect()->route('support'))->name('contact');
-    Route::get('/support-center', [SupportController::class, 'index'])->name('support');
+    Route::get('/support-center/tickets', [SupportController::class, 'index'])->name('support.tickets');
     Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1');
     Route::get('/support-center/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('support.show');
     Route::post('/support-center/{ticket}/reply', [SupportController::class, 'reply'])->whereNumber('ticket')->name('support.reply')->middleware('throttle:10,1');
@@ -282,6 +287,13 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/post-manager', [ContentManagerController::class, 'posts'])->name('dashboard.posts');
             Route::post('/post-manager', [ContentManagerController::class, 'storePost'])->name('dashboard.posts.store');
             Route::patch('/post-manager/{entry}', [ContentManagerController::class, 'updatePost'])->name('dashboard.posts.update');
+            Route::get('/knowledge-base', [KnowledgeBaseManagerController::class, 'index'])->name('dashboard.knowledge.index');
+            Route::get('/knowledge-base/create', [KnowledgeBaseManagerController::class, 'create'])->name('dashboard.knowledge.create');
+            Route::get('/knowledge-base/{article}/edit', [KnowledgeBaseManagerController::class, 'edit'])->name('dashboard.knowledge.edit');
+            Route::get('/knowledge-base/{article}/preview', [KnowledgeBaseManagerController::class, 'preview'])->name('dashboard.knowledge.preview');
+            Route::post('/knowledge-base', [KnowledgeBaseManagerController::class, 'store'])->name('dashboard.knowledge.store')->middleware('throttle:10,1');
+            Route::patch('/knowledge-base/{article}', [KnowledgeBaseManagerController::class, 'update'])->name('dashboard.knowledge.update')->middleware('throttle:10,1');
+            Route::post('/knowledge-base/starter-drafts', [KnowledgeBaseManagerController::class, 'seed'])->name('dashboard.knowledge.seed')->middleware('throttle:3,1');
             Route::get('/policy-center', [PolicyManagerController::class, 'index'])->name('dashboard.policies');
             Route::get('/policy-center/create', [PolicyManagerController::class, 'create'])->name('dashboard.policies.create');
             Route::get('/policy-center/{policy}/edit', [PolicyManagerController::class, 'edit'])->name('dashboard.policies.edit');
