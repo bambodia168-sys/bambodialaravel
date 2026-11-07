@@ -20,7 +20,7 @@
 <td><span class="role-pill">{{ ucfirst(str_replace('_',' ',$record->status)) }}</span></td>
 <td>{{ $record->created_at->format('d M Y') }}</td>
 <td>{{ $record->updated_at->format('d M Y') }}</td>
-<td><a class="btn subtle compact" href="{{ route('privacy.show',$record) }}">View request</a></td></tr>
+<td><x-row-action-menu :id="'account-privacy-'.$record->id" :label="'Privacy request '.$record->public_id"><a href="{{ route('privacy.show',$record) }}"><x-icon name="eye" size="16"/> View request</a></x-row-action-menu></td></tr>
 @empty<tr><td colspan="6" class="empty-cell">No privacy requests recorded for your account.</td></tr>@endforelse
 </tbody></table></div><x-pagination :paginator="$requests"/>
 </section>
