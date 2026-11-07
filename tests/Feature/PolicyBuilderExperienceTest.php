@@ -116,6 +116,36 @@ class PolicyBuilderExperienceTest extends TestCase
         $this->assertDatabaseCount('account_notifications', 0);
     }
 
+
+    public function test_account_announcement_is_delivered_once_when_worker_processes_the_notice(): void
+    {
+        $policy = $this->policy();
+        $admin = $this->admin();
+        $recipient = User::query()->create([
+            'name' => 'Legal Notice Recipient', 'email' => 'recipient@example.test',
+            'password' => 'test-only-password', 'role' => 'customer',
+        ]);
+
+        $this->actingAs($admin)->patch(route('dashboard.policies.update', $policy), [
+            'title' => $policy->title, 'body' => $policy->body,
+            'body_format' => 'markdown', 'category' => 'general',
+            'version' => '1.0.0', 'status' => 'published',
+            'confirm_legal_review' => '1', 'notify_account' => '1',
+            'notification_headline' => 'Policy publication notice',
+            'notification_message' => 'Please review the updated legal policy and keep a copy for your records.',
+        ])->assertRedirect();
+
+        $notice = PolicyUpdateNotice::query()->firstOrFail();
+        $this->assertTrue($notice->notify_account);
+        (new \App\Jobs\DeliverPolicyNotice($notice->id))->handle();
+        (new \App\Jobs\DeliverPolicyNotice($notice->id))->handle();
+
+        $this->assertSame(1, AccountNotification::query()
+            ->where('user_id', $recipient->id)->where('event', 'policy.updated')->count());
+        $this->assertSame(1, \Illuminate\Support\Facades\DB::table('policy_notice_recipients')
+            ->where('policy_update_notice_id', $notice->id)->where('user_id', $recipient->id)->count());
+    }
+
     public function test_unreviewed_draft_cannot_be_published(): void
     {
         $policy = $this->policy();
