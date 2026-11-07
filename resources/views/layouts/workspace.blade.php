@@ -168,7 +168,8 @@
           @foreach($group['items'] as $item)
             @continue(isset($item['roles']) && !in_array($user->role,$item['roles'],true))
             @php
-              $match = $currentName === $item['route']
+              $match = ($currentName === $item['route']
+                || ($item['route'] === 'dashboard.knowledge.index' && str_starts_with($currentName, 'dashboard.knowledge.')))
                 && (!isset($item['params']) || (request()->route('type') === ($item['params']['type'] ?? null)));
             @endphp
             <a href="{{ route($item['route'], $item['params'] ?? []) }}"
