@@ -52,13 +52,13 @@
             <td>@if($product->coverAsset)<img class="media-thumb" src="{{ $product->coverAsset->previewUrl() }}" alt="{{ $product->coverAsset->alt_text }}" width="52" height="52">@else<span class="text-muted">Not selected</span>@endif</td>
             <td><span class="role-pill">{{ ucfirst($product->status) }}</span></td><td>{{ $product->created_at->format('d M Y') }}</td>
             <td>
-              <div class="table-actions">
-                <a class="btn subtle compact" href="{{ url('/builder?='.$product->public_id) }}"><x-icon name="edit" size="15"/> {{ in_array($product->status,['draft','rejected'],true) ? 'Edit in builder' : 'Details' }}</a>
+              <x-row-action-menu :id="'creator-product-'.$product->id" :label="$product->title">
+                <a href="{{ url('/builder?='.$product->public_id) }}"><x-icon name="edit" size="16"/> {{ in_array($product->status,['draft','rejected'],true) ? 'Edit in builder' : 'Details' }}</a>
                 @if($product->status === 'published')
-                  <a class="btn subtle compact" href="{{ $product->publicUrl() }}">View</a>
-                  <a class="btn primary compact" href="{{ route('studio.vault.index', $product) }}">Releases</a>
+                  <a href="{{ $product->publicUrl() }}"><x-icon name="eye" size="16"/> View</a>
+                  <a href="{{ route('studio.vault.index', $product) }}"><x-icon name="archive" size="16"/> Releases</a>
                 @endif
-              </div>
+              </x-row-action-menu>
             </td>
           </tr>
         @empty<tr><td class="empty-cell" colspan="7">No digital products have been created.</td></tr>@endforelse
