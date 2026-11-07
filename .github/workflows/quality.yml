@@ -68,6 +68,7 @@ jobs:
           bash -n support/support-center-content-hero-upgrade.sh
           bash -n support/support-agent-photo-upgrade.sh
           bash -n support/support-agent-clarity-upgrade.sh
+          bash -n support/support-agent-blending-upgrade.sh
           php -l examples/license-validation.php
           bash -n support/builder-studio-db-backup.sh
       - name: Check PHP syntax
