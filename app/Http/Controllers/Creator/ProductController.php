@@ -148,6 +148,20 @@ class ProductController extends Controller
         }
         BuilderFeaturedMedia::check($data, (int)$request->user()->id);
         BuilderGallery::check($data, $request);
+        if (!empty($data['license_definition_id'])) {
+            $regular = LicenseDefinition::query()->find($data['license_definition_id']);
+            if (!$regular || !$regular->allowsTier('regular')) {
+                throw ValidationException::withMessages(['license_definition_id' =>
+                    'Choose an administrator-reviewed Regular License definition.']);
+            }
+        }
+        if (!empty($data['extended_license_definition_id'])) {
+            $extended = LicenseDefinition::query()->find($data['extended_license_definition_id']);
+            if (!$extended || !$extended->allowsTier('extended')) {
+                throw ValidationException::withMessages(['extended_license_definition_id' =>
+                    'Choose an administrator-reviewed Extended License definition.']);
+            }
+        }
         if ($request->boolean('builder_mode')) {
             $data['price'] = $data['regular_price'] ?? null;
             if ($data['status'] === 'pending' && ($data['regular_price'] ?? null) === null) {
@@ -157,7 +171,7 @@ class ProductController extends Controller
                 $license = !empty($data['extended_license_definition_id'])
                     ? LicenseDefinition::query()->find($data['extended_license_definition_id'])
                     : null;
-                if (!$license || $license->status !== 'active') {
+                if (!$license || $license->status !== 'active' || !$license->allowsTier('extended')) {
                     throw ValidationException::withMessages([
                         'extended_license_definition_id' => 'Choose an active, administrator-reviewed Extended License.',
                     ]);

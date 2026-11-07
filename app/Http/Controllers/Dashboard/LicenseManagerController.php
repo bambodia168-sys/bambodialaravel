@@ -134,6 +134,7 @@ class LicenseManagerController extends Controller
 
         return $request->validate([
             'code' => ['required', 'string', 'regex:/^[A-Z0-9_]{3,32}$/', $unique],
+            'tier' => ['required', Rule::in(array_keys(LicenseDefinition::TIERS))],
             'name' => ['required', 'string', 'min:3', 'max:120'],
             'version' => ['required', 'string', 'regex:/^[0-9]+\.[0-9]+\.[0-9]+$/', 'max:30'],
             'permissions' => ['required', 'string', 'min:30', 'max:50000'],

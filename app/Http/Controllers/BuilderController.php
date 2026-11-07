@@ -71,8 +71,10 @@ class BuilderController extends Controller
         $suggestedTerms = BuilderSubmissionTerms::suggestedTerms($termsPublications);
         $licenses = $type === 'product'
             ? LicenseDefinition::query()->where('status', 'active')
-                ->orderBy('name')->get(['id', 'name', 'version'])
+                ->orderBy('name')->get(['id','name','version','tier','public_id','slug','permissions','restrictions'])
             : collect();
+        $regularLicenses = $licenses->filter(fn (LicenseDefinition $definition) => $definition->allowsTier('regular'));
+        $extendedLicenses = $licenses->filter(fn (LicenseDefinition $definition) => $definition->allowsTier('extended'));
         $assets = $type !== null
             ? MediaAsset::query()->where('user_id', $request->user()->id)
                 ->whereIn('review_status', ['approved', 'pending'])->latest()
@@ -85,7 +87,7 @@ class BuilderController extends Controller
             : collect();
 
         return view('builder.index', compact(
-            'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'licenses', 'assets',
+            'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'licenses', 'regularLicenses', 'extendedLicenses', 'assets',
             'termsPublications', 'termsSha256', 'suggestedTerms', 'productVersions'
         ));
     }

@@ -45,7 +45,8 @@ final class ProductLicenseLifecycle
             abort_if($tier === 'extended' && $product->extended_price === null, 409,
                 'The product does not offer an Extended License.');
             $definition = $definitionId ? LicenseDefinition::query()->find($definitionId) : null;
-            abort_unless($definition && $definition->status === 'active', 409,
+            abort_unless($definition && $definition->status === 'active'
+                && $definition->allowsTier($tier), 409,
                 'The selected license definition must be active and reviewed.');
 
             $secret = 'BAM-'.strtoupper(bin2hex(random_bytes(24)));
@@ -209,7 +210,8 @@ final class ProductLicenseLifecycle
             $product = $locked->product()->firstOrFail();
             abort_unless($product->type === 'product' && $product->extended_price !== null,409);
             $extended = $product->extendedLicenseDefinition;
-            abort_unless($extended && $extended->status === 'active',409);
+            abort_unless($extended && $extended->status === 'active'
+                && $extended->allowsTier('extended'),409);
             $locked->update(['tier'=>'extended','license_definition_id'=>$extended->id]);
             self::event($locked,'upgraded',$administrator->id,null,null,$reason);
         });

@@ -8,8 +8,10 @@ use Illuminate\Support\Str;
 
 class LicenseDefinition extends Model
 {
+    public const TIERS = ['regular'=>'Regular License','extended'=>'Extended License'];
+
     protected $fillable = [
-        'code', 'name', 'version', 'permissions', 'restrictions',
+        'code', 'tier', 'name', 'version', 'permissions', 'restrictions',
         'status', 'published_at', 'created_by',
     ];
 
@@ -51,6 +53,27 @@ class LicenseDefinition extends Model
     public function issuedLicenses(): HasMany
     {
         return $this->hasMany(ProductLicense::class, 'license_definition_id');
+    }
+
+    /** Existing unclassified definitions remain usable until administrators classify them.
+     * The label is guidance, not an inferred grant of extra commercial rights. */
+    public function tierLabel(): string
+    {
+        return self::TIERS[$this->tier] ?? 'Legacy definition (unclassified)';
+    }
+
+    public static function tierDescription(string $tier): string
+    {
+        return $tier === 'extended'
+            ? 'May provide additional commercial or monetized usage only when the published Extended License explicitly allows it. Original files remain protected.'
+            : 'Typically intended for a single end project or installation, strictly subject to the approved Regular License terms and restrictions.';
+    }
+
+    public function allowsTier(string $tier): bool
+    {
+        // Legacy definitions predating tier classification retain their existing
+        // references; new typed definitions are never interchangeable.
+        return $this->tier === null || $this->tier === $tier;
     }
 
     public function publicUrl(): string

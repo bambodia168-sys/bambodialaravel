@@ -14,7 +14,7 @@ final class ProductReadiness
     {
         $errors = [];
         $license = $licenseId ? LicenseDefinition::query()->find($licenseId) : null;
-        if (! $license || $license->status !== 'active') {
+        if (! $license || $license->status !== 'active' || ! $license->allowsTier('regular')) {
             $errors['license_definition_id'] = 'Select an active, administrator-reviewed license definition.';
         }
 
@@ -37,7 +37,7 @@ final class ProductReadiness
         }
         if ($listing->extended_price !== null) {
             $extended = $listing->extendedLicenseDefinition;
-            if (! $extended || $extended->status !== 'active') {
+            if (! $extended || $extended->status !== 'active' || ! $extended->allowsTier('extended')) {
                 throw ValidationException::withMessages([
                     'extended_license_definition_id' => 'The Extended License must remain administrator-approved.',
                 ]);
