@@ -27,7 +27,9 @@
             <td>@if($product->coverAsset)<img class="media-thumb" src="{{ $product->coverAsset->previewUrl() }}" width="52" height="52" alt="{{ $product->coverAsset->alt_text }}">@else<span class="text-muted">Missing</span>@endif</td>
             <td><span class="role-pill">{{ ucfirst($product->status) }}</span></td>
             <td>
-              <button class="btn subtle compact" data-modal-open="admin-product-{{ $product->id }}" type="button"><x-icon name="settings" size="16"/> Configure</button>
+              <x-row-action-menu :id="'admin-product-'.$product->id" :label="$product->title">
+                <button type="button" data-modal-open="admin-product-{{ $product->id }}"><x-icon name="settings" size="16"/> Configure</button>
+              </x-row-action-menu>
               <dialog class="config-dialog wide-dialog" id="admin-product-{{ $product->id }}">
                 <div class="dialog-heading"><h2>{{ $product->title }}</h2><p>ID {{ $product->public_id }} · {{ $product->creator?->name }} · {{ ucfirst($product->status) }}</p></div>
                 @if($product->coverAsset)<img class="media-dialog-preview" src="{{ $product->coverAsset->previewUrl() }}" alt="{{ $product->coverAsset->alt_text }}">@endif
