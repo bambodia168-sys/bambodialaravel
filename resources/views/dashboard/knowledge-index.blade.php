@@ -12,6 +12,9 @@
       <form method="post" action="{{ route('dashboard.knowledge.seed') }}" onsubmit="return confirm('Prepare nine starter help articles as unpublished drafts? Existing articles are preserved.')">
         @csrf <button class="btn subtle" type="submit"><x-icon name="book-open" size="16"/> Create starter drafts</button>
       </form>
+      <form method="post" action="{{ route('dashboard.knowledge.additional-drafts') }}" onsubmit="return confirm('Prepare 24 additional Knowledge Base articles as unpublished drafts? Existing articles will remain unchanged.')">
+        @csrf <button class="btn subtle" type="submit"><x-icon name="book" size="16"/> Create 24 more drafts</button>
+      </form>
       <a class="btn primary" href="{{ route('dashboard.knowledge.create') }}"><x-icon name="edit" size="16"/> New article</a>
     </div>
   </div>
