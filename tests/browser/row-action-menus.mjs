@@ -83,11 +83,9 @@ try {
       throw Error(name+' Policy Builder did not open');
     checks++;
 
-    const licenseResponse = await page.goto(origin+'/dashboard/licenses',{waitUntil:'networkidle'});
+    const licenseResponse = await page.goto(origin+'/dashboard/license-manager',{waitUntil:'networkidle'});
     if(licenseResponse?.status()!==200) throw Error(name+' license manager unavailable');
     const license = page.locator('[data-row-action-menu][id^="license-actions-"]').first();
-    const licenseTrigger = page.locator('[aria-controls="'+await license.getAttribute('id')+'"]');
-    // Existing License Manager uses popovertarget rather than aria-controls.
     const licenseAnchor = await license.getAttribute('data-row-action-anchor');
     if(!licenseAnchor) throw Error(name+' shared License Manager adapter missing');
     await page.locator('#'+licenseAnchor).click();
