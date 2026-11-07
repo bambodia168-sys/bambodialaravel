@@ -31,7 +31,7 @@
 <td>{{ str_replace('.',' / ',$notification->event) }}</td>
 <td><span class="role-pill">{{ $notification->read_at?'Read':'Unread' }}</span></td>
 <td>{{ $notification->created_at->format('d M Y H:i') }}</td>
-<td><form method="post" action="{{ route('account.notifications.read',$notification) }}">@csrf @method('PATCH')<button type="submit" class="btn subtle compact">Open</button></form></td></tr>
+<td><x-row-action-menu :id="'notification-'.$notification->id" :label="$notification->title"><form method="post" action="{{ route('account.notifications.read',$notification) }}">@csrf @method('PATCH')<button type="submit"><x-icon name="eye" size="16"/> Open</button></form></x-row-action-menu></td></tr>
 @empty<tr><td colspan="5" class="empty-cell">No recorded activity for this filter.</td></tr>@endforelse
 </tbody></table></div><x-pagination :paginator="$notifications"/></section>
 </div>
