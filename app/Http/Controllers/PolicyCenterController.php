@@ -25,6 +25,7 @@ class PolicyCenterController extends Controller
             ->with('policy:id,title,public_code,slug,status')
             ->where('show_banner', true)
             ->whereHas('policy', fn ($query) => $query->where('status', 'published'))
+            ->whereRaw('policy_publication_id = (SELECT MAX(id) FROM policy_publications WHERE policy_id = policy_update_notices.policy_id)')
             ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
             ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>', now()))
             ->latest()->limit(5)->get();
