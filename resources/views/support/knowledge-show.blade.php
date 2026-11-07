@@ -8,13 +8,13 @@
     @if($related->isNotEmpty())
       <div class="support-sidebar-subtitle">In this category</div>
       @foreach($related as $item)
-        <a href="{{ $item->publicUrl() }}" class="support-related-link"><x-icon name="file-text" size="16"/><span>{{ $item->title }}</span></a>
+        <a href="{{ $item->publicUrl() }}" class="support-related-link"><span class="support-related-number" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span><span>{{ $item->title }}</span></a>
       @endforeach
     @endif
     @if($otherGuides->isNotEmpty())
       <div class="support-sidebar-subtitle">Other guides</div>
       @foreach($otherGuides as $item)
-        <a href="{{ $item->publicUrl() }}" class="support-related-link"><x-icon name="file-text" size="16"/><span>{{ $item->title }}</span></a>
+        <a href="{{ $item->publicUrl() }}" class="support-related-link"><span class="support-related-number" aria-hidden="true">{{ sprintf('%02d', $related->count() + $loop->iteration) }}</span><span>{{ $item->title }}</span></a>
       @endforeach
     @endif
     @if($related->isEmpty() && $otherGuides->isEmpty())
