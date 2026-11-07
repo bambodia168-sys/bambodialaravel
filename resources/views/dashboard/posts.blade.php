@@ -17,7 +17,7 @@
         Published {{ $counts['published'] ?? 0 }} · Drafts {{ $counts['draft'] ?? 0 }} · Archived {{ $counts['archived'] ?? 0 }}
       </p>
     </div>
-    <a class="btn primary" href="{{ route('dashboard.posts.create') }}"><x-icon name="plus" size="17"/> New post</a>
+    <a class="btn primary" href="{{ route('dashboard.posts.create') }}"><x-icon name="edit" size="17"/> New post</a>
   </header>
   <form method="get" action="{{ route('dashboard.posts') }}" class="post-manager-filters">
     <label class="sr-only" for="post-search">Search posts</label>
