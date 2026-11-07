@@ -21,6 +21,7 @@ $paths = [
     'newspaper' => '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h6M7 12h6M7 16h10M16 8h2v4h-2z"/>',
     'scale' => '<path d="M12 3v18M5 6h14M8 6 4 14h8L8 6zm8 0-4 8h8l-4-8zM8 21h8"/>',
     'file-check' => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 16l3 3 5-5"/>',
+    'credit-card' => '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
     'folders' => '<path d="M3 7h7l2 2h9v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM5 4h7l2 2h6"/>',
     'wrench' => '<path d="M14.7 6.3a5 5 0 0 0-6.4 6.4L3 18l3 3 5.3-5.3a5 5 0 0 0 6.4-6.4l-3 3-3.4-3.4 3.4-3.4z"/>',
     'bell' => '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9zM10 21h4"/>',
