@@ -21,7 +21,9 @@
   <div class="table-scroll"><table class="data-table"><thead><tr><th>Listing ID</th><th>Title</th><th>Creator</th><th>Type</th><th>Submitted</th><th>Action</th></tr></thead><tbody>
   @forelse($listings as $listing)
     <tr><td class="mono">{{ $listing->public_id }}</td><td><strong>{{ $listing->title }}</strong></td><td>{{ $listing->creator?->name }}</td><td>{{ ucfirst($listing->type) }}</td><td>{{ $listing->created_at->format('d M Y') }}</td><td>
-      <button type="button" class="btn subtle compact" data-modal-open="review-{{ $listing->id }}"><x-icon name="settings" size="15"/> Configure</button>
+      <x-row-action-menu :id="'review-'.$listing->id" :label="$listing->title">
+        <button type="button" data-modal-open="review-{{ $listing->id }}"><x-icon name="settings" size="16"/> Configure</button>
+      </x-row-action-menu>
       <dialog id="review-{{ $listing->id }}" class="config-dialog wide-dialog">
         <div class="dialog-heading"><h2>{{ $listing->title }}</h2><p>Submission {{ $listing->public_id }} by {{ $listing->creator?->name }}</p></div>
         <strong>Submitted description</strong><p class="review-text">{{ $listing->description }}</p>
