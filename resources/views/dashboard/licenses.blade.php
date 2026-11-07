@@ -51,7 +51,7 @@
               <x-icon name="ellipsis-vertical" size="19"/>
             </button>
             <div id="license-actions-{{ $license->id }}" popover="auto"
-              class="row-action-popover license-action-popover" data-row-action-menu data-row-action-anchor="license-action-trigger-{{ $license->id }}"
+              class="row-action-popover license-action-popover" data-row-action-menu data-license-action-menu data-row-action-anchor="license-action-trigger-{{ $license->id }}"
               aria-label="Actions for {{ $license->name }}">
               <button type="button" data-license-action data-modal-open="license-{{ $license->id }}"
                 data-license-focus="license-heading-{{ $license->id }}"><x-icon name="eye" size="16"/> View definition</button>
@@ -285,7 +285,7 @@
             <x-icon name="ellipsis-vertical" size="19"/>
           </button>
           <div id="issued-actions-{{ $item->id }}" popover="auto"
-            class="row-action-popover license-action-popover" data-row-action-menu data-row-action-anchor="issued-action-trigger-{{ $item->id }}"
+            class="row-action-popover license-action-popover" data-row-action-menu data-license-action-menu data-row-action-anchor="issued-action-trigger-{{ $item->id }}"
             aria-label="Product license actions">
             <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
               data-license-focus="issued-{{ $item->id }}-heading"><x-icon name="eye" size="16"/> License details</button>
