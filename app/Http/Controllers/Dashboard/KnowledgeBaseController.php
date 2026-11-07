@@ -71,6 +71,30 @@ class KnowledgeBaseController extends Controller
             ->with('status', $created.' knowledge article drafts created. Review and publish each article.');
     }
 
+    /**
+     * Import additional help templates as editable drafts only. Existing articles,
+     * including published and archived content, are never rewritten.
+     */
+    public function additionalDrafts(Request $request): RedirectResponse
+    {
+        $created = DB::transaction(function () use ($request): int {
+            $created = 0;
+            foreach (SupportKnowledge::additionalArticles() as $template) {
+                if (KnowledgeArticle::query()->where('title', $template['title'])->exists()) {
+                    continue;
+                }
+                KnowledgeArticle::query()->create([
+                    ...$template, 'author_id'=>$request->user()->id, 'status'=>'draft',
+                ]);
+                $created++;
+            }
+            return $created;
+        });
+        AuditEvent::record('knowledge.additional_drafts_created', $request->user(), $request);
+        return redirect()->route('dashboard.knowledge.index', ['status'=>'draft'])
+            ->with('status', $created.' additional knowledge article drafts created. Review each before publishing.');
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
