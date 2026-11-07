@@ -72,6 +72,8 @@ Route::get('/media/{publicId}/preview', [MediaLibraryController::class, 'preview
     ->where('publicId', '[0-9]{9}')->name('media.preview');
 Route::get('/policy-center', [PolicyCenterController::class, 'index'])->name('policy-center');
 Route::get('/policies', [PolicyCenterController::class, 'show'])->name('policy.show');
+Route::get('/policies/{reference}-{slug}', [PolicyCenterController::class, 'showByReference'])
+    ->where(['reference' => '[0-9]{8}', 'slug' => '[a-z0-9-]+'])->name('policy.reference.show');
 Route::get('/search', [ListingController::class, 'search'])->name('marketplace.search');
 foreach (['product', 'project', 'freelance', 'service'] as $type) {
     Route::get('/'.$type, fn (\Illuminate\Http\Request $request) => app(ListingController::class)->show($request, $type))->name('marketplace.'.$type);
@@ -281,6 +283,9 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/post-manager', [ContentManagerController::class, 'storePost'])->name('dashboard.posts.store');
             Route::patch('/post-manager/{entry}', [ContentManagerController::class, 'updatePost'])->name('dashboard.posts.update');
             Route::get('/policy-center', [PolicyManagerController::class, 'index'])->name('dashboard.policies');
+            Route::get('/policy-center/create', [PolicyManagerController::class, 'create'])->name('dashboard.policies.create');
+            Route::get('/policy-center/{policy}/edit', [PolicyManagerController::class, 'edit'])->name('dashboard.policies.edit');
+            Route::get('/policy-center/{policy}/preview', [PolicyManagerController::class, 'preview'])->name('dashboard.policies.preview');
             Route::post('/policy-center', [PolicyManagerController::class, 'store'])->name('dashboard.policies.store');
             Route::post('/policy-center/legal-drafts', [PolicyManagerController::class, 'seedLegalDrafts'])->name('dashboard.policies.legal-drafts')->middleware('throttle:3,1');
             Route::patch('/policy-center/{policy}', [PolicyManagerController::class, 'update'])->name('dashboard.policies.update');
