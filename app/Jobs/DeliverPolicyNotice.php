@@ -62,7 +62,7 @@ class DeliverPolicyNotice implements ShouldQueue
             if ($notice->notify_email && filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
                 $pending = DB::table('policy_notice_recipients')
                     ->where('policy_update_notice_id', $notice->id)
-                    ->where('user_id', $user->id)->whereNull('email_queued_at')->exists();
+                    ->where('user_id', $user->id)->whereNull('email_sent_at')->exists();
                 if ($pending) {
                     $link = url($path);
                     // This runs in the database queue worker, never in an admin HTTP request.
@@ -74,7 +74,7 @@ class DeliverPolicyNotice implements ShouldQueue
                     DB::table('policy_notice_recipients')
                         ->where('policy_update_notice_id', $notice->id)
                         ->where('user_id', $user->id)
-                        ->update(['email_queued_at' => now(), 'updated_at' => now()]);
+                        ->update(['email_sent_at' => now(), 'updated_at' => now()]);
                 }
             }
         }
