@@ -50,6 +50,7 @@ EXISTING=(
   resources/views/content/show.blade.php
   resources/views/content/blog.blade.php
   resources/views/layouts/main.blade.php
+  resources/views/layouts/workspace.blade.php
   resources/css/app.css
   resources/js/app.js
 )
