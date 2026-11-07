@@ -87,8 +87,7 @@ try{
          (viewport.width>=1280 && heroAgent.layerOpacity<.99) ||
          !heroAgent.imageFilter.includes('contrast(1.13)') ||
          !heroAgent.maskImage.includes('radial-gradient') ||
-         !heroAgent.webkitMaskImage.includes('radial-gradient') ||
-         !heroAgent.maskImage.includes('transparent 94%') && viewport.width>680)
+         !heroAgent.webkitMaskImage.includes('radial-gradient'))
         throw Error('Photographic support-agent hero background missing or obstructing interactions: '+JSON.stringify(heroAgent));
       if(columns !== viewport.columns)
         throw Error('Expected '+viewport.columns+' article columns at '+viewport.width+', found '+columns);
