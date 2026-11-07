@@ -1729,16 +1729,16 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   position:absolute;z-index:1;pointer-events:none;user-select:none;
   right:max(0px,calc((100vw - 1550px)/2));bottom:-2px;
   width:clamp(260px,31vw,465px);height:min(100%,395px);
-  overflow:hidden;opacity:.64;
+  overflow:hidden;opacity:.96;
   mask-image:linear-gradient(90deg,transparent 0%,#000 28%,#000 100%);
   -webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 28%,#000 100%);
 }
 .support-hero-agent-art img{display:block;width:100%;height:100%;object-fit:contain;object-position:right bottom}
-[data-theme="dark"] .support-hero-agent-art{opacity:.40;filter:saturate(.78) brightness(.84)}
-@media(max-width:1100px){.support-hero-agent-art{width:clamp(220px,30vw,340px);opacity:.38}}
+[data-theme="dark"] .support-hero-agent-art{opacity:.80;filter:saturate(.87) brightness(.91)}
+@media(max-width:1100px){.support-hero-agent-art{width:clamp(220px,30vw,340px);opacity:.65}}
 @media(max-width:680px){
-  .support-hero-agent-art{right:-45px;width:205px;height:245px;opacity:.20;mask-image:linear-gradient(90deg,transparent,#000 65%);-webkit-mask-image:linear-gradient(90deg,transparent,#000 65%)}
-  [data-theme="dark"] .support-hero-agent-art{opacity:.16}
+  .support-hero-agent-art{right:-45px;width:205px;height:245px;opacity:.24;mask-image:linear-gradient(90deg,transparent,#000 65%);-webkit-mask-image:linear-gradient(90deg,transparent,#000 65%)}
+  [data-theme="dark"] .support-hero-agent-art{opacity:.20}
 }
 .support-knowledge-hero h1{
   margin:.45rem 0 .75rem;letter-spacing:-.045em;
