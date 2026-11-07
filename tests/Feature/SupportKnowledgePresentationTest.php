@@ -36,6 +36,8 @@ class SupportKnowledgePresentationTest extends TestCase
         $response = $this->get(route('support'));
         $response->assertOk()
             ->assertSee('images/support-agent-photo.webp', false)
+            ->assertSee('images/support-agent-photo-dark.webp', false)
+            ->assertSee('support-agent-photo-dark', false)
             ->assertDontSee('images/support-agent-hero.svg', false);
         $image = public_path('images/support-agent-photo.webp');
         $this->assertFileExists($image);
