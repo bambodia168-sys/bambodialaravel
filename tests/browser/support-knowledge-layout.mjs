@@ -106,7 +106,7 @@ try{
          !heroAgent.maskImage.includes('radial-gradient') ||
          !heroAgent.webkitMaskImage.includes('radial-gradient'))
         throw Error('Photographic support-agent hero background missing or obstructing interactions: '+JSON.stringify(heroAgent));
-      const goldenColor=theme==='dark' ? /242,\\s*177,\\s*76/ : /255,\\s*220,\\s*141/;
+      const goldenColor=theme==='dark' ? /242,\s*177,\s*76/ : /255,\s*220,\s*141/;
       if(!heroAgent.haloBackground.includes('radial-gradient') ||
          !goldenColor.test(heroAgent.haloBackground) ||
          heroAgent.haloLayer!=='0' ||
