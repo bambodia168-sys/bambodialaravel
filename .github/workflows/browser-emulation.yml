@@ -25,18 +25,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Set up deterministic image build
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - name: Prepare local test application
         run: |
           composer install --prefer-dist --no-interaction --no-progress
           npm install --ignore-scripts
           npm run build
-          python3 -m pip install --disable-pip-version-check --no-input Pillow==11.3.0
-          python3 support/enhance-support-agent.py public/images/support-agent-photo.webp
-          python3 support/prepare-support-agent-dark.py public/images/support-agent-photo.webp public/images/support-agent-photo-dark.webp
+          test -s public/images/support-agent-hero.avif
           cp .env.example .env
           php artisan key:generate
           mkdir -p database
