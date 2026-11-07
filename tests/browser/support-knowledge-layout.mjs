@@ -46,6 +46,7 @@ try{
               visibleWidth:agent.width,
               imageAlt:img.getAttribute('alt'),
               layerOpacity:Number(getComputedStyle(visual).opacity),
+              imageFilter:getComputedStyle(img).filter,
               pointerEvents:getComputedStyle(visual).pointerEvents,
             };
           })(),
@@ -81,7 +82,8 @@ try{
          heroAgent.rightDistance > 60 || heroAgent.visibleWidth<190 ||
          heroAgent.pointerEvents!=='none' || heroAgent.imageAlt!=='' ||
          heroAgent.layerOpacity<.15 || heroAgent.layerOpacity>1 ||
-         (viewport.width===1600 && theme==='light' && heroAgent.layerOpacity<.90))
+         (viewport.width>=1280 && heroAgent.layerOpacity<.99) ||
+         !heroAgent.imageFilter.includes('contrast(1.13)'))
         throw Error('Photographic support-agent hero background missing or obstructing interactions: '+JSON.stringify(heroAgent));
       if(columns !== viewport.columns)
         throw Error('Expected '+viewport.columns+' article columns at '+viewport.width+', found '+columns);
