@@ -27,7 +27,7 @@ class KnowledgeBaseController extends Controller
                     ->orWhere('body', 'like', '%'.$search.'%');
             }))
             ->orderByDesc('published_at')->orderBy('title')
-            ->paginate(12)->withQueryString();
+            ->paginate(10)->withQueryString();
 
         $categoryCounts = KnowledgeArticle::query()->where('status', 'published')
             ->selectRaw('category, COUNT(*) as total')
