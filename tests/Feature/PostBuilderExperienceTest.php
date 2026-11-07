@@ -116,7 +116,7 @@ class PostBuilderExperienceTest extends TestCase
             'body'=>'<img src=x onerror=alert(1)><script>alert(1)</script>',
         ]))->assertSessionHasErrors('body');
         $this->post(route('dashboard.posts.store'), $this->payload([
-            'tags'=>implode(', ', array_fill(0, 11, 'tag')).', longer',
+            'tags'=>implode(', ', array_map(fn ($i) => 'tag'.$i, range(1, 11))),
         ]))->assertSessionHasErrors('tags');
 
         $this->post(route('dashboard.posts.store'), $this->payload([
