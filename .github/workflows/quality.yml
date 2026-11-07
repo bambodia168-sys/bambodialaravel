@@ -55,6 +55,7 @@ jobs:
           bash -n support/license-definitions-upgrade.sh
           bash -n support/license-tables-upgrade.sh
           bash -n support/legal-policy-center-upgrade.sh
+          bash -n support/policy-builder-upgrade.sh
           php -l examples/license-validation.php
           bash -n support/builder-studio-db-backup.sh
       - name: Check PHP syntax
