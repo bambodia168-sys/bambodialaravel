@@ -37,10 +37,11 @@ class PolicyCenterController extends Controller
     public function show(Request $request): View|RedirectResponse
     {
         $raw = (string) $request->server('QUERY_STRING', '');
-        abort_unless(preg_match('/^=(\d{9})-([a-z0-9-]+)$/D', $raw, $match) === 1, 404);
+        abort_unless(preg_match('/^=(\d{8,9})-([a-z0-9-]+)$/D', $raw, $match) === 1, 404);
+        $field = strlen($match[1]) === 8 ? 'public_code' : 'public_id';
         $policy = Policy::query()->where('status', 'published')
-            ->where('public_id', $match[1])->firstOrFail();
-        if ($policy->slug !== $match[2]) {
+            ->where($field, $match[1])->firstOrFail();
+        if ($field === 'public_code' || $policy->slug !== $match[2]) {
             return redirect($policy->publicUrl(), 301);
         }
         return $this->showPolicy($request, $policy);
