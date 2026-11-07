@@ -58,7 +58,7 @@
         <td>{{ $token->expires_at->format('d M Y') }}</td>
         <td>{{ $token->last_used_at?->format('d M Y H:i') ?? 'Never' }}</td>
         <td><span class="role-pill">{{ $token->revoked_at ? 'Revoked' : ($token->expires_at->isPast() ? 'Expired' : 'Active') }}</span></td>
-        <td><button class="btn subtle compact" type="button" data-modal-open="token-{{ $token->id }}"><x-icon name="settings" size="15"/> Configure</button>
+        <td><x-row-action-menu :id="'token-'.$token->id" :label="$token->name"><button type="button" data-modal-open="token-{{ $token->id }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
           <dialog id="token-{{ $token->id }}" class="config-dialog">
             <div class="dialog-heading"><h2>{{ $token->name }}</h2><p>{{ $token->prefix }}…</p></div>
             <p><strong>Scopes:</strong> {{ implode(', ', $token->scopes) }}</p>
