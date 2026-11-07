@@ -953,7 +953,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', async () => {
             const url = button.dataset.policyCopyUrl;
             if (!url) return;
-            const feedback = button.closest('.policy-builder-main, .policy-single-hero')
+            const feedback = button.closest('.policy-builder-main, .policy-single-actions')
                 ?.querySelector('.policy-copy-feedback');
             try {
                 if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');

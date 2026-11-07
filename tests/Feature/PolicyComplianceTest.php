@@ -57,7 +57,7 @@ class PolicyComplianceTest extends TestCase
         $this->assertDatabaseHas('audit_events',['event'=>'policy.published','actor_id'=>$admin->id]);
 
         $this->actingAs($customer)->get($policy->publicUrl())
-            ->assertOk()->assertSee('Published revision')->assertSee($publication->sha256);
+            ->assertOk()->assertSee('Published revision')->assertDontSee($publication->sha256);
 
         $this->post('/policies/acknowledgements/'.$publication->id,[
             'confirm_read'=>'1',

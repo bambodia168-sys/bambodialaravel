@@ -1577,8 +1577,8 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .policy-notice-actions{display:flex;gap:.65rem;flex-wrap:wrap;margin-top:1.2rem}
 
 /* Public single-policy reading experience */
-.policy-single-premium .policy-single-hero{padding:1rem 0 1.8rem;max-width:1020px;margin:0 auto}
-.policy-single-hero h1{font-size:clamp(2rem,4vw,3.2rem);letter-spacing:-.03em;margin:.2rem 0 1.1rem}
+
+
 .policy-single-meta{display:flex;align-items:center;flex-wrap:wrap;gap:.7rem 1.3rem;margin:1rem 0;color:var(--muted);font-size:.86rem}
 .policy-single-meta span{display:inline-flex;align-items:center;gap:.4rem}
 .policy-single-premium .policy-layout{display:grid;grid-template-columns:minmax(180px,245px) minmax(0,1fr);gap:1.25rem;align-items:start}
@@ -1590,7 +1590,7 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .policy-single-detail-grid strong{overflow-wrap:anywhere;font-size:.82rem}
 .policy-single-premium .policy-copy{line-height:1.8;overflow-wrap:anywhere}
 .policy-reading-ack{border-top:1px solid var(--line);margin-top:2.5rem;padding-top:1.5rem}
-.policy-hash{font-size:.75rem;color:var(--muted);overflow-wrap:anywhere}
+
 @media(max-width:1499px){.policy-center-premium .policy-card-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:1099px){.policy-center-premium .policy-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.policy-builder-columns{grid-template-columns:minmax(0,1fr) 270px}}
 @media(max-width:799px){.policy-center-premium .policy-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.policy-trust-shield{right:-65px;opacity:.055}.policy-builder-columns{grid-template-columns:1fr}.policy-builder-sidebar{position:static;max-height:none;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.policy-single-premium .policy-layout{grid-template-columns:1fr}.policy-single-premium .policy-aside{position:static;max-height:none}.policy-single-detail-grid{grid-template-columns:1fr 1fr}}
@@ -1617,3 +1617,27 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 @keyframes feedback-leave{from{opacity:1;transform:translateZ(0)}to{opacity:0;transform:translate3d(12px,-6px,0)}}
 @media(max-width:600px){.global-feedback-region{top:calc(var(--header-height,60px) + 9px + env(safe-area-inset-top,0px));right:10px;width:min(390px,calc(100vw - 20px))}.global-feedback-toast{grid-template-columns:30px minmax(0,1fr) 27px;gap:9px;padding:12px 10px}.global-feedback-symbol{height:29px;width:29px}}
 @media(prefers-reduced-motion:reduce){.global-feedback-toast,.global-feedback-toast.is-dismissing{animation:none!important}.global-feedback-dismiss{transition:none}}
+
+
+/* Public single-policy: move directory back-navigation to sidebar, metadata to document top,
+   and copy/print/share to a right-aligned document footer. */
+.policy-single-premium .policy-layout{margin-top:clamp(1rem,3vw,2rem)}
+.policy-single-premium .policy-aside{padding:1.3rem}
+.policy-single-premium .policy-sidebar-back{display:flex;align-items:center;gap:.45rem;width:100%;margin:0 0 .9rem;padding:.6rem .65rem 1rem;border-radius:9px;font-weight:700;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line)}
+.policy-single-premium .policy-sidebar-back:hover,.policy-single-premium .policy-sidebar-back:focus-visible{color:var(--accent);background:var(--surface-2)}
+.policy-single-premium .policy-aside h2{margin:.15rem 0 .55rem}
+.policy-single-premium .policy-document-header{margin-bottom:1.5rem;border-bottom:1px solid var(--line);padding-bottom:1.15rem}
+.policy-single-premium .policy-document-header .policy-single-meta{margin:0;display:flex;flex-wrap:wrap;gap:.65rem 1.25rem;color:var(--muted);font-size:.85rem}
+.policy-single-premium .policy-document-footer{margin-top:2rem;padding-top:1.3rem;border-top:1px solid var(--line);display:flex;justify-content:flex-end;align-items:center}
+.policy-single-premium .policy-document-footer .policy-single-actions{justify-content:flex-end;gap:.65rem}
+.policy-single-premium .policy-document-footer .policy-copy-feedback{flex-basis:100%;text-align:right}
+@media(max-width:600px){
+ .policy-single-premium .policy-aside{padding:1rem}
+ .policy-single-premium .policy-document-header .policy-single-meta{gap:.6rem 1rem}
+ .policy-single-premium .policy-document-footer .policy-single-actions{width:100%;justify-content:flex-end}
+ .policy-single-premium .policy-document-footer .btn{padding:.65rem .75rem;font-size:.82rem}
+}
+@media print{
+ .policy-single-premium .policy-document-footer{display:none!important}
+ .policy-single-premium .policy-document-header{display:block!important}
+}
