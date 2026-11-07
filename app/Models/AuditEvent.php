@@ -27,6 +27,7 @@ class AuditEvent extends Model
         'support.staff.replied',
         'support.status.changed',
         'policy.published',
+        'policy.legal_drafts_created',
         'policy.read.acknowledged',
         'privacy.request.submitted',
         'privacy.request.inspected',
