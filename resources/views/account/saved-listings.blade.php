@@ -32,13 +32,13 @@
             <td>—</td><td>—</td>
           @endif
           <td>{{ $entry->created_at->format('d M Y') }}</td>
-          <td><div class="toolbar-actions">
-            @if($entry->listing)<a class="btn subtle compact" href="{{ $entry->listing->publicUrl() }}">View</a>@endif
+          <td><x-row-action-menu :id="'saved-listing-'.$entry->id" :label="$entry->listing?->title ?? 'Saved listing'">
+            @if($entry->listing)<a href="{{ $entry->listing->publicUrl() }}"><x-icon name="eye" size="16"/> View</a>@endif
             <form method="post" action="{{ route('saved-listings.destroy',$entry->marketplace_listing_id) }}">
               @csrf @method('DELETE')
-              <button class="btn subtle compact" type="submit">Remove</button>
+              <button type="submit" class="is-danger"><x-icon name="x" size="16"/> Remove</button>
             </form>
-          </div></td>
+          </x-row-action-menu></td>
         </tr>
       @empty
         <tr><td colspan="5" class="empty-cell">You have not saved a listing yet. Use Save on an approved listing to add it here.</td></tr>
