@@ -808,3 +808,40 @@ document.addEventListener('click', async (event) => {
     }
     button.dataset.originalLabel = oldLabel;
 });
+
+// Admin-only drafting helpers: never automatically publish a legal definition.
+// The explicit tier and review checkbox remain validated on the server.
+document.addEventListener('click', (event) => {
+    const preset = event.target.closest('[data-license-preset]')?.dataset.licensePreset;
+    if (!['regular','extended'].includes(preset)) return;
+    const dialog = document.getElementById('license-create');
+    if (!dialog) return;
+    const set = (id, value) => {
+        const field = dialog.querySelector('#' + id);
+        if (field) field.value = value;
+    };
+    const drafts = {
+        regular: {
+            code: 'BAM_REGULAR',
+            name: 'Regular License',
+            permissions: 'Proposed starting terms: non-exclusive permission to install and use one copy of the approved product for one end project or registered domain, subject to the exact limitations in the published license. Commercial use is permitted only if expressly authorized in the final approved terms.',
+            restrictions: 'Do not resell, redistribute, sublicense, or republish the original source files as a standalone product. Do not transfer ownership or claim copyright. Further uses require specific written authorization.'
+        },
+        extended: {
+            code: 'BAM_EXTENDED',
+            name: 'Extended License',
+            permissions: 'Proposed starting terms: non-exclusive permission to incorporate one copy of the approved product in an end project, including monetization only to the extent expressly permitted in the final reviewed license. This does not transfer copyright or ownership.',
+            restrictions: 'Do not resell, redistribute, sublicense or publish the original source code as a competing standalone product. Additional redistribution rights must be expressly stated in the published definition. Unwritten rights are not granted.'
+        }
+    };
+    const data = drafts[preset];
+    set('license-new-tier', preset);
+    set('license-new-code', data.code);
+    set('license-new-name', data.name);
+    set('license-new-version', '1.0.0');
+    set('license-new-permissions', data.permissions);
+    set('license-new-restrictions', data.restrictions);
+    set('license-new-status', 'draft');
+    const reviewed = dialog.querySelector('input[name="confirm_review"]');
+    if (reviewed) reviewed.checked = false;
+});

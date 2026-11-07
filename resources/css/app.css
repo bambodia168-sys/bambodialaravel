@@ -1449,3 +1449,17 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .license-product-description{padding:12px 0 14px;border-top:1px solid var(--line);margin-top:12px}
 .license-product-description h3{font-size:14px;font-weight:800;margin:0 0 8px}
 .license-product-description p{white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow-y:auto;line-height:1.6;margin:0}
+
+/* Admin License Definitions: type-specific, editable draft starter guidance. */
+.license-definition-guide{margin-bottom:20px}
+.license-definition-guide-header h2{margin:5px 0 8px;font-size:23px;font-weight:800}
+.license-definition-guide-header p{color:var(--muted);margin:0 0 15px;line-height:1.6}
+.license-definition-guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.license-definition-guide-card{padding:19px;border:1px solid var(--line);border-radius:17px;background:var(--surface)}
+.license-definition-guide-card h3{font-size:17px;display:flex;align-items:center;gap:9px;margin:0 0 10px}
+.license-definition-guide-card h3 svg{color:var(--accent)}
+.license-definition-guide-card p{font-size:13px;color:var(--muted);line-height:1.65;margin:0 0 10px}
+.license-definition-guide-card .btn{margin-top:4px}
+.license-definition-guide-footer{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--muted);margin:12px 2px 2px;line-height:1.5}
+.license-definition-guide-footer svg{flex:none}
+@media(max-width:720px){.license-definition-guide-grid{grid-template-columns:1fr}}

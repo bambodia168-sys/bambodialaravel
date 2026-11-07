@@ -2,6 +2,29 @@
 @section('title','License Manager')
 @section('content')
 <div class="page-intro"><div class="eyebrow">Marketplace Governance</div><h1>License Manager</h1><p>Manage reusable Regular and Extended license terms and the unique product licenses issued to customers.</p></div>
+<section class="license-definition-guide" aria-labelledby="license-definitions-guide">
+  <div class="license-definition-guide-header">
+    <div><span class="eyebrow">License Definitions</span>
+      <h2 id="license-definitions-guide">Regular & Extended License</h2>
+      <p>Define the product usage rights before a creator can attach them in Builder Studio. These definitions are not customer keys.</p>
+    </div>
+  </div>
+  <div class="license-definition-guide-grid">
+    <article class="license-definition-guide-card">
+      <h3><x-icon name="file-check" size="20"/> Regular License</h3>
+      <p>{{ \App\Models\LicenseDefinition::tierDescription('regular') }}</p>
+      <p class="hint">The customer's product license is lifetime; included standard support is six months, separately renewable.</p>
+      <button type="button" class="btn subtle compact" data-license-preset="regular" data-modal-open="license-create"><x-icon name="plus" size="16"/> Draft Regular terms</button>
+    </article>
+    <article class="license-definition-guide-card">
+      <h3><x-icon name="shield" size="20"/> Extended License</h3>
+      <p>{{ \App\Models\LicenseDefinition::tierDescription('extended') }}</p>
+      <p class="hint">Expanded permissions exist only when expressly written and approved; Extended does not transfer ownership of source code.</p>
+      <button type="button" class="btn subtle compact" data-license-preset="extended" data-modal-open="license-create"><x-icon name="plus" size="16"/> Draft Extended terms</button>
+    </article>
+  </div>
+  <p class="license-definition-guide-footer"><x-icon name="shield" size="16"/> Starter language is editable guidance, not an automatically approved legal policy. Review and publish each definition before products use it.</p>
+</section>
 <section class="panel">
   <div class="panel-head">
     <div><h2>License definitions <span class="count">{{ $licenses->total() }}</span></h2>
@@ -12,14 +35,15 @@
     </div>
   </div>
   <div class="table-scroll"><table class="data-table">
-    <thead><tr><th>Public ID</th><th>License</th><th>Code</th><th>Version</th><th>Status</th><th>Products</th><th>Action</th></tr></thead>
+    <thead><tr><th>Public ID</th><th>License</th><th>Type</th><th>Code</th><th>Version</th><th>Status</th><th>Products</th><th>Action</th></tr></thead>
     <tbody>
       @forelse($licenses as $license)
         @php($definitionLocked = $license->listings_count > 0 || $license->extended_listings_count > 0 || $license->issued_licenses_count > 0)
         <tr>
           <td class="mono">{{ $license->public_id }}</td><td><strong>{{ $license->name }}</strong></td>
+          <td><span class="role-pill">{{ $license->tierLabel() }}</span></td>
           <td class="mono">{{ $license->code }}</td><td>{{ $license->version }}</td>
-          <td><span class="role-pill">{{ ucfirst($license->status) }}</span></td><td>{{ $license->listings_count }}</td>
+          <td><span class="role-pill">{{ ucfirst($license->status) }}</span></td><td>{{ $license->listings_count + $license->extended_listings_count }}</td>
           <td>
             <button class="btn subtle compact license-action-trigger" type="button"
               id="license-action-trigger-{{ $license->id }}" popovertarget="license-actions-{{ $license->id }}"
@@ -50,12 +74,19 @@
               <form method="post" action="{{ route('dashboard.licenses.update',$license) }}">
                 @csrf @method('PATCH')
                 <h2 id="license-heading-{{ $license->id }}">{{ $license->name }}</h2>
-                <p>Public license ID {{ $license->public_id }} · {{ $license->listings_count }} referenced products</p>
+                <p>Public license ID {{ $license->public_id }} · {{ $license->tierLabel() }} · {{ $license->listings_count + $license->extended_listings_count }} referenced products</p>
                 @if($definitionLocked)
                   <div class="notice">This definition is already referenced by a product or issued license. Its rights are locked; create a new definition for changed terms.</div>
                   @if($license->status === 'active')<a href="{{ $license->publicUrl() }}" class="btn subtle" target="_blank" rel="noopener noreferrer">Read published license</a>@endif
                   <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Close</button></div>
                 @else
+                  <label for="license-tier-{{ $license->id }}">License definition type</label>
+                  <select id="license-tier-{{ $license->id }}" name="tier" required>
+                    @foreach(\App\Models\LicenseDefinition::TIERS as $tier=>$label)
+                      <option value="{{ $tier }}" @selected($license->tier===$tier)>{{ $label }}</option>
+                    @endforeach
+                  </select>
+                  @if(!$license->tier)<p class="hint">This older definition is unclassified. Assign its type before saving; existing issued licenses keep their terms.</p>@endif
                   <label for="license-code-{{ $license->id }}">License code (A–Z, 0–9, underscore)</label><input id="license-code-{{ $license->id }}" name="code" value="{{ $license->code }}" required maxlength="32">
                   <label for="license-name-{{ $license->id }}">Display name</label><input id="license-name-{{ $license->id }}" name="name" value="{{ $license->name }}" required maxlength="120">
                   <label for="license-version-{{ $license->id }}">Version</label><input id="license-version-{{ $license->id }}" name="version" value="{{ $license->version }}" required placeholder="1.0.0">
@@ -69,7 +100,7 @@
             </dialog>
           </td>
         </tr>
-      @empty<tr><td class="empty-cell" colspan="7">No license definitions have been created.</td></tr>@endforelse
+      @empty<tr><td class="empty-cell" colspan="8">No license definitions have been created. Use Draft Regular terms or Draft Extended terms to prepare them for review.</td></tr>@endforelse
     </tbody>
   </table></div>
   <x-pagination :paginator="$licenses"/>
@@ -78,7 +109,12 @@
   <form method="post" action="{{ route('dashboard.licenses.store') }}">
     @csrf
     <h2>Create a license definition</h2>
-    <p>Define the rights granted to buyers and the uses that are prohibited. Legal review is required before activation.</p>
+    <p>Define the rights granted to buyers and the prohibited uses for one license type. Review the draft wording before publishing it.</p>
+    <label for="license-new-tier">License definition type</label>
+    <select id="license-new-tier" name="tier" required>
+      <option value="regular" @selected(old('tier','regular')==='regular')>Regular License</option>
+      <option value="extended" @selected(old('tier')==='extended')>Extended License</option>
+    </select>
     <label for="license-new-code">License code</label><input id="license-new-code" name="code" placeholder="REGULAR" maxlength="32" required>
     <label for="license-new-name">License name</label><input id="license-new-name" name="name" maxlength="120" required>
     <label for="license-new-version">Version</label><input id="license-new-version" name="version" value="1.0.0" required>
