@@ -22,9 +22,9 @@ try{
     for(const theme of ['light','dark']){
       await page.evaluate(async theme=>{
         document.documentElement.dataset.theme = theme;
-        const visible=document.querySelector(theme==='dark' ? '.support-agent-photo-dark' : '.support-agent-photo-light');
-        if(!visible) throw Error('Missing theme-specific support portrait');
-        await visible.decode();
+        const image=document.querySelector('.support-hero-agent-art img');
+        if(!image) throw Error('Missing single transparent hero portrait');
+        await image.decode();
       },theme);
       const measurements = await page.evaluate(theme=>{
         document.documentElement.dataset.theme = theme;
@@ -43,14 +43,11 @@ try{
           heroAgent:(()=>{
             const hero=document.querySelector('.support-knowledge-hero').getBoundingClientRect();
             const visual=document.querySelector('.support-hero-agent-art');
-            const day=visual.querySelector('.support-agent-photo-light');
-            const night=visual.querySelector('.support-agent-photo-dark');
-            const img=theme==='dark'?night:day;
+            const img=visual.querySelector('img');
             const agent=visual.getBoundingClientRect();
             return {
-              loaded:img.complete && img.naturalWidth>=570 && img.naturalHeight>=478,
-              dayVisible:getComputedStyle(day).display!=='none',
-              nightVisible:getComputedStyle(night).display!=='none',
+              loaded:img.complete && img.naturalWidth===480 && img.naturalHeight===501,
+              imageCount:visual.querySelectorAll('img').length,
               source:img.currentSrc,
               rightDistance:hero.right-agent.right,
               visibleWidth:agent.width,
@@ -61,8 +58,6 @@ try{
               webkitMaskImage:getComputedStyle(visual).webkitMaskImage,
               pointerEvents:getComputedStyle(visual).pointerEvents,
               haloBackground:getComputedStyle(visual,'::before').backgroundImage,
-              haloOpacity:Number(getComputedStyle(visual,'::before').opacity),
-              haloLayer:getComputedStyle(visual,'::before').zIndex,
             };
           })(),
           categoryStyles,
@@ -93,25 +88,15 @@ try{
         };
       },theme);
       const {columns,documentWidth,viewportWidth,heroAgent,categoryStyles,assistanceBackground,cards} = measurements;
-      const expectedImage=theme==='dark' ? '/images/support-agent-photo-dark.webp' : '/images/support-agent-photo.webp';
-      const expectedContrast=theme==='dark' ? 'contrast(1.08)' : 'contrast(1.13)';
-      if(!heroAgent.loaded || !heroAgent.source.endsWith(expectedImage) ||
-         heroAgent.dayVisible !== (theme==='light') ||
-         heroAgent.nightVisible !== (theme==='dark') ||
-         heroAgent.rightDistance > 60 || heroAgent.visibleWidth<190 ||
+      if(!heroAgent.loaded || heroAgent.imageCount!==1 ||
+         !heroAgent.source.endsWith('/images/support-agent-hero.avif') ||
+         heroAgent.rightDistance>60 || heroAgent.visibleWidth<190 ||
          heroAgent.pointerEvents!=='none' || heroAgent.imageAlt!=='' ||
-         heroAgent.layerOpacity<.15 || heroAgent.layerOpacity>1 ||
-         (viewport.width>=1280 && heroAgent.layerOpacity<.99) ||
-         !heroAgent.imageFilter.includes(expectedContrast) ||
-         !heroAgent.maskImage.includes('radial-gradient') ||
-         !heroAgent.webkitMaskImage.includes('radial-gradient'))
-        throw Error('Photographic support-agent hero background missing or obstructing interactions: '+JSON.stringify(heroAgent));
-      const goldenColor=theme==='dark' ? /242,\s*177,\s*76/ : /255,\s*220,\s*141/;
-      if(!heroAgent.haloBackground.includes('radial-gradient') ||
-         !goldenColor.test(heroAgent.haloBackground) ||
-         heroAgent.haloLayer!=='0' ||
-         heroAgent.haloOpacity < .40)
-        throw Error('Golden agent halo missing or incorrect in '+theme+' at '+viewport.width+': '+JSON.stringify(heroAgent));
+         heroAgent.layerOpacity<.25 || heroAgent.layerOpacity>1 ||
+         heroAgent.imageFilter!=='none' ||
+         heroAgent.maskImage!=='none' || heroAgent.webkitMaskImage!=='none' ||
+         heroAgent.haloBackground!=='none')
+        throw Error('Clean single-image Support Center hero acceptance failed at '+viewport.width+'/'+theme+': '+JSON.stringify(heroAgent));
       if(columns !== viewport.columns)
         throw Error('Expected '+viewport.columns+' article columns at '+viewport.width+', found '+columns);
       if(documentWidth > viewportWidth+5)
