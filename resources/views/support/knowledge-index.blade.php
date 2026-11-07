@@ -60,9 +60,11 @@
     <div class="support-article-grid">
       @forelse($articles as $article)
         <a class="support-article-card" href="{{ $article->publicUrl() }}">
-          <span class="support-article-card-glyph" aria-hidden="true"><x-icon :name="$categoryIcons[$article->category] ?? 'book-open'" size="30"/></span>
+          <span class="support-article-card-number" aria-hidden="true">{{ sprintf('%02d', ($articles->currentPage() - 1) * $articles->perPage() + $loop->iteration) }}</span>
+          <span class="support-article-card-glyph" aria-hidden="true"><x-icon :name="$categoryIcons[$article->category] ?? 'book-open'" size="76"/></span>
           <span class="support-article-category">{{ \App\Support\SupportKnowledge::CATEGORIES[$article->category] ?? ucfirst($article->category) }}</span>
           <strong>{{ $article->title }}</strong>
+          <p class="support-article-excerpt">{{ $article->excerpt }}</p>
           <span class="support-article-open">Read article <x-icon name="chevron-right" size="16"/></span>
         </a>
       @empty
