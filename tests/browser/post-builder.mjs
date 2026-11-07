@@ -47,13 +47,13 @@ try {
   const editUrl=page.url(), publicPath=await page.locator('.policy-reference-row').innerText();
   if(!publicPath.includes('Post ID'))throw Error('Save did not create a post');
   assertions+=2;
-  await page.getByRole('link',{name:'Preview'}).first().click();
-  const popup=await context.waitForEvent('page',{timeout:10000}).catch(()=>null);
-  if(popup){
-    await popup.waitForLoadState('domcontentloaded');
-    if(!(await popup.locator('body').innerText()).includes(title))throw Error('Draft preview missing title');
-    await popup.close();
-  }
+  const [popup]=await Promise.all([
+    context.waitForEvent('page',{timeout:10000}),
+    page.getByRole('link',{name:'Preview'}).first().click(),
+  ]);
+  await popup.waitForLoadState('domcontentloaded');
+  if(!(await popup.locator('body').innerText()).includes(title))throw Error('Draft preview missing title');
+  await popup.close();
   await page.locator('#post-status').selectOption('published');
   await page.getByRole('button',{name:'Save changes'}).click();
   await page.waitForURL(editUrl,{waitUntil:'load',timeout:15000}).catch(()=>{});
