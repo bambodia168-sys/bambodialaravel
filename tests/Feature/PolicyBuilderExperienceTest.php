@@ -77,7 +77,7 @@ class PolicyBuilderExperienceTest extends TestCase
         $policy->refresh();
         $this->assertDatabaseHas('policy_publications', ['policy_id' => $policy->id, 'version' => '1.0.1']);
         $this->get($policy->publicUrl())->assertOk()
-            ->assertSee('Public Legal Terms')->assertDontSee('<script>', false);
+            ->assertSee('Public Legal Terms')->assertDontSee('alert(&quot;x&quot;)')->assertDontSee('alert("x")');
         $this->get('/policies?='.$policy->public_id.'-'.$policy->slug)->assertOk();
         $this->get('/policies?='.$policy->public_code.'-'.$policy->slug)
             ->assertRedirect($policy->publicUrl());
