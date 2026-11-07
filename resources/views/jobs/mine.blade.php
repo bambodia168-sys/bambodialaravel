@@ -22,10 +22,10 @@
           <td>{{ $job->budget===null?'—':'$'.number_format((float)$job->budget,2) }}</td>
           <td><span class="role-pill">{{ ucfirst($job->status) }}</span></td>
           <td>{{ $job->proposals_count }}</td>
-          <td><div class="table-actions">
-            <a class="btn subtle compact" href="{{ url('/builder?='.$job->public_id) }}"><x-icon name="edit" size="15"/> {{ in_array($job->status,['pending','rejected'],true) ? 'Edit in builder' : 'Details' }}</a>
-            <a class="btn subtle compact" href="{{ route('jobs.proposals',$job) }}">Proposals</a>
-          </div></td>
+          <td><x-row-action-menu :id="'my-job-'.$job->id" :label="$job->title">
+            <a href="{{ url('/builder?='.$job->public_id) }}"><x-icon name="edit" size="16"/> {{ in_array($job->status,['pending','rejected'],true) ? 'Edit in builder' : 'Details' }}</a>
+            <a href="{{ route('jobs.proposals',$job) }}"><x-icon name="eye" size="16"/> Proposals</a>
+          </x-row-action-menu></td>
         </tr>
       @empty
         <tr><td colspan="7" class="empty-cell">You have not posted a job yet.</td></tr>
