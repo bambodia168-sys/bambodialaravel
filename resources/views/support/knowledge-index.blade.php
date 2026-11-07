@@ -4,8 +4,7 @@
 <div class="support-knowledge">
   <section class="support-knowledge-hero">
     <div class="support-hero-agent-art" aria-hidden="true">
-      <img class="support-agent-photo-light" src="{{ asset('images/support-agent-photo.webp') }}" alt="" width="570" height="478" decoding="async" fetchpriority="low">
-      <img class="support-agent-photo-dark" src="{{ asset('images/support-agent-photo-dark.webp') }}" alt="" width="570" height="478" decoding="async" fetchpriority="low">
+      <img src="{{ asset('images/support-agent-hero.avif') }}" alt="" width="480" height="501" decoding="async" fetchpriority="low">
     </div>
     <div class="container support-knowledge-hero-inner">
       <div class="eyebrow">Bambodia Support</div>
