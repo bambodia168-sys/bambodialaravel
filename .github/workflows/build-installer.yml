@@ -29,15 +29,10 @@ jobs:
         run: |
           npm install --ignore-scripts
           npm run build
-      - name: Prepare support portrait build environment
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Create sharper transparent support portrait
+      - name: Validate transparent support hero
         run: |
-          python -m pip install --disable-pip-version-check --no-input Pillow==11.3.0
-          python support/enhance-support-agent.py public/images/support-agent-photo.webp
-          python support/prepare-support-agent-dark.py public/images/support-agent-photo.webp public/images/support-agent-photo-dark.webp
+          test -s public/images/support-agent-hero.avif
+          test "$(sha256sum public/images/support-agent-hero.avif | cut -d' ' -f1)" = "01665887c851ed475f52ac6bdd9274f6bb73e7e34a65e79f867517e260c6b82d"
       - name: Assert complete runtime
         run: |
           test -f vendor/autoload.php
