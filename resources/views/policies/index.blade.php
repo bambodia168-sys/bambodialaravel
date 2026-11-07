@@ -13,9 +13,10 @@
     'Security and Vulnerability Disclosure Policy'=>'alert',
   ];
 @endphp
-<div class="container inner-page policy-index policy-center-premium">
+<div class="policy-center-premium policy-index">
   <section class="policy-hero" aria-labelledby="policy-center-heading">
-    <div class="policy-hero-copy">
+    <div class="container policy-hero-inner">
+      <div class="policy-hero-copy">
       <div class="eyebrow">Bambodia Policies</div>
       <h1 id="policy-center-heading">Policy Center</h1>
       <p>Understand your rights, responsibilities, and the commitments that guide the Bambodia marketplace.</p>
@@ -24,12 +25,14 @@
         <input name="q" value="{{ $search }}" type="search" placeholder="Find a policy" aria-label="Find policy">
         <button class="btn primary" type="submit">Search policies</button>
       </form>
+      </div>
     </div>
     <div class="policy-trust-shield" aria-hidden="true">
       <span class="policy-trust-ring"></span><x-icon name="shield" size="225"/>
     </div>
   </section>
 
+  <div class="container inner-page policy-directory-content">
   @foreach($notices as $notice)
     <dialog class="policy-update-dialog" data-policy-notice="{{ $notice->id }}" aria-labelledby="legal-notice-title-{{ $notice->id }}">
       <div class="policy-notice-top"><span class="policy-notice-icon"><x-icon name="shield" size="28"/></span><button class="policy-icon-button" type="button" data-policy-notice-dismiss aria-label="Dismiss legal update"><x-icon name="x" size="19"/></button></div>
@@ -66,5 +69,6 @@
     @endforelse
   </div>
   <x-pagination :paginator="$policies"/>
+  </div>
 </div>
 @endsection
