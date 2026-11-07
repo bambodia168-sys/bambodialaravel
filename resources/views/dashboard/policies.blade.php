@@ -2,8 +2,9 @@
 @section('title','Policy Center')
 @section('content')
 <div class="page-intro"><div class="eyebrow">Content & Policies</div><h1>Policy Center</h1><p>Maintain policies, review legal content, and control publication.</p></div>
+<p class="text-muted" style="margin:0 0 1rem">Create legal drafts prepares 13 editable policies, including Regular and Extended License terms. This action will not publish them or replace existing documents. Review with qualified counsel before publishing.</p>
 <section class="panel">
-  <div class="panel-head"><h2>Policies <span class="count">{{ $policies->total() }}</span></h2><button type="button" class="btn primary" data-modal-open="policy-new">New policy</button></div>
+  <div class="panel-head"><h2>Policies <span class="count">{{ $policies->total() }}</span></h2><div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center"><form action="{{ route('dashboard.policies.legal-drafts') }}" method="post" onsubmit="return confirm('Create missing draft legal policies for review? No existing policies will be changed or published.')">@csrf <button class="btn subtle" type="submit">Create legal drafts</button></form><button type="button" class="btn primary" data-modal-open="policy-new">New policy</button></div></div>
   <div class="table-scroll"><table class="data-table"><thead><tr><th>Policy ID</th><th>Title</th><th>Category</th><th>Status</th><th>Reviewed</th><th>Action</th></tr></thead><tbody>
   @forelse($policies as $policy)
     <tr><td class="mono">{{ $policy->public_id }}</td><td><strong>{{ $policy->title }}</strong></td><td>{{ ucfirst($policy->category) }}</td><td><span class="role-pill">{{ ucfirst($policy->status) }}</span></td><td>{{ $policy->reviewed_at?->format('d M Y') ?? 'Pending' }}</td><td><button class="btn subtle compact" type="button" data-modal-open="policy-{{ $policy->id }}"><x-icon name="settings" size="15"/> Configure</button>
