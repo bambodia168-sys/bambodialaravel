@@ -141,9 +141,9 @@ class SupportKnowledgePresentationTest extends TestCase
         $this->assertStringNotContainsString($draft->title, $html);
         $this->assertStringNotContainsString($archived->title, $html);
 
-        $dom = new \\DOMDocument();
+        $dom = new \DOMDocument();
         @$dom->loadHTML($html);
-        $xpath = new \\DOMXPath($dom);
+        $xpath = new \DOMXPath($dom);
         $sidebar = $xpath->query('//aside[contains(@class, "support-article-sidebar")]')->item(0);
         $this->assertNotNull($sidebar);
         $this->assertCount(1, $xpath->query('.//a[contains(@class,"support-related-link")]', $sidebar));
