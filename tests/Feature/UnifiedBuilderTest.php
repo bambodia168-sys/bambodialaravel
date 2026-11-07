@@ -469,4 +469,71 @@ class UnifiedBuilderTest extends TestCase
             ->assertForbidden();
         $this->postJson('/builder/content/preview',['html'=>''])->assertForbidden();
     }
+
+    public function test_typed_license_definitions_link_to_builder_and_reject_wrong_tier(): void
+    {
+        $admin=$this->member('admin');
+        $creator=$this->member('freelancer');
+        $base=[
+            'version'=>'1.0.0',
+            'permissions'=>str_repeat('Non-exclusive product use subject to published conditions. ',2),
+            'restrictions'=>str_repeat('Original source file redistribution is prohibited. ',2),
+            'status'=>'active','confirm_review'=>'1',
+        ];
+        $this->actingAs($admin)->post('/dashboard/license-manager', [
+            ...$base,'code'=>'BAM_REGULAR','name'=>'Regular License',
+        ])->assertSessionHasErrors('tier');
+        $this->post('/dashboard/license-manager', [
+            ...$base,'code'=>'BAM_REGULAR','tier'=>'regular','name'=>'Regular License',
+        ])->assertRedirect();
+        $this->post('/dashboard/license-manager', [
+            ...$base,'code'=>'BAM_EXTENDED','tier'=>'extended','name'=>'Extended License',
+        ])->assertRedirect();
+        $regular=\App\Models\LicenseDefinition::where('code','BAM_REGULAR')->firstOrFail();
+        $extended=\App\Models\LicenseDefinition::where('code','BAM_EXTENDED')->firstOrFail();
+        $this->assertSame('regular',$regular->tier);
+        $this->assertSame('extended',$extended->tier);
+        $this->assertDatabaseCount('product_licenses',0);
+
+        $this->actingAs($creator);
+        $html=$this->get('/builder?type=product')->assertOk()
+            ->assertSee('Read published Regular License terms')
+            ->assertSee('Read published Extended License terms')
+            ->getContent();
+        preg_match('/<select[^>]*id="studio-license"[^>]*>(.*?)<\/select>/s',$html,$regularOptions);
+        preg_match('/<select[^>]*id="studio-extended-license"[^>]*>(.*?)<\/select>/s',$html,$extendedOptions);
+        $this->assertStringContainsString('value="'.$regular->id.'"',$regularOptions[1] ?? '');
+        $this->assertStringNotContainsString('value="'.$extended->id.'"',$regularOptions[1] ?? '');
+        $this->assertStringContainsString('value="'.$extended->id.'"',$extendedOptions[1] ?? '');
+        $this->assertStringNotContainsString('value="'.$regular->id.'"',$extendedOptions[1] ?? '');
+        $this->assertStringContainsString('/licenses?=',$regularOptions[1] ?? '');
+        $this->assertStringContainsString('/licenses?=',$extendedOptions[1] ?? '');
+
+        $payload=[
+            ...$this->agreed(),
+            'title'=>'A source-code template with licensed deliverables',
+            'description'=>str_repeat('Original documentation for a reviewed software template. ',2),
+            'status'=>'draft','regular_price'=>'25.00',
+            'license_definition_id'=>$extended->id,
+        ];
+        $this->post('/studio/products',$payload)->assertSessionHasErrors('license_definition_id');
+        $this->post('/studio/products',[
+            ...$payload,
+            'license_definition_id'=>$regular->id,'extended_license_definition_id'=>$regular->id,
+            'extended_price'=>'120.00',
+        ])->assertSessionHasErrors('extended_license_definition_id');
+        $this->assertDatabaseCount('marketplace_listings',0);
+        $this->post('/studio/products',[
+            ...$payload,
+            'license_definition_id'=>$regular->id,'extended_license_definition_id'=>$extended->id,
+            'extended_price'=>'120.00',
+        ])->assertRedirect();
+        $this->assertDatabaseHas('marketplace_listings',[
+            'type'=>'product',
+            'license_definition_id'=>$regular->id,
+            'extended_license_definition_id'=>$extended->id,
+        ]);
+    }
+
+
 }

@@ -450,6 +450,20 @@ try {
       const tableWidth=await admin.locator('.license-issued-scroll').evaluate(el=>({viewport:el.clientWidth,table:el.scrollWidth}));
       if(tableWidth.table<=tableWidth.viewport)
         throw new Error('Issued licenses table does not support horizontal scrolling');
+      // Both legal starter definitions are draft-only and differentiated by type.
+      const regularPreset=admin.locator('[data-license-preset="regular"]');
+      await regularPreset.click();
+      const definitionDialog=admin.locator('#license-create');
+      if(!(await definitionDialog.isVisible()) || await definitionDialog.locator('#license-new-tier').inputValue()!=='regular')
+        throw new Error('Regular License draft preset did not populate');
+      if(await definitionDialog.locator('#license-new-status').inputValue()!=='draft')
+        throw new Error('Regular License preset should not publish without review');
+      await definitionDialog.locator('[data-modal-close]').click();
+      await admin.locator('[data-license-preset="extended"]').click();
+      if(await definitionDialog.locator('#license-new-tier').inputValue()!=='extended')
+        throw new Error('Extended License draft preset did not populate');
+      await definitionDialog.locator('[data-modal-close]').click();
+      checks+=2;
       await issueTrigger.click();
       const issuanceDialog=admin.locator('#license-issue-dialog');
       if(!(await issuanceDialog.isVisible()) || !(await issuanceDialog.evaluate(el=>el.open)))

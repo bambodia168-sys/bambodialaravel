@@ -45,6 +45,7 @@ class ProductMediaLicenseTest extends TestCase
     {
         $this->actingAs($admin)->post('/dashboard/license-manager', [
             'code' => 'REGULAR',
+            'tier' => 'regular',
             'name' => 'Regular Product License',
             'version' => '1.0.0',
             'permissions' => str_repeat('Use this digital work on one registered project. ', 2),
@@ -91,6 +92,7 @@ class ProductMediaLicenseTest extends TestCase
 
         $this->actingAs($admin)->post('/dashboard/license-manager', [
             'code' => 'REGULAR',
+            'tier' => 'regular',
             'name' => 'Regular Product License',
             'version' => '1.0.0',
             'permissions' => str_repeat('Licensed for one commercial website. ', 2),
@@ -113,6 +115,7 @@ class ProductMediaLicenseTest extends TestCase
 
         $this->actingAs($admin)->patch('/dashboard/license-manager/'.$license->id, [
             'code' => 'REGULAR',
+            'tier' => 'regular',
             'name' => 'Changed license rights',
             'version' => '1.0.1',
             'permissions' => str_repeat('Grant unrestricted redistribution to third parties. ', 2),

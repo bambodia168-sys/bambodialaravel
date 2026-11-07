@@ -555,4 +555,28 @@ class ProductLicenseLifecycleTest extends TestCase
     }
 
 
+
+    public function test_existing_issued_rights_are_visible_to_customer_and_owner_creator_without_key_leak(): void
+    {
+        $license=$this->issue();
+        $definition=LicenseDefinition::where('code','BAM_REG')->firstOrFail();
+        $this->assertNull($definition->tier); // Existing definition remains unclassified.
+
+        $account=$this->actingAs($this->customer)->get('/account/licenses')->assertOk()
+            ->assertSee('Read published license definition')
+            ->assertSee('Permissions granted')
+            ->assertSee($definition->permissions)
+            ->assertSee($definition->restrictions)
+            ->assertDontSee($license->key_ciphertext);
+        $this->get($definition->publicUrl())->assertOk()->assertSee('Regular License');
+        $this->actingAs($this->creator)->get('/studio/licenses')->assertOk()
+            ->assertSee('Read published license definition')
+            ->assertSee($definition->permissions)
+            ->assertDontSee($license->key_ciphertext);
+        $this->get('/studio/products')->assertOk()->assertSee('Read Regular terms')->assertSee('Read Extended terms');
+        $this->actingAs($this->stranger)->get('/account/licenses')->assertOk()
+            ->assertDontSee($license->public_id)->assertDontSee($license->key_ciphertext);
+    }
+
+
 }

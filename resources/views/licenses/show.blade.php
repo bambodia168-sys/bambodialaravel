@@ -6,7 +6,7 @@
     <div class="eyebrow">Bambodia · Digital Product License</div>
     <h1>{{ $license->name }}</h1>
     <p class="text-muted">{{ $license->tierLabel() }} · Code {{ $license->code }} · Version {{ $license->version }} · Published {{ $license->published_at?->format('d M Y') }}</p>
-    <p>{{ $license->tier === 'extended' ? \App\Models\LicenseDefinition::tierDescription('extended') : \App\Models\LicenseDefinition::tierDescription('regular') }}</p>
+    <p>{{ $license->tier ? \App\Models\LicenseDefinition::tierDescription($license->tier) : 'This definition predates license-type classification. Its published permissions and restrictions govern actual usage rights.' }}</p>
     <h2>Licensed permissions</h2>
     <div class="policy-copy">{!! nl2br(e($license->permissions)) !!}</div>
     <h2>Restrictions</h2>
