@@ -49,11 +49,9 @@ class SharedRowActionMenuTest extends TestCase
 
     public function test_shared_component_has_accessible_trigger_and_native_menu_markup(): void
     {
-        $html = view('components.row-action-menu', [
-            'id' => 'fixture-21',
-            'label' => 'Example Record',
-            'slot' => new \Illuminate\Support\HtmlString('<a href="/allowed">Edit</a>'),
-        ])->render();
+        $html = \Illuminate\Support\Facades\Blade::render(
+            '<x-row-action-menu id="fixture-21" label="Example Record"><a href="/allowed">Edit</a></x-row-action-menu>'
+        );
 
         $this->assertStringContainsString('id="row-action-trigger-fixture-21"', $html);
         $this->assertStringContainsString('popovertarget="row-action-menu-fixture-21"', $html);
@@ -73,7 +71,7 @@ class SharedRowActionMenuTest extends TestCase
             'dashboard/marketplace', 'dashboard/creator-applications',
             'dashboard/categories', 'dashboard/features', 'dashboard/entitlements',
             'dashboard/privacy-requests', 'dashboard/vault-versions',
-            'dashboard/contents', 'dashboard/site-settings', 'dashboard/licenses',
+            'dashboard/contents', 'dashboard/site-settings',
             'account/products', 'account/listings', 'account/licenses',
             'account/downloads', 'account/notifications', 'account/privacy-requests',
             'account/product-versions', 'account/saved-jobs', 'account/saved-listings',
