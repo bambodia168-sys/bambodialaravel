@@ -1775,7 +1775,7 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 }
 .support-article-card:hover,.support-article-card:focus-visible{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 13px 33px rgba(12,32,60,.085)}
 .support-article-card-number{position:absolute;z-index:0;top:9px;right:13px;pointer-events:none;user-select:none;font-size:clamp(3.6rem,4.6vw,5rem);font-weight:850;line-height:1;letter-spacing:-.065em;font-variant-numeric:tabular-nums;color:var(--text);opacity:.065}
-.support-article-card-glyph{position:absolute;z-index:0;top:54px;right:12px;display:grid;place-items:center;width:85px;height:85px;color:var(--accent);pointer-events:none;opacity:.1}
+.support-article-card-glyph{position:absolute;z-index:0;bottom:16px;right:12px;display:grid;place-items:center;width:85px;height:85px;color:var(--accent);pointer-events:none;opacity:.1}
 .support-article-card-glyph svg{width:76px;height:76px;stroke-width:1.5}
 .support-article-card>.support-article-category,.support-article-card>strong,.support-article-card>.support-article-excerpt,.support-article-card>.support-article-open{position:relative;z-index:1}
 .support-article-category{font-size:.69rem;color:var(--accent);letter-spacing:.075em;font-weight:800;text-transform:uppercase;overflow-wrap:anywhere}
@@ -1803,6 +1803,7 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .support-article-sidebar .support-related-link{align-items:flex-start;line-height:1.5;overflow-wrap:anywhere}
 .support-article-sidebar .support-related-link svg{flex:none;margin-top:2px;opacity:.8}
 .support-article-sidebar .support-related-link span{flex:1;min-width:0;overflow-wrap:anywhere}
+.support-article-sidebar .support-related-link .support-related-number{flex:0 0 23px;min-width:23px;font-variant-numeric:tabular-nums;color:var(--accent);font-size:.75rem;font-weight:800;letter-spacing:.035em;line-height:1.6}
 .support-article-sidebar .btn{margin-top:1rem}
 .support-article-main{min-width:0;padding:clamp(1.25rem,4vw,3rem)}
 .support-article-main h1{font-size:clamp(1.9rem,3.8vw,2.85rem);letter-spacing:-.035em;line-height:1.2;margin:.55rem 0}
@@ -1838,7 +1839,7 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   .support-search .btn{width:100%;justify-content:center}
   .support-article-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .support-article-card{min-height:228px;padding:15px;gap:11px}
-  .support-article-card-glyph{top:51px;right:7px;width:68px;height:68px}
+  .support-article-card-glyph{bottom:12px;right:7px;width:68px;height:68px}
   .support-article-card-glyph svg{width:64px;height:64px}
   .support-article-card-number{top:9px;right:9px;font-size:3.5rem}
   .support-article-card strong{margin-top:7px}
