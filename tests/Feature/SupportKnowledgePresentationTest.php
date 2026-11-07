@@ -52,21 +52,23 @@ class SupportKnowledgePresentationTest extends TestCase
         $this->assertCount(8, array_unique($icons));
     }
 
-    public function test_public_help_cards_are_vertical_without_excerpt_and_private_assistance_remains(): void
+    public function test_public_help_cards_display_excerpt_and_background_icon_number(): void
     {
         $article = $this->publish(
             'Find your Bambodia product downloads',
             'downloads',
-            'HIDDEN PRESENTATION SUMMARY MUST NOT APPEAR IN PUBLIC CARDS.'
+            'A short summary should appear underneath the article title on responsive cards.'
         );
 
         $response = $this->get(route('support'));
         $response->assertOk()
             ->assertSee($article->title)
             ->assertSee('class="support-article-card-glyph"', false)
+            ->assertSee('class="support-article-card-number"', false)
+            ->assertSee('class="support-article-excerpt"', false)
+            ->assertSee($article->excerpt)
             ->assertSee('class="support-contact-cta"', false)
-            ->assertSee('Still need help?')
-            ->assertDontSee($article->excerpt);
+            ->assertSee('Still need help?');
     }
 
     public function test_single_article_hides_summary_and_groups_ticket_button_with_share_actions(): void
@@ -100,4 +102,52 @@ class SupportKnowledgePresentationTest extends TestCase
         $this->assertLessThan($copy, $ticket);
         $this->assertLessThan($share, $copy);
     }
+    public function test_sidebar_lists_published_guides_across_categories_without_exposing_drafts_or_current_article(): void
+    {
+        $current = $this->publish(
+            'How to create a Bambodia account',
+            'getting-started',
+            'Registration, account security, and dashboard basics.'
+        );
+        $different = $this->publish(
+            'Understanding Regular and Extended Licenses',
+            'licenses',
+            'Learn what each product license permits.'
+        );
+        $author = User::query()->firstOrFail();
+        $draft = KnowledgeArticle::query()->create([
+            'title' => 'Unreviewed internal account procedure',
+            'excerpt' => 'An internal workflow that must remain private until reviewed.',
+            'body' => str_repeat('Not yet approved for public publication. ', 3),
+            'body_format' => 'markdown',
+            'category' => 'getting-started',
+            'status' => 'draft',
+            'author_id' => $author->id,
+        ]);
+        $archived = KnowledgeArticle::query()->create([
+            'title' => 'Retired staff administration guide',
+            'excerpt' => 'An archived workflow that should never appear as a guide.',
+            'body' => str_repeat('This guide is no longer public. ', 3),
+            'body_format' => 'markdown',
+            'category' => 'licenses',
+            'status' => 'archived',
+            'author_id' => $author->id,
+        ]);
+
+        $html = $this->get($current->publicUrl())->assertOk()->getContent();
+        $this->assertStringContainsString('Other guides', $html);
+        $this->assertStringContainsString($different->title, $html);
+        $this->assertStringContainsString($different->publicUrl(), $html);
+        $this->assertStringNotContainsString($draft->title, $html);
+        $this->assertStringNotContainsString($archived->title, $html);
+
+        $dom = new \\DOMDocument();
+        @$dom->loadHTML($html);
+        $xpath = new \\DOMXPath($dom);
+        $sidebar = $xpath->query('//aside[contains(@class, "support-article-sidebar")]')->item(0);
+        $this->assertNotNull($sidebar);
+        $this->assertCount(1, $xpath->query('.//a[contains(@class,"support-related-link")]', $sidebar));
+        $this->assertStringNotContainsString($current->title, $dom->saveHTML($sidebar));
+    }
+
 }
