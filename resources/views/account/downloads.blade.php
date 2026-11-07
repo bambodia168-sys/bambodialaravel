@@ -33,7 +33,7 @@
           <td>{{ $entitlement->expires_at?->format('d M Y') ?? 'No expiry' }}</td>
           <td>
           @if($available)
-            <a class="btn primary compact" href="{{ route('account.downloads.file',$entitlement) }}"><x-icon name="download" size="15"/> Download</a>
+            <x-row-action-menu :id="'download-'.$entitlement->id" :label="'Download '.$entitlement->id"><a href="{{ route('account.downloads.file',$entitlement) }}"><x-icon name="download" size="16"/> Download</a></x-row-action-menu>
           @else<span class="text-muted">Download unavailable</span>@endif
           </td>
         </tr>
