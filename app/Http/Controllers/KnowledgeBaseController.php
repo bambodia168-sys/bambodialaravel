@@ -46,13 +46,21 @@ class KnowledgeBaseController extends Controller
             return redirect($article->publicUrl(), 301);
         }
 
+        // Keep same-category guides first, then show published guides from other
+        // categories so the sidebar is useful even when a topic has one article.
         $related = KnowledgeArticle::query()->where('status', 'published')
             ->where('category', $article->category)
             ->where('id', '!=', $article->id)
-            ->orderByDesc('published_at')->limit(5)
+            ->orderByDesc('published_at')->orderBy('title')->limit(5)
+            ->get(['id','title','slug','public_code']);
+
+        $otherGuides = KnowledgeArticle::query()->where('status', 'published')
+            ->where('category', '!=', $article->category)
+            ->where('id', '!=', $article->id)
+            ->orderByDesc('published_at')->orderBy('title')->limit(max(0, 8 - $related->count()))
             ->get(['id','title','slug','public_code']);
 
         $html = PolicyContent::display($article->body, $article->body_format);
-        return view('support.knowledge-show', compact('article', 'related', 'html'));
+        return view('support.knowledge-show', compact('article', 'related', 'otherGuides', 'html'));
     }
 }
