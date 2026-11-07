@@ -46,10 +46,10 @@
           </div>
           <div class="policy-editor-heading"><label class="policy-builder-label" for="policy-editor-area">Policy content</label><small>Formatting is saved as sanitized HTML</small></div>
           <div class="policy-editor-toolbar" role="toolbar" aria-label="Policy rich text tools">
-            <select data-policy-block aria-label="Paragraph or heading style" title="Text style"><option value="p">Paragraph</option><option value="h1">H1</option><option value="h2">H2</option><option value="h3">H3</option></select>
+            <select data-policy-block aria-label="Paragraph or heading style" title="Text style"><option value="p">Paragraph</option><option value="h1">H1</option><option value="h2">H2</option><option value="h3">H3</option><option value="h4">H4</option></select>
             @foreach([
-              ['bold','bold','Bold'],['italic','italic','Italic'],['underline','underline','Underline'],
-              ['strikeThrough','strikethrough','Strike'],['insertUnorderedList','list','Bulleted list'],
+              ['bold','bold','Bold'],['italic','italic','Italic'],['underline','underline','Underline'],['foreColor','palette','Text color'],['hiliteColor','highlighter','Highlight'],
+              ['strikeThrough','strikethrough','Strike'],['superscript','superscript','Superscript'],['subscript','subscript','Subscript'],['insertUnorderedList','list','Bulleted list'],
               ['insertOrderedList','list-ordered','Numbered list'],['justifyLeft','align-left','Align left'],
               ['justifyCenter','align-center','Align center'],['justifyRight','align-right','Align right'],
               ['justifyFull','align-justify','Justify'],['createLink','link','Insert link'],
