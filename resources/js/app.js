@@ -868,3 +868,130 @@ document.addEventListener('DOMContentLoaded', () => {
         sync();
     });
 });
+
+
+/* Policy Center: accessible toolbar, secure server-sanitized editor and notices. */
+document.addEventListener('DOMContentLoaded', () => {
+    const policyForm = document.getElementById('policy-builder-form');
+    const policyEditor = document.querySelector('[data-policy-editor]');
+    if (policyForm && policyEditor) {
+        const source = policyForm.querySelector('[data-policy-body]');
+        const toolbar = policyForm.querySelector('.policy-editor-toolbar');
+        const sync = () => {
+            if (source) source.value = policyEditor.innerHTML.trim();
+        };
+        toolbar?.querySelectorAll('button[data-policy-command]').forEach((button) => {
+            button.addEventListener('mousedown', (event) => event.preventDefault());
+            button.addEventListener('click', () => {
+                const command = button.dataset.policyCommand;
+                policyEditor.focus();
+                if (command === 'createLink') {
+                    const selected = window.getSelection()?.toString() || '';
+                    if (!selected) {
+                        window.alert('Select text in the policy before adding a link.');
+                        return;
+                    }
+                    const link = window.prompt('Enter HTTPS link', 'https://');
+                    if (!link) return;
+                    try {
+                        const url = new URL(link);
+                        if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Invalid scheme');
+                        document.execCommand('createLink', false, url.href);
+                    } catch {
+                        window.alert('Only HTTP and HTTPS links are allowed.');
+                    }
+                } else if (command === 'table') {
+                    const rows = Number.parseInt(window.prompt('Table rows (1–10)', '3'), 10);
+                    const columns = Number.parseInt(window.prompt('Table columns (1–6)', '3'), 10);
+                    if (!Number.isInteger(rows) || !Number.isInteger(columns) || rows < 1 || rows > 10 || columns < 1 || columns > 6) return;
+                    let html = '<table><tbody>';
+                    for (let row = 0; row < rows; row++) {
+                        html += '<tr>';
+                        for (let col = 0; col < columns; col++) html += row === 0 ? '<th>Heading</th>' : '<td>Content</td>';
+                        html += '</tr>';
+                    }
+                    html += '</tbody></table><p></p>';
+                    document.execCommand('insertHTML', false, html);
+                } else if (command === 'horizontal') {
+                    document.execCommand('insertHorizontalRule');
+                } else if (command === 'checklist') {
+                    document.execCommand('insertHTML', false, '<ul><li>☐ Checklist item</li></ul>');
+                } else if (command === 'blockquote') {
+                    document.execCommand('formatBlock', false, 'blockquote');
+                } else if (command === 'code') {
+                    document.execCommand('formatBlock', false, 'pre');
+                } else {
+                    document.execCommand(command, false);
+                }
+                sync();
+            });
+        });
+        toolbar?.querySelector('[data-policy-block]')?.addEventListener('change', (event) => {
+            policyEditor.focus();
+            document.execCommand('formatBlock', false, event.target.value);
+            sync();
+        });
+        toolbar?.querySelector('[data-policy-fullscreen]')?.addEventListener('click', () => {
+            policyForm.querySelector('.policy-editor-panel')?.classList.toggle('is-fullscreen');
+        });
+        policyForm.addEventListener('submit', (event) => {
+            sync();
+            if (!policyEditor.textContent?.trim() || policyEditor.textContent.trim().length < 50) {
+                event.preventDefault();
+                policyEditor.focus();
+                window.alert('Enter at least 50 characters of readable policy content.');
+            }
+        });
+        policyEditor.addEventListener('input', sync);
+    }
+
+    document.querySelectorAll('[data-policy-copy-url]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const url = button.dataset.policyCopyUrl;
+            if (!url) return;
+            const feedback = button.closest('.policy-builder-main, .policy-single-hero')
+                ?.querySelector('.policy-copy-feedback');
+            try {
+                if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+                await navigator.clipboard.writeText(url);
+                if (feedback) feedback.textContent = 'Full URL copied';
+            } catch {
+                window.prompt('Copy policy URL', url);
+                if (feedback) feedback.textContent = 'Select the link to copy';
+            }
+        });
+    });
+    document.querySelectorAll('[data-policy-print]').forEach((button) => {
+        button.addEventListener('click', () => window.print());
+    });
+    document.querySelectorAll('[data-policy-share]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const url = button.dataset.policyShare;
+            if (!url) return;
+            if (navigator.share) {
+                try { await navigator.share({ url }); } catch { /* user cancelled */ }
+            } else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(url);
+                button.title = 'Full URL copied';
+            } else {
+                window.prompt('Share policy URL', url);
+            }
+        });
+    });
+
+    const notices = [...document.querySelectorAll('[data-policy-notice]')];
+    for (const notice of notices) {
+        const id = notice.dataset.policyNotice;
+        try {
+            if (sessionStorage.getItem('bambodia-policy-notice-' + id) === 'dismissed') continue;
+        } catch { /* session storage may be unavailable */ }
+        if (typeof notice.showModal === 'function') notice.showModal();
+        notice.querySelectorAll('[data-policy-notice-dismiss]').forEach((button) => {
+            button.addEventListener('click', () => {
+                notice.close();
+                try { sessionStorage.setItem('bambodia-policy-notice-' + id, 'dismissed'); } catch { /* private storage */ }
+            });
+        });
+        break;
+    }
+});
