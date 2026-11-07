@@ -64,6 +64,10 @@ class PolicyManagerController extends Controller
             'confirm_legal_review' => ['sometimes', 'accepted'],
         ]);
 
+        if ($data['status'] === 'published' && str_contains($data['body'], 'Draft for legal review')) {
+            return back()->withErrors(['body' => 'Remove the legal-review draft notice and finalize the document before publishing.'])->withInput();
+        }
+
         if ($data['status'] === 'published' && ! $request->boolean('confirm_legal_review')) {
             return back()->withErrors(['status' => 'Confirm an administrator has reviewed the legal text before publication.']);
         }
