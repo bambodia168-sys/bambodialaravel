@@ -33,7 +33,7 @@
           <td>{{ $contract->client?->name }}</td><td>{{ $contract->freelancer?->name }}</td>
           <td>{{ number_format((float)$contract->agreed_budget,2) }}</td>
           <td><span class="role-pill">{{ ucfirst($contract->status) }}</span></td>
-          <td><a class="btn subtle compact" href="{{ route('contracts.show',$contract) }}">Open contract</a></td>
+          <td><x-row-action-menu :id="'my-contract-'.$contract->id" :label="$contract->title"><a href="{{ route('contracts.show',$contract) }}"><x-icon name="eye" size="16"/> Open contract</a></x-row-action-menu></td>
         </tr>
       @empty
         <tr><td colspan="7" class="empty-cell">No agreements recorded. A client can create a contract draft from a shortlisted job proposal.</td></tr>
