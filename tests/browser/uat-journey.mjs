@@ -109,6 +109,8 @@ try{
   pass('Creator private release uploaded; unscanned approval blocked (genuine scanner acceptance outstanding)');
 
   await visit(client,'/support-center');
+  await textOn(client,'How can we help?');
+  await visit(client,'/support-center/tickets');
   await client.locator('button[data-modal-open="ticket-new"]').click();
   await client.locator('#ticket-new [name="subject"]').fill('UAT Private Support Response');
   await client.locator('#ticket-new [name="message"]').fill('QA-only authenticated support request and notification verification.');
