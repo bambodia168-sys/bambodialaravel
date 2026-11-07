@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Guarded Bambodia support-agent clarity-only stylesheet update (no database changes).
+# Guarded Bambodia support-agent clearer-portrait-and-stylesheet update (no database changes).
 # Usage: bash support/support-agent-clarity-upgrade.sh --check COMMIT_SHA
 #        bash support/support-agent-clarity-upgrade.sh --apply COMMIT_SHA
 set -Eeuo pipefail
@@ -104,7 +104,7 @@ echo "========== BACK UP AND APPLY =========="
 install -d -m 0700 "$BACKUP_DIR"
 SAVE="$(mktemp -d "$BACKUP_DIR/release-XXXXXXXX")"
 ARCHIVE="$SAVE/original-files.tar.gz"
-tar -czf "$ARCHIVE" -C "$APP" "${FILES[@]}" public/build
+tar -czf "$ARCHIVE" -C "$APP" "${FILES[@]}" "$ARTWORK" public/build
 tar -tzf "$ARCHIVE" >/dev/null || stop "Rollback archive invalid"
 ENV_HASH="$(sha256sum "$APP/.env" | cut -d' ' -f1)"
 LOCK_HASH="$(sha256sum "$APP/storage/app/installed.lock" | cut -d' ' -f1)"
@@ -128,4 +128,4 @@ TOUCHED=0
 echo "BAMBODIA SUPPORT AGENT CLARITY DEPLOYED SUCCESSFULLY"
 echo "SHA: $SHA"
 echo "Rollback archive: $ARCHIVE"
-echo "Only the Support Center hero CSS changed. Portrait file and all records remain unchanged."
+echo "Only the hero portrait and its styling changed; account and article records were not touched."
