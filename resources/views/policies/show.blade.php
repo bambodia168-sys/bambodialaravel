@@ -9,27 +9,31 @@
       </a>
       <h2>Policy directory</h2>
       @foreach($otherPolicies as $other)
-        <a class="{{ $other->id === $policy->id ? 'active' : '' }}" href="{{ $other->publicUrl() }}">
-          <x-icon name="file-text" size="16"/>{{ $other->title }}
+        <a class="policy-dir-link{{ $other->id === $policy->id ? ' active' : '' }}" href="{{ $other->publicUrl() }}" @if($other->id === $policy->id) aria-current="page" @endif>
+          <span class="policy-dir-number" aria-hidden="true">{{ str_pad((string) $loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
+          <span class="policy-dir-title">{{ $other->title }}</span>
         </a>
       @endforeach
     </aside>
 
     <article class="panel policy-article policy-formatted-content">
       <header class="policy-document-header" aria-label="Policy publication details">
-        <div class="policy-single-meta">
-          <span><x-icon name="shield" size="16"/> Policy ID <strong class="mono">{{ $policy->public_code }}</strong></span>
-          <span><x-icon name="book-open" size="16"/> {{ ucfirst($policy->category) }}</span>
-          <span><x-icon name="file-check" size="16"/> v{{ $publication?->version ?? $policy->version }}</span>
-          <span><x-icon name="clock" size="16"/> Published {{ $policy->published_at?->format('d M Y') ?? $publication?->created_at?->format('d M Y') ?? 'Date unavailable' }}</span>
-        </div>
+        <table class="policy-meta-table" aria-label="Policy information">
+          <tbody>
+            <tr>
+              <td><span class="policy-meta-label">Policy ID</span><strong class="policy-meta-value mono">{{ $policy->public_code }}</strong></td>
+              <td><span class="policy-meta-label">Category</span><strong class="policy-meta-value">{{ ucfirst($policy->category) }}</strong></td>
+              <td><span class="policy-meta-label">Version</span><strong class="policy-meta-value">v{{ $publication?->version ?? $policy->version }}</strong></td>
+              <td><span class="policy-meta-label">Published date</span><strong class="policy-meta-value">{{ $policy->published_at?->format('d M Y') ?? $publication?->created_at?->format('d M Y') ?? 'Date unavailable' }}</strong></td>
+            </tr>
+            <tr>
+              <td><span class="policy-meta-label">Jurisdiction</span><strong class="policy-meta-value">{{ $policy->jurisdiction ?: 'As specified in the policy' }}</strong></td>
+              <td><span class="policy-meta-label">Last updated</span><strong class="policy-meta-value">{{ $policy->updated_at?->format('d M Y') ?? 'Not recorded' }}</strong></td>
+              <td colspan="2"><span class="policy-meta-label">Person in charge</span><strong class="policy-meta-value"><a href="mailto:{{ $policy->pic_email }}">{{ $policy->pic_email }}</a></strong></td>
+            </tr>
+          </tbody>
+        </table>
       </header>
-
-      <div class="policy-single-detail-grid">
-        <div><span>Jurisdiction</span><strong>{{ $policy->jurisdiction ?: 'As specified in the policy' }}</strong></div>
-        <div><span>Last updated</span><strong>{{ $policy->updated_at?->format('d M Y') ?? 'Not recorded' }}</strong></div>
-        <div><span>Person in charge</span><strong><a href="mailto:{{ $policy->pic_email }}">{{ $policy->pic_email }}</a></strong></div>
-      </div>
 
       <div class="policy-copy">{!! $policyHtml !!}</div>
 

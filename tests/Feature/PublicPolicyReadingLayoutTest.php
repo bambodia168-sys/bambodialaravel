@@ -58,6 +58,12 @@ class PublicPolicyReadingLayoutTest extends TestCase
         $html = $response->getContent();
         $this->assertSame(1, substr_count($html, 'class="policy-back policy-sidebar-back"'));
         $this->assertSame(1, substr_count($html, 'class="policy-document-header"'));
+        $this->assertSame(1, substr_count($html, 'class="policy-meta-table"'));
+        $this->assertSame(1, substr_count($html, 'class="policy-dir-number"'));
+        $this->assertStringNotContainsString('class="policy-single-detail-grid"', $html);
+        $response->assertSeeInOrder(['Policy ID', 'Category', 'Version', 'Published date',
+            'Jurisdiction', 'Last updated', 'Person in charge']);
+        $this->assertStringContainsString('colspan="2"', $html);
         $this->assertSame(1, substr_count($html, 'class="policy-document-footer"'));
         $this->assertSame(1, substr_count($html, 'data-policy-copy-url='));
         $this->assertLessThan(strpos($html, 'class="policy-document-header"'), strpos($html, 'class="policy-back policy-sidebar-back"'));
@@ -79,4 +85,27 @@ class PublicPolicyReadingLayoutTest extends TestCase
         ]);
         $this->get($policy->publicUrl())->assertNotFound();
     }
+    public function test_sidebar_numbers_include_only_published_policies(): void
+    {
+        $first = Policy::query()->create([
+            'title' => 'Alpha Policy', 'body' => str_repeat('A published terms description. ', 5),
+            'category' => 'terms', 'status' => 'published',
+        ]);
+        Policy::query()->create([
+            'title' => 'Beta Policy', 'body' => str_repeat('A published terms description. ', 5),
+            'category' => 'terms', 'status' => 'published',
+        ]);
+        Policy::query()->create([
+            'title' => 'Gamma Policy', 'body' => str_repeat('An unpublished terms description. ', 5),
+            'category' => 'terms', 'status' => 'draft',
+        ]);
+        $response = $this->get($first->publicUrl());
+        $response->assertOk()->assertSee('Alpha Policy')
+            ->assertSee('Beta Policy')->assertDontSee('Gamma Policy');
+        $html = $response->getContent();
+        $this->assertSame(2, substr_count($html, 'class="policy-dir-number"'));
+        $this->assertStringContainsString('>01</span>', $html);
+        $this->assertStringContainsString('>02</span>', $html);
+    }
+
 }
