@@ -42,6 +42,13 @@ try {
       await trigger.click();
       const menu = page.locator('[id="'+menuId+'"]');
       await menu.waitFor({state:'visible'});
+      await page.waitForFunction(id => {
+        const menu=document.getElementById(id);
+        const button=document.querySelector('[aria-controls="'+id+'"]');
+        const bounds=menu?.getBoundingClientRect();
+        return menu?.matches(':popover-open') && button?.getAttribute('aria-expanded')==='true'
+          && bounds?.top>0;
+      },menuId);
       const check = await page.evaluate(menuId=>{
         const menu = document.getElementById(menuId);
         const trigger = document.querySelector('[aria-controls="'+menuId+'"]');
@@ -69,6 +76,7 @@ try {
       if(second!=='Preview') throw Error(name+'/'+theme+' ArrowDown navigation failed: '+second);
       await page.keyboard.press('Escape');
       await menu.waitFor({state:'hidden'});
+      await page.waitForFunction(id => document.querySelector('[aria-controls="'+id+'"]')?.getAttribute('aria-expanded')==='false',menuId);
       if(await trigger.getAttribute('aria-expanded')!=='false')
         throw Error(name+'/'+theme+' popover did not reset expanded state');
       checks += 5;
