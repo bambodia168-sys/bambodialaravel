@@ -8,7 +8,7 @@
   @forelse($entries as $entry)
     <tr><td class="mono">{{ $entry->public_id }}</td><td><strong>{{ $entry->title }}</strong></td><td><span class="role-pill">{{ ucfirst($entry->status) }}</span></td><td>{{ $entry->published_at?->format('d M Y') ?? 'Not published' }}</td>
     <td>@if($entry->status === 'published')<a class="btn subtle compact" href="{{ $entry->publicUrl() }}" target="_blank" rel="noopener noreferrer">View</a>@else<span class="text-muted">Draft</span>@endif</td>
-    <td><button type="button" class="btn subtle compact" data-modal-open="content-{{ $entry->id }}"><x-icon name="settings" size="15"/> Configure</button>
+    <td><x-row-action-menu :id="'content-'.$entry->id" :label="$entry->title"><button type="button" data-modal-open="content-{{ $entry->id }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
       <dialog id="content-{{ $entry->id }}" class="config-dialog wide-dialog">
         <form method="post" action="{{ route($prefix.'.update',$entry) }}">@csrf @method('PATCH')
         <h2>Configure {{ $type }}</h2>
