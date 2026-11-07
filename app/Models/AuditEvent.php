@@ -33,6 +33,7 @@ class AuditEvent extends Model
         'policy.published',
         'policy.notification.queued',
         'policy.legal_drafts_created',
+        'policy.supplemental_drafts_created',
         'policy.read.acknowledged',
         'privacy.request.submitted',
         'privacy.request.inspected',

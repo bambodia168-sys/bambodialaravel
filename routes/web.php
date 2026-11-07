@@ -300,6 +300,7 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/policy-center/{policy}/preview', [PolicyManagerController::class, 'preview'])->name('dashboard.policies.preview');
             Route::post('/policy-center', [PolicyManagerController::class, 'store'])->name('dashboard.policies.store');
             Route::post('/policy-center/legal-drafts', [PolicyManagerController::class, 'seedLegalDrafts'])->name('dashboard.policies.legal-drafts')->middleware('throttle:3,1');
+            Route::post('/policy-center/supplemental-drafts', [PolicyManagerController::class, 'seedSupplementalDrafts'])->name('dashboard.policies.supplemental-drafts')->middleware('throttle:3,1');
             Route::patch('/policy-center/{policy}', [PolicyManagerController::class, 'update'])->name('dashboard.policies.update');
             Route::get('/creator-applications', [CreatorReviewController::class, 'index'])->name('dashboard.creator-applications');
             Route::patch('/creator-applications/{application}', [CreatorReviewController::class, 'decide'])->name('dashboard.creator-applications.decide');
