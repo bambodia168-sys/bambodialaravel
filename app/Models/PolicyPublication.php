@@ -10,7 +10,7 @@ class PolicyPublication extends Model
 {
     public $timestamps=false;
     protected $fillable=[
-        'policy_id','revision','title','category','jurisdiction','body_snapshot','sha256','published_by','created_at',
+        'policy_id','revision','title','category','jurisdiction','body_snapshot','sha256','published_by','created_at','version','body_format',
     ];
     protected function casts(): array { return ['created_at'=>'datetime']; }
     public function policy(): BelongsTo { return $this->belongsTo(Policy::class); }
