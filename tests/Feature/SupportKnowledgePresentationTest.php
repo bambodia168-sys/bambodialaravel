@@ -31,23 +31,23 @@ class SupportKnowledgePresentationTest extends TestCase
         ]);
     }
 
-    public function test_public_support_hero_uses_a_realistic_transparent_webp_asset(): void
+    public function test_public_support_hero_uses_one_clean_transparent_generated_portrait(): void
     {
         $response = $this->get(route('support'));
         $response->assertOk()
-            ->assertSee('images/support-agent-photo.webp', false)
-            ->assertSee('images/support-agent-photo-dark.webp', false)
-            ->assertSee('support-agent-photo-dark', false)
+            ->assertSee('images/support-agent-hero.avif', false)
+            ->assertDontSee('images/support-agent-photo.webp', false)
+            ->assertDontSee('images/support-agent-photo-dark.webp', false)
             ->assertDontSee('images/support-agent-hero.svg', false);
-        $image = public_path('images/support-agent-photo.webp');
+        $image = public_path('images/support-agent-hero.avif');
         $this->assertFileExists($image);
-        $this->assertSame('524c0c8cb8454d3b04adabe5bb4ff812c61c95d4e98303582d8dfc7d0b2bd700',
+        $this->assertSame('01665887c851ed475f52ac6bdd9274f6bb73e7e34a65e79f867517e260c6b82d',
             hash_file('sha256', $image));
         $info = getimagesize($image);
         $this->assertIsArray($info);
-        $this->assertSame(380, $info[0]);
-        $this->assertSame(319, $info[1]);
-        $this->assertSame('image/webp', $info['mime']);
+        $this->assertSame(480, $info[0]);
+        $this->assertSame(501, $info[1]);
+        $this->assertSame('image/avif', $info['mime']);
     }
 
     public function test_category_cards_have_eight_distinct_svg_icons_and_blended_numbers(): void
