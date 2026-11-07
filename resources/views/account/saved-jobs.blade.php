@@ -25,12 +25,12 @@
             <td>—</td><td>—</td><td>—</td>
           @endif
           <td>{{ $entry->created_at->format('d M Y') }}</td>
-          <td><div class="toolbar-actions">
-            @if($entry->job)<a href="{{ $entry->job->publicUrl() }}" class="btn subtle compact">View job</a>@endif
+          <td><x-row-action-menu :id="'saved-job-'.$entry->id" :label="$entry->job?->title ?? 'Saved job'">
+            @if($entry->job)<a href="{{ $entry->job->publicUrl() }}"><x-icon name="eye" size="16"/> View job</a>@endif
             <form method="post" action="{{ route('saved-jobs.destroy',$entry->marketplace_job_id) }}">
-              @csrf @method('DELETE')<button class="btn subtle compact" type="submit">Remove</button>
+              @csrf @method('DELETE')<button type="submit" class="is-danger"><x-icon name="x" size="16"/> Remove</button>
             </form>
-          </div></td>
+          </x-row-action-menu></td>
         </tr>
         @empty
           <tr><td colspan="6" class="empty-cell">No saved jobs. Use the Save action on an approved job to keep it here.</td></tr>
