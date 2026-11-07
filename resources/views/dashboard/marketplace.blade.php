@@ -12,7 +12,9 @@
 @forelse($listings as $listing)<tr>
 <td class="mono">{{ $listing->public_id }}</td><td><strong>{{ $listing->title }}</strong></td><td>{{ $listing->creator?->name }}</td><td>{{ $listing->category?->name ?? 'Uncategorized' }}</td>
 <td>{{ $listing->price===null?'—':'$'.number_format((float)$listing->price,2) }}</td><td><span class="role-pill">{{ ucfirst($listing->status) }}</span></td>
-<td><button type="button" class="btn subtle compact" data-modal-open="listing-{{ $listing->id }}"><x-icon name="settings" size="16"/> Configure</button>
+<td><x-row-action-menu :id="'listing-'.$listing->id" :label="$listing->title">
+    <button type="button" data-modal-open="listing-{{ $listing->id }}"><x-icon name="settings" size="16"/> Configure</button>
+  </x-row-action-menu>
 <dialog class="config-dialog wide-dialog" id="listing-{{ $listing->id }}"><h2>{{ $listing->title }}</h2><p>ID {{ $listing->public_id }} · {{ $listing->creator?->name }}</p>
 <p class="review-text">{{ $listing->description }}</p>
 @if($listing->status==='pending')
