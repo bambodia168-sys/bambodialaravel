@@ -294,6 +294,7 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/knowledge-base', [KnowledgeBaseManagerController::class, 'store'])->name('dashboard.knowledge.store')->middleware('throttle:10,1');
             Route::patch('/knowledge-base/{article}', [KnowledgeBaseManagerController::class, 'update'])->name('dashboard.knowledge.update')->middleware('throttle:10,1');
             Route::post('/knowledge-base/starter-drafts', [KnowledgeBaseManagerController::class, 'seed'])->name('dashboard.knowledge.seed')->middleware('throttle:3,1');
+            Route::post('/knowledge-base/additional-drafts', [KnowledgeBaseManagerController::class, 'additionalDrafts'])->name('dashboard.knowledge.additional-drafts')->middleware('throttle:3,1');
             Route::get('/policy-center', [PolicyManagerController::class, 'index'])->name('dashboard.policies');
             Route::get('/policy-center/create', [PolicyManagerController::class, 'create'])->name('dashboard.policies.create');
             Route::get('/policy-center/{policy}/edit', [PolicyManagerController::class, 'edit'])->name('dashboard.policies.edit');
