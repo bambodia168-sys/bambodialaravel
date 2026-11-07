@@ -24,7 +24,9 @@
           <td><span class="role-pill">{{ ucfirst($application->status) }}</span></td>
           <td>{{ $application->updated_at->format('d M Y') }}</td>
           <td>
-            <button class="btn subtle compact" type="button" data-modal-open="creator-review-{{ $application->id }}"><x-icon name="settings" size="15"/> Configure</button>
+            <x-row-action-menu :id="'creator-application-'.$application->id" :label="$application->applicant?->name ?? 'Creator application'">
+              <button type="button" data-modal-open="creator-review-{{ $application->id }}"><x-icon name="settings" size="16"/> Configure</button>
+            </x-row-action-menu>
             <dialog class="config-dialog wide-dialog" id="creator-review-{{ $application->id }}">
               <div class="dialog-heading"><h2>{{ $application->applicant?->name }}</h2><p>Applicant ID {{ $application->applicant?->public_id }}</p></div>
               <p><strong>Specialization:</strong> {{ $application->specialization }}</p>
