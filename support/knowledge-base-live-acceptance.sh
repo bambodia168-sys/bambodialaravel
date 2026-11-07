@@ -3,7 +3,7 @@
 # Usage: bash support/knowledge-base-live-acceptance.sh --preflight|--accept
 set -Eeuo pipefail
 umask 077
-MODE="\${1:---preflight}"
+MODE="${1:---preflight}"
 [[ "$MODE" == --preflight || "$MODE" == --accept ]] || { echo 'Use --preflight or --accept' >&2; exit 2; }
 APP='/www/wwwroot/bambodia-staging-qa'
 PHP='/www/server/php/85/bin/php'
@@ -21,11 +21,11 @@ probe() {
   headers="$body.headers"
   local opts=(--silent --show-error --compressed --max-time 25 --connect-timeout 8 --output "$body" --dump-header "$headers" --write-out '%{http_code}')
   if [[ "$source" == origin ]]; then opts+=(--resolve "$DOMAIN:443:127.0.0.1"); fi
-  if ! status="$(curl "\${opts[@]}" "https://$DOMAIN$path")"; then
+  if ! status="$(curl "${opts[@]}" "https://$DOMAIN$path")"; then
     echo "FAIL $source $path: connection/TLS failure"; FAILURES=$((FAILURES+1)); return
   fi
   location="$(grep -i '^location:' "$headers" | tail -n 1 | tr -d '\r' || true)"
-  echo "HTTP $source $path: $status \${location:+($location)}"
+  echo "HTTP $source $path: $status ${location:+($location)}"
   if [[ "$kind" == public ]]; then
     if [[ "$status" != 200 ]] || ! grep -Fq 'How can we help?' "$body" || ! grep -Fq 'Help categories' "$body"; then
       echo "FAIL: public Support Center must render without login"; FAILURES=$((FAILURES+1))
