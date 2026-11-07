@@ -65,9 +65,11 @@
                 @endif
               </td>
               <td>
-                <button type="button" class="btn subtle compact" data-modal-open="account-license-{{ $license->id }}" aria-haspopup="dialog" aria-controls="account-license-{{ $license->id }}">
-                  <x-icon name="settings" size="16"/> {{ $license->status === 'revoked' ? 'Details' : 'Manage' }}
-                </button>
+                <x-row-action-menu :id="'account-license-'.$license->id" :label="'License '.$license->public_id">
+                  <button type="button" data-modal-open="account-license-{{ $license->id }}" aria-haspopup="dialog" aria-controls="account-license-{{ $license->id }}">
+                    <x-icon name="settings" size="16"/> {{ $license->status === 'revoked' ? 'Details' : 'Manage' }}
+                  </button>
+                </x-row-action-menu>
                 <dialog class="config-dialog wide-dialog license-account-dialog" id="account-license-{{ $license->id }}" aria-labelledby="account-license-title-{{ $license->id }}">
                   <div class="license-account-dialog-heading">
                     <div>
