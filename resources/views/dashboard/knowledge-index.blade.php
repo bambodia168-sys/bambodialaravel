@@ -38,10 +38,11 @@
         <td><span class="role-pill">{{ ucfirst($item->status) }}</span></td>
         <td>{{ $item->author?->name ?? 'Unknown' }}</td>
         <td>{{ $item->updated_at?->format('d M Y') }}</td>
-        <td><a href="{{ route('dashboard.knowledge.edit',$item) }}" class="btn subtle compact">Edit</a>
-          @if($item->status === 'published')<a href="{{ $item->publicUrl() }}" class="btn subtle compact" target="_blank" rel="noopener">View</a>
-          @else<a href="{{ route('dashboard.knowledge.preview',$item) }}" class="btn subtle compact" target="_blank" rel="noopener">Preview</a>@endif
-        </td>
+        <td><x-row-action-menu :id="'knowledge-'.$item->id" :label="$item->title">
+          <a href="{{ route('dashboard.knowledge.edit',$item) }}"><x-icon name="edit" size="16"/> Edit</a>
+          @if($item->status === 'published')<a href="{{ $item->publicUrl() }}" target="_blank" rel="noopener"><x-icon name="eye" size="16"/> View</a>
+          @else<a href="{{ route('dashboard.knowledge.preview',$item) }}" target="_blank" rel="noopener"><x-icon name="eye" size="16"/> Preview</a>@endif
+        </x-row-action-menu></td>
       </tr>
       @empty<tr><td colspan="7" class="empty-cell">No knowledge articles yet. Create an article or prepare the starter drafts.</td></tr>@endforelse
     </tbody></table>
