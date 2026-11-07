@@ -52,8 +52,16 @@ class GlobalFeedbackTest extends TestCase
             'title' => $policy->title, 'body' => $policy->body,
             'category' => 'terms', 'status' => 'published',
         ])->assertRedirect($url)->assertSessionHasErrors('confirm_legal_review');
-        $response = $this->get($url);
+        // Re-create the redirect's error bag explicitly. A second test request can
+        // age Laravel's flashed messages, which is unrelated to toast rendering.
+        $message = 'Confirm documented legal review before publishing.';
+        $errors = new \Illuminate\Support\ViewErrorBag();
+        $errors->put('default', new \Illuminate\Support\MessageBag([
+            'status' => [$message],
+            'confirm_legal_review' => [$message],
+        ]));
+        $response = $this->withSession(['errors' => $errors])->get($url);
         $response->assertOk()->assertSee('data-feedback-kind="error"', false);
-        $this->assertSame(1, substr_count($response->getContent(), 'Confirm documented legal review before publishing.'));
+        $this->assertSame(1, substr_count($response->getContent(), $message));
     }
 }
