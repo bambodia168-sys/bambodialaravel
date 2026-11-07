@@ -23,7 +23,7 @@
 <td>{{ ucfirst($dispute->category) }}</td><td><span class="role-pill">{{ ucfirst(str_replace('_',' ',$dispute->status)) }}</span></td>
 <td>
 @if($dispute->contract && ! $dispute->contract->isParticipant((int)auth()->id()))
-<a class="btn subtle compact" href="{{ route('dashboard.contracts.inspect',$dispute) }}">Open case</a>
+<x-row-action-menu :id="'dispute-'.$dispute->id" :label="'Dispute '.$dispute->id"><a href="{{ route('dashboard.contracts.inspect',$dispute) }}"><x-icon name="eye" size="16"/> Open case</a></x-row-action-menu>
 @else<span class="text-muted">Conflict of interest</span>@endif
 </td>
 </tr>
