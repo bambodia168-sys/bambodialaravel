@@ -83,6 +83,26 @@ class PolicyBuilderExperienceTest extends TestCase
             ->assertRedirect($policy->publicUrl());
     }
 
+    public function test_optional_jurisdiction_preserves_existing_value_when_omitted(): void
+    {
+        $policy = $this->policy();
+        $policy->update(['jurisdiction' => 'Cambodia']);
+        $this->actingAs($this->admin())
+            ->patch(route('dashboard.policies.update', $policy), [
+                'title' => $policy->title,
+                'body' => $policy->body,
+                'category' => $policy->category,
+                'status' => 'published',
+                'confirm_legal_review' => '1',
+            ])->assertRedirect();
+
+        $this->assertSame('Cambodia', $policy->fresh()->jurisdiction);
+        $this->assertDatabaseHas('policy_publications', [
+            'policy_id' => $policy->id,
+            'jurisdiction' => 'Cambodia',
+        ]);
+    }
+
     public function test_publishing_without_notification_opt_in_does_not_notify_users(): void
     {
         $policy = $this->policy();
