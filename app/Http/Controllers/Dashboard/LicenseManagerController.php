@@ -26,12 +26,40 @@ class LicenseManagerController extends Controller
             }))
             ->latest()->paginate(10)->withQueryString();
 
+        $issuedSearch = mb_substr(trim((string) $request->query('issued_search', '')), 0, 120);
+        $issuedSort = (string) $request->query('issued_sort', 'recent');
+        if (! in_array($issuedSort, ['recent', 'oldest', 'updated', 'status'], true)) {
+            $issuedSort = 'recent';
+        }
+
         $issued = ProductLicense::query()
             ->with(['customer:id,public_id', 'product:id,title,public_id,user_id,status',
                 'version:id,version,status', 'definition:id,name,version',
                 'entitlement:id,status,expires_at,revoked_at',
                 'activations','events.actor:id,name'])
-            ->latest()->paginate(10,['*'],'issued_page')->withQueryString();
+            ->when($issuedSearch !== '', function ($query) use ($issuedSearch): void {
+                $query->where(function ($q) use ($issuedSearch): void {
+                    $q->where('public_id','like','%'.$issuedSearch.'%')
+                        ->orWhere('key_prefix','like','%'.$issuedSearch.'%')
+                        ->orWhere('tier','like','%'.$issuedSearch.'%')
+                        ->orWhere('status','like','%'.$issuedSearch.'%')
+                        ->orWhereHas('product',function ($product) use ($issuedSearch): void {
+                            $product->where('title','like','%'.$issuedSearch.'%')
+                                ->orWhere('public_id','like','%'.$issuedSearch.'%');
+                        })
+                        ->orWhereHas('customer',function ($customer) use ($issuedSearch): void {
+                            $customer->where('public_id','like','%'.$issuedSearch.'%')
+                                ->orWhere('name','like','%'.$issuedSearch.'%');
+                        })
+                        ->orWhereHas('activations',fn ($activation) =>
+                            $activation->where('domain','like','%'.$issuedSearch.'%'));
+                });
+            })
+            ->when($issuedSort === 'recent',fn ($q) => $q->orderByDesc('id'))
+            ->when($issuedSort === 'oldest',fn ($q) => $q->orderBy('id'))
+            ->when($issuedSort === 'updated',fn ($q) => $q->orderByDesc('updated_at')->orderByDesc('id'))
+            ->when($issuedSort === 'status',fn ($q) => $q->orderBy('status')->orderByDesc('id'))
+            ->paginate(10,['*'],'issued_page')->withQueryString();
         $supportRenewals=ProductLicenseSupportRequest::query()
             ->with(['license.product:id,title,public_id,type','license.customer:id,public_id','requester:id,public_id'])
             ->latest()->paginate(10,['*'],'support_page')->withQueryString();
@@ -45,7 +73,7 @@ class LicenseManagerController extends Controller
                 ->latest()->limit(100)->get()
             : collect();
 
-        return view('dashboard.licenses', compact('licenses', 'search','issued','issuable','supportRenewals'));
+        return view('dashboard.licenses', compact('licenses', 'search','issued','issuable','supportRenewals','issuedSearch','issuedSort'));
     }
 
     public function store(Request $request): RedirectResponse

@@ -13,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 final class ProductLicenseSupport
 {
+    public const DEFAULT_TERM = 'six_months';
+
     public const TERMS = [
         'six_months'=>'6-month support',
         'twelve_months'=>'12-month support',

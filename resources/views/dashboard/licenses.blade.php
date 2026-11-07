@@ -90,54 +90,116 @@
   </form>
 </dialog>
 
-<section class="panel" id="issued-product-licenses">
-  <div class="panel-head">
-    <div>
-      <h2>Issued product licenses <span class="count">{{ $issued->total() }}</span></h2>
-      <p>Keys are bound to real downloadable products and their approved file entitlements. License definitions alone never generate customer keys.</p>
+
+<section class="panel license-issued-panel" id="issued-product-licenses">
+  <div class="panel-head license-issued-heading">
+    <div class="license-issued-heading-text">
+      <h2>Issued Product Licenses <span class="count">{{ $issued->total() }}</span></h2>
+      <p>Licenses for verified downloadable products. License definitions do not create customer keys.</p>
     </div>
+    @if(auth()->user()->role === 'super_admin')
+      <button class="btn primary license-issue-trigger" type="button" data-modal-open="license-issue-dialog">
+        <x-icon name="key-round" size="17"/> Manual License
+      </button>
+    @endif
+  </div>
+  <div class="license-issued-controls">
+    <form class="license-issued-search" method="get" action="{{ route('dashboard.licenses.index') }}#issued-product-licenses" role="search">
+      @foreach(request()->except(['issued_search','issued_sort','issued_page','page','support_page']) as $key=>$value)
+        @if(is_scalar($value))<input type="hidden" name="{{ $key }}" value="{{ $value }}">@endif
+      @endforeach
+      <label class="sr-only" for="issued-license-search">Search issued product licenses</label>
+      <span class="license-issued-search-field"><x-icon name="search" size="17"/>
+        <input id="issued-license-search" name="issued_search" type="search" value="{{ $issuedSearch }}"
+          maxlength="120" placeholder="License, product, customer, domain..." autocomplete="off"></span>
+      <label class="sr-only" for="issued-license-sort">Sort issued product licenses</label>
+      <select id="issued-license-sort" name="issued_sort" aria-label="Sort issued product licenses">
+        <option value="recent" @selected($issuedSort==='recent')>Recent (newest first)</option>
+        <option value="oldest" @selected($issuedSort==='oldest')>Oldest first</option>
+        <option value="updated" @selected($issuedSort==='updated')>Recently updated</option>
+        <option value="status" @selected($issuedSort==='status')>Status A–Z</option>
+      </select>
+      <button type="submit" class="btn subtle"><x-icon name="search" size="16"/> Search</button>
+      @if($issuedSearch !== '' || $issuedSort !== 'recent')
+        <a class="btn subtle" href="{{ route('dashboard.licenses.index',request()->except(['issued_search','issued_sort','issued_page'])) }}#issued-product-licenses">Reset</a>
+      @endif
+    </form>
   </div>
   @if(auth()->user()->role === 'super_admin')
-    <details class="license-workflow-panel">
-      <summary><x-icon name="plus" size="17"/> Issue a complimentary license from an approved download entitlement</summary>
+    <dialog class="config-dialog wide-dialog license-issue-dialog" id="license-issue-dialog" aria-labelledby="license-issue-heading">
+      <div class="license-issue-modal-head">
+        <div><span class="eyebrow">Product licensing</span>
+          <h2 id="license-issue-heading">Issue Manual License</h2>
+          <p>Assign a complimentary license to an eligible product and customer.</p></div>
+        <button class="btn subtle compact" type="button" data-modal-close aria-label="Close manual license dialog"><x-icon name="x" size="18"/></button>
+      </div>
       <form method="post" action="{{ route('dashboard.licenses.issue') }}" class="license-workflow-form">
         @csrf
         <label for="issued-entitlement">Approved product / release / recipient</label>
         <select id="issued-entitlement" name="product_entitlement_id" required>
           <option value="">Choose an active entitlement with an approved downloadable original</option>
           @foreach($issuable as $grant)
-            <option value="{{ $grant->id }}">
+            <option value="{{ $grant->id }}" @selected((string)old('product_entitlement_id')===(string)$grant->id)>
               {{ $grant->version?->product?->title }} · {{ $grant->version?->version }}
               · Customer {{ $grant->recipient?->public_id }} · Entitlement #{{ $grant->id }}
             </option>
           @endforeach
         </select>
-        <p class="hint">All file, malware, license-definition, release and SHA-256 integrity checks are repeated on the server before issuance.</p>
-        <label for="issued-tier">License tier</label>
-        <select id="issued-tier" name="tier" required><option value="regular">Regular License</option><option value="extended">Extended License (if offered by product)</option></select>
-        <label for="initial-support-term">Product support period</label>
-        <select name="support_term" id="initial-support-term" required>
-          @foreach(\App\Support\ProductLicenseSupport::TERMS as $term=>$label)
-            <option value="{{ $term }}" @selected($term==='six_months')>{{ $label }}</option>
-          @endforeach
-        </select>
-        <p class="hint">The product license is lifetime. Support runs for the chosen period and can be renewed separately.</p>
+        @if($issuable->isEmpty())
+          <p class="hint">No eligible entitlements yet. Approve the downloadable product and its file entitlement before issuing a key.</p>
+        @endif
+        <p class="hint">Product rights, malware screening, license terms and file integrity are checked again on the server.</p>
+        <div class="license-issue-fields">
+          <div><label for="issued-tier">License tier</label>
+            <select id="issued-tier" name="tier" required>
+              <option value="regular" @selected(old('tier','regular')==='regular')>Regular License</option>
+              <option value="extended" @selected(old('tier')==='extended')>Extended License (when offered)</option>
+            </select></div>
+          <div><label for="initial-support-term">Product support period</label>
+            <select name="support_term" id="initial-support-term" required>
+              @foreach(\App\Support\ProductLicenseSupport::TERMS as $term=>$label)
+                <option value="{{ $term }}" @selected(old('support_term',\App\Support\ProductLicenseSupport::DEFAULT_TERM)===$term)>{{ $label }}</option>
+              @endforeach
+            </select></div>
+        </div>
+        <p class="hint">License validity is lifetime. Standard support starts at 6 months; an authorized administrator can assign longer complimentary support.</p>
         <label for="issued-reason">Reason and authorization</label>
-        <textarea id="issued-reason" name="reason" rows="3" minlength="15" maxlength="500" required placeholder="Describe why this customer is receiving a complimentary license."></textarea>
+        <textarea id="issued-reason" name="reason" rows="3" minlength="15" maxlength="500" required
+          placeholder="Explain this complimentary issuance.">{{ old('reason') }}</textarea>
         <label class="check-label"><input type="checkbox" name="confirm_complimentary" value="1" required>
-          Confirm this is a manual complimentary issuance linked to an approved product and entitlement. No payment has been verified or recorded.</label>
-        <button type="submit" class="btn primary"><x-icon name="key-round" size="17"/> Issue license</button>
+          I confirm this manually issued license is complimentary and backed by an approved downloadable product and entitlement.</label>
+        <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Cancel</button>
+          <button type="submit" class="btn primary" @disabled($issuable->isEmpty())><x-icon name="key-round" size="17"/> Issue License</button>
+        </div>
       </form>
-    </details>
+    </dialog>
   @endif
-  <div class="table-scroll"><table class="data-table">
-    <thead><tr><th>License ID / Key</th><th>Downloadable product</th><th>Customer</th><th>Tier / Terms</th><th>License period</th><th>Support</th><th>Status</th><th>Active domain</th><th>Action</th></tr></thead>
+  <div class="table-scroll license-issued-scroll" tabindex="0" role="region" aria-label="Issued product license table; scroll horizontally to see all columns">
+    <table class="data-table license-issued-table">
+    <thead><tr><th scope="col">No</th><th scope="col">License</th><th scope="col">Product</th><th scope="col">Customer</th><th scope="col">Terms</th><th scope="col">Period</th><th scope="col">Support</th><th scope="col">Status</th><th scope="col">Domain</th><th scope="col">Action</th></tr></thead>
     <tbody>
     @forelse($issued as $item)
       <tr>
-        <td><strong class="mono">{{ $item->public_id }}</strong><div class="text-muted mono">{{ $item->maskedKey() }}</div></td>
-        <td><strong>{{ $item->product?->title ?? 'Unavailable product' }}</strong>
-          <div class="text-muted">Product {{ $item->product?->public_id }} · File v{{ $item->version?->version }}</div></td>
+        <td class="mono">{{ $issued->firstItem() + $loop->index }}</td>
+        <td>
+          <button class="license-table-link mono" type="button" data-modal-open="issued-{{ $item->id }}"
+            aria-label="View license {{ $item->public_id }}">{{ $item->public_id }}</button>
+          <div class="text-muted mono">{{ $item->maskedKey() }}</div>
+        </td>
+        <td>
+          @if($item->product)
+            <button class="license-table-link" type="button" data-modal-open="issued-product-{{ $item->id }}"
+              aria-label="View product {{ $item->product->title }}">{{ $item->product->title }}</button>
+            <div class="license-issued-subrow">
+              <span class="mono">#{{ $item->product->public_id }}</span>
+              <button type="button" class="license-copy-button" data-license-copy-url="{{ $item->product->publicUrl() }}"
+                aria-label="Copy full product URL"><x-icon name="copy" size="15"/> Copy URL</button>
+            </div>
+          @else
+            <span class="text-muted">Unavailable product</span>
+          @endif
+          <div class="text-muted">File v{{ $item->version?->version }}</div>
+        </td>
         <td class="mono">{{ $item->customer?->public_id }}</td>
         <td>{{ ucfirst($item->tier) }}<div class="text-muted">{{ $item->definition?->name }} v{{ $item->definition?->version }}</div></td>
         <td><strong>Lifetime</strong></td>
@@ -148,8 +210,35 @@
         </td>
         <td><span class="role-pill">{{ ucfirst($item->status) }}</span>
           @unless($item->isActive())<small class="text-muted">Not currently valid</small>@endunless</td>
-        <td>{{ $item->activations->where('status','active')->pluck('domain')->implode(', ') ?: 'Not activated' }}</td>
+        <td><span class="license-domain-cell">{{ $item->activations->where('status','active')->pluck('domain')->implode(', ') ?: 'Not activated' }}</span></td>
         <td>
+          @if($item->product)
+            <dialog class="config-dialog wide-dialog license-product-dialog" id="issued-product-{{ $item->id }}"
+              aria-labelledby="issued-product-heading-{{ $item->id }}">
+              <h2 id="issued-product-heading-{{ $item->id }}">{{ $item->product->title }}</h2>
+              <p>Product #{{ $item->product->public_id }} · {{ ucfirst($item->product->status) }} · Downloadable product</p>
+              <div class="license-product-summary">
+                <div><small>Product</small><strong>{{ $item->product->title }}</strong></div>
+                <div><small>Release</small><strong>v{{ $item->version?->version ?? 'Unavailable' }}</strong></div>
+                <div><small>License</small><strong>{{ $item->public_id }}</strong></div>
+                <div><small>Customer</small><strong>{{ $item->customer?->public_id }}</strong></div>
+              </div>
+              <label class="license-product-url-label" for="issued-product-url-{{ $item->id }}">Full product URL</label>
+              <div class="license-product-url-row">
+                <input id="issued-product-url-{{ $item->id }}" type="text" readonly value="{{ $item->product->publicUrl() }}">
+                <button class="btn subtle compact" type="button" data-license-copy-url="{{ $item->product->publicUrl() }}">
+                  <x-icon name="copy" size="16"/> Copy URL</button>
+              </div>
+              <div class="dialog-actions">
+                <button class="btn subtle" type="button" data-modal-open="issued-{{ $item->id }}" data-modal-close>License details</button>
+                @if($item->product->status === 'published')
+                  <a class="btn subtle" href="{{ $item->product->publicUrl() }}" target="_blank" rel="noopener noreferrer">
+                    <x-icon name="external-link" size="16"/> Open product</a>
+                @endif
+                <button type="button" class="btn primary" data-modal-close>Close</button>
+              </div>
+            </dialog>
+          @endif
           <button class="btn subtle compact license-action-trigger" type="button"
             id="issued-action-trigger-{{ $item->id }}" popovertarget="issued-actions-{{ $item->id }}"
             aria-haspopup="true" aria-label="Actions for product license {{ $item->public_id }}">
@@ -245,7 +334,7 @@
           </dialog>
         </td>
       </tr>
-    @empty<tr><td colspan="9" class="empty-cell">No product licenses have been issued. A real approved product and entitlement are required first.</td></tr>@endforelse
+    @empty<tr><td colspan="10" class="empty-cell">{{ $issuedSearch !== '' ? 'No issued licenses match your search.' : 'No issued product licenses yet. An approved downloadable product and entitlement are required.' }}</td></tr>@endforelse
     </tbody>
   </table></div>
   <x-pagination :paginator="$issued"/>

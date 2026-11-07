@@ -788,3 +788,23 @@ function initializeBuilderStudio() {
     }
 }
 document.addEventListener('DOMContentLoaded', initializeBuilderStudio);
+
+/* Copy only public product URLs from administrator license tables. Do not reveal secret license keys. */
+document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-license-copy-url]');
+    if (!button) return;
+    const url = button.dataset.licenseCopyUrl;
+    if (!url) return;
+    const oldLabel = button.getAttribute('aria-label') || button.textContent.trim();
+    try {
+        await navigator.clipboard.writeText(url);
+        button.setAttribute('aria-label', 'Full product URL copied');
+        button.title = 'Copied full product URL';
+    } catch (_) {
+        const field = button.closest('dialog')?.querySelector('.license-product-url-row input');
+        field?.select();
+        button.title = 'Select and copy the product URL';
+        button.setAttribute('aria-label', 'Select and copy full product URL');
+    }
+    button.dataset.originalLabel = oldLabel;
+});

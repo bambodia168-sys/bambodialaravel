@@ -512,4 +512,45 @@ class ProductLicenseLifecycleTest extends TestCase
     }
 
 
+
+    public function test_manual_issuance_is_in_right_aligned_modal_and_keeps_default_six_month_support(): void
+    {
+        $response=$this->actingAs($this->admin)->get('/dashboard/license-manager');
+        $response->assertOk()
+            ->assertSee('id="license-issue-dialog"',false)
+            ->assertSee('data-modal-open="license-issue-dialog"',false)
+            ->assertSee('id="initial-support-term"',false)
+            ->assertSee('value="six_months" selected',false)
+            ->assertSee('name="confirm_complimentary"',false)
+            ->assertSee('class="table-scroll license-issued-scroll"',false)
+            ->assertDontSee('<details class="license-workflow-panel">',false);
+        $this->assertDatabaseCount('product_licenses',0);
+        // The manual modal is only rendered for super administrators.
+        $this->actingAs($this->staff)->get('/dashboard/license-manager')
+            ->assertOk()->assertDontSee('id="license-issue-dialog"',false);
+    }
+
+    public function test_admin_issued_license_search_sort_and_product_link_are_real_and_independent(): void
+    {
+        $license=$this->issue();
+        $url=$this->product->publicUrl();
+        $this->actingAs($this->admin)->get('/dashboard/license-manager?issued_search='.urlencode($this->product->title))
+            ->assertOk()->assertSee($license->public_id)
+            ->assertSee('data-license-copy-url="'.$url.'"',false)
+            ->assertSee('id="issued-product-'.$license->id.'"',false)
+            ->assertSee('id="issued-'.$license->id.'"',false)
+            ->assertSee('No</th><th scope="col">License',false);
+
+        $this->get('/dashboard/license-manager?issued_search=missing-product-name')
+            ->assertOk()->assertSee('No issued licenses match your search.')
+            ->assertDontSee('aria-label="View license '.$license->public_id.'"',false);
+        $this->get('/dashboard/license-manager?issued_search='.urlencode($this->customer->public_id).'&issued_sort=oldest')
+            ->assertOk()->assertSee($license->public_id)->assertSee('selected>Oldest first',false);
+        $this->get('/dashboard/license-manager?issued_sort=status')
+            ->assertOk()->assertSee($license->public_id);
+        $this->get('/dashboard/license-manager?issued_sort=not-valid')
+            ->assertOk()->assertSee('selected>Recent (newest first)',false);
+    }
+
+
 }
