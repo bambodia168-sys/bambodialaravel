@@ -25,10 +25,23 @@
   </section>
   <div class="container inner-page support-knowledge-main">
     <div class="support-section-heading"><div><div class="eyebrow">Browse by topic</div><h2>Help categories</h2></div></div>
+    @php
+      $categoryIcons = [
+        'getting-started' => 'book-open',
+        'accounts' => 'shield',
+        'licenses' => 'key-round',
+        'downloads' => 'download',
+        'creators' => 'palette',
+        'freelance' => 'briefcase',
+        'payments' => 'file-check',
+        'policies' => 'scale',
+      ];
+    @endphp
     <nav class="support-category-grid" aria-label="Knowledge base categories">
       @foreach(\App\Support\SupportKnowledge::CATEGORIES as $key => $label)
         <a href="{{ route('support',['category'=>$key]) }}" class="support-category-card{{ $category === $key ? ' is-active' : '' }}" @if($category === $key)aria-current="page"@endif>
-          <span class="support-category-glyph"><x-icon name="book-open" size="20"/></span>
+          <span class="support-category-number" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
+          <span class="support-category-glyph" aria-hidden="true"><x-icon :name="$categoryIcons[$key]" size="50"/></span>
           <strong>{{ $label }}</strong>
           <small>{{ (int)$categoryCounts->get($key,0) }} {{ (int)$categoryCounts->get($key,0) === 1 ? 'article' : 'articles' }}</small>
         </a>
@@ -47,9 +60,9 @@
     <div class="support-article-grid">
       @forelse($articles as $article)
         <a class="support-article-card" href="{{ $article->publicUrl() }}">
+          <span class="support-article-card-glyph" aria-hidden="true"><x-icon :name="$categoryIcons[$article->category] ?? 'book-open'" size="30"/></span>
           <span class="support-article-category">{{ \App\Support\SupportKnowledge::CATEGORIES[$article->category] ?? ucfirst($article->category) }}</span>
           <strong>{{ $article->title }}</strong>
-          <p>{{ $article->excerpt }}</p>
           <span class="support-article-open">Read article <x-icon name="chevron-right" size="16"/></span>
         </a>
       @empty
@@ -62,7 +75,7 @@
       @endforelse
     </div>
     <x-pagination :paginator="$articles"/>
-    <section class="support-contact-cta">
+    <section class="support-contact-cta" aria-label="Private support assistance">
       <div><div class="eyebrow">Personal assistance</div><h2>Still need help?</h2>
         <p>Your support ticket stays private between your account and authorized support staff.</p>
       </div>
