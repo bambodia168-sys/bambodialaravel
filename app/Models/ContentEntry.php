@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class ContentEntry extends Model
 {
-    protected $fillable = ['type', 'title', 'body', 'status', 'author_id', 'published_at'];
+    protected $fillable = ['type', 'title', 'body', 'body_format', 'status', 'author_id', 'published_at', 'excerpt', 'category', 'tags', 'seo_title', 'seo_description', 'featured_media_id'];
 
     protected function casts(): array
     {
@@ -38,6 +38,16 @@ class ContentEntry extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_id');
+    }
+
+    public function featuredMedia(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'featured_media_id');
+    }
+
+    public function isPublic(): bool
+    {
+        return $this->status === 'published' && $this->published_at !== null;
     }
 
     public function publicUrl(): string
