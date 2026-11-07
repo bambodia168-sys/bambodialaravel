@@ -40,7 +40,8 @@ try{
             const img=visual.querySelector('img');
             const agent=visual.getBoundingClientRect();
             return {
-              loaded:img.complete && img.naturalWidth>0 && img.naturalHeight>0,
+              loaded:img.complete && img.naturalWidth>=380 && img.naturalHeight>=319,
+              source:img.currentSrc,
               rightDistance:hero.right-agent.right,
               visibleWidth:agent.width,
               imageAlt:img.getAttribute('alt'),
@@ -76,9 +77,12 @@ try{
         };
       },theme);
       const {columns,documentWidth,viewportWidth,heroAgent,categoryStyles,assistanceBackground,cards} = measurements;
-      if(!heroAgent.loaded || heroAgent.rightDistance > 60 || heroAgent.visibleWidth<190 ||
-         heroAgent.pointerEvents!=='none' || heroAgent.imageAlt!=='' || heroAgent.layerOpacity>.8)
-        throw Error('Responsive support agent hero background missing or obstructing interactions: '+JSON.stringify(heroAgent));
+      if(!heroAgent.loaded || !heroAgent.source.endsWith('/images/support-agent-photo.webp') ||
+         heroAgent.rightDistance > 60 || heroAgent.visibleWidth<190 ||
+         heroAgent.pointerEvents!=='none' || heroAgent.imageAlt!=='' ||
+         heroAgent.layerOpacity<.15 || heroAgent.layerOpacity>1 ||
+         (viewport.width===1600 && theme==='light' && heroAgent.layerOpacity<.90))
+        throw Error('Photographic support-agent hero background missing or obstructing interactions: '+JSON.stringify(heroAgent));
       if(columns !== viewport.columns)
         throw Error('Expected '+viewport.columns+' article columns at '+viewport.width+', found '+columns);
       if(documentWidth > viewportWidth+5)
