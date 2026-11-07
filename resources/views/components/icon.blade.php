@@ -93,6 +93,7 @@ $paths = [
     'eraser' => '<path d="m19 4 3 3-12 12H5l-3-3L14 4zM8 14l6 6M4 22h18"/>',
     'code' => '<path d="m8 8-4 4 4 4m8-8 4 4-4 4m-3-13-6 18"/>',
     'save' => '<path d="M4 3h14l3 3v15H3V3zM7 3v7h9V3M7 21v-8h10v8"/>',
+    'ellipsis-vertical' => '<circle cx="12" cy="5" r="1.45" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.45" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.45" fill="currentColor" stroke="none"/>',
     'eye' => '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
     'x' => '<path d="M5 5 19 19M19 5 5 19"/>',
     'slash' => '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6 18.4 18.4"/>',
