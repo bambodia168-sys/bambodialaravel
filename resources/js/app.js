@@ -64,35 +64,72 @@ document.querySelectorAll('dialog').forEach((dialog) => {
 
 
 
-/* License Manager row actions use browser-native top-layer popovers so menus
-   cannot be clipped by horizontally scrolling tables. Every action opens
-   the existing server-validated workflow, never performs a direct mutation. */
-function initializeLicenseActionMenus() {
-    const menus = [...document.querySelectorAll('[data-license-action-menu]')];
+/* Unified native top-layer row actions. Position beside the actual trigger to
+   avoid clipped menus in horizontally scrollable tables; preserve existing routes
+   and dialogs. No mutation is performed by opening an action menu. */
+function initializeRowActionMenus() {
+    const menus = [...document.querySelectorAll('[data-row-action-menu]')];
     if (!menus.length) return;
-    const reposition = (menu) => {
-        const trigger = document.getElementById(menu.dataset.licenseAnchor || '');
+    const menuItems = menu => [...menu.querySelectorAll('a[href],button:not([disabled])')]
+        .filter(item => !item.closest('[hidden]') && getComputedStyle(item).display !== 'none');
+    const place = menu => {
+        const trigger = document.getElementById(menu.dataset.rowActionAnchor || '');
         if (!trigger) return;
-        const rect = trigger.getBoundingClientRect();
-        const width = menu.offsetWidth || 252;
-        const height = menu.offsetHeight || 280;
-        const left = Math.max(12, Math.min(window.innerWidth - width - 12, rect.right - width));
-        const below = rect.bottom + 6;
-        const top = below + height > window.innerHeight - 12 && rect.top > height + 18
-            ? rect.top - height - 6
-            : Math.max(12, Math.min(below, window.innerHeight - height - 12));
+        const box = trigger.getBoundingClientRect();
+        const width = menu.offsetWidth || 210;
+        const height = menu.offsetHeight || 100;
+        const left = Math.max(10, Math.min(window.innerWidth - width - 10, box.right - width));
+        const below = box.bottom + 6;
+        const top = (below + height > window.innerHeight - 10 && box.top - height - 6 > 10)
+            ? box.top - height - 6
+            : Math.max(10, Math.min(below, window.innerHeight - height - 10));
         menu.style.left = left + 'px';
         menu.style.top = top + 'px';
     };
-    menus.forEach((menu) => {
-        menu.addEventListener('toggle', (event) => {
-            if (event.newState === 'open') reposition(menu);
+    menus.forEach(menu => {
+        const trigger = document.getElementById(menu.dataset.rowActionAnchor || '');
+        if (!trigger) return;
+        menuItems(menu).forEach(item => item.setAttribute('role', 'menuitem'));
+        menu.addEventListener('toggle', event => {
+            const isOpen = event.newState === 'open';
+            trigger.setAttribute('aria-expanded', String(isOpen));
+            if (isOpen) {
+                place(menu);
+                requestAnimationFrame(() => {
+                    if (menu.matches(':popover-open')) menuItems(menu)[0]?.focus({ preventScroll:true });
+                });
+            }
         });
-        menu.addEventListener('click', (event) => {
-            if (event.target.closest('[data-license-action]')) menu.hidePopover?.();
+        menu.addEventListener('click', event => {
+            if (event.target.closest('a[href],button:not([disabled])')) menu.hidePopover?.();
+        });
+        menu.addEventListener('keydown', event => {
+            if (!['ArrowDown','ArrowUp','Home','End'].includes(event.key)) return;
+            const items = menuItems(menu);
+            if (!items.length) return;
+            event.preventDefault();
+            let idx = items.indexOf(document.activeElement);
+            if (event.key === 'Home') idx = 0;
+            else if (event.key === 'End') idx = items.length - 1;
+            else if (event.key === 'ArrowDown') idx = (idx + 1) % items.length;
+            else idx = (idx - 1 + items.length) % items.length;
+            items[idx]?.focus({ preventScroll:true });
         });
     });
-    document.addEventListener('click', (event) => {
+    window.addEventListener('resize', () => menus.forEach(menu => {
+        if (menu.matches(':popover-open')) place(menu);
+    }));
+    document.addEventListener('scroll', event => {
+        if (event.target === document || event.target.closest?.('.table-scroll,.license-issued-scroll,[data-workspace-scroll]')) {
+            menus.forEach(menu => { if (menu.matches(':popover-open')) menu.hidePopover?.(); });
+        }
+    }, true);
+}
+document.addEventListener('DOMContentLoaded', initializeRowActionMenus);
+
+/* License-specific dialog focus and status presets remain unchanged. */
+function initializeLicenseActionMenus() {
+    document.addEventListener('click', event => {
         const action = event.target.closest('[data-license-action][data-modal-open]');
         if (!action) return;
         const targetId = action.dataset.licenseFocus;
@@ -114,12 +151,6 @@ function initializeLicenseActionMenus() {
             focusable.focus({preventScroll:true});
         });
     });
-    window.addEventListener('resize', () => {
-        menus.forEach(m => {if (m.matches(':popover-open')) reposition(m);});
-    });
-    document.addEventListener('scroll', () => {
-        menus.forEach(m => {if (m.matches(':popover-open')) m.hidePopover?.();});
-    }, true);
 }
 document.addEventListener('DOMContentLoaded', initializeLicenseActionMenus);
 
