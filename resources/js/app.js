@@ -90,6 +90,14 @@ function initializeRowActionMenus() {
         const trigger = document.getElementById(menu.dataset.rowActionAnchor || '');
         if (!trigger) return;
         menuItems(menu).forEach(item => item.setAttribute('role', 'menuitem'));
+        // beforetoggle fires while the trigger is still active. Pre-position the
+        // popover before it enters the top layer so it never flashes at (0,0).
+        menu.addEventListener('beforetoggle', event => {
+            if (event.newState === 'open') {
+                trigger.setAttribute('aria-expanded', 'true');
+                place(menu);
+            }
+        });
         menu.addEventListener('toggle', event => {
             const isOpen = event.newState === 'open';
             trigger.setAttribute('aria-expanded', String(isOpen));
