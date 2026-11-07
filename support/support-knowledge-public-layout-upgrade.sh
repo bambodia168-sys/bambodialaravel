@@ -16,7 +16,7 @@ PHP="/www/server/php/85/bin/php"
 CONF="/www/server/panel/vhost/nginx/bambodia.com.conf"
 BACKUP_DIR="/root/Bambodia-SupportKnowledge-Layout-Backups"
 ARTIFACT="Bambodia-Installer-v0.0.1"
-FILES=(resources/css/app.css resources/views/support/knowledge-index.blade.php resources/views/support/knowledge-show.blade.php)
+FILES=(resources/css/app.css resources/views/support/knowledge-index.blade.php resources/views/support/knowledge-show.blade.php resources/views/components/icon.blade.php)
 stop(){ echo "BLOCKED: $*" >&2; exit 1; }
 [[ "$MODE" == --check || "$MODE" == --apply ]] || stop "Invalid mode"
 [[ "$SHA" =~ ^[a-f0-9]{40}$ ]] || stop "Expected an exact 40-character SHA"
@@ -40,7 +40,7 @@ echo "========== VERIFY INSTALLED SOURCE BASELINE =========="
 for file in "${FILES[@]}"; do
   [[ -f "$SRC/$file" && -f "$APP/$file" && ! -L "$APP/$file" ]] || stop "Missing or symlinked file: $file"
   base="$BASE_VIEWS"
-  [[ "$file" != "resources/css/app.css" ]] || base="$BASE_CSS"
+  if [[ "$file" == "resources/css/app.css" || "$file" == "resources/views/components/icon.blade.php" ]]; then base="$BASE_CSS"; fi
   cmp -s "$APP/$file" <(git -C "$SRC" show "$base:$file") || stop "Installed file customized since prior release: $file"
   echo "MATCH: $file"
 done
