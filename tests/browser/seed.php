@@ -108,7 +108,7 @@ foreach ([
     ['Browser QA Getting Started Guide', 'getting-started', 'This original short guide explains how to create an account and navigate your dashboard.'],
     ['Browser QA Product License Guide', 'licenses', 'Learn how to review your license details and find product access information.'],
 ] as [$title, $category, $excerpt]) {
-    \\App\\Models\\KnowledgeArticle::query()->create([
+    \App\Models\KnowledgeArticle::query()->create([
         'title' => $title, 'category' => $category, 'excerpt' => $excerpt,
         'body' => str_repeat('Use the QA guidance to review your account securely. ', 3),
         'body_format' => 'markdown', 'status' => 'published',
