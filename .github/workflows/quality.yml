@@ -63,6 +63,7 @@ jobs:
           bash -n support/knowledge-base-upgrade.sh
           bash -n support/knowledge-builder-layout-upgrade.sh
           bash -n support/support-knowledge-public-layout-upgrade.sh
+          bash -n support/support-knowledge-article-enhancements-upgrade.sh
           php -l examples/license-validation.php
           bash -n support/builder-studio-db-backup.sh
       - name: Check PHP syntax
