@@ -81,6 +81,17 @@
     @endif
   </nav>
 
+  @if($publishedLegalPolicies->isNotEmpty())
+    <nav class="studio-landing-guide" aria-label="Published platform policies" style="margin:1rem 0;padding:1rem 1.25rem">
+      <strong>Platform policies and legal terms</strong>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.5rem">
+        @foreach($publishedLegalPolicies as $legalPolicy)
+          <a href="{{ $legalPolicy->publicUrl() }}" target="_blank" rel="noopener noreferrer">{{ $legalPolicy->title }}</a>
+        @endforeach
+      </div>
+    </nav>
+  @endif
+
   @if($type === null)
     @if(count($allowedTypes) === 0)
       <div class="studio-empty panel">
