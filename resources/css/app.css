@@ -1826,3 +1826,39 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   .support-article-layout{display:block}
   .support-article-main{border:0!important;box-shadow:none!important;padding:0}
 }
+
+/* Knowledge Builder — fit the editorial form and publication sidebar to the admin workspace. */
+.support-knowledge-builder{width:100%;min-width:0}
+.support-knowledge-builder .policy-builder-heading>div:first-child{min-width:0;flex:1 1 320px}
+.support-knowledge-builder .policy-builder-columns{grid-template-columns:minmax(0,1fr) minmax(300px,340px);gap:clamp(16px,1.6vw,24px)}
+.support-knowledge-builder .policy-builder-main,.support-knowledge-builder .policy-builder-sidebar{min-width:0}
+.support-knowledge-builder .policy-builder-sidebar{align-content:start;top:82px}
+.support-knowledge-builder .policy-side-panel{min-width:0;padding:1.25rem!important;overflow-wrap:break-word}
+.support-knowledge-builder .policy-side-head{min-width:0;align-items:center;gap:.65rem}
+.support-knowledge-builder .policy-side-head svg{flex:none}
+.support-knowledge-builder .policy-review-check{align-items:flex-start;gap:.7rem;overflow-wrap:anywhere}
+.support-knowledge-builder .policy-review-check input{flex:0 0 auto;margin:.22rem 0 0}
+.support-knowledge-builder .policy-title-input-wrap{margin-bottom:1.25rem;min-width:0}
+.support-knowledge-builder .policy-builder-main .support-knowledge-title-input input{width:100%;margin:0;min-height:48px;font-size:1rem;font-weight:650}
+.support-knowledge-builder .policy-builder-main .support-knowledge-excerpt{width:100%;box-sizing:border-box;min-height:104px;max-width:100%;margin-bottom:1.15rem;padding:.85rem 1rem;background:var(--surface-2);color:var(--text);border:1px solid var(--line);border-radius:12px;line-height:1.55;font:inherit;resize:vertical}
+.support-knowledge-builder .support-knowledge-excerpt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.support-knowledge-builder .policy-editor-panel{min-width:0}
+.support-knowledge-builder .policy-editor-toolbar{max-width:100%}
+.support-knowledge-builder .policy-editor-area{min-width:0;min-height:400px}
+.support-knowledge-builder .support-knowledge-facts{grid-template-columns:minmax(0,1fr) minmax(0,auto);gap:.75rem;border-top:1px solid var(--line);padding-top:1rem;margin:1.1rem 0}
+.support-knowledge-builder .support-knowledge-facts dt,.support-knowledge-builder .support-knowledge-facts dd{min-width:0;overflow-wrap:anywhere}
+.support-knowledge-builder .support-knowledge-facts dd{text-align:right}
+.support-knowledge-builder .policy-side-panel>.btn{max-width:100%;justify-content:center}
+@media(max-width:1180px){
+  .support-knowledge-builder .policy-builder-columns{grid-template-columns:minmax(0,1fr)}
+  .support-knowledge-builder .policy-builder-sidebar{position:static;max-height:none;overflow:visible;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+}
+@media(max-width:700px){
+  .support-knowledge-builder .policy-builder-sidebar{grid-template-columns:minmax(0,1fr)}
+  .support-knowledge-builder .policy-builder-heading{align-items:stretch}
+  .support-knowledge-builder .policy-builder-top-actions{width:100%}
+  .support-knowledge-builder .policy-builder-top-actions .btn{flex:1;justify-content:center}
+  .support-knowledge-builder .policy-editor-panel{padding:1rem!important}
+  .support-knowledge-builder .policy-editor-area{min-height:320px;padding:.75rem .25rem}
+  .support-knowledge-builder .policy-side-panel{padding:1.1rem!important}
+}
