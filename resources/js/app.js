@@ -982,10 +982,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         policyForm.addEventListener('submit', (event) => {
             sync();
-            if (!policyEditor.textContent?.trim() || policyEditor.textContent.trim().length < 50) {
+            const minimum = Number.parseInt(policyForm.dataset.editorMinLength || '50', 10);
+            if (!policyEditor.textContent?.trim() || policyEditor.textContent.trim().length < minimum) {
                 event.preventDefault();
                 policyEditor.focus();
-                window.alert('Enter at least 50 characters of readable policy content.');
+                window.alert('Enter at least ' + minimum + ' characters of readable content.');
             }
         });
         policyEditor.addEventListener('input', sync);
@@ -1123,3 +1124,32 @@ function initializeGlobalFeedback() {
     });
 }
 document.addEventListener('DOMContentLoaded', initializeGlobalFeedback);
+
+
+/* Post Builder: preview only approved Media Library images; save the selected ID
+   with the form. Rich-text editing uses the existing safely sanitized editor. */
+document.addEventListener('DOMContentLoaded', () => {
+    const root = document.querySelector('[data-post-builder]');
+    if (!root) return;
+    const select = root.querySelector('[data-post-featured-select]');
+    const preview = root.querySelector('[data-post-featured-preview]');
+    if (!select || !preview) return;
+    const image = preview.querySelector('img');
+    const empty = preview.querySelector('span');
+    const sync = () => {
+        const option = select.selectedOptions[0];
+        const url = option?.dataset.imageUrl;
+        if (url) {
+            image.src = url;
+            image.alt = option?.dataset.alt || 'Featured image preview';
+            image.hidden = false;
+            empty.hidden = true;
+        } else {
+            image.removeAttribute('src');
+            image.hidden = true;
+            empty.hidden = false;
+        }
+    };
+    select.addEventListener('change', sync);
+    sync();
+});
