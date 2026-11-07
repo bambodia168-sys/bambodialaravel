@@ -22,8 +22,10 @@
   <div class="table-scroll"><table class="data-table"><thead><tr><th>Ticket ID</th><th>Subject</th><th>Customer</th><th>Status</th><th>Updated</th><th>Action</th></tr></thead><tbody>
   @forelse($tickets as $ticket)
     <tr><td class="mono">{{ $ticket->public_id }}</td><td><strong>{{ $ticket->subject }}</strong></td><td>{{ $ticket->owner?->name }}</td><td><span class="role-pill">{{ ucwords(str_replace('_',' ',$ticket->status)) }}</span></td><td>{{ $ticket->updated_at->format('d M Y') }}</td><td>
-      <a class="btn subtle compact" href="{{ route('dashboard.support.show',$ticket->public_id) }}">Open</a>
-      <button class="btn subtle compact" type="button" data-modal-open="ticket-{{ $ticket->id }}">Configure</button>
+      <x-row-action-menu :id="'ticket-'.$ticket->id" :label="$ticket->subject">
+        <a href="{{ route('dashboard.support.show',$ticket->public_id) }}"><x-icon name="eye" size="16"/> Open</a>
+        <button type="button" data-modal-open="ticket-{{ $ticket->id }}"><x-icon name="settings" size="16"/> Configure</button>
+      </x-row-action-menu>
       <dialog class="config-dialog" id="ticket-{{ $ticket->id }}">
         <form method="post" action="{{ route('dashboard.support.status',$ticket->public_id) }}">@csrf @method('PATCH')
         <h2>Configure ticket</h2><p>Ticket {{ $ticket->public_id }}</p>
