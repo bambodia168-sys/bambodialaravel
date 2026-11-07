@@ -30,6 +30,7 @@ class AuditEvent extends Model
         'knowledge.article.updated',
         'knowledge.article.published',
         'knowledge.starter_drafts_created',
+        'knowledge.additional_drafts_created',
         'policy.published',
         'policy.notification.queued',
         'policy.legal_drafts_created',
