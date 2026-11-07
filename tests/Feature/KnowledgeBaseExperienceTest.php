@@ -74,6 +74,55 @@ class KnowledgeBaseExperienceTest extends TestCase
         $this->get(route('support'))->assertDontSee('How to create a Bambodia account');
     }
 
+    public function test_additional_help_templates_are_unique_private_drafts_and_preserve_existing_published_content(): void
+    {
+        $admin = $this->member('super_admin');
+        $customer = $this->member();
+        $first = $this->article($admin, 'published', 'An existing reviewed marketplace help article');
+        $first->update(['excerpt' => 'An approved public summary that must never be rewritten.']);
+        $this->assertCount(24, SupportKnowledge::additionalArticles());
+        $this->assertCount(24, collect(SupportKnowledge::additionalArticles())->pluck('title')->unique());
+
+        $this->actingAs($customer)
+            ->post(route('dashboard.knowledge.additional-drafts'))
+            ->assertForbidden();
+        $this->assertDatabaseCount('knowledge_articles', 1);
+
+        $this->actingAs($admin)
+            ->post(route('dashboard.knowledge.additional-drafts'))
+            ->assertRedirect(route('dashboard.knowledge.index', ['status'=>'draft']));
+        $this->assertDatabaseCount('knowledge_articles', 25);
+        $this->assertSame(24, KnowledgeArticle::query()->where('status', 'draft')->count());
+
+        $this->post(route('dashboard.knowledge.additional-drafts'))->assertRedirect();
+        $this->assertDatabaseCount('knowledge_articles', 25);
+        $this->assertSame('published', $first->fresh()->status);
+        $this->assertSame('An approved public summary that must never be rewritten.', $first->fresh()->excerpt);
+
+        $new = KnowledgeArticle::query()->where('title', 'Resetting your account password securely')->firstOrFail();
+        $this->assertSame('accounts', $new->category);
+        $this->assertSame('draft', $new->status);
+        $this->get($new->publicUrl())->assertNotFound();
+        $this->get(route('support'))->assertDontSee($new->title)->assertSee($first->title);
+
+        $this->assertDatabaseHas('audit_events', [
+            'event'=>'knowledge.additional_drafts_created', 'actor_id'=>$admin->id,
+        ]);
+    }
+
+    public function test_supplemental_templates_have_reviewable_content_across_all_eight_categories(): void
+    {
+        $templates = SupportKnowledge::additionalArticles();
+        $this->assertCount(8, collect($templates)->pluck('category')->unique());
+        foreach ($templates as $template) {
+            $this->assertArrayHasKey($template['category'], SupportKnowledge::CATEGORIES);
+            $this->assertGreaterThanOrEqual(25, mb_strlen($template['excerpt']));
+            $this->assertLessThanOrEqual(320, mb_strlen($template['excerpt']));
+            $this->assertGreaterThan(250, mb_strlen($template['body']));
+            $this->assertSame('markdown', $template['body_format']);
+        }
+    }
+
     public function test_admin_review_is_required_and_public_search_only_shows_published_articles(): void
     {
         $admin=$this->member('admin');
