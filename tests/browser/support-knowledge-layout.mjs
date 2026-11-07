@@ -20,6 +20,12 @@ try{
     const response = await page.goto(origin+'/support-center',{waitUntil:'networkidle',timeout:30000});
     if(response?.status() !== 200) throw Error('Public Support Center returned '+response?.status());
     for(const theme of ['light','dark']){
+      await page.evaluate(async theme=>{
+        document.documentElement.dataset.theme = theme;
+        const visible=document.querySelector(theme==='dark' ? '.support-agent-photo-dark' : '.support-agent-photo-light');
+        if(!visible) throw Error('Missing theme-specific support portrait');
+        await visible.decode();
+      },theme);
       const measurements = await page.evaluate(theme=>{
         document.documentElement.dataset.theme = theme;
         const articleGrid = document.querySelector('.support-article-grid');
@@ -37,10 +43,14 @@ try{
           heroAgent:(()=>{
             const hero=document.querySelector('.support-knowledge-hero').getBoundingClientRect();
             const visual=document.querySelector('.support-hero-agent-art');
-            const img=visual.querySelector('img');
+            const day=visual.querySelector('.support-agent-photo-light');
+            const night=visual.querySelector('.support-agent-photo-dark');
+            const img=theme==='dark'?night:day;
             const agent=visual.getBoundingClientRect();
             return {
-              loaded:img.complete && img.naturalWidth>=380 && img.naturalHeight>=319,
+              loaded:img.complete && img.naturalWidth>=570 && img.naturalHeight>=478,
+              dayVisible:getComputedStyle(day).display!=='none',
+              nightVisible:getComputedStyle(night).display!=='none',
               source:img.currentSrc,
               rightDistance:hero.right-agent.right,
               visibleWidth:agent.width,
@@ -80,12 +90,16 @@ try{
         };
       },theme);
       const {columns,documentWidth,viewportWidth,heroAgent,categoryStyles,assistanceBackground,cards} = measurements;
-      if(!heroAgent.loaded || !heroAgent.source.endsWith('/images/support-agent-photo.webp') ||
+      const expectedImage=theme==='dark' ? '/images/support-agent-photo-dark.webp' : '/images/support-agent-photo.webp';
+      const expectedContrast=theme==='dark' ? 'contrast(1.08)' : 'contrast(1.13)';
+      if(!heroAgent.loaded || !heroAgent.source.endsWith(expectedImage) ||
+         heroAgent.dayVisible !== (theme==='light') ||
+         heroAgent.nightVisible !== (theme==='dark') ||
          heroAgent.rightDistance > 60 || heroAgent.visibleWidth<190 ||
          heroAgent.pointerEvents!=='none' || heroAgent.imageAlt!=='' ||
          heroAgent.layerOpacity<.15 || heroAgent.layerOpacity>1 ||
          (viewport.width>=1280 && heroAgent.layerOpacity<.99) ||
-         !heroAgent.imageFilter.includes('contrast(1.13)') ||
+         !heroAgent.imageFilter.includes(expectedContrast) ||
          !heroAgent.maskImage.includes('radial-gradient') ||
          !heroAgent.webkitMaskImage.includes('radial-gradient'))
         throw Error('Photographic support-agent hero background missing or obstructing interactions: '+JSON.stringify(heroAgent));
