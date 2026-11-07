@@ -34,7 +34,9 @@ class ProductController extends Controller
         $counts = (clone $owned)->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')->pluck('total','status');
         $products = (clone $owned)
-            ->with(['licenseDefinition:id,name,version','coverAsset:id,public_id,alt_text,review_status'])
+            ->with(['licenseDefinition:id,name,version,tier,status,public_id,slug',
+                    'extendedLicenseDefinition:id,name,version,tier,status,public_id,slug',
+                    'coverAsset:id,public_id,alt_text,review_status'])
             ->when($status!=='all',fn($q)=>$q->where('status',$status))
             ->when($search!=='',fn($q)=>$q->where(function($inner)use($search){
                 $inner->where('title','like','%'.$search.'%')

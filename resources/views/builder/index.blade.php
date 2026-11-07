@@ -395,15 +395,23 @@
                 <div class="studio-license-tiers">
                   <div class="studio-license-tier">
                     <h4><x-icon name="file-check" size="19"/> Regular License</h4>
-                    <p class="hint">Usage rights are governed by the selected Regular License definition.</p>
+                    <p class="hint">{{ \App\Models\LicenseDefinition::tierDescription('regular') }}</p>
                     <div class="studio-field">
                       <label for="studio-license">Regular License definition</label>
-                      <select id="studio-license" name="license_definition_id" @disabled(!$canEdit)>
+                      <select id="studio-license" name="license_definition_id" data-license-definition-select="regular" @disabled(!$canEdit)>
                         <option value="">Choose an active definition</option>
-                        @foreach($licenses as $license)
-                          <option value="{{ $license->id }}" @selected((string)old('license_definition_id',$record?->license_definition_id)===(string)$license->id)>{{ $license->name }} · {{ $license->version }}</option>
+                        @foreach($regularLicenses as $license)
+                          <option value="{{ $license->id }}" data-license-definition-url="{{ $license->publicUrl() }}"
+                            data-license-definition-summary="{{ \Illuminate\Support\Str::limit($license->permissions, 180) }}"
+                            @selected((string)old('license_definition_id',$record?->license_definition_id)===(string)$license->id)>{{ $license->name }} · v{{ $license->version }}{{ $license->tier === null ? ' (legacy)' : '' }}</option>
                         @endforeach
                       </select>
+                      <div class="studio-definition-preview">
+                        <a href="#" target="_blank" rel="noopener noreferrer" data-license-definition-preview="regular" hidden><x-icon name="external-link" size="15"/> Read published Regular License terms</a>
+                        <p class="hint" data-license-definition-description="regular"></p>
+                      </div>
+                      @if($regularLicenses->isEmpty())<p class="hint">No approved Regular License definitions. Ask an administrator to review and publish one.</p>@endif
+                      @error('license_definition_id')<small class="builder-field-error">{{ $message }}</small>@enderror
                     </div>
                     <div class="studio-field">
                       <label for="studio-regular-price">Regular License price (USD)</label>
@@ -414,15 +422,23 @@
                   </div>
                   <div class="studio-license-tier">
                     <h4><x-icon name="shield" size="19"/> Extended License</h4>
-                    <p class="hint">Optional broader permissions, only when the approved definition grants them.</p>
+                    <p class="hint">{{ \App\Models\LicenseDefinition::tierDescription('extended') }}</p>
                     <div class="studio-field">
                       <label for="studio-extended-license">Extended License definition</label>
-                      <select id="studio-extended-license" name="extended_license_definition_id" @disabled(!$canEdit)>
+                      <select id="studio-extended-license" name="extended_license_definition_id" data-license-definition-select="extended" @disabled(!$canEdit)>
                         <option value="">No Extended License offered</option>
-                        @foreach($licenses as $license)
-                          <option value="{{ $license->id }}" @selected((string)old('extended_license_definition_id',$record?->extended_license_definition_id)===(string)$license->id)>{{ $license->name }} · {{ $license->version }}</option>
+                        @foreach($extendedLicenses as $license)
+                          <option value="{{ $license->id }}" data-license-definition-url="{{ $license->publicUrl() }}"
+                            data-license-definition-summary="{{ \Illuminate\Support\Str::limit($license->permissions, 180) }}"
+                            @selected((string)old('extended_license_definition_id',$record?->extended_license_definition_id)===(string)$license->id)>{{ $license->name }} · v{{ $license->version }}{{ $license->tier === null ? ' (legacy)' : '' }}</option>
                         @endforeach
                       </select>
+                      <div class="studio-definition-preview">
+                        <a href="#" target="_blank" rel="noopener noreferrer" data-license-definition-preview="extended" hidden><x-icon name="external-link" size="15"/> Read published Extended License terms</a>
+                        <p class="hint" data-license-definition-description="extended"></p>
+                      </div>
+                      @if($extendedLicenses->isEmpty())<p class="hint">No approved Extended License definitions. Admin must publish one before the extended option can be used.</p>@endif
+                      @error('extended_license_definition_id')<small class="builder-field-error">{{ $message }}</small>@enderror
                     </div>
                     <div class="studio-field">
                       <label for="studio-extended-price">Extended License price (USD, optional)</label>
@@ -443,7 +459,7 @@
                     @endforeach
                   </select>
                 </div>
-                <p class="hint">A valid active license and approved static image are required before submitting a product for publication. After verified checkout is enabled, the purchased license tier is intended to be issued automatically; checkout and issuance are not live.</p>
+                <p class="hint">Lifetime license validity and six-month standard support are separate. License definitions govern permitted use; support has its own expiry. An approved static preview and Regular definition are required for publication. Automatic paid issuance requires verified checkout.</p>
               </section>
             @endif
 

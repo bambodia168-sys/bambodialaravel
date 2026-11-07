@@ -23,7 +23,7 @@ class ProductLicenseController extends Controller
         $licenses=ProductLicense::query()->where('user_id',$request->user()->id)
             ->with(['product:id,title,type,user_id,public_id,status',
                 'version:id,marketplace_listing_id,version,status',
-                'definition:id,name,version','entitlement:id,status,expires_at,revoked_at',
+                'definition:id,name,code,tier,version,status,public_id,slug,permissions,restrictions','entitlement:id,status,expires_at,revoked_at',
                 'activations','events.actor:id,name','supportRequests:id,product_license_id,term,status,created_at'])
             ->latest()->paginate(10);
         return view('account.licenses',compact('licenses'));

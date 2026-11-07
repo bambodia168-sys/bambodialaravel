@@ -37,7 +37,20 @@
         @forelse($products as $product)
           <tr>
             <td class="mono">{{ $product->public_id }}</td><td><strong>{{ $product->title }}</strong></td>
-            <td>{{ $product->licenseDefinition?->name ?? 'Not selected' }}</td>
+            <td><div class="creator-product-license-lines">
+              @if($product->licenseDefinition)
+                <span>Regular: {{ $product->licenseDefinition->name }}</span>
+                @if($product->licenseDefinition->status === 'active')
+                  <a href="{{ $product->licenseDefinition->publicUrl() }}" target="_blank" rel="noopener noreferrer"><x-icon name="external-link" size="13"/> Read Regular terms</a>
+                @endif
+              @else <span class="text-muted">Regular: Not selected</span> @endif
+              @if($product->extendedLicenseDefinition && $product->extended_price !== null)
+                <span>Extended: {{ $product->extendedLicenseDefinition->name }}</span>
+                @if($product->extendedLicenseDefinition->status === 'active')
+                  <a href="{{ $product->extendedLicenseDefinition->publicUrl() }}" target="_blank" rel="noopener noreferrer"><x-icon name="external-link" size="13"/> Read Extended terms</a>
+                @endif
+              @endif
+            </div></td>
             <td>@if($product->coverAsset)<img class="media-thumb" src="{{ $product->coverAsset->previewUrl() }}" alt="{{ $product->coverAsset->alt_text }}" width="52" height="52">@else<span class="text-muted">Not selected</span>@endif</td>
             <td><span class="role-pill">{{ ucfirst($product->status) }}</span></td><td>{{ $product->created_at->format('d M Y') }}</td>
             <td>

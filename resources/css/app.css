@@ -1463,3 +1463,19 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .license-definition-guide-footer{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--muted);margin:12px 2px 2px;line-height:1.5}
 .license-definition-guide-footer svg{flex:none}
 @media(max-width:720px){.license-definition-guide-grid{grid-template-columns:1fr}}
+
+/* Read-only published licensing details for Builder Studio and owned account records. */
+.studio-definition-preview{padding:8px 1px 3px;min-height:26px}
+.studio-definition-preview>a{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-size:12px;font-weight:750;text-decoration:none}
+.studio-definition-preview>a:hover{text-decoration:underline}
+.studio-definition-preview .hint{margin:5px 0 0;font-size:12px;line-height:1.5}
+.license-definition-readonly{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:var(--surface-2)}
+.license-definition-readonly summary{display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:750;font-size:13px}
+.license-definition-readonly summary svg{color:var(--accent)}
+.license-definition-readonly-body{padding:12px 2px 3px;font-size:13px;line-height:1.6}
+.license-definition-readonly-body h4{font-size:12px;margin:12px 0 6px;font-weight:800}
+.license-definition-readonly-body p{margin:5px 0;color:var(--muted)}
+.license-definition-readonly-copy{white-space:pre-wrap;overflow-wrap:anywhere}
+.license-definition-readonly-body .btn{margin-top:9px}
+.creator-product-license-lines{display:flex;flex-direction:column;gap:5px;min-width:175px}
+.creator-product-license-lines a{color:var(--accent);font-weight:750;font-size:12px}

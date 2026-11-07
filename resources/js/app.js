@@ -845,3 +845,26 @@ document.addEventListener('click', (event) => {
     const reviewed = dialog.querySelector('input[name="confirm_review"]');
     if (reviewed) reviewed.checked = false;
 });
+
+// Builder Studio links each tier to the administrator-approved definition
+// without changing or re-publishing the underlying rights.
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-license-definition-select]').forEach((select) => {
+        const tier = select.dataset.licenseDefinitionSelect;
+        const parent = select.closest('.studio-license-tier');
+        const link = parent?.querySelector('[data-license-definition-preview="' + tier + '"]');
+        const summary = parent?.querySelector('[data-license-definition-description="' + tier + '"]');
+        const sync = () => {
+            const option = select.selectedOptions?.[0];
+            const url = option?.dataset.licenseDefinitionUrl || '';
+            if (link) {
+                link.hidden = !url;
+                if (url) link.href = url;
+                else link.removeAttribute('href');
+            }
+            if (summary) summary.textContent = option?.dataset.licenseDefinitionSummary || '';
+        };
+        select.addEventListener('change', sync);
+        sync();
+    });
+});

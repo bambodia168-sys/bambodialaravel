@@ -48,7 +48,7 @@ class ProductLicensesController extends Controller
             ->whereHas('product',fn($q)=>$q->where('user_id',$request->user()->id)->where('type','product'))
             ->with(['product:id,title,public_id,type,user_id',
                 'version:id,marketplace_listing_id,version',
-                'definition:id,name,version',
+                'definition:id,name,code,tier,version,status,public_id,slug,permissions,restrictions',
                 'customer:id,public_id',
                 'activations:id,product_license_id,domain,status,activated_at',
                 'events:id,product_license_id,action,domain,created_at',

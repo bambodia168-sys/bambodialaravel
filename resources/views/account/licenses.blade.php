@@ -84,6 +84,7 @@
                     <div><small>Product support</small><strong>{{ $license->supportName() }} · {{ $license->supportStatus() }}</strong></div>
                     <div><small>Support ends</small><strong>{{ $license->support_expires_at?->format('d M Y') ?? ($license->support_term === 'lifetime' ? 'Never' : 'Not set') }}</strong></div>
                   </div>
+                  <x-license-definition-readonly :definition="$license->definition" :label="ucfirst($license->tier).' License'"/>
                   @if($license->status !== 'revoked')
                     <details class="license-workflow-panel">
                       <summary><x-icon name="key-round" size="16"/> Reveal installer license key</summary>

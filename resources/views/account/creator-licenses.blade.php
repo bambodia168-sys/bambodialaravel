@@ -15,8 +15,9 @@
           <td><strong>{{ $license->product?->title }}</strong><div class="text-muted">Product {{ $license->product?->public_id }}</div></td>
           <td>v{{ $license->version?->version }}</td>
           <td class="mono">{{ $license->customer?->public_id }}</td>
-          <td>{{ ucfirst($license->tier) }} · {{ $license->definition?->name }}
-            <div class="text-muted mono">License {{ $license->public_id }}</div></td>
+          <td><strong>{{ ucfirst($license->tier) }} License</strong><div class="text-muted mono">License {{ $license->public_id }}</div>
+            <x-license-definition-readonly :definition="$license->definition" :label="ucfirst($license->tier).' License'"/>
+          </td>
           <td><strong>Lifetime</strong></td>
           <td>
             <span class="role-pill {{ $license->supportStatus() === 'Expired' ? 'license-support-expired' : '' }}">{{ $license->supportStatus() }}</span>
