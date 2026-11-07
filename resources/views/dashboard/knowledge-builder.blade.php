@@ -8,7 +8,7 @@
   $html = \App\Support\PolicyContent::display($body, $format);
   $state = old('status', $article->status ?: 'draft');
 @endphp
-<div class="policy-builder support-knowledge-builder">
+<div class="policy-builder support-knowledge-builder" data-policy-builder>
   <div class="policy-builder-heading">
     <div>
       <a class="policy-back" href="{{ route('dashboard.knowledge.index') }}"><x-icon name="chevron-left" size="16"/> Knowledge Base</a>
@@ -28,9 +28,11 @@
       <main class="policy-builder-main">
         <section class="panel policy-editor-panel">
           <label class="policy-builder-label" for="knowledge-title">Article title</label>
-          <input type="text" id="knowledge-title" name="title" value="{{ old('title',$article->title) }}" minlength="6" maxlength="180" placeholder="A clear, searchable question or title" required>
+          <div class="policy-title-input-wrap support-knowledge-title-input">
+            <input type="text" id="knowledge-title" name="title" value="{{ old('title',$article->title) }}" minlength="6" maxlength="180" placeholder="A clear, searchable question or title" required>
+          </div>
           <label class="policy-builder-label" for="knowledge-excerpt">Short summary</label>
-          <textarea id="knowledge-excerpt" name="excerpt" minlength="25" maxlength="320" rows="3" required placeholder="Explain what the reader will learn.">{{ old('excerpt',$article->excerpt) }}</textarea>
+          <textarea class="support-knowledge-excerpt" id="knowledge-excerpt" name="excerpt" minlength="25" maxlength="320" rows="3" required placeholder="Explain what the reader will learn.">{{ old('excerpt',$article->excerpt) }}</textarea>
           <div class="policy-editor-heading">
             <label class="policy-builder-label" for="knowledge-editor">Knowledge article content</label><small>Clean headings, lists, links and formatted text</small>
           </div>
@@ -53,9 +55,9 @@
           <p class="policy-editor-hint">Article content is sanitized on the server. Avoid including private passwords, keys or confidential customer data.</p>
         </section>
       </main>
-      <aside class="policy-builder-sidebar">
-        <section class="panel policy-builder-side-panel">
-          <h2><x-icon name="file-check" size="17"/> Publication</h2>
+      <aside class="policy-builder-sidebar" aria-label="Knowledge article settings">
+        <section class="panel policy-side-panel">
+          <div class="policy-side-head"><x-icon name="file-check" size="19"/><strong>Publication</strong></div>
           <label class="policy-builder-label" for="knowledge-status">Status</label>
           <select id="knowledge-status" name="status">
             @foreach(['draft'=>'Draft','published'=>'Published','archived'=>'Archived'] as $value=>$label)
@@ -63,14 +65,14 @@
             @endforeach
           </select>
           @if($editing)
-            <label class="check-label"><input type="checkbox" name="confirm_review" value="1"> I have reviewed the article and approve this publication state.</label>
-            <p class="text-muted">Publishing or editing a published article requires fresh review. Archived and draft articles are not public.</p>
+            <label class="policy-review-check"><input type="checkbox" name="confirm_review" value="1"> I have reviewed the article and approve this publication state.</label>
+            <p class="policy-help">Publishing or editing a published article requires fresh review. Archived and draft articles are not public.</p>
           @else
-            <p class="text-muted">Save the draft before publishing. Articles are never published automatically.</p>
+            <p class="policy-help">Save the draft before publishing. Articles are never published automatically.</p>
           @endif
         </section>
-        <section class="panel policy-builder-side-panel">
-          <h2><x-icon name="book-open" size="17"/> Article details</h2>
+        <section class="panel policy-side-panel">
+          <div class="policy-side-head"><x-icon name="book-open" size="19"/><strong>Article details</strong></div>
           <label class="policy-builder-label" for="knowledge-category">Category</label>
           <select id="knowledge-category" name="category" required>
             @foreach(\App\Support\SupportKnowledge::CATEGORIES as $key=>$label)
