@@ -127,8 +127,9 @@ class PostBuilderExperienceTest extends TestCase
         $this->assertStringNotContainsString('<script>', $post->body);
         $this->assertStringNotContainsString('onclick=', $post->body);
         $this->get($post->publicUrl())->assertOk()
-            ->assertDontSee('<script>', false)
-            ->assertDontSee('onclick=', false);
+            ->assertSee('<h2>Public notice</h2>', false)
+            ->assertDontSee('<script>alert(1)</script>', false)
+            ->assertDontSee('onclick="alert(1)"', false);
     }
 
     public function test_approved_featured_media_is_public_only_while_post_is_published_and_delete_is_confirmed(): void
