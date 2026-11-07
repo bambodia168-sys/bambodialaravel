@@ -60,6 +60,9 @@ try{
               maskImage:getComputedStyle(visual).maskImage,
               webkitMaskImage:getComputedStyle(visual).webkitMaskImage,
               pointerEvents:getComputedStyle(visual).pointerEvents,
+              haloBackground:getComputedStyle(visual,'::before').backgroundImage,
+              haloOpacity:Number(getComputedStyle(visual,'::before').opacity),
+              haloLayer:getComputedStyle(visual,'::before').zIndex,
             };
           })(),
           categoryStyles,
@@ -103,6 +106,12 @@ try{
          !heroAgent.maskImage.includes('radial-gradient') ||
          !heroAgent.webkitMaskImage.includes('radial-gradient'))
         throw Error('Photographic support-agent hero background missing or obstructing interactions: '+JSON.stringify(heroAgent));
+      const goldenColor=theme==='dark' ? /242,\\s*177,\\s*76/ : /255,\\s*220,\\s*141/;
+      if(!heroAgent.haloBackground.includes('radial-gradient') ||
+         !goldenColor.test(heroAgent.haloBackground) ||
+         heroAgent.haloLayer!=='0' ||
+         heroAgent.haloOpacity < .40)
+        throw Error('Golden agent halo missing or incorrect in '+theme+' at '+viewport.width+': '+JSON.stringify(heroAgent));
       if(columns !== viewport.columns)
         throw Error('Expected '+viewport.columns+' article columns at '+viewport.width+', found '+columns);
       if(documentWidth > viewportWidth+5)
