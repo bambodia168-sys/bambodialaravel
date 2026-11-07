@@ -19,7 +19,7 @@
 @if($definition['type']==='bool')<span class="role-pill">{{ $value==='1'?'On':'Off' }}</span>
 @else<span class="settings-preview">{{ $value!==''?$value:'Not configured' }}</span>@endif
 </td>
-<td><x-row-action-menu :id="'setting-'.$fieldId" :label="$setting->label ?? $fieldId"><button type="button" data-modal-open="{{ $fieldId }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
+<td><x-row-action-menu :id="'setting-'.$fieldId" :label="$definition['label']"><button type="button" data-modal-open="{{ $fieldId }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
 <dialog class="config-dialog wide-dialog" id="{{ $fieldId }}">
 <form method="post" action="{{ $group==='appearance'?route('dashboard.appearance.update'):route('dashboard.system-settings.update') }}">
 @csrf @method('PATCH')<input type="hidden" name="key" value="{{ $key }}">
