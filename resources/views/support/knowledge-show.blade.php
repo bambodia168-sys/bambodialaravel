@@ -15,7 +15,6 @@
   <article class="panel support-article-main policy-formatted-content">
     <div class="eyebrow">{{ \App\Support\SupportKnowledge::CATEGORIES[$article->category] ?? ucfirst($article->category) }}</div>
     <h1>{{ $article->title }}</h1>
-    <p class="support-article-summary">{{ $article->excerpt }}</p>
     <div class="support-article-meta">
       <span>Article {{ $article->public_code }}</span>
       <span>Updated {{ $article->updated_at?->format('d M Y') }}</span>
@@ -23,14 +22,16 @@
     <div class="policy-copy support-article-body">{!! $html !!}</div>
     <footer class="support-article-footer">
       <p>Was this guide useful? For unresolved issues, open a private support ticket.</p>
-      <div class="policy-single-actions">
-        <button type="button" class="btn subtle" data-policy-copy-url="{{ $article->publicUrl() }}"><x-icon name="copy" size="16"/> Copy link</button>
-        <button type="button" class="btn subtle" data-policy-print><x-icon name="file-text" size="16"/> Print</button>
-        <button type="button" class="btn subtle" data-policy-share="{{ $article->publicUrl() }}"><x-icon name="external-link" size="16"/> Share</button>
-        <span class="policy-copy-feedback" aria-live="polite"></span>
+      <div class="support-article-action-row">
+        @auth<a href="{{ route('support.tickets') }}" class="btn primary support-ticket-action"><x-icon name="life-buoy" size="16"/> Create support ticket</a>
+        @else<a href="{{ route('login') }}" class="btn primary support-ticket-action"><x-icon name="life-buoy" size="16"/> Sign in to contact support</a>@endauth
+        <div class="policy-single-actions" aria-label="Article sharing actions">
+          <button type="button" class="btn subtle" data-policy-copy-url="{{ $article->publicUrl() }}"><x-icon name="copy" size="16"/> Copy link</button>
+          <button type="button" class="btn subtle" data-policy-print><x-icon name="file-text" size="16"/> Print</button>
+          <button type="button" class="btn subtle" data-policy-share="{{ $article->publicUrl() }}"><x-icon name="external-link" size="16"/> Share</button>
+          <span class="policy-copy-feedback" aria-live="polite"></span>
+        </div>
       </div>
-      @auth<a href="{{ route('support.tickets') }}" class="btn primary">Create support ticket</a>
-      @else<a href="{{ route('login') }}" class="btn primary">Sign in to contact support</a>@endauth
     </footer>
   </article>
 </div>
