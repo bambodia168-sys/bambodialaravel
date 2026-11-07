@@ -147,7 +147,34 @@ class SupportKnowledgePresentationTest extends TestCase
         $sidebar = $xpath->query('//aside[contains(@class, "support-article-sidebar")]')->item(0);
         $this->assertNotNull($sidebar);
         $this->assertCount(1, $xpath->query('.//a[contains(@class,"support-related-link")]', $sidebar));
+        $numbers = $xpath->query('.//a[contains(@class,"support-related-link")]/span[contains(@class,"support-related-number")]', $sidebar);
+        $this->assertCount(1, $numbers);
+        $this->assertSame('01', trim($numbers->item(0)->textContent));
+        $this->assertCount(0, $xpath->query('.//a[contains(@class,"support-related-link")]//*[local-name()="svg"]', $sidebar));
         $this->assertStringNotContainsString($current->title, $dom->saveHTML($sidebar));
+    }
+
+    public function test_sidebar_numbers_continue_across_related_and_other_guide_groups(): void
+    {
+        $current = $this->publish('Account help navigation', 'accounts', 'Information about user account support.');
+        $this->publish('Account security guide', 'accounts', 'A guide in the same category as the current one.');
+        $this->publish('Licensed product downloads', 'downloads', 'A guide in a different category.');
+        $this->publish('Regular and Extended license types', 'licenses', 'A second guide from another category.');
+
+        $html = $this->get($current->publicUrl())->assertOk()->getContent();
+        $dom = new \DOMDocument();
+        @$dom->loadHTML($html);
+        $xpath = new \DOMXPath($dom);
+        $sidebar = $xpath->query('//aside[contains(@class,"support-article-sidebar")]')->item(0);
+        $this->assertNotNull($sidebar);
+
+        $numbers = $xpath->query('.//a[contains(@class,"support-related-link")]/span[contains(@class,"support-related-number")]', $sidebar);
+        $this->assertCount(3, $numbers);
+        $this->assertSame(['01', '02', '03'], array_map(
+            static fn ($node) => trim($node->textContent),
+            iterator_to_array($numbers)
+        ));
+        $this->assertCount(0, $xpath->query('.//a[contains(@class,"support-related-link")]//*[local-name()="svg"]', $sidebar));
     }
 
 }
