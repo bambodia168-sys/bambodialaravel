@@ -79,6 +79,8 @@ class PolicyBuilderExperienceTest extends TestCase
         $this->get($policy->publicUrl())->assertOk()
             ->assertSee('Public Legal Terms')->assertDontSee('<script>', false);
         $this->get('/policies?='.$policy->public_id.'-'.$policy->slug)->assertOk();
+        $this->get('/policies?='.$policy->public_code.'-'.$policy->slug)
+            ->assertRedirect($policy->publicUrl());
     }
 
     public function test_publishing_without_notification_opt_in_does_not_notify_users(): void
