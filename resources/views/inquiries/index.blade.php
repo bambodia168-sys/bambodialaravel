@@ -30,7 +30,7 @@
 <td>{{ $creator?$inquiry->client?->name:$inquiry->creator?->name }}</td>
 <td>{{ $inquiry->subject }}</td><td><span class="role-pill">{{ ucfirst($inquiry->status) }}</span></td>
 <td>{{ $inquiry->updated_at->format('d M Y') }}</td>
-<td><a class="btn subtle compact" href="{{ route('inquiries.show',$inquiry) }}">Open conversation</a></td></tr>
+<td><x-row-action-menu :id="'my-inquiry-'.$inquiry->id" :label="$inquiry->subject"><a href="{{ route('inquiries.show',$inquiry) }}"><x-icon name="eye" size="16"/> Open conversation</a></x-row-action-menu></td></tr>
 @empty<tr><td colspan="7" class="empty-cell">No inquiries are available.</td></tr>@endforelse
 </tbody></table></div><x-pagination :paginator="$inquiries"/>
 </section></div>
