@@ -128,11 +128,12 @@ function initializeRowActionMenus() {
         if (menu.matches(':popover-open')) place(menu);
     }));
     document.addEventListener('scroll', event => {
-        // Scrolling a tall menu should not dismiss the menu itself.
+        // Keep the native popover anchored when mobile/table scrolling moves its row.
+        // Do not dismiss a menu because the browser scrolls it into view.
         if (event.target.closest?.('[data-row-action-menu]')) return;
-        if (event.target === document || event.target.closest?.('.table-scroll,.license-issued-scroll,[data-workspace-scroll]')) {
-            menus.forEach(menu => { if (menu.matches(':popover-open')) menu.hidePopover?.(); });
-        }
+        menus.forEach(menu => {
+            if (menu.matches(':popover-open')) place(menu);
+        });
     }, true);
 }
 document.addEventListener('DOMContentLoaded', initializeRowActionMenus);
