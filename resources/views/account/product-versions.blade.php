@@ -36,7 +36,7 @@
               <div class="text-muted">Rights: {{ ucfirst($version->rights_review_status) }}</div></td>
             <td>{{ $version->created_at->format('d M Y') }}</td>
             <td>
-              <button type="button" class="btn subtle compact" data-modal-open="version-{{ $version->id }}"><x-icon name="settings" size="15"/> Configure</button>
+              <x-row-action-menu :id="'creator-release-'.$version->id" :label="'Release '.$version->version"><button type="button" data-modal-open="version-{{ $version->id }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
               <dialog class="config-dialog wide-dialog" id="version-{{ $version->id }}">
                 <h2>Release {{ $version->version }}</h2>
                 <p>{{ $version->original_filename }} · {{ ucfirst($version->status) }}</p>
