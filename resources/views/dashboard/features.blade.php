@@ -18,7 +18,7 @@
         </form>
       </td>
       <td>
-        <button class="btn subtle compact" type="button" data-modal-open="feature-{{ $feature->id }}"><x-icon name="settings" size="15"/> Configure</button>
+        <x-row-action-menu :id="'feature-'.$feature->id" :label="$feature->key ?? 'Feature'"><button type="button" data-modal-open="feature-{{ $feature->id }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
         <dialog class="config-dialog" id="feature-{{ $feature->id }}">
           <form action="{{ route('dashboard.features.update',$feature) }}" method="post">@csrf @method('PATCH')
             <h2>{{ $available[$feature->key]['label'] }}</h2><p>{{ $available[$feature->key]['description'] }}</p>
