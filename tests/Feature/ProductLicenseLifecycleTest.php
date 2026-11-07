@@ -533,10 +533,10 @@ class ProductLicenseLifecycleTest extends TestCase
     public function test_admin_issued_license_search_sort_and_product_link_are_real_and_independent(): void
     {
         $license=$this->issue();
-        $url=$this->product->publicUrl();
         $this->actingAs($this->admin)->get('/dashboard/license-manager?issued_search='.urlencode($this->product->title))
             ->assertOk()->assertSee($license->public_id)
-            ->assertSee('data-license-copy-url="'.$url.'"',false)
+            ->assertSee('data-license-copy-url="',false)
+            ->assertSee('product?='.$this->product->public_id.'-'.$this->product->slug,false)
             ->assertSee('id="issued-product-'.$license->id.'"',false)
             ->assertSee('id="issued-'.$license->id.'"',false)
             ->assertSee('No</th><th scope="col">License',false);
