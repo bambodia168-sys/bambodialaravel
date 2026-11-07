@@ -36,13 +36,13 @@ class SupplementalLegalPoliciesTest extends TestCase
             'status' => 'published',
         ]);
         $this->actingAs($admin)->post(route('dashboard.policies.supplemental-drafts'))->assertRedirect();
-        $this->assertDatabaseCount('policies', 8);
-        $this->assertSame(7, Policy::query()->where('status', 'draft')->count());
+        $this->assertDatabaseCount('policies', 19);
+        $this->assertSame(18, Policy::query()->where('status', 'draft')->count());
         $this->assertSame('published', $existing->fresh()->status);
         $one = Policy::query()->where('title', 'Payments and Billing Policy')->firstOrFail();
         $one->update(['body' => 'Preserved administrator draft edits.']);
         $this->post(route('dashboard.policies.supplemental-drafts'))->assertRedirect();
-        $this->assertDatabaseCount('policies', 8);
+        $this->assertDatabaseCount('policies', 19);
         $this->assertSame('Preserved administrator draft edits.', $one->fresh()->body);
     }
 
