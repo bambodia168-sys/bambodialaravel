@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditEvent;
+use App\Models\ContentEntry;
 use App\Models\MediaAsset;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceJob;
@@ -136,7 +137,8 @@ class MediaLibraryController extends Controller
             abort_if($asset->coverListings()->exists() || $asset->featuredListings()->exists()
                 || $asset->featuredJobs()->exists()
                 || MarketplaceListing::query()->whereJsonContains('gallery_media_ids', $asset->id)->exists()
-                || MarketplaceJob::query()->whereJsonContains('gallery_media_ids', $asset->id)->exists(),
+                || MarketplaceJob::query()->whereJsonContains('gallery_media_ids', $asset->id)->exists()
+                || ContentEntry::query()->where('type', 'post')->where('featured_media_id', $asset->id)->exists(),
                 409, 'This media is attached to a listing or job and cannot be deleted.');
             $path = $asset->storage_path;
             $asset->delete();
@@ -195,6 +197,9 @@ class MediaLibraryController extends Controller
                 ->where('status', 'published')->exists()
             || MarketplaceJob::query()
                 ->whereJsonContains('gallery_media_ids', $asset->id)
+                ->where('status', 'published')->exists()
+            || ContentEntry::query()->where('type', 'post')
+                ->where('featured_media_id', $asset->id)
                 ->where('status', 'published')->exists()
         );
 
