@@ -95,7 +95,10 @@ class PolicyManagerController extends Controller
             return back()->withErrors(['body' => 'Finalize this legal-review draft before publication.'])->withInput();
         }
         if ($isPublished && ! $request->boolean('confirm_legal_review')) {
-            return back()->withErrors(['confirm_legal_review' => 'Confirm documented legal review before publishing.'])->withInput();
+            return back()->withErrors([
+                'status' => 'Confirm documented legal review before publishing.',
+                'confirm_legal_review' => 'Confirm documented legal review before publishing.',
+            ])->withInput();
         }
         $notifyAccount = $request->boolean('notify_account');
         $notifyEmail = $request->boolean('notify_email');
