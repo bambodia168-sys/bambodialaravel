@@ -196,7 +196,12 @@ class PolicyManagerController extends Controller
             'version' => ['nullable', 'regex:/^\d{1,4}\.\d{1,4}\.\d{1,4}$/', 'max:24'],
             'pic_email' => ['nullable', 'email', 'max:180'],
         ]);
-        $data['body_format'] ??= 'markdown';
+        // Omitted optional fields retain their existing values. An explicit empty
+        // jurisdiction may still clear the field through Laravel's null conversion.
+        if (! array_key_exists('jurisdiction', $data)) {
+            $data['jurisdiction'] = $policy?->jurisdiction;
+        }
+        $data['body_format'] ??= $policy?->body_format ?? 'markdown';
         $data['version'] ??= $policy?->version ?? '1.0.0';
         $data['pic_email'] ??= $policy?->pic_email ?? 'legal@bambodia.com';
 
