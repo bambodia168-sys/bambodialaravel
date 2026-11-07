@@ -43,6 +43,16 @@ class LicenseDefinition extends Model
         return $this->hasMany(MarketplaceListing::class, 'license_definition_id');
     }
 
+    public function extendedListings(): HasMany
+    {
+        return $this->hasMany(MarketplaceListing::class, 'extended_license_definition_id');
+    }
+
+    public function issuedLicenses(): HasMany
+    {
+        return $this->hasMany(ProductLicense::class, 'license_definition_id');
+    }
+
     public function publicUrl(): string
     {
         return url('/licenses').'?='.$this->public_id.'-'.$this->slug;

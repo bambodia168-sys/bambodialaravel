@@ -63,6 +63,66 @@ document.querySelectorAll('dialog').forEach((dialog) => {
 });
 
 
+
+/* License Manager row actions use browser-native top-layer popovers so menus
+   cannot be clipped by horizontally scrolling tables. Every action opens
+   the existing server-validated workflow, never performs a direct mutation. */
+function initializeLicenseActionMenus() {
+    const menus = [...document.querySelectorAll('[data-license-action-menu]')];
+    if (!menus.length) return;
+    const reposition = (menu) => {
+        const trigger = document.getElementById(menu.dataset.licenseAnchor || '');
+        if (!trigger) return;
+        const rect = trigger.getBoundingClientRect();
+        const width = menu.offsetWidth || 252;
+        const height = menu.offsetHeight || 280;
+        const left = Math.max(12, Math.min(window.innerWidth - width - 12, rect.right - width));
+        const below = rect.bottom + 6;
+        const top = below + height > window.innerHeight - 12 && rect.top > height + 18
+            ? rect.top - height - 6
+            : Math.max(12, Math.min(below, window.innerHeight - height - 12));
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+    };
+    menus.forEach((menu) => {
+        menu.addEventListener('toggle', (event) => {
+            if (event.newState === 'open') reposition(menu);
+        });
+        menu.addEventListener('click', (event) => {
+            if (event.target.closest('[data-license-action]')) menu.hidePopover?.();
+        });
+    });
+    document.addEventListener('click', (event) => {
+        const action = event.target.closest('[data-license-action][data-modal-open]');
+        if (!action) return;
+        const targetId = action.dataset.licenseFocus;
+        const selected = action.dataset.licenseSelect;
+        requestAnimationFrame(() => {
+            const dialog = document.getElementById(action.dataset.modalOpen);
+            const field = document.getElementById(targetId);
+            if (!dialog?.open || !field) return;
+            if (selected) {
+                const select = field.tagName === 'SELECT' ? field : field.querySelector('select[name="action"],select[name="status"]');
+                if (select && [...select.options].some(o => o.value === selected)) select.value = selected;
+            }
+            field.scrollIntoView({block:'nearest'});
+            const focusable = field.matches('input,select,textarea,button') ? field
+                : field.querySelector('select,input,textarea,button,[tabindex]') || field;
+            if (!focusable.hasAttribute('tabindex') && focusable === field && !field.matches('input,select,textarea,button')) {
+                field.setAttribute('tabindex','-1');
+            }
+            focusable.focus({preventScroll:true});
+        });
+    });
+    window.addEventListener('resize', () => {
+        menus.forEach(m => {if (m.matches(':popover-open')) reposition(m);});
+    });
+    document.addEventListener('scroll', () => {
+        menus.forEach(m => {if (m.matches(':popover-open')) m.hidePopover?.();});
+    }, true);
+}
+document.addEventListener('DOMContentLoaded', initializeLicenseActionMenus);
+
 /* Four role-aware workspaces: persistent icon-only collapse, independently
    scrollable navigation, and a working menu search. No private data stored. */
 function initializeWorkspaces() {

@@ -20,7 +20,7 @@ class LicenseManagerController extends Controller
     {
         $search = mb_substr(trim((string) $request->query('search', '')), 0, 120);
         $licenses = LicenseDefinition::query()
-            ->withCount('listings')
+            ->withCount(['listings','extendedListings','issuedLicenses'])
             ->when($search !== '', fn ($q) => $q->where(function ($q) use ($search): void {
                 $q->where('name', 'like', '%'.$search.'%')->orWhere('code', 'like', '%'.$search.'%');
             }))

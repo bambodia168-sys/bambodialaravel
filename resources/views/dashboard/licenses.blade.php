@@ -1,10 +1,11 @@
 @extends('layouts.dashboard')
 @section('title','License Manager')
 @section('content')
-<div class="page-intro"><div class="eyebrow">Marketplace Governance</div><h1>License Manager</h1><p>Create explicit license terms for digital products. Activated licenses used by products are immutable; issue a new version to change rights.</p></div>
+<div class="page-intro"><div class="eyebrow">Marketplace Governance</div><h1>License Manager</h1><p>Manage reusable Regular and Extended license terms and the unique product licenses issued to customers.</p></div>
 <section class="panel">
   <div class="panel-head">
-    <h2>License definitions <span class="count">{{ $licenses->total() }}</span></h2>
+    <div><h2>License definitions <span class="count">{{ $licenses->total() }}</span></h2>
+      <p>These are reusable usage rights for digital products—not customer license keys.</p></div>
     <div class="toolbar-actions">
       <form method="get" class="table-search"><x-icon name="search" size="17"/><input name="search" value="{{ $search }}" aria-label="Search licenses" placeholder="Code or license name"><button class="btn subtle" type="submit">Search</button></form>
       <button class="btn primary" type="button" data-modal-open="license-create">New license</button>
@@ -14,19 +15,44 @@
     <thead><tr><th>Public ID</th><th>License</th><th>Code</th><th>Version</th><th>Status</th><th>Products</th><th>Action</th></tr></thead>
     <tbody>
       @forelse($licenses as $license)
+        @php($definitionLocked = $license->listings_count > 0 || $license->extended_listings_count > 0 || $license->issued_licenses_count > 0)
         <tr>
           <td class="mono">{{ $license->public_id }}</td><td><strong>{{ $license->name }}</strong></td>
           <td class="mono">{{ $license->code }}</td><td>{{ $license->version }}</td>
           <td><span class="role-pill">{{ ucfirst($license->status) }}</span></td><td>{{ $license->listings_count }}</td>
           <td>
-            <button class="btn subtle compact" type="button" data-modal-open="license-{{ $license->id }}"><x-icon name="settings" size="16"/> Configure</button>
+            <button class="btn subtle compact license-action-trigger" type="button"
+              id="license-action-trigger-{{ $license->id }}" popovertarget="license-actions-{{ $license->id }}"
+              aria-haspopup="true" aria-label="Actions for {{ $license->name }}">
+              <x-icon name="settings" size="15"/> Action <x-icon name="chevron-down" size="14"/>
+            </button>
+            <div id="license-actions-{{ $license->id }}" popover="auto"
+              class="license-action-popover" data-license-action-menu data-license-anchor="license-action-trigger-{{ $license->id }}"
+              aria-label="Actions for {{ $license->name }}">
+              <button type="button" data-license-action data-modal-open="license-{{ $license->id }}"
+                data-license-focus="license-heading-{{ $license->id }}"><x-icon name="eye" size="16"/> View definition</button>
+              @unless($definitionLocked)
+                <button type="button" data-license-action data-modal-open="license-{{ $license->id }}"
+                  data-license-focus="license-code-{{ $license->id }}"><x-icon name="pencil" size="16"/> Edit terms</button>
+                <button type="button" data-license-action data-modal-open="license-{{ $license->id }}"
+                  data-license-focus="license-status-{{ $license->id }}"
+                  data-license-select="{{ $license->status === 'active' ? 'draft' : 'active' }}">
+                  <x-icon name="{{ $license->status === 'active' ? 'pause-circle' : 'play-circle' }}" size="16"/>
+                  {{ $license->status === 'active' ? 'Deactivate' : 'Activate' }}
+                </button>
+              @endunless
+              @if($license->status === 'active')
+                <a href="{{ $license->publicUrl() }}" target="_blank" rel="noopener noreferrer"
+                  data-license-action><x-icon name="external-link" size="16"/> Published terms</a>
+              @endif
+            </div>
             <dialog class="config-dialog wide-dialog" id="license-{{ $license->id }}">
               <form method="post" action="{{ route('dashboard.licenses.update',$license) }}">
                 @csrf @method('PATCH')
-                <h2>{{ $license->name }}</h2>
+                <h2 id="license-heading-{{ $license->id }}">{{ $license->name }}</h2>
                 <p>Public license ID {{ $license->public_id }} · {{ $license->listings_count }} referenced products</p>
-                @if($license->listings_count > 0)
-                  <div class="notice">This license is referenced by products. Its terms are locked to prevent silent license changes. Create a new version for updated rights.</div>
+                @if($definitionLocked)
+                  <div class="notice">This definition is already referenced by a product or issued license. Its rights are locked; create a new definition for changed terms.</div>
                   @if($license->status === 'active')<a href="{{ $license->publicUrl() }}" class="btn subtle" target="_blank" rel="noopener noreferrer">Read published license</a>@endif
                   <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Close</button></div>
                 @else
@@ -105,7 +131,7 @@
     </details>
   @endif
   <div class="table-scroll"><table class="data-table">
-    <thead><tr><th>License ID / Key</th><th>Downloadable product</th><th>Customer</th><th>Tier / Terms</th><th>License period</th><th>Support</th><th>Status</th><th>Active domain</th><th>Management</th></tr></thead>
+    <thead><tr><th>License ID / Key</th><th>Downloadable product</th><th>Customer</th><th>Tier / Terms</th><th>License period</th><th>Support</th><th>Status</th><th>Active domain</th><th>Action</th></tr></thead>
     <tbody>
     @forelse($issued as $item)
       <tr>
@@ -124,14 +150,50 @@
           @unless($item->isActive())<small class="text-muted">Not currently valid</small>@endunless</td>
         <td>{{ $item->activations->where('status','active')->pluck('domain')->implode(', ') ?: 'Not activated' }}</td>
         <td>
-          <button class="btn subtle compact" type="button" data-modal-open="issued-{{ $item->id }}"><x-icon name="settings" size="16"/> Manage</button>
+          <button class="btn subtle compact license-action-trigger" type="button"
+            id="issued-action-trigger-{{ $item->id }}" popovertarget="issued-actions-{{ $item->id }}"
+            aria-haspopup="true" aria-label="Actions for product license {{ $item->public_id }}">
+            <x-icon name="settings" size="15"/> Action <x-icon name="chevron-down" size="14"/>
+          </button>
+          <div id="issued-actions-{{ $item->id }}" popover="auto"
+            class="license-action-popover" data-license-action-menu data-license-anchor="issued-action-trigger-{{ $item->id }}"
+            aria-label="Product license actions">
+            <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+              data-license-focus="issued-{{ $item->id }}-heading"><x-icon name="eye" size="16"/> License details</button>
+            <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+              data-license-focus="issued-{{ $item->id }}-history"><x-icon name="history" size="16"/> Activation history</button>
+            @if($item->status !== 'revoked')
+              <div class="license-action-separator"></div>
+              @if($item->status === 'active')
+                <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+                  data-license-focus="issued-{{ $item->id }}-status" data-license-select="suspend">
+                  <x-icon name="pause-circle" size="16"/> Suspend license</button>
+              @else
+                <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+                  data-license-focus="issued-{{ $item->id }}-status" data-license-select="activate">
+                  <x-icon name="play-circle" size="16"/> Activate license</button>
+              @endif
+              @if($item->tier === 'regular' && $item->product?->extended_price !== null)
+                <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+                  data-license-focus="issued-{{ $item->id }}-upgrade"><x-icon name="shield" size="16"/> Upgrade to Extended</button>
+              @endif
+              <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+                data-license-focus="issued-{{ $item->id }}-domain"><x-icon name="globe" size="16"/> Change domain</button>
+              <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+                data-license-focus="issued-{{ $item->id }}-rotate"><x-icon name="refresh-cw" size="16"/> Rotate license key</button>
+              <div class="license-action-separator"></div>
+              <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+                data-license-focus="issued-{{ $item->id }}-status" data-license-select="revoke"
+                class="is-danger"><x-icon name="ban" size="16"/> Revoke license</button>
+            @endif
+          </div>
           <dialog class="config-dialog wide-dialog" id="issued-{{ $item->id }}">
-            <h2>Manage issued product license</h2>
+            <h2 id="issued-{{ $item->id }}-heading">Manage issued product license</h2>
             <p>License {{ $item->public_id }} · {{ $item->product?->title }} · {{ ucfirst($item->tier) }} · {{ ucfirst($item->status) }}</p>
             <p class="hint">The full secret key is available only to its authenticated customer after password confirmation. Domains and administrative changes are recorded below.</p>
             <div class="license-admin-actions">
               @if($item->status !== 'revoked')
-                <form method="post" action="{{ route('dashboard.licenses.issued.status',$item) }}">
+                <form id="issued-{{ $item->id }}-status" method="post" action="{{ route('dashboard.licenses.issued.status',$item) }}">
                   @csrf @method('PATCH')
                   <label for="status-action-{{ $item->id }}">License status</label>
                   <select id="status-action-{{ $item->id }}" name="action" required>
@@ -144,14 +206,14 @@
                   <button class="btn primary compact" type="submit">Update status</button>
                 </form>
                 @if($item->tier==='regular' && $item->product?->extended_price !== null)
-                  <form method="post" action="{{ route('dashboard.licenses.issued.upgrade',$item) }}">
+                  <form id="issued-{{ $item->id }}-upgrade" method="post" action="{{ route('dashboard.licenses.issued.upgrade',$item) }}">
                     @csrf @method('PATCH')
                     <label>Upgrade reason <textarea name="reason" rows="2" minlength="12" maxlength="500" required placeholder="Administrative entitlement to Extended License"></textarea></label>
                     <label class="check-label"><input type="checkbox" name="confirm_manual_upgrade" value="1" required> Approve manual upgrade to reviewed Extended License (no payment)</label>
                     <button class="btn subtle compact" type="submit">Upgrade to Extended</button>
                   </form>
                 @endif
-                <form method="post" action="{{ route('dashboard.licenses.issued.domain',$item) }}">
+                <form id="issued-{{ $item->id }}-domain" method="post" action="{{ route('dashboard.licenses.issued.domain',$item) }}">
                   @csrf @method('PATCH')
                   <label>Replacement domain (optional; leave blank to deactivate all)</label>
                   <input name="domain" placeholder="new.example.com" maxlength="253">
@@ -159,7 +221,7 @@
                   <button class="btn subtle compact" type="submit">Release current domain</button>
                   <p class="hint">The replacement domain is not auto-activated. The installed script must authenticate with the license key.</p>
                 </form>
-                <form method="post" action="{{ route('dashboard.licenses.issued.rotate',$item) }}">
+                <form id="issued-{{ $item->id }}-rotate" method="post" action="{{ route('dashboard.licenses.issued.rotate',$item) }}">
                   @csrf
                   <label>Key rotation reason <textarea name="reason" rows="2" minlength="12" maxlength="500" required></textarea></label>
                   <label class="check-label"><input type="checkbox" name="confirm_rotate" value="1" required> Invalidate the old license key permanently</label>
@@ -170,7 +232,7 @@
               @endif
             </div>
             <h3>Domain activation & action history</h3>
-            <div class="license-history">
+            <div class="license-history" id="issued-{{ $item->id }}-history">
               @forelse($item->events->take(30) as $event)
                 <div><strong>{{ ucfirst(str_replace('.',' ',$event->action)) }}</strong>
                 <span>{{ $event->previous_domain ? $event->previous_domain.' → ' : '' }}{{ $event->domain }}

@@ -483,4 +483,33 @@ class ProductLicenseLifecycleTest extends TestCase
             ->assertSee('Showing 11–11 of 11');
     }
 
+
+    public function test_admin_license_actions_use_icon_dropdowns_with_existing_authorized_workflows(): void
+    {
+        $license=$this->issue();
+        $regular=LicenseDefinition::query()->where('code','BAM_REG')->sole();
+        $extended=LicenseDefinition::query()->where('code','BAM_EXT')->sole();
+        $response=$this->actingAs($this->admin)->get('/dashboard/license-manager')->assertOk();
+        $response->assertSee('popovertarget="license-actions-'.$regular->id.'"',false)
+            ->assertSee('data-license-action-menu',false)
+            ->assertSee('data-license-focus="issued-'.$license->id.'-history"',false)
+            ->assertSee('data-license-select="suspend"',false)
+            ->assertSee('data-license-select="revoke"',false)
+            ->assertSee('data-license-focus="issued-'.$license->id.'-rotate"',false)
+            ->assertSee('Published terms')
+            ->assertDontSee('data-license-focus="license-code-'.$extended->id.'"',false);
+
+        // A definition used as the Extended License must not expose
+        // editing or activation actions, even with zero regular listings.
+        $this->assertSame(0,$extended->listings()->count());
+        $this->assertSame(1,$extended->extendedListings()->count());
+
+        // The visual dropdown cannot bypass existing server-side checks.
+        $this->actingAs($this->customer)->patch('/dashboard/license-manager/issued/'.$license->id.'/status', [
+            'action'=>'suspend','reason'=>'Unauthorized customer action','confirm_change'=>'1',
+        ])->assertForbidden();
+        $this->assertSame('active',$license->fresh()->status);
+    }
+
+
 }
