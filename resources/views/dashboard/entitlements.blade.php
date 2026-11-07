@@ -19,7 +19,7 @@
           <td><span class="role-pill">{{ $entitlement->isActive() ? 'Active' : ($entitlement->status==='revoked' ? 'Revoked' : 'Expired') }}</span></td>
           <td>{{ $entitlement->expires_at?->format('d M Y') ?? 'No expiry' }}</td>
           <td>
-            <button type="button" class="btn subtle compact" data-modal-open="entitlement-{{ $entitlement->id }}"><x-icon name="settings" size="15"/> Configure</button>
+            <x-row-action-menu :id="'entitlement-'.$entitlement->id" :label="'Entitlement '.$entitlement->id"><button type="button" data-modal-open="entitlement-{{ $entitlement->id }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
             <dialog class="config-dialog" id="entitlement-{{ $entitlement->id }}">
               <h2>Download access</h2><p>{{ $entitlement->recipient?->name }} · Version {{ $entitlement->version?->version }}</p>
               <p><strong>Grant reason:</strong> {{ $entitlement->grant_reason }}</p>
