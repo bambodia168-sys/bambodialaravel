@@ -3,6 +3,9 @@
 @section('content')
 <div class="support-knowledge">
   <section class="support-knowledge-hero">
+    <div class="support-hero-agent-art" aria-hidden="true">
+      <img src="{{ asset('images/support-agent-hero.svg') }}" alt="" width="560" height="420" decoding="async" fetchpriority="low">
+    </div>
     <div class="container support-knowledge-hero-inner">
       <div class="eyebrow">Bambodia Support</div>
       <h1>How can we help?</h1>
