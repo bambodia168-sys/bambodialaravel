@@ -10,7 +10,7 @@ class ContentController extends Controller
     public function show(string $content): View
     {
         abort_unless(preg_match('/^(\d{9})_([a-z0-9-]+)$/', $content, $match) === 1, 404);
-        $entry = ContentEntry::query()->with('author:id,name')
+        $entry = ContentEntry::query()->with('author:id,name', 'featuredMedia:id,public_id,review_status,alt_text')
             ->where('public_id', $match[1])
             ->where('slug', $match[2])
             ->where('status', 'published')
@@ -21,7 +21,7 @@ class ContentController extends Controller
 
     public function blog(): View
     {
-        $posts = ContentEntry::query()->with('author:id,name')
+        $posts = ContentEntry::query()->with('author:id,name', 'featuredMedia:id,public_id,review_status,alt_text')
             ->where('type', 'post')->where('status', 'published')
             ->latest('published_at')->paginate(10);
 
