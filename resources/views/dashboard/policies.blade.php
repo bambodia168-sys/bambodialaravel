@@ -13,7 +13,7 @@
       <form method="post" action="{{ route('dashboard.policies.legal-drafts') }}" onsubmit="return confirm('Create any missing legal drafts? Published policies and existing edits will remain untouched.')">
         @csrf <button class="btn subtle" type="submit"><x-icon name="file-check" size="16"/> Create legal drafts</button>
       </form>
-      <form method="post" action="{{ route('dashboard.policies.supplemental-drafts') }}" onsubmit="return confirm('Create seven additional draft policies? No existing policies will change or be published.')">
+      <form method="post" action="{{ route('dashboard.policies.supplemental-drafts') }}" onsubmit="return confirm('Create any missing supplemental and marketplace-service legal-review drafts? Existing published policies and edited drafts will remain unchanged; nothing is published automatically.')">
         @csrf <button class="btn subtle" type="submit"><x-icon name="file-text" size="16"/> Add compliance drafts</button>
       </form>
       <a class="btn primary" href="{{ route('dashboard.policies.create') }}"><x-icon name="edit" size="16"/> New policy</a>
