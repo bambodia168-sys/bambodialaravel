@@ -131,6 +131,59 @@ try{
   await textOn(client,'QA staff verified your case');
   pass('Client support ticket, staff reply, private visibility and recipient notification');
 
+
+  // Isolated browser acceptance: public discovery, permissions, editorial publication, and archival.
+  const anonymousContext=await browser.newContext({viewport:{width:390,height:844}});
+  const anonymousPage=await anonymousContext.newPage();
+  await visit(anonymousPage,'/support-center');
+  await textOn(anonymousPage,'How can we help?');
+  const anonTickets=await anonymousPage.request.get(origin+'/support-center/tickets',{maxRedirects:0});
+  assert(anonTickets.status()===302,'Anonymous visitor can access private tickets');
+  const staffKnowledge=await staff.request.get(origin+'/dashboard/knowledge-base',{maxRedirects:0});
+  assert(staffKnowledge.status()===403,'Support staff can access administrator article editor');
+  pass('Mobile viewport public Support Center; private tickets and article administration denied');
+
+  await post(superUser,'/dashboard/knowledge-base/starter-drafts');
+  await visit(superUser,'/dashboard/knowledge-base?status=draft');
+  const starterTitle='How to create a Bambodia account';
+  const starterRow=superUser.locator('tr').filter({hasText:starterTitle}).first();
+  assert(await starterRow.count()===1,'Starter knowledge article was not created as a draft');
+  const editHref=await starterRow.locator('a[href$="/edit"]').first().getAttribute('href');
+  assert(Boolean(editHref),'Missing administrator article editor link');
+  const editPath=new URL(editHref,origin).pathname;
+  await visit(superUser,editPath);
+  await superUser.locator('#knowledge-status').selectOption('published');
+  await superUser.locator('button[form="policy-builder-form"]').click();
+  await superUser.waitForLoadState('networkidle');
+  await visit(anonymousPage,'/support-center');
+  assert(!(await anonymousPage.getByText(starterTitle,{exact:true}).count()),
+    'Article was published without administrator editorial review confirmation');
+  await visit(superUser,editPath);
+  await superUser.locator('#knowledge-status').selectOption('published');
+  await superUser.locator('input[name="confirm_review"]').check();
+  await superUser.locator('button[form="policy-builder-form"]').click();
+  await superUser.waitForLoadState('networkidle');
+  await visit(anonymousPage,'/support-center');
+  await textOn(anonymousPage,starterTitle);
+  const starterLink=await anonymousPage.locator('.support-article-card').filter({hasText:starterTitle}).first().getAttribute('href');
+  assert(Boolean(starterLink),'Published starter article lacks public URL');
+  const starterPath=new URL(starterLink,origin).pathname;
+  await visit(anonymousPage,starterPath);
+  await textOn(anonymousPage,'Create an account');
+  await visit(anonymousPage,'/support-center?q=Bambodia%20account');
+  await textOn(anonymousPage,starterTitle);
+  await visit(anonymousPage,'/support-center?category=licenses');
+  assert(!(await anonymousPage.getByText(starterTitle,{exact:true}).count()),
+    'Public category filtering returned an unrelated article');
+  await visit(superUser,editPath);
+  await superUser.locator('#knowledge-status').selectOption('archived');
+  await superUser.locator('button[form="policy-builder-form"]').click();
+  await superUser.waitForLoadState('networkidle');
+  const archived=await anonymousPage.request.get(origin+starterPath,{maxRedirects:0});
+  assert(archived.status()===404,'Archived article remains publicly available');
+  await anonymousContext.close();
+  pass('Administrator starter draft, required editorial review, public search/category, and unpublication');
+
   const inquiry=await post(client,'/inquiries/for/'+fixture.public_service_id,{
     subject:'UAT Private Service Conversation',
     body:'QA-only original private service inquiry that does not create any real commercial order.',
