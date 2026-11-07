@@ -152,6 +152,68 @@ class KnowledgeBaseExperienceTest extends TestCase
         $this->assertDatabaseHas('audit_events',['event'=>'knowledge.article.published','actor_id'=>$admin->id]);
     }
 
+    public function test_public_knowledge_base_paginates_ten_articles_and_preserves_filters(): void
+    {
+        $admin = $this->member('super_admin');
+
+        for ($i = 1; $i <= 26; $i++) {
+            $article = $this->article(
+                $admin, 'published', sprintf('Pagination sample guide %02d', $i)
+            );
+            $article->update([
+                'category' => $i <= 13 ? 'downloads' : 'licenses',
+                'published_at' => now()->subMinutes($i),
+            ]);
+        }
+
+        $this->article($admin, 'draft', 'Pagination sample unpublished draft');
+        $this->article($admin, 'archived', 'Pagination sample archived article');
+
+        foreach ([1 => [10, '01', '10'], 2 => [10, '11', '20'], 3 => [6, '21', '26']] as $page => [$expectedCount, $firstNumber, $lastNumber]) {
+            $response = $this->get(route('support', ['page' => $page]))->assertOk();
+            $paginator = $response->viewData('articles');
+
+            $this->assertSame(26, $paginator->total());
+            $this->assertSame(10, $paginator->perPage());
+            $this->assertSame(3, $paginator->lastPage());
+            $this->assertSame($page, $paginator->currentPage());
+            $this->assertCount($expectedCount, $paginator->items());
+
+            $html = $response->getContent();
+            $dom = new \\DOMDocument();
+            @$dom->loadHTML($html);
+            $xpath = new \\DOMXPath($dom);
+            $cards = $xpath->query('//a[contains(concat(" ", normalize-space(@class), " "), " support-article-card ")]');
+            $numbers = $xpath->query('//a[contains(concat(" ", normalize-space(@class), " "), " support-article-card ")]/span[contains(@class, "support-article-card-number")]');
+
+            $this->assertCount($expectedCount, $cards);
+            $this->assertCount($expectedCount, $numbers);
+            $this->assertSame($firstNumber, trim($numbers->item(0)->textContent));
+            $this->assertSame($lastNumber, trim($numbers->item($expectedCount - 1)->textContent));
+            $this->assertStringNotContainsString('Pagination sample unpublished draft', $html);
+            $this->assertStringNotContainsString('Pagination sample archived article', $html);
+        }
+
+        $filtered = $this->get(route('support', [
+            'q' => 'Pagination sample', 'category' => 'downloads', 'page' => 2,
+        ]))->assertOk();
+        $articles = $filtered->viewData('articles');
+
+        $this->assertSame(13, $articles->total());
+        $this->assertSame(10, $articles->perPage());
+        $this->assertSame(2, $articles->currentPage());
+        $this->assertCount(3, $articles->items());
+        $this->assertTrue(collect($articles->items())->every(fn ($article) => $article->category === 'downloads'));
+
+        $previous = $articles->previousPageUrl();
+        $this->assertNotNull($previous);
+        parse_str((string) parse_url($previous, PHP_URL_QUERY), $params);
+        $this->assertSame('Pagination sample', $params['q'] ?? null);
+        $this->assertSame('downloads', $params['category'] ?? null);
+        $this->assertSame('1', (string) ($params['page'] ?? null));
+        $filtered->assertSee('Showing 11', false)->assertSee('of 13');
+    }
+
     public function test_untrusted_html_cannot_inject_scripts_into_public_article(): void
     {
         $admin=$this->member('admin');
