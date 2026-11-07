@@ -282,6 +282,7 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/post-manager/{entry}', [ContentManagerController::class, 'updatePost'])->name('dashboard.posts.update');
             Route::get('/policy-center', [PolicyManagerController::class, 'index'])->name('dashboard.policies');
             Route::post('/policy-center', [PolicyManagerController::class, 'store'])->name('dashboard.policies.store');
+            Route::post('/policy-center/legal-drafts', [PolicyManagerController::class, 'seedLegalDrafts'])->name('dashboard.policies.legal-drafts')->middleware('throttle:3,1');
             Route::patch('/policy-center/{policy}', [PolicyManagerController::class, 'update'])->name('dashboard.policies.update');
             Route::get('/creator-applications', [CreatorReviewController::class, 'index'])->name('dashboard.creator-applications');
             Route::patch('/creator-applications/{application}', [CreatorReviewController::class, 'decide'])->name('dashboard.creator-applications.decide');
