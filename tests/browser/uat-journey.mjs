@@ -253,6 +253,7 @@ try{
   await visit(superUser,'/developer');
   const tokenRow=superUser.locator('tr').filter({hasText:'UAT Revocable Credential'}).first();
   assert(await tokenRow.count()===1,'Token not present in account');
+  await tokenRow.locator('button[popovertarget^="row-action-menu-token-"]').click();
   await tokenRow.locator('button[data-modal-open^="token-"]').click();
   await tokenRow.locator('input[name="password"]').fill('UatIsolatedBrowserOnly123!');
   await tokenRow.getByRole('button',{name:'Revoke token'}).click();
