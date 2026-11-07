@@ -900,6 +900,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch {
                         window.alert('Only HTTP and HTTPS links are allowed.');
                     }
+                } else if (command === 'foreColor' || command === 'hiliteColor') {
+                    const color = window.prompt(command === 'foreColor' ? 'Text color (#RRGGBB)' : 'Highlight color (#RRGGBB)', '#c2410c');
+                    if (!color || !/^#[0-9a-fA-F]{6}$/.test(color)) return;
+                    document.execCommand(command, false, color);
                 } else if (command === 'table') {
                     const rows = Number.parseInt(window.prompt('Table rows (1–10)', '3'), 10);
                     const columns = Number.parseInt(window.prompt('Table columns (1–6)', '3'), 10);
