@@ -45,13 +45,13 @@
           <td class="mono">{{ $license->code }}</td><td>{{ $license->version }}</td>
           <td><span class="role-pill">{{ ucfirst($license->status) }}</span></td><td>{{ $license->listings_count + $license->extended_listings_count }}</td>
           <td>
-            <button class="btn subtle compact license-action-trigger" type="button"
+            <button class="row-action-trigger license-action-trigger" type="button"
               id="license-action-trigger-{{ $license->id }}" popovertarget="license-actions-{{ $license->id }}"
-              aria-haspopup="true" aria-label="Actions for {{ $license->name }}">
-              <x-icon name="settings" size="15"/> Action <x-icon name="chevron-down" size="14"/>
+              aria-haspopup="menu" aria-expanded="false" aria-label="Actions for {{ $license->name }}">
+              <x-icon name="ellipsis-vertical" size="19"/>
             </button>
             <div id="license-actions-{{ $license->id }}" popover="auto"
-              class="license-action-popover" data-license-action-menu data-license-anchor="license-action-trigger-{{ $license->id }}"
+              class="row-action-popover license-action-popover" data-row-action-menu data-row-action-anchor="license-action-trigger-{{ $license->id }}"
               aria-label="Actions for {{ $license->name }}">
               <button type="button" data-license-action data-modal-open="license-{{ $license->id }}"
                 data-license-focus="license-heading-{{ $license->id }}"><x-icon name="eye" size="16"/> View definition</button>
@@ -279,13 +279,13 @@
               </div>
             </dialog>
           @endif
-          <button class="btn subtle compact license-action-trigger" type="button"
+          <button class="row-action-trigger license-action-trigger" type="button"
             id="issued-action-trigger-{{ $item->id }}" popovertarget="issued-actions-{{ $item->id }}"
-            aria-haspopup="true" aria-label="Actions for product license {{ $item->public_id }}">
-            <x-icon name="settings" size="15"/> Action <x-icon name="chevron-down" size="14"/>
+            aria-haspopup="menu" aria-expanded="false" aria-label="Actions for product license {{ $item->public_id }}">
+            <x-icon name="ellipsis-vertical" size="19"/>
           </button>
           <div id="issued-actions-{{ $item->id }}" popover="auto"
-            class="license-action-popover" data-license-action-menu data-license-anchor="issued-action-trigger-{{ $item->id }}"
+            class="row-action-popover license-action-popover" data-row-action-menu data-row-action-anchor="issued-action-trigger-{{ $item->id }}"
             aria-label="Product license actions">
             <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
               data-license-focus="issued-{{ $item->id }}-heading"><x-icon name="eye" size="16"/> License details</button>
