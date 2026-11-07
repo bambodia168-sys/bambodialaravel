@@ -1730,14 +1730,15 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   right:max(0px,calc((100vw - 1550px)/2));bottom:-2px;
   width:clamp(260px,29vw,430px);height:min(100%,395px);
   overflow:hidden;opacity:1;
-  mask-image:linear-gradient(90deg,transparent 0%,#000 16%,#000 100%);
-  -webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 16%,#000 100%);
+  /* Fade the left and bottom cutout edges without softening the face/headset. */
+  mask-image:radial-gradient(ellipse 87% 87% at 82% 19%,#000 0%,#000 50%,rgba(0,0,0,.9) 64%,rgba(0,0,0,.48) 76%,transparent 94%);
+  -webkit-mask-image:radial-gradient(ellipse 87% 87% at 82% 19%,#000 0%,#000 50%,rgba(0,0,0,.9) 64%,rgba(0,0,0,.48) 76%,transparent 94%);
 }
 .support-hero-agent-art img{display:block;width:100%;height:100%;object-fit:contain;object-position:right bottom;filter:contrast(1.13) saturate(1.06) brightness(1.05);image-rendering:auto}
 [data-theme="dark"] .support-hero-agent-art{opacity:1;filter:none}
 @media(max-width:1100px){.support-hero-agent-art{width:clamp(220px,30vw,340px);opacity:.90}}
 @media(max-width:680px){
-  .support-hero-agent-art{right:-45px;width:205px;height:245px;opacity:.30;mask-image:linear-gradient(90deg,transparent,#000 65%);-webkit-mask-image:linear-gradient(90deg,transparent,#000 65%)}
+  .support-hero-agent-art{right:-45px;width:205px;height:245px;opacity:.30;mask-image:radial-gradient(ellipse 93% 87% at 82% 19%,#000 0%,#000 43%,rgba(0,0,0,.75) 58%,transparent 92%);-webkit-mask-image:radial-gradient(ellipse 93% 87% at 82% 19%,#000 0%,#000 43%,rgba(0,0,0,.75) 58%,transparent 92%)}
   [data-theme="dark"] .support-hero-agent-art{opacity:.30}
 }
 .support-knowledge-hero h1{
