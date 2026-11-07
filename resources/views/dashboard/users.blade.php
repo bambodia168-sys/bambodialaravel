@@ -10,7 +10,9 @@
   <tbody>
     @forelse($users as $user)
     <tr><td class="mono">{{ $user->public_id }}</td><td><strong>{{ $user->name }}</strong></td><td>{{ $user->email }}</td><td><span class="role-pill">{{ str_replace('_',' ',ucwords($user->role,'_')) }}</span></td><td>{{ $user->created_at?->format('d M Y') }}</td><td>
-    <button type="button" class="btn subtle compact" data-modal-open="user-{{ $user->id }}"><x-icon name="settings" size="15"/> Configure</button>
+    <x-row-action-menu :id="'user-'.$user->id" :label="$user->name">
+      <button type="button" data-modal-open="user-{{ $user->id }}"><x-icon name="settings" size="16"/> Configure</button>
+    </x-row-action-menu>
     <dialog id="user-{{ $user->id }}" class="config-dialog">
       <form method="post" action="{{ route('dashboard.users.update',$user) }}">
         @csrf @method('PATCH')
