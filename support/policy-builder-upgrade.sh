@@ -6,8 +6,8 @@
 set -Eeuo pipefail
 umask 077
 
-MODE="\${1:-}"
-SHA="\${2:-}"
+MODE="${1:-}"
+SHA="${2:-}"
 REPO="bambodia168-sys/bambodialaravel"
 BASE="7067f5266883dc917211a808f5e9f4e3cc7f6270"
 SRC="/root/bambodia-release-audit"
@@ -64,20 +64,20 @@ NEW=(
   resources/views/dashboard/policy-builder.blade.php
   resources/views/dashboard/policy-preview.blade.php
 )
-ALL=("\${EXISTING[@]}" "\${NEW[@]}")
+ALL=("${EXISTING[@]}" "${NEW[@]}")
 
 echo "========== VERIFY PRODUCTION BASELINE =========="
-for file in "\${EXISTING[@]}"; do
+for file in "${EXISTING[@]}"; do
   [[ -f "$APP/$file" && ! -L "$APP/$file" ]] || stop "Missing or symlinked installed file: $file"
   cmp -s "$APP/$file" <(git -C "$SRC" show "$BASE:$file") ||
     stop "Installed file customized since last verified deployment: $file"
   echo "MATCH: $file"
 done
-for file in "\${NEW[@]}"; do
+for file in "${NEW[@]}"; do
   [[ -f "$SRC/$file" && ! -e "$APP/$file" && ! -L "$APP/$file" ]] ||
     stop "New file missing from source or already installed: $file"
 done
-for file in "\${ALL[@]}"; do
+for file in "${ALL[@]}"; do
   if [[ "$file" == *.php ]]; then
     "$PHP" -l "$SRC/$file" >/dev/null || stop "PHP syntax error in $file"
   fi
@@ -107,13 +107,13 @@ cleanup() {
   if (( rc != 0 && TOUCHED == 1 )); then
     echo "ALERT: restoring original source and compiled frontend assets" >&2
     tar -xzf "$ARCHIVE" -C "$APP" || true
-    for file in "\${NEW[@]}"; do rm -f -- "$APP/$file"; done
+    for file in "${NEW[@]}"; do rm -f -- "$APP/$file"; done
     (cd "$APP" && runuser -u www -- "$PHP" artisan route:clear &&
       runuser -u www -- "$PHP" artisan view:clear) || true
   fi
   if (( rc != 0 && MIGRATED == 1 )); then
     echo "ALERT: additive database migration remains; do not drop columns automatically." >&2
-    echo "Snapshot supplied: \${BAMBODIA_DB_BACKUP_FILE:-none}" >&2
+    echo "Snapshot supplied: ${BAMBODIA_DB_BACKUP_FILE:-none}" >&2
   fi
   if (( DOWN == 1 )); then
     (cd "$APP" && runuser -u www -- "$PHP" artisan up) ||
@@ -137,7 +137,7 @@ for stable in artisan composer.json VERSION; do
     stop "Installer identity mismatch: $stable"
 done
 [[ -s "$RELEASE/public/build/manifest.json" ]] || stop "Compiled frontend missing"
-for file in "\${ALL[@]}"; do
+for file in "${ALL[@]}"; do
   [[ -f "$RELEASE/$file" ]] && cmp -s "$SRC/$file" "$RELEASE/$file" ||
     stop "Artifact differs from exact GitHub source: $file"
 done
@@ -148,7 +148,7 @@ if [[ "$MODE" == --check ]]; then
   exit 0
 fi
 
-DB_BACKUP="\${BAMBODIA_DB_BACKUP_FILE:-}"
+DB_BACKUP="${BAMBODIA_DB_BACKUP_FILE:-}"
 [[ -n "$DB_BACKUP" && -f "$DB_BACKUP" && -s "$DB_BACKUP" && ! -L "$DB_BACKUP" && "$DB_BACKUP" == /root/* ]] ||
   stop "Set BAMBODIA_DB_BACKUP_FILE to fresh private /root/*.sql.gz snapshot"
 [[ "$DB_BACKUP" == *.sql.gz ]] || stop "Expected compressed SQL archive"
@@ -160,7 +160,7 @@ gzip -t "$DB_BACKUP" || stop "Invalid MySQL backup"
 install -d -m 0700 "$BACKUP_ROOT"
 SAVE="$(mktemp -d "$BACKUP_ROOT/release-XXXXXXXX")"
 ARCHIVE="$SAVE/original-files.tar.gz"
-tar -czf "$ARCHIVE" -C "$APP" "\${EXISTING[@]}" public/build
+tar -czf "$ARCHIVE" -C "$APP" "${EXISTING[@]}" public/build
 tar -tzf "$ARCHIVE" >/dev/null || stop "Original file backup failed"
 ENV_SHA="$(sha256sum "$APP/.env" | cut -d ' ' -f1)"
 LOCK_SHA="$(sha256sum "$APP/storage/app/installed.lock" | cut -d ' ' -f1)"
@@ -175,7 +175,7 @@ install -d -o www -g www -m 0755 "$(dirname "$APP/$MIGRATION")"
 install -o www -g www -m 0644 "$RELEASE/$MIGRATION" "$APP/$MIGRATION"
 MIGRATED=1
 (cd "$APP" && runuser -u www -- "$PHP" artisan migrate --path="$MIGRATION" --force --no-interaction)
-for file in "\${ALL[@]}"; do
+for file in "${ALL[@]}"; do
   install -d -o www -g www -m 0755 "$(dirname "$APP/$file")"
   install -o www -g www -m 0644 "$RELEASE/$file" "$APP/$file"
   cmp -s "$APP/$file" "$RELEASE/$file" || stop "Copy mismatch: $file"
