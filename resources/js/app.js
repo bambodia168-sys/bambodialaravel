@@ -120,6 +120,8 @@ function initializeRowActionMenus() {
         if (menu.matches(':popover-open')) place(menu);
     }));
     document.addEventListener('scroll', event => {
+        // Scrolling a tall menu should not dismiss the menu itself.
+        if (event.target.closest?.('[data-row-action-menu]')) return;
         if (event.target === document || event.target.closest?.('.table-scroll,.license-issued-scroll,[data-workspace-scroll]')) {
             menus.forEach(menu => { if (menu.matches(':popover-open')) menu.hidePopover?.(); });
         }
