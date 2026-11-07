@@ -1768,7 +1768,7 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .support-article-heading{margin-top:clamp(2rem,4vw,3.5rem)}
 .support-article-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
 .support-article-card{
-  display:flex;flex-direction:column;align-items:flex-start;min-width:0;min-height:244px;gap:13px;
+  display:flex;flex-direction:column;align-items:flex-start;min-width:0;min-height:244px;aspect-ratio:5/6;gap:13px;
   padding:20px;border:1px solid var(--line);border-radius:17px;
   background:var(--surface);text-decoration:none;color:var(--text);
   box-shadow:0 9px 28px rgba(12,32,60,.04);transition:border-color .16s,transform .16s,box-shadow .16s;
