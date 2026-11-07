@@ -7,8 +7,6 @@
 <h1>Privacy Requests</h1>
 <p>Submit a request about your personal data and track administrator responses. Submitting a case records your request; it does not automatically change or erase your account data.</p>
 </div>
-@if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-@if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
 <section class="panel">
 <div class="panel-head"><h2>Submitted requests <span class="count">{{ $requests->total() }}</span></h2>
 <button class="btn primary" type="button" data-modal-open="new-privacy-request">New privacy request</button>

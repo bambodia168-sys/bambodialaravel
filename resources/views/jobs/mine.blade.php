@@ -6,7 +6,6 @@
     <div class="eyebrow">Client Account</div><h1>Job Manager</h1>
     <p>Post genuine job briefs, manage existing posts and review freelancer proposals. All new jobs require administrator approval.</p>
   </div>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
   <section class="panel">
     <div class="panel-head">
       <h2>My posted jobs <span class="count">{{ $jobs->total() }}</span></h2>

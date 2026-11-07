@@ -5,8 +5,6 @@
 <div class="container inner-page">
   <div class="page-intro"><div class="eyebrow">Creator Studio · Digital Products</div><h1>Product Manager</h1>
     <p>Create and manage digital product listings. Only products with an approved preview and an active license can be submitted for publication.</p></div>
-  @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
-  @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
   <section class="panel">
     <div class="panel-head">
       <h2>My products <span class="count">{{ $products->total() }}</span></h2>

@@ -4,8 +4,6 @@
 @section('content')
 <div class="container inner-page creator-onboarding">
  <div class="page-intro"><div class="eyebrow">Freelancer workspace</div><h1>Resume Builder</h1><p>Maintain a professional profile for job proposals. Your resume is shown only to job owners when you apply, if you choose to publish it.</p></div>
- @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
- @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
  <section class="panel"><div class="panel-head"><h2>Professional experience</h2><span class="role-pill">{{ $resume?->is_visible ? 'Published to job owners' : 'Private' }}</span></div>
  <div class="onboarding-content">
  <form method="post" action="{{ route('resume.update') }}" class="creator-application-form">

@@ -6,7 +6,6 @@
   <div class="page-intro"><div class="eyebrow">Account · Private opportunities</div><h1>Saved Jobs</h1>
     <p>Keep track of approved client opportunities and return when you are ready to submit a proposal.</p>
   </div>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
   <section class="panel">
     <div class="panel-head"><h2>My saved opportunities <span class="count">{{ $saved->total() }}</span></h2>
       <a href="{{ route('jobs') }}" class="btn subtle"><x-icon name="briefcase" size="16"/> Explore jobs</a>

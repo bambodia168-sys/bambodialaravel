@@ -8,8 +8,6 @@
 <div class="toolbar-actions"><span class="role-pill">{{ ucfirst(str_replace('_',' ',$dispute->status)) }}</span>
 <a class="btn subtle" href="{{ route('dashboard.contracts.disputes') }}">Back to cases</a></div>
 </div>
-@if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-@if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
 <section class="panel"><div class="panel-head"><h2>Reported concern</h2><span class="role-pill">{{ ucfirst($dispute->category) }}</span></div>
 <div class="onboarding-content">
 <p><strong>Reporter:</strong> {{ $dispute->reporter?->name }} · {{ $dispute->created_at->format('d M Y H:i') }}</p>

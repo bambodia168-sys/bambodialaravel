@@ -17,8 +17,6 @@
       <a class="btn subtle compact" href="{{ route('contracts.index') }}">All contracts</a>
     </div>
   </div>
-  @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
-  @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
 
   <section class="panel">
     <div class="panel-head"><h2>Agreement scope and terms</h2><span class="role-pill">{{ $contract->offered_at ? 'Frozen offer' : 'Draft' }}</span></div>

@@ -4,7 +4,6 @@
 @section('content')
 <div class="container inner-page">
 <div class="page-intro"><div class="eyebrow">Account · Activity</div><h1>Notification Center</h1><p>Your private updates from actual Bambodia workflows. You have {{ number_format($unread) }} unread notifications.</p></div>
-@if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
 <section class="panel"><div class="panel-head"><h2>{{ ucfirst($filter) }} notifications <span class="count">{{ $notifications->total() }}</span></h2>
 <div class="toolbar-actions">
 <a class="btn subtle compact" href="{{ route('account.notifications',array_merge(['filter'=>'all'],$event==='all'?[]:['event'=>$event])) }}">All</a>

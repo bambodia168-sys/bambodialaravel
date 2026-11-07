@@ -2,7 +2,6 @@
 @section('title','Job Proposals')
 @section('content')
 <div class="container inner-page"><div class="page-intro"><div class="eyebrow">Client Account</div><h1>Applications for {{ $job->title }}</h1><p>Review each proposal privately. Shortlisting does not create a contract or financial obligation.</p></div>
-@if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
 <section class="panel"><div class="panel-head"><h2>Received proposals <span class="count">{{ $proposals->total() }}</span></h2><a class="btn subtle" href="{{ route('jobs.mine') }}">Back to jobs</a></div>
 <div class="table-scroll"><table class="data-table"><thead><tr><th>Freelancer</th><th>Public ID</th><th>Budget</th><th>Status</th><th>Submitted</th><th>Action</th></tr></thead><tbody>
 @forelse($proposals as $proposal)

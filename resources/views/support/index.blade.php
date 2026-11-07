@@ -3,8 +3,6 @@
 @section('content')
 <div class="container inner-page">
   <div class="page-intro"><div class="eyebrow">Customer Care</div><h1>Support Center</h1><p>Open a support request and follow its progress in your account.</p></div>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-  @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
   <section class="panel">
     <div class="panel-head"><h2>My tickets <span class="count">{{ $tickets->total() }}</span></h2><button class="btn primary" type="button" data-modal-open="ticket-new">Create ticket</button></div>
     <div class="table-scroll"><table class="data-table"><thead><tr><th>Ticket ID</th><th>Subject</th><th>Status</th><th>Updated</th><th>Action</th></tr></thead><tbody>

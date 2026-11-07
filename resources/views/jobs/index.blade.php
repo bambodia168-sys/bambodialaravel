@@ -5,7 +5,6 @@
   <div class="page-intro"><div class="eyebrow">Bambodia · Freelance opportunities</div><h1>Find Jobs</h1>
     <p>Browse real administrator-approved client opportunities, save interesting briefs, and apply through your freelancer workspace.</p>
   </div>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
   <section class="marketplace-filter-panel">
     <form method="get" action="{{ route('jobs') }}" class="marketplace-filter-form">
       <div class="marketplace-filter-field marketplace-filter-search">

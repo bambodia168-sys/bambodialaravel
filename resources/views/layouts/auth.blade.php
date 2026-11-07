@@ -11,6 +11,7 @@
   @vite(['resources/css/app.css','resources/js/app.js'])
 </head>
 <body class="auth-body">
+<x-flash-feedback />
 <main class="auth-shell">
   <section class="auth-card" aria-labelledby="auth-title">
     <div class="auth-card-head">
@@ -18,8 +19,6 @@
       <h1 id="auth-title">@yield('heading')</h1>
       <p>@yield('intro')</p>
     </div>
-    @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
-    @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
     @yield('content')
   </section>
   <nav class="auth-tools" aria-label="Account page controls">

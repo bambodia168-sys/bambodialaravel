@@ -9,8 +9,6 @@
     <p>Product ID {{ $product->public_id }} · Upload immutable, privately stored originals. Each version is reviewed independently before it can be granted to an account.</p>
     <p><a class="btn subtle compact" href="{{ route('studio.products.index') }}">Back to Product Manager</a></p>
   </div>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-  @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
   <section class="panel">
     <div class="panel-head">
       <h2>File versions <span class="count">{{ $versions->total() }}</span></h2>

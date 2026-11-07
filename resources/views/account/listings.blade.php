@@ -4,8 +4,6 @@
 @section('content')
 <div class="container inner-page">
   <div class="page-intro"><div class="eyebrow">Creator studio</div><h1>My listings</h1><p>Submit original work for review and track publication status.</p></div>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-  @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
   <p><a class="btn subtle" href="{{ route('studio.products.index') }}">Manage digital products and licenses</a></p><section class="panel">
     <div class="panel-head"><h2>Submitted listings <span class="count">{{ $listings->total() }}</span></h2>@if(\App\Models\FeatureFlag::isEnabled('creator_submissions'))<a class="btn primary" href="{{ route('builder', ['type' => 'project']) }}">Create listing</a>@endif</div>
     <div class="table-scroll">

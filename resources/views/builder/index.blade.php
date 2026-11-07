@@ -49,13 +49,6 @@
     </section>
   @endif
 
-  @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
-  @if($errors->any())
-    <div class="notice error" role="alert">
-      <strong>Please correct the following:</strong>
-      <ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
-    </div>
-  @endif
 
   <nav class="studio-types" aria-label="Builder content type">
     @foreach($types as $key=>$meta)

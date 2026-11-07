@@ -7,7 +7,6 @@
     <h1>Saved Listings</h1>
     <p>Keep track of digital products, creators' services, projects, and freelance offers. Your collection is visible only to your account.</p>
   </div>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
   <section class="panel">
     <div class="panel-head"><h2>My collection <span class="count">{{ $saved->total() }}</span></h2>
       <a href="{{ route('marketplace.search') }}" class="btn subtle"><x-icon name="search" size="16"/> Explore marketplace</a>

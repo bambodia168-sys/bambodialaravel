@@ -23,7 +23,6 @@
     <h1>{{ $browseTitle }}</h1>
     <p>{{ $browseIntro }}</p>
   </div>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
   <div class="marketplace-browse-layout">
     <aside class="marketplace-filter-panel marketplace-filter-sidebar" aria-label="Marketplace filters">
       <div class="marketplace-filter-title"><div><x-icon name="filter" size="18"/><h2>Refine results</h2></div>

@@ -4,8 +4,6 @@
 @section('content')
 <div class="container inner-page">
   <div class="page-intro"><div class="eyebrow">Account workspace</div><h1>My account</h1><p>Signed in as {{ $user->name }}.</p></div>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-  @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
   @php
     $accountMetricRoutes=[
         'saved'=>'account.saved-listings','saved_jobs'=>'account.saved-jobs',

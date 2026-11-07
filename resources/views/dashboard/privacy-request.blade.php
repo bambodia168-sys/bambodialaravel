@@ -6,8 +6,6 @@
 <p>{{ $privacyRequest->owner?->name }} · Public ID {{ $privacyRequest->owner?->public_id }}</p>
 <span class="role-pill">{{ ucfirst(str_replace('_',' ',$privacyRequest->status)) }}</span>
 </div>
-@if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-@if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
 <section class="panel"><div class="panel-head"><h2>{{ ucfirst($privacyRequest->category) }} request</h2></div>
 <div class="onboarding-content">
 <p><strong>Submitted:</strong> {{ $privacyRequest->created_at->format('d M Y H:i') }}</p>

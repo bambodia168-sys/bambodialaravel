@@ -7,7 +7,6 @@
 <h1>{{ ucfirst($privacyRequest->category) }} request</h1>
 <p><span class="role-pill">{{ ucfirst(str_replace('_',' ',$privacyRequest->status)) }}</span> · Submitted {{ $privacyRequest->created_at->format('d M Y H:i') }}</p>
 </div>
-@if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
 <section class="panel">
 <div class="panel-head"><h2>Submitted information</h2></div>
 <div class="onboarding-content"><p class="review-text">{{ $privacyRequest->details }}</p></div>

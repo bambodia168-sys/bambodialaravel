@@ -7,7 +7,6 @@
   <h1>My Policy Receipts</h1>
   <p>Review your voluntary acknowledgement history for specific published policy revisions. Acknowledging a revision is not blanket consent to personal-data processing.</p>
 </div>
-@if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
 <section class="panel">
   <div class="panel-head"><h2>Reading acknowledgements <span class="count">{{ $receipts->total() }}</span></h2>
     <a href="{{ route('policy-center') }}" class="btn subtle">Read current policies</a>

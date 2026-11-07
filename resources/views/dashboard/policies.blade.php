@@ -6,8 +6,6 @@
   <h1>Policy Center</h1>
   <p>Manage legal content, publish reviewed revisions, and communicate policy updates.</p>
 </div>
-@if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
-@if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
 <section class="panel">
   <div class="panel-head">
     <div><h2>Policies <span class="count">{{ $policies->total() }}</span></h2><p class="text-muted">Every legal draft opens in the full Policy Builder.</p></div>

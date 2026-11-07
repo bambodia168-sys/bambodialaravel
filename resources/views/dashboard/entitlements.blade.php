@@ -3,8 +3,6 @@
 @section('content')
 <div class="page-intro"><div class="eyebrow">Super Admin · Controlled Fulfillment</div><h1>Download Entitlements</h1>
   <p>Manually grant complimentary or support access to one approved product version. This action does not create an order or accept, process, or verify payment.</p></div>
-@if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
-@if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
 <section class="panel">
   <div class="panel-head"><h2>Access grants <span class="count">{{ $entitlements->total() }}</span></h2>
     <button class="btn primary" type="button" data-modal-open="grant-entitlement"><x-icon name="key" size="16"/> Grant manual access</button>

@@ -8,8 +8,6 @@
     <h1>Creator Profile</h1>
     <p>Write a professional introduction that customers can view alongside your approved listings. Publishing is optional and never exposes private account records.</p>
   </div>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-  @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
   <section class="panel">
     <div class="panel-head"><h2>Profile configuration</h2>
       <span class="role-pill">{{ $profile?->is_public?'Public':'Private' }}</span>

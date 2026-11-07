@@ -146,6 +146,7 @@
   };
 @endphp
 <body class="dashboard-body workspace-body" data-workspace="{{ $workspace }}">
+<x-flash-feedback />
 <div class="workspace-shell" id="workspace-shell">
   <aside class="workspace-sidebar" id="workspace-sidebar" aria-label="{{ $workspaceTitles[$workspace] }} navigation">
     <div class="workspace-sidebar-head">
@@ -259,8 +260,6 @@
       </div>
     </header>
     <main class="workspace-content" id="workspace-content">
-      @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
-      @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
       @yield('content')
     </main>
   </div>

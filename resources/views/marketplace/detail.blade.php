@@ -55,8 +55,6 @@
     </div>
   </header>
 
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-  @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
 
   <nav class="premium-detail-tabs" aria-label="Listing sections">
     @foreach($pageSections as $section)

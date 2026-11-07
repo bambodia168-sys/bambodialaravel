@@ -3,8 +3,6 @@
 @section('content')
 <div class="page-intro"><div class="eyebrow">Marketplace · Secure Fulfillment</div><h1>Digital File Vault</h1>
   <p>Fail-closed release governance: scan original bytes with ClamAV, inspect the screened file, review ownership evidence, then approve. A missing, failed, outdated or infected scan blocks customer access.</p></div>
-@if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-@if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
 <section class="panel">
   <div class="panel-head"><h2>Product releases <span class="count">{{ $versions->total() }}</span></h2>
     <form method="get" class="table-search"><x-icon name="filter" size="17"/>

@@ -19,8 +19,6 @@
       <span><x-icon name="check" size="16"/> Open for proposals</span>
     </div>
   </header>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-  @if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
 
   <nav class="premium-detail-tabs" aria-label="Job opportunity sections">
     <a href="#overview">Overview</a>

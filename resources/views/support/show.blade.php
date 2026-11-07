@@ -5,7 +5,6 @@
   <div class="page-intro"><div class="eyebrow">Support Ticket {{ $ticket->public_id }}</div><h1>{{ $ticket->subject }}</h1>
     <p>Status: {{ ucwords(str_replace('_',' ',$ticket->status)) }} @if($isStaff) · Opened by {{ $ticket->owner?->name }} ({{ $ticket->owner?->email }}) @endif</p>
   </div>
-  @if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
   <section class="panel ticket-conversation">
     <div class="panel-head"><h2>Conversation</h2><span class="role-pill">{{ ucwords(str_replace('_',' ',$ticket->status)) }}</span></div>
     <div class="messages">

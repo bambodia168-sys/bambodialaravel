@@ -23,10 +23,6 @@
       <button class="btn primary" form="policy-builder-form" type="submit"><x-icon name="save" size="16"/> Save policy</button>
     </div>
   </div>
-  @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
-  @if($errors->any())
-    <div class="notice error" role="alert"><strong>Please review these fields:</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
-  @endif
   <form id="policy-builder-form" action="{{ $editing ? route('dashboard.policies.update',$policy) : route('dashboard.policies.store') }}" method="post">
     @csrf @if($editing) @method('PATCH') @endif
     <input type="hidden" name="body_format" value="html">

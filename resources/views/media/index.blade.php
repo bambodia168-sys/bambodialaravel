@@ -4,8 +4,6 @@
 <div class="{{ $studio ? 'container inner-page' : '' }}">
   <div class="page-intro"><div class="eyebrow">Rights-aware media management</div><h1>Media Library</h1>
     <p>Upload JPEG, PNG, WebP, GIF animation, MP4 or WebM. Media stays private until administrator review and authorized publication.</p></div>
-  @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
-  @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
   <section class="panel">
     <div class="panel-head"><h2>Preview images <span class="count">{{ $assets->total() }}</span></h2>
       <button class="btn primary" type="button" data-modal-open="media-new"><x-icon name="upload" size="17"/> Upload image</button>

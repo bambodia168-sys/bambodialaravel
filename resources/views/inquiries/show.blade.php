@@ -6,8 +6,6 @@
 <p>{{ $inquiry->listing?->title }} · Client {{ $inquiry->client?->name }} · Creator {{ $inquiry->creator?->name }}</p>
 @if($inquiry->proposed_budget!==null)<p><strong>Proposed budget:</strong> USD {{ number_format((float)$inquiry->proposed_budget,2) }} (informational)</p>@endif
 </div>
-@if(session('status'))<div class="notice success">{{ session('status') }}</div>@endif
-@if($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
 <section class="panel"><div class="panel-head"><h2>Conversation <span class="count">{{ $messages->total() }}</span></h2><span class="role-pill">{{ ucfirst($inquiry->status) }}</span></div>
 <div class="conversation-thread">
 @forelse($messages as $message)<article class="conversation-message {{ (int)$message->sender_id===(int)auth()->id()?'own':'' }}">

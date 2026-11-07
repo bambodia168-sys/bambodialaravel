@@ -4,8 +4,6 @@
 @section('content')
 <div class="container inner-page creator-onboarding">
   <div class="page-intro"><div class="eyebrow">Creator onboarding</div><h1>Become a Bambodia creator</h1><p>Apply to publish your own professional services, digital projects and licensed products.</p></div>
-  @if(session('status'))<div class="notice success" role="status">{{ session('status') }}</div>@endif
-  @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
   <section class="panel">
     <div class="panel-head"><h2>Your application</h2>
       @if($application)<span class="role-pill">{{ ucfirst($application->status) }}</span>@else<span class="role-pill">Not submitted</span>@endif

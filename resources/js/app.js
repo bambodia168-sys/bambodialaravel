@@ -999,3 +999,85 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
     }
 });
+
+
+/* Shared notification surface: layouts render flash once; modules can emit
+   'bambodia:feedback' or use window.BambodiaFeedback.show(message,kind). */
+function initializeGlobalFeedback() {
+    const region = document.querySelector('[data-feedback-region]');
+    if (!region) return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const icons = {
+        success: '<circle cx="12" cy="12" r="9"/><path d="m7 12 3 3 7-7"/>',
+        error: '<path d="M12 7v6m0 4h.01"/><path d="M12 2 2 21h20L12 2z"/>',
+        warning: '<path d="M12 7v6m0 4h.01"/><path d="M12 2 2 21h20L12 2z"/>',
+        info: '<circle cx="12" cy="12" r="9"/><path d="M12 10v7M12 7h.01"/>',
+    };
+    function dismiss(toast) {
+        if (!toast || toast.classList.contains('is-dismissing')) return;
+        toast.classList.add('is-dismissing');
+        window.setTimeout(() => toast.remove(), reduced ? 0 : 210);
+    }
+    function mount(toast) {
+        if (toast.dataset.feedbackMounted === 'yes') return;
+        toast.dataset.feedbackMounted = 'yes';
+        const length = Number(toast.dataset.feedbackDuration || 0);
+        let left = Number.isFinite(length) ? Math.max(0, length) : 0;
+        let timer = null, started = 0;
+        const pause = () => {
+            if (timer !== null) {
+                window.clearTimeout(timer);
+                timer = null;
+                left = Math.max(0, left - (Date.now() - started));
+            }
+        };
+        const resume = () => {
+            if (!left || timer !== null || toast.matches(':hover') || toast.contains(document.activeElement)) return;
+            started = Date.now();
+            timer = window.setTimeout(() => dismiss(toast), left);
+        };
+        toast.addEventListener('mouseenter', pause);
+        toast.addEventListener('mouseleave', resume);
+        toast.addEventListener('focusin', pause);
+        toast.addEventListener('focusout', () => window.setTimeout(resume, 0));
+        toast.querySelector('[data-feedback-dismiss]')?.addEventListener('click', () => dismiss(toast));
+        resume();
+    }
+    region.querySelectorAll('[data-global-toast]').forEach(mount);
+    function show(message, kind = 'success', options = {}) {
+        if (typeof message !== 'string' || !message.trim()) return;
+        kind = Object.hasOwn(icons, kind) ? kind : 'info';
+        const titles = {success: 'Confirmed', error: 'Action needs attention', warning: 'Please review', info: 'Information'};
+        const toast = document.createElement('section');
+        toast.className = 'global-feedback-toast global-feedback-' + kind;
+        toast.dataset.globalToast = '';
+        toast.dataset.feedbackDuration = String(options.duration ?? (kind === 'success' ? 6500 : kind === 'info' ? 8500 : 0));
+        toast.setAttribute('role', ['error', 'warning'].includes(kind) ? 'alert' : 'status');
+        const icon = document.createElement('span');
+        icon.className = 'global-feedback-symbol';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + icons[kind] + '</svg>';
+        const copy = document.createElement('div');
+        copy.className = 'global-feedback-copy';
+        const heading = document.createElement('strong');
+        heading.textContent = typeof options.title === 'string' && options.title.trim() ? options.title.trim() : titles[kind];
+        const body = document.createElement('p');
+        body.textContent = message.trim();
+        copy.append(heading, body);
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'global-feedback-dismiss';
+        close.dataset.feedbackDismiss = '';
+        close.setAttribute('aria-label', 'Dismiss notification');
+        close.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+        toast.append(icon, copy, close);
+        region.prepend(toast);
+        mount(toast);
+    }
+    window.BambodiaFeedback = { show };
+    document.addEventListener('bambodia:feedback', (event) => {
+        const detail = event.detail || {};
+        show(detail.message, detail.kind || 'info', detail);
+    });
+}
+document.addEventListener('DOMContentLoaded', initializeGlobalFeedback);
