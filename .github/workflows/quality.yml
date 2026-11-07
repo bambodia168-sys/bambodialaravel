@@ -70,6 +70,7 @@ jobs:
           bash -n support/support-agent-clarity-upgrade.sh
           bash -n support/support-agent-blending-upgrade.sh
           bash -n support/support-agent-dark-hair-upgrade.sh
+          bash -n support/support-agent-golden-halo-upgrade.sh
           php -l examples/license-validation.php
           bash -n support/builder-studio-db-backup.sh
       - name: Check PHP syntax
