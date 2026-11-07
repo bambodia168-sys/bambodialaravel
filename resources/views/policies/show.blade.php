@@ -1,36 +1,56 @@
 @extends('layouts.main')
 @section('title',$policy->title)
 @section('content')
-<div class="container inner-page">
-  <div class="page-intro"><div class="eyebrow">Policy Center</div><h1>{{ $policy->title }}</h1><p>Last administrator review: {{ $policy->reviewed_at?->format('d M Y') ?? 'Not recorded' }}</p></div>
+<div class="container inner-page policy-single-premium">
+  <div class="policy-single-hero">
+    <a href="{{ route('policy-center') }}" class="policy-back"><x-icon name="chevron-left" size="16"/> All policies</a>
+    <div class="eyebrow">Bambodia · Legal policy</div>
+    <h1>{{ $policy->title }}</h1>
+    <div class="policy-single-meta">
+      <span><x-icon name="shield" size="16"/> Policy ID <strong class="mono">{{ $policy->public_code }}</strong></span>
+      <span><x-icon name="book-open" size="16"/> {{ ucfirst($policy->category) }}</span>
+      <span><x-icon name="file-check" size="16"/> v{{ $publication?->version ?? $policy->version }}</span>
+      <span><x-icon name="clock" size="16"/> Published {{ $policy->published_at?->format('d M Y') ?? $publication?->created_at?->format('d M Y') ?? 'Date unavailable' }}</span>
+    </div>
+    <div class="policy-single-actions">
+      <button type="button" class="btn subtle" data-policy-copy-url="{{ $policy->publicUrl() }}"><x-icon name="copy" size="16"/> Copy full URL</button>
+      <button type="button" class="btn subtle" data-policy-print><x-icon name="file-text" size="16"/> Print</button>
+      <button type="button" class="btn subtle" data-policy-share="{{ $policy->publicUrl() }}"><x-icon name="external-link" size="16"/> Share</button>
+      <span class="policy-copy-feedback" aria-live="polite"></span>
+    </div>
+  </div>
   <div class="policy-layout">
-    <aside class="panel policy-aside"><h2>Policy directory</h2>
+    <aside class="panel policy-aside">
+      <h2>Policy directory</h2>
       @foreach($otherPolicies as $other)
-        <a class="{{ $other->id === $policy->id ? 'active' : '' }}" href="{{ $other->publicUrl() }}"><x-icon name="file" size="17"/>{{ $other->title }}</a>
+        <a class="{{ $other->id === $policy->id ? 'active' : '' }}" href="{{ $other->publicUrl() }}"><x-icon name="file-text" size="16"/>{{ $other->title }}</a>
       @endforeach
     </aside>
-    <article class="panel policy-article"><div class="eyebrow">{{ ucfirst($policy->category) }} @if($policy->jurisdiction) · {{ $policy->jurisdiction }} @endif</div><h2>{{ $policy->title }}</h2><div class="policy-copy">{!! nl2br(e($policy->body)) !!}</div>
+    <article class="panel policy-article policy-formatted-content">
+      <div class="policy-single-detail-grid">
+        <div><span>Jurisdiction</span><strong>{{ $policy->jurisdiction ?: 'As specified in the policy' }}</strong></div>
+        <div><span>Last updated</span><strong>{{ $policy->updated_at?->format('d M Y') ?? 'Not recorded' }}</strong></div>
+        <div><span>Person in charge</span><strong><a href="mailto:{{ $policy->pic_email }}">{{ $policy->pic_email }}</a></strong></div>
+      </div>
+      <div class="policy-copy">{!! $policyHtml !!}</div>
       @if($publication)
-        <div class="onboarding-content">
-          <p><strong>Published revision:</strong> {{ $publication->revision }}</p>
-          <p><strong>Publication SHA-256:</strong> <span class="mono hash-line">{{ $publication->sha256 }}</span></p>
+        <section class="policy-reading-ack">
+          <p class="text-muted"><strong>Published revision:</strong> {{ $publication->revision }} &nbsp; <strong>Version:</strong> {{ $publication->version ?? $policy->version }}</p>
+          <p class="policy-hash">Publication SHA-256: <span class="mono">{{ $publication->sha256 }}</span></p>
           @auth
             @if($acknowledged)
-              <p class="notice success">You have already recorded a voluntary reading acknowledgement for this revision.</p>
+              <p class="notice success">You have recorded a voluntary acknowledgement for this revision.</p>
             @else
               <form method="post" action="{{ route('policy.acknowledge',$publication) }}">
                 @csrf
-                <label class="check-label"><input type="checkbox" name="confirm_read" value="1" required>
-                  I confirm I have read this published revision and want to record an optional acknowledgement.</label>
-                <button class="btn primary" type="submit">Record reading acknowledgement</button>
+                <label class="check-label"><input name="confirm_read" type="checkbox" value="1" required> I have read this revision and voluntarily wish to record an acknowledgement.</label>
+                <button class="btn subtle" type="submit">Record acknowledgement</button>
               </form>
             @endif
-            <p><a href="{{ route('account.policy-receipts') }}">View my policy receipts</a></p>
+            <p><a href="{{ route('account.policy-receipts') }}">View policy receipts</a></p>
           @endauth
-          <p class="hint">Reading acknowledgement is voluntary. It is not blanket consent to process personal data, not a verified legal e-signature, and does not replace a jurisdiction-specific privacy basis or legal review.</p>
-        </div>
-      @else
-        <p class="hint">This policy was published before revision receipts were enabled. Administrators must republish after legal review before optional reading acknowledgements can be recorded.</p>
+          <p class="text-muted">Acknowledgements are voluntary and do not replace legally required consent or contract acceptance.</p>
+        </section>
       @endif
     </article>
   </div>
