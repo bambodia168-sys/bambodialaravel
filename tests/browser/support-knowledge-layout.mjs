@@ -36,10 +36,29 @@ try{
           viewportWidth:window.innerWidth,
           categoryStyles,
           assistanceBackground:getComputedStyle(document.querySelector('.support-contact-cta')).backgroundColor,
-          excerptCount:document.querySelectorAll('.support-article-card p').length,
+          cards:[...document.querySelectorAll('.support-article-card')].map(card=>{
+            const excerpt=card.querySelector('.support-article-excerpt');
+            const icon=card.querySelector('.support-article-card-glyph');
+            const number=card.querySelector('.support-article-card-number');
+            const cardRect=card.getBoundingClientRect();
+            const excerptStyle=excerpt?getComputedStyle(excerpt):null;
+            const iconStyle=icon?getComputedStyle(icon):null;
+            return {
+              hasSummary:!!excerpt?.textContent.trim(),
+              lineClamp:excerptStyle?.webkitLineClamp,
+              excerptHeight:excerpt?.getBoundingClientRect().height,
+              lineHeight:excerptStyle?parseFloat(excerptStyle.lineHeight):0,
+              number:number?.textContent.trim(),
+              iconOpacity:iconStyle?Number(iconStyle.opacity):1,
+              numberOpacity:number?Number(getComputedStyle(number).opacity):1,
+              iconRight:icon?.getBoundingClientRect().right-cardRect.left,
+              iconWidth:icon?.getBoundingClientRect().width,
+              cardWidth:cardRect.width,
+            };
+          }),
         };
       },theme);
-      const {columns,documentWidth,viewportWidth,categoryStyles,assistanceBackground,excerptCount} = measurements;
+      const {columns,documentWidth,viewportWidth,categoryStyles,assistanceBackground,cards} = measurements;
       if(columns !== viewport.columns)
         throw Error('Expected '+viewport.columns+' article columns at '+viewport.width+', found '+columns);
       if(documentWidth > viewportWidth+5)
@@ -50,11 +69,25 @@ try{
         throw Error('Category numbering or icon size incorrect at '+viewport.width+'/'+theme);
       if(!/rgba\([^)]*,\s*0\)/.test(assistanceBackground) && assistanceBackground !== 'transparent')
         throw Error('Personal Assistance still has a section background: '+assistanceBackground);
-      if(excerptCount !== 0) throw Error('Article cards still render summaries');
+      if(cards.length !== 2 || cards.some((card,i)=>!
+        card.hasSummary || card.lineClamp !== '2' ||
+        card.excerptHeight > card.lineHeight*2+3 ||
+        card.number !== String(i+1).padStart(2,'0') ||
+        card.iconOpacity > .18 || card.numberOpacity > .16 ||
+        card.iconWidth < 60 || card.iconRight > card.cardWidth+2))
+        throw Error('Article summary or blended icon/number acceptance failed at '+viewport.width+'/'+theme+': '+JSON.stringify(cards));
       if(viewport.width===1600 || viewport.width===390)
         await page.screenshot({path:output+'/support-knowledge-'+viewport.width+'-'+theme+'.png',fullPage:true});
       console.log('PASS public support layout '+viewport.width+'px '+theme+' ('+columns+' columns)');
     }
+    const cardLink = await page.locator('.support-article-card').first().getAttribute('href');
+    const articleResponse = await page.goto(new URL(cardLink,origin).href,{waitUntil:'networkidle'});
+    if(articleResponse?.status()!==200 || await page.locator('.support-related-link').count()!==1)
+      throw Error('Published article sidebar must show another published help guide');
+    const firstTitle = (await page.locator('.support-related-link').first().textContent()).trim();
+    if(!firstTitle.includes('Browser QA'))
+      throw Error('Sidebar link title missing or incorrect');
+    console.log('PASS single article sidebar has a cross-category published guide at '+viewport.width);
     await page.close();
   }
 }finally{
