@@ -223,6 +223,10 @@
                 <div><small>License</small><strong>{{ $item->public_id }}</strong></div>
                 <div><small>Customer</small><strong>{{ $item->customer?->public_id }}</strong></div>
               </div>
+              <div class="license-product-description">
+                <h3>Product description</h3>
+                <p>{{ $item->product->description ?: 'No product description available.' }}</p>
+              </div>
               <label class="license-product-url-label" for="issued-product-url-{{ $item->id }}">Full product URL</label>
               <div class="license-product-url-row">
                 <input id="issued-product-url-{{ $item->id }}" type="text" readonly value="{{ $item->product->publicUrl() }}">
