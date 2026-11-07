@@ -10,8 +10,10 @@
       <table class="data-table"><thead><tr><th>Listing ID</th><th>Title</th><th>Type</th><th>Status</th><th>Submitted</th><th>Action</th></tr></thead><tbody>
       @forelse($listings as $listing)
       <tr><td class="mono">{{ $listing->public_id }}</td><td><strong>{{ $listing->title }}</strong></td><td>{{ ucfirst($listing->type) }}</td><td><span class="role-pill">{{ ucfirst($listing->status) }}</span></td><td>{{ $listing->created_at->format('d M Y') }}</td><td>
-      <a class="btn subtle compact" href="{{ url('/builder?='.$listing->public_id) }}"><x-icon name="edit" size="15"/> {{ in_array($listing->status,['draft','rejected'],true) ? 'Edit in builder' : 'Details' }}</a>
-      @if($listing->status === 'published')<a class="btn subtle compact" href="{{ $listing->publicUrl() }}">View</a>@endif
+      <x-row-action-menu :id="'account-listing-'.$listing->id" :label="$listing->title">
+        <a href="{{ url('/builder?='.$listing->public_id) }}"><x-icon name="edit" size="16"/> {{ in_array($listing->status,['draft','rejected'],true) ? 'Edit in builder' : 'Details' }}</a>
+        @if($listing->status === 'published')<a href="{{ $listing->publicUrl() }}"><x-icon name="eye" size="16"/> View</a>@endif
+      </x-row-action-menu>
       </td></tr>
       @empty<tr><td colspan="6" class="empty-cell">No listings have been submitted by this creator.</td></tr>@endforelse
       </tbody></table>
