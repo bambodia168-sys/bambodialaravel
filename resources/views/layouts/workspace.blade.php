@@ -6,7 +6,7 @@
   <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon" sizes="any">
   <link rel="icon" href="{{ asset('favicon.png') }}" type="image/png" sizes="64x64">
   <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}" sizes="152x152">
-  <title>@yield('title','Workspace') · Bambodia</title>
+  <title>{{ trim($__env->yieldContent('title','Workspace')) }} · Bambodia</title>
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
 </head>
