@@ -439,6 +439,31 @@ try {
       if(!(await admin.getByText('Feature Manager').first().count()))
         throw new Error('Admin menu lacks real controls');
       await admin.screenshot({path:out+'/desktop-admin-workspace.png',fullPage:false});
+      // License Manager: a top-level manual-issuance popup, not an expanded row
+      // inside the horizontally scrollable ten-column issued-license table.
+      await admin.goto(origin+'/en/dashboard/license-manager',{waitUntil:'networkidle'});
+      const issueTrigger=admin.locator('[data-modal-open="license-issue-dialog"]');
+      if(!(await issueTrigger.isVisible())) throw new Error('Manual License header action missing');
+      const licenseHeaders=await admin.locator('.license-issued-table thead th').allTextContents();
+      if(licenseHeaders.map(x=>x.trim()).join('|')!=='No|License|Product|Customer|Terms|Period|Support|Status|Domain|Action')
+        throw new Error('Issued License Manager columns have changed: '+licenseHeaders.join(', '));
+      const tableWidth=await admin.locator('.license-issued-scroll').evaluate(el=>({viewport:el.clientWidth,table:el.scrollWidth}));
+      if(tableWidth.table<=tableWidth.viewport)
+        throw new Error('Issued licenses table does not support horizontal scrolling');
+      await issueTrigger.click();
+      const issuanceDialog=admin.locator('#license-issue-dialog');
+      if(!(await issuanceDialog.isVisible()) || !(await issuanceDialog.evaluate(el=>el.open)))
+        throw new Error('Manual License modal is not functional');
+      if(await issuanceDialog.locator('select[name="support_term"]').inputValue()!=='six_months')
+        throw new Error('Default complimentary product support must be six months');
+      await issuanceDialog.locator('[data-modal-close]').first().click();
+      if(await issuanceDialog.isVisible()) throw new Error('Manual License modal failed to close');
+      await admin.locator('#issued-license-search').fill('nonexistent-license-qa');
+      await admin.locator('.license-issued-search button[type="submit"]').click();
+      await admin.waitForLoadState('networkidle');
+      if(!(await admin.getByText('No issued licenses match your search.').isVisible()))
+        throw new Error('Issued License Manager search did not filter results');
+      checks+=6;
       await admin.goto(origin+'/en/dashboard/review-queue?type=service',{waitUntil:'networkidle'});
       if(!(await admin.locator('[aria-label="Pending submissions by type"] a[aria-current="page"]').count()))
         throw new Error('Admin moderation type filter is missing');

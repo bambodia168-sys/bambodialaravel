@@ -537,6 +537,8 @@ class ProductLicenseLifecycleTest extends TestCase
             ->assertOk()->assertSee($license->public_id)
             ->assertSee('data-license-copy-url="',false)
             ->assertSee('product?='.$this->product->public_id.'-'.$this->product->slug,false)
+            ->assertSee('Product description')
+            ->assertSee($this->product->description)
             ->assertSee('id="issued-product-'.$license->id.'"',false)
             ->assertSee('id="issued-'.$license->id.'"',false)
             ->assertSee('No</th><th scope="col">License',false);

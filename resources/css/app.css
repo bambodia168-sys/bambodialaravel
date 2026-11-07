@@ -1444,3 +1444,8 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .license-product-url-row{display:flex;gap:8px;align-items:center}
 .license-product-url-row input{flex:1;min-width:0}
 @media(max-width:700px){.license-issued-heading{align-items:flex-start;flex-wrap:wrap}.license-issued-controls{padding:12px 15px}.license-issued-search-field{max-width:none}.license-issue-fields,.license-product-summary{grid-template-columns:1fr}.license-product-url-row{flex-wrap:wrap}}
+
+/* Issued-license product details show original description as safe text, not executable HTML. */
+.license-product-description{padding:12px 0 14px;border-top:1px solid var(--line);margin-top:12px}
+.license-product-description h3{font-size:14px;font-weight:800;margin:0 0 8px}
+.license-product-description p{white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow-y:auto;line-height:1.6;margin:0}
