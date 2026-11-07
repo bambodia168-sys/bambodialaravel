@@ -74,6 +74,7 @@ jobs:
           bash -n support/support-agent-replacement-upgrade.sh
           bash -n support/support-knowledge-pagination-upgrade.sh
           bash -n support/policy-marketplace-coverage-upgrade.sh
+          bash -n support/unified-row-actions-upgrade.sh
           php -l examples/license-validation.php
           bash -n support/builder-studio-db-backup.sh
       - name: Check PHP syntax
