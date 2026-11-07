@@ -63,7 +63,7 @@
             <button class="policy-editor-tool" type="button" data-policy-fullscreen title="Toggle fullscreen" aria-label="Toggle editor fullscreen"><x-icon name="eye" size="17"/></button>
           </div>
           <div id="policy-editor-area" class="policy-editor-area" data-policy-editor role="textbox" aria-label="Policy content" aria-multiline="true" contenteditable="true" spellcheck="true">{!! $editorHtml !!}</div>
-          <textarea class="policy-editor-source" name="body" data-policy-body required aria-label="Policy HTML source">{{ $content }}</textarea>
+          <textarea class="policy-editor-source" name="body" data-policy-body aria-label="Policy HTML source">{{ $content }}</textarea>
           <p class="policy-editor-hint">Format headings with the toolbar. Markdown headings in existing drafts appear as real headings rather than raw # characters.</p>
         </section>
       </main>
