@@ -20,7 +20,7 @@
 <td>
 @if((int)$record->user_id===(int)auth()->id())
 <span class="text-muted">Self-review prohibited</span>
-@else<a class="btn subtle compact" href="{{ route('dashboard.privacy.inspect',$record) }}">Open case</a>@endif
+@else<x-row-action-menu :id="'privacy-'.$record->id" :label="'Privacy request '.$record->public_id"><a href="{{ route('dashboard.privacy.inspect',$record) }}"><x-icon name="eye" size="16"/> Open case</a></x-row-action-menu>@endif
 </td></tr>
 @empty<tr><td colspan="7" class="empty-cell">No matching personal-data requests.</td></tr>@endforelse
 </tbody></table></div><x-pagination :paginator="$requests"/>
