@@ -33,7 +33,7 @@ class LicenseManagerController extends Controller
         }
 
         $issued = ProductLicense::query()
-            ->with(['customer:id,public_id', 'product:id,title,public_id,user_id,status',
+            ->with(['customer:id,public_id', 'product:id,title,public_id,user_id,status,slug,type,description',
                 'version:id,version,status', 'definition:id,name,version',
                 'entitlement:id,status,expires_at,revoked_at',
                 'activations','events.actor:id,name'])
