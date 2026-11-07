@@ -103,4 +103,16 @@ $terms=\App\Models\Policy::query()->create([
     'sha256'=>\App\Models\PolicyPublication::digestFor($terms),
     'published_by'=>$admin->id,'created_at'=>now(),
 ]);
+// Published knowledge fixtures are strictly disposable browser test records.
+foreach ([
+    ['Browser QA Getting Started Guide', 'getting-started', 'This original short guide explains how to create an account and navigate your dashboard.'],
+    ['Browser QA Product License Guide', 'licenses', 'Learn how to review your license details and find product access information.'],
+] as [$title, $category, $excerpt]) {
+    \\App\\Models\\KnowledgeArticle::query()->create([
+        'title' => $title, 'category' => $category, 'excerpt' => $excerpt,
+        'body' => str_repeat('Use the QA guidance to review your account securely. ', 3),
+        'body_format' => 'markdown', 'status' => 'published',
+        'author_id' => $admin->id, 'reviewed_by' => $admin->id, 'published_at' => now(),
+    ]);
+}
 echo "Public browser fixtures, including test-only published Terms, seeded in an isolated test database.\n";
