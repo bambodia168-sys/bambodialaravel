@@ -26,7 +26,7 @@
           <td><span class="role-pill">{{ ucfirst($version->status) }}</span>
             <div class="text-muted">AV: {{ ucfirst($version->malware_scan_status) }}</div>
             <div class="text-muted">Rights: {{ ucfirst($version->rights_review_status) }}</div></td>
-          <td><button class="btn subtle compact" type="button" data-modal-open="vault-{{ $version->id }}"><x-icon name="settings" size="15"/> Configure</button>
+          <td><x-row-action-menu :id="'vault-'.$version->id" :label="'Release '.$version->version"><button type="button" data-modal-open="vault-{{ $version->id }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
             <dialog class="config-dialog wide-dialog" id="vault-{{ $version->id }}">
               <h2>{{ $version->product?->title }}</h2><p>Release {{ $version->version }} · {{ $version->original_filename }}</p>
               <p><strong>Uploader:</strong> {{ $version->uploader?->name }}</p>
