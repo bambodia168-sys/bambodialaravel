@@ -33,10 +33,10 @@
             <td>{{ $policy->reviewed_at?->format('d M Y') ?? 'Pending' }}</td>
             <td>{{ $policy->updated_at?->format('d M Y') ?? '—' }}</td>
             <td>
-              <div class="toolbar-actions">
-                <a class="btn subtle compact" href="{{ route('dashboard.policies.edit',$policy) }}"><x-icon name="edit" size="15"/> Edit</a>
-                <a class="btn subtle compact" href="{{ route('dashboard.policies.preview',$policy) }}"><x-icon name="eye" size="15"/> Preview</a>
-              </div>
+              <x-row-action-menu :id="'policy-'.$policy->id" :label="$policy->title">
+                <a href="{{ route('dashboard.policies.edit',$policy) }}"><x-icon name="edit" size="16"/> Edit</a>
+                <a href="{{ route('dashboard.policies.preview',$policy) }}"><x-icon name="eye" size="16"/> Preview</a>
+              </x-row-action-menu>
             </td>
           </tr>
         @empty
