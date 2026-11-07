@@ -12,7 +12,7 @@ final class BuilderContent
 {
     private const ALLOWED = [
         'p', 'div', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'del', 'mark',
-        'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+        'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
         'a', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'span',
         'sup', 'sub', 'font', 'iframe',
     ];
@@ -80,7 +80,7 @@ final class BuilderContent
             return '';
         }
         $spaced = preg_replace(
-            '~</(?:p|div|h2|h3|h4|blockquote|li|pre|tr)>|<br\s*/?>~i',
+            '~</(?:p|div|h1|h2|h3|h4|blockquote|li|pre|tr)>|<br\s*/?>~i',
             "\n",
             $html
         );
