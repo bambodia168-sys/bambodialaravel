@@ -57,6 +57,7 @@ use App\Http\Controllers\Dashboard\SupportCenterController;
 use App\Http\Controllers\Dashboard\KnowledgeBaseController as KnowledgeBaseManagerController;
 use App\Http\Controllers\Dashboard\FeatureManagerController;
 use App\Http\Controllers\Dashboard\ContentManagerController;
+use App\Http\Controllers\Dashboard\PostManagerController;
 use App\Http\Controllers\Dashboard\PolicyManagerController;
 use Illuminate\Support\Facades\Route;
 
@@ -284,9 +285,13 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/page-manager', [ContentManagerController::class, 'pages'])->name('dashboard.pages');
             Route::post('/page-manager', [ContentManagerController::class, 'storePage'])->name('dashboard.pages.store');
             Route::patch('/page-manager/{entry}', [ContentManagerController::class, 'updatePage'])->name('dashboard.pages.update');
-            Route::get('/post-manager', [ContentManagerController::class, 'posts'])->name('dashboard.posts');
-            Route::post('/post-manager', [ContentManagerController::class, 'storePost'])->name('dashboard.posts.store');
-            Route::patch('/post-manager/{entry}', [ContentManagerController::class, 'updatePost'])->name('dashboard.posts.update');
+            Route::get('/post-manager', [PostManagerController::class, 'index'])->name('dashboard.posts');
+            Route::get('/post-manager/create', [PostManagerController::class, 'create'])->name('dashboard.posts.create');
+            Route::get('/post-manager/{entry}/edit', [PostManagerController::class, 'edit'])->name('dashboard.posts.edit');
+            Route::get('/post-manager/{entry}/preview', [PostManagerController::class, 'preview'])->name('dashboard.posts.preview');
+            Route::post('/post-manager', [PostManagerController::class, 'store'])->name('dashboard.posts.store')->middleware('throttle:12,1');
+            Route::patch('/post-manager/{entry}', [PostManagerController::class, 'update'])->name('dashboard.posts.update')->middleware('throttle:20,1');
+            Route::delete('/post-manager/{entry}', [PostManagerController::class, 'destroy'])->name('dashboard.posts.destroy')->middleware('throttle:5,1');
             Route::get('/knowledge-base', [KnowledgeBaseManagerController::class, 'index'])->name('dashboard.knowledge.index');
             Route::get('/knowledge-base/create', [KnowledgeBaseManagerController::class, 'create'])->name('dashboard.knowledge.create');
             Route::get('/knowledge-base/{article}/edit', [KnowledgeBaseManagerController::class, 'edit'])->name('dashboard.knowledge.edit');
