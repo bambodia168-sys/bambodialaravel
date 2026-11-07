@@ -16,7 +16,7 @@ PHP="/www/server/php/85/bin/php"
 CONF="/www/server/panel/vhost/nginx/bambodia.com.conf"
 BACKUP_DIR="/root/Bambodia-SupportHero-Content-Backups"
 ARTIFACT="Bambodia-Installer-v0.0.1"
-FILES=(resources/css/app.css resources/views/support/knowledge-index.blade.php resources/views/dashboard/knowledge-index.blade.php app/Support/SupportKnowledge.php app/Http/Controllers/Dashboard/KnowledgeBaseController.php routes/web.php)
+FILES=(resources/css/app.css resources/views/support/knowledge-index.blade.php resources/views/dashboard/knowledge-index.blade.php app/Support/SupportKnowledge.php app/Http/Controllers/Dashboard/KnowledgeBaseController.php app/Models/AuditEvent.php routes/web.php)
 ARTWORK="public/images/support-agent-hero.svg"
 stop(){ echo "BLOCKED: $*" >&2; exit 1; }
 [[ "$MODE" == --check || "$MODE" == --apply ]] || stop "Invalid mode"
