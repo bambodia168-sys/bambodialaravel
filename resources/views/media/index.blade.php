@@ -20,7 +20,7 @@
             <td>{{ ucfirst($asset->rights_basis) }}<div class="text-muted">{{ $asset->rights_holder }}</div></td>
             <td><span class="role-pill">{{ ucfirst($asset->review_status) }}</span></td><td>{{ $asset->cover_listings_count }}</td>
             <td>
-              <button class="btn subtle compact" type="button" data-modal-open="media-{{ $asset->id }}"><x-icon name="settings" size="16"/> Configure</button>
+              <x-row-action-menu :id="'media-'.$asset->id" :label="$asset->original_name"><button type="button" data-modal-open="media-{{ $asset->id }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
               <dialog id="media-{{ $asset->id }}" class="config-dialog wide-dialog">
                 <div class="dialog-heading"><h2>{{ $asset->original_name }}</h2><p>ID {{ $asset->public_id }} · {{ $asset->mime_type }}</p></div>
                 @if(str_starts_with($asset->mime_type,'video/'))<video class="media-dialog-preview" src="{{ $asset->previewUrl() }}" controls preload="metadata" playsinline></video>@else<img class="media-dialog-preview" src="{{ $asset->previewUrl() }}" alt="{{ $asset->alt_text }}" loading="lazy">@endif
