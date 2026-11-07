@@ -13,6 +13,7 @@ use App\Models\MarketplaceCategory;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\MediaAsset;
+use App\Models\Policy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -66,6 +67,9 @@ class BuilderController extends Controller
             ? MarketplaceCategory::query()->where('type', $type)->where('is_active', true)
                 ->orderBy('sort_order')->orderBy('name')->get(['id', 'type', 'name'])
             : collect();
+        $publishedLegalPolicies = Policy::query()->where('status', 'published')
+            ->whereIn('title', ['Regular License', 'Extended License', 'Terms of Service', 'Privacy Policy', 'Creator and Seller Agreement', 'Refund and Cancellation Policy'])
+            ->orderBy('title')->get(['id', 'title', 'public_id', 'slug']);
         $termsPublications = BuilderSubmissionTerms::publications();
         $termsSha256 = BuilderSubmissionTerms::digest($termsPublications);
         $suggestedTerms = BuilderSubmissionTerms::suggestedTerms($termsPublications);
@@ -88,7 +92,7 @@ class BuilderController extends Controller
 
         return view('builder.index', compact(
             'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'licenses', 'regularLicenses', 'extendedLicenses', 'assets',
-            'termsPublications', 'termsSha256', 'suggestedTerms', 'productVersions'
+            'termsPublications', 'termsSha256', 'suggestedTerms', 'productVersions', 'publishedLegalPolicies'
         ));
     }
 
