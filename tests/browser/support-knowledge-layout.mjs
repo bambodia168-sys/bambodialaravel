@@ -52,6 +52,9 @@ try{
               iconOpacity:iconStyle?Number(iconStyle.opacity):1,
               numberOpacity:number?Number(getComputedStyle(number).opacity):1,
               iconRight:icon?.getBoundingClientRect().right-cardRect.left,
+              iconBottom:cardRect.bottom-(icon?.getBoundingClientRect().bottom||0),
+              iconTop:(icon?.getBoundingClientRect().top||0)-cardRect.top,
+              numberBottom:(number?.getBoundingClientRect().bottom||0)-cardRect.top,
               iconWidth:icon?.getBoundingClientRect().width,
               cardWidth:cardRect.width,
             };
@@ -74,7 +77,9 @@ try{
         card.excerptHeight > card.lineHeight*2+3 ||
         card.number !== String(i+1).padStart(2,'0') ||
         card.iconOpacity > .18 || card.numberOpacity > .16 ||
-        card.iconWidth < 60 || card.iconRight > card.cardWidth+2))
+        card.iconWidth < 60 || card.iconRight > card.cardWidth+2 ||
+        card.iconBottom < 8 || card.iconBottom > 21 ||
+        card.iconTop <= card.numberBottom + 5))
         throw Error('Article summary or blended icon/number acceptance failed at '+viewport.width+'/'+theme+': '+JSON.stringify(cards));
       if(viewport.width===1600 || viewport.width===390)
         await page.screenshot({path:output+'/support-knowledge-'+viewport.width+'-'+theme+'.png',fullPage:true});
@@ -84,6 +89,10 @@ try{
     const articleResponse = await page.goto(new URL(cardLink,origin).href,{waitUntil:'networkidle'});
     if(articleResponse?.status()!==200 || await page.locator('.support-related-link').count()!==1)
       throw Error('Published article sidebar must show another published help guide');
+    const sidebarNumbers = await page.locator('.support-related-link .support-related-number').allTextContents();
+    if(sidebarNumbers.map(n=>n.trim()).join(',') !== '01' ||
+       await page.locator('.support-related-link svg').count() !== 0)
+      throw Error('Article navigation must use continuous numbering instead of file icons');
     const firstTitle = (await page.locator('.support-related-link').first().textContent()).trim();
     if(!firstTitle.includes('Browser QA'))
       throw Error('Sidebar link title missing or incorrect');
