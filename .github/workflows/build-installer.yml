@@ -37,6 +37,7 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check --no-input Pillow==11.3.0
           python support/enhance-support-agent.py public/images/support-agent-photo.webp
+          python support/prepare-support-agent-dark.py public/images/support-agent-photo.webp public/images/support-agent-photo-dark.webp
       - name: Assert complete runtime
         run: |
           test -f vendor/autoload.php
