@@ -117,6 +117,8 @@ for file in "${FILES[@]}"; do
   install -o www -g www -m 0644 "$RELEASE/$file" "$APP/$file"
   cmp -s "$RELEASE/$file" "$APP/$file" || stop "Copy mismatch: $file"
 done
+install -o www -g www -m 0644 "$RELEASE/$ARTWORK" "$APP/$ARTWORK"
+cmp -s "$RELEASE/$ARTWORK" "$APP/$ARTWORK" || stop "Enhanced image copy failed"
 rsync -a "$RELEASE/public/build/" "$APP/public/build/"
 chown -R www:www "$APP/public/build"
 cmp -s "$RELEASE/public/build/manifest.json" "$APP/public/build/manifest.json" || stop "Compiled manifest mismatch"
