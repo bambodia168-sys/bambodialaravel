@@ -180,9 +180,9 @@ class KnowledgeBaseExperienceTest extends TestCase
             $this->assertCount($expectedCount, $paginator->items());
 
             $html = $response->getContent();
-            $dom = new \\DOMDocument();
+            $dom = new \DOMDocument();
             @$dom->loadHTML($html);
-            $xpath = new \\DOMXPath($dom);
+            $xpath = new \DOMXPath($dom);
             $cards = $xpath->query('//a[contains(concat(" ", normalize-space(@class), " "), " support-article-card ")]');
             $numbers = $xpath->query('//a[contains(concat(" ", normalize-space(@class), " "), " support-article-card ")]/span[contains(@class, "support-article-card-number")]');
 
