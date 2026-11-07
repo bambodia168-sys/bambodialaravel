@@ -1,7 +1,11 @@
+@props(['validationErrors' => []])
 @php
     $feedbackItems = [];
     $seen = [];
-    $errorsForToast = collect($errors->all() ?? [])->filter(fn ($value) => is_string($value) && trim($value) !== '')
+    $sessionErrorBag = request()->hasSession() ? request()->session()->get('errors') : null;
+    $receivedErrors = is_array($validationErrors) ? $validationErrors : [];
+    $sessionErrors = $sessionErrorBag instanceof \Illuminate\Support\ViewErrorBag ? $sessionErrorBag->all() : [];
+    $errorsForToast = collect(array_merge($receivedErrors, $sessionErrors))->filter(fn ($value) => is_string($value) && trim($value) !== '')
         ->map(fn ($value) => trim($value))->unique()->values()->all();
     if ($errorsForToast !== []) {
         $feedbackItems[] = ['kind' => 'error', 'title' => 'Please review these fields',

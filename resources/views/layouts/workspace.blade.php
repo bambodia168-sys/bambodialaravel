@@ -146,7 +146,7 @@
   };
 @endphp
 <body class="dashboard-body workspace-body" data-workspace="{{ $workspace }}">
-<x-flash-feedback />
+<x-flash-feedback :validation-errors="$errors->all()" />
 <div class="workspace-shell" id="workspace-shell">
   <aside class="workspace-sidebar" id="workspace-sidebar" aria-label="{{ $workspaceTitles[$workspace] }} navigation">
     <div class="workspace-sidebar-head">

@@ -11,7 +11,7 @@
   @vite(['resources/css/app.css','resources/js/app.js'])
 </head>
 <body class="auth-body">
-<x-flash-feedback />
+<x-flash-feedback :validation-errors="$errors->all()" />
 <main class="auth-shell">
   <section class="auth-card" aria-labelledby="auth-title">
     <div class="auth-card-head">

@@ -12,7 +12,7 @@
   @vite(['resources/css/app.css','resources/js/app.js'])
 </head>
 <body class="site-body">
-<x-flash-feedback />
+<x-flash-feedback :validation-errors="$errors->all()" />
 <header class="site-header">
   <div class="site-nav container">
     <a class="brand" href="{{ route('home') }}" aria-label="Bambodia home">
