@@ -10,6 +10,7 @@ use App\Models\PolicyPublication;
 use App\Models\PolicyUpdateNotice;
 use App\Support\LegalPolicyDrafts;
 use App\Support\SupplementalLegalPolicyDrafts;
+use App\Support\MarketplaceServiceLegalDrafts;
 use App\Support\PolicyContent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -72,7 +73,7 @@ class PolicyManagerController extends Controller
     {
         $created = DB::transaction(function (): int {
             $count = 0;
-            foreach (SupplementalLegalPolicyDrafts::all() as $template) {
+            foreach (array_merge(SupplementalLegalPolicyDrafts::all(), MarketplaceServiceLegalDrafts::all()) as $template) {
                 if (Policy::query()->where('title', $template['title'])->exists()) {
                     continue;
                 }
@@ -85,7 +86,7 @@ class PolicyManagerController extends Controller
         });
 
         AuditEvent::record('policy.supplemental_drafts_created', $request->user(), $request);
-        return back()->with('status', $created.' additional legal-review drafts created. No terms were published.');
+        return back()->with('status', $created.' additional legal-review drafts created or already present. No terms were published.');
     }
 
     public function store(Request $request): RedirectResponse
