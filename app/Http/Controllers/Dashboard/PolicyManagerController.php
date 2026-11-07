@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Policy;
+use App\Support\LegalPolicyDrafts;
 use App\Models\PolicyPublication;
 use Illuminate\Support\Facades\DB;
 use App\Models\AuditEvent;
@@ -17,6 +18,26 @@ class PolicyManagerController extends Controller
     public function index(): View
     {
         return view('dashboard.policies', ['policies' => Policy::query()->latest()->paginate(10)]);
+    }
+
+    public function seedLegalDrafts(Request $request): RedirectResponse
+    {
+        $created = DB::transaction(function (): int {
+            $created = 0;
+            foreach (LegalPolicyDrafts::all() as $template) {
+                // Never replace an existing or already published policy.
+                if (Policy::query()->where('title', $template['title'])->exists()) {
+                    continue;
+                }
+                Policy::query()->create([...$template, 'status' => 'draft']);
+                $created++;
+            }
+            return $created;
+        });
+
+        AuditEvent::record('policy.legal_drafts_created', $request->user(), $request);
+
+        return back()->with('status', $created.' new legal policy drafts created. Review each document and publish individually after legal approval.');
     }
 
     public function store(Request $request): RedirectResponse
