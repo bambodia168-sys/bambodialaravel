@@ -89,8 +89,9 @@ for stable in artisan composer.json VERSION; do
   [[ -f "$RELEASE/$stable" ]] && cmp -s "$RELEASE/$stable" "$APP/$stable" || stop "Release identity mismatch: $stable"
 done
 [[ -s "$RELEASE/public/build/manifest.json" ]] || stop "Compiled assets missing"
-[[ -s "$RELEASE/$ARTWORK" ]] && cmp -s "$SRC/$ARTWORK" "$RELEASE/$ARTWORK" ||
-  stop "Agent hero illustration missing or mismatched in release"
+[[ -s "$RELEASE/$ARTWORK" && ! -L "$RELEASE/$ARTWORK" ]] || stop "Enhanced portrait absent from packaged installer"
+[[ "$(stat -c %s "$RELEASE/$ARTWORK")" -gt 15000 ]] || stop "Packaged portrait not upgraded"
+if cmp -s "$SRC/$ARTWORK" "$RELEASE/$ARTWORK"; then stop "Release contains unchanged small portrait"; fi
 [[ "$(sha256sum "$SRC/$ARTWORK" | cut -d' ' -f1)" == "524c0c8cb8454d3b04adabe5bb4ff812c61c95d4e98303582d8dfc7d0b2bd700" ]] ||
   stop "Photo source checksum does not match verified render"
 for file in "${FILES[@]}"; do
