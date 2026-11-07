@@ -266,7 +266,7 @@ class KnowledgeBaseExperienceTest extends TestCase
     {
         $admin=$this->member('super_admin');
         $this->actingAs($admin)->post(route('dashboard.policies.supplemental-drafts'))->assertRedirect();
-        $this->assertSame(7,Policy::query()->where('status','draft')->count());
+        $this->assertSame(18,Policy::query()->where('status','draft')->count());
         $this->assertSame(0,Policy::query()->where('status','published')->count());
     }
 }
