@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Guarded Bambodia Post Manager rich editor and CRUD release.
 # Usage: bash support/post-builder-upgrade.sh --check SHA
-#        BAMBODIA_DB_BACKUP_FILE=/root/path/database.sql.gz bash support/knowledge-base-upgrade.sh --apply SHA
+#        BAMBODIA_DB_BACKUP_FILE=/root/path/database.sql.gz bash support/post-builder-upgrade.sh --apply SHA
 # Adds post metadata columns, never seeds or publishes existing content.
 set -Eeuo pipefail
 umask 077
