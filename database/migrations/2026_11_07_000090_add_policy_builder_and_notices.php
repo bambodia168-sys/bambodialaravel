@@ -57,7 +57,7 @@ return new class extends Migration
             $table->foreignId('policy_update_notice_id')->constrained('policy_update_notices')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->timestamp('account_sent_at')->nullable();
-            $table->timestamp('email_queued_at')->nullable();
+            $table->timestamp('email_sent_at')->nullable();
             $table->timestamps();
             $table->unique(['policy_update_notice_id', 'user_id'], 'policy_notice_user_unique');
         });
