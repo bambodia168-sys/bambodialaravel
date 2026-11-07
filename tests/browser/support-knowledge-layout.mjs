@@ -34,6 +34,20 @@ try{
           columns:getComputedStyle(articleGrid).gridTemplateColumns.split(/\s+/).filter(Boolean).length,
           documentWidth:document.documentElement.scrollWidth,
           viewportWidth:window.innerWidth,
+          heroAgent:(()=>{
+            const hero=document.querySelector('.support-knowledge-hero').getBoundingClientRect();
+            const visual=document.querySelector('.support-hero-agent-art');
+            const img=visual.querySelector('img');
+            const agent=visual.getBoundingClientRect();
+            return {
+              loaded:img.complete && img.naturalWidth>0 && img.naturalHeight>0,
+              rightDistance:hero.right-agent.right,
+              visibleWidth:agent.width,
+              imageAlt:img.getAttribute('alt'),
+              layerOpacity:Number(getComputedStyle(visual).opacity),
+              pointerEvents:getComputedStyle(visual).pointerEvents,
+            };
+          })(),
           categoryStyles,
           assistanceBackground:getComputedStyle(document.querySelector('.support-contact-cta')).backgroundColor,
           cards:[...document.querySelectorAll('.support-article-card')].map(card=>{
@@ -61,7 +75,10 @@ try{
           }),
         };
       },theme);
-      const {columns,documentWidth,viewportWidth,categoryStyles,assistanceBackground,cards} = measurements;
+      const {columns,documentWidth,viewportWidth,heroAgent,categoryStyles,assistanceBackground,cards} = measurements;
+      if(!heroAgent.loaded || heroAgent.rightDistance > 60 || heroAgent.visibleWidth<190 ||
+         heroAgent.pointerEvents!=='none' || heroAgent.imageAlt!=='' || heroAgent.layerOpacity>.8)
+        throw Error('Responsive support agent hero background missing or obstructing interactions: '+JSON.stringify(heroAgent));
       if(columns !== viewport.columns)
         throw Error('Expected '+viewport.columns+' article columns at '+viewport.width+', found '+columns);
       if(documentWidth > viewportWidth+5)
