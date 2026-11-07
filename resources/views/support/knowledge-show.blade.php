@@ -4,12 +4,22 @@
 <div class="container inner-page support-article-layout">
   <aside class="panel support-article-sidebar" aria-label="Help navigation">
     <a href="{{ route('support') }}" class="support-back-link"><x-icon name="chevron-left" size="16"/> All help articles</a>
-    <h2>Related guides</h2>
-    @forelse($related as $item)
-      <a href="{{ $item->publicUrl() }}" class="support-related-link">{{ $item->title }}</a>
-    @empty
+    <h2>More help articles</h2>
+    @if($related->isNotEmpty())
+      <div class="support-sidebar-subtitle">In this category</div>
+      @foreach($related as $item)
+        <a href="{{ $item->publicUrl() }}" class="support-related-link"><x-icon name="file-text" size="16"/><span>{{ $item->title }}</span></a>
+      @endforeach
+    @endif
+    @if($otherGuides->isNotEmpty())
+      <div class="support-sidebar-subtitle">Other guides</div>
+      @foreach($otherGuides as $item)
+        <a href="{{ $item->publicUrl() }}" class="support-related-link"><x-icon name="file-text" size="16"/><span>{{ $item->title }}</span></a>
+      @endforeach
+    @endif
+    @if($related->isEmpty() && $otherGuides->isEmpty())
       <p class="text-muted">More guides will appear as they are published.</p>
-    @endforelse
+    @endif
     <a class="btn subtle" href="{{ route('policy-center') }}">Read our policies</a>
   </aside>
   <article class="panel support-article-main policy-formatted-content">
