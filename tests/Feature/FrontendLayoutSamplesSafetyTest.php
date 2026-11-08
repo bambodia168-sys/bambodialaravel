@@ -57,7 +57,9 @@ class FrontendLayoutSamplesSafetyTest extends TestCase
         $this->assertDatabaseCount('service_inquiries',0);
 
         $this->actingAs($freelancer)->get($job->publicUrl())->assertOk()
-            ->assertSee('fictional job; applications are disabled')
+            ->assertSee('Preview listing')
+            ->assertSee('Browse job opportunities')
+            ->assertDontSee('fictional job; applications are disabled')
             ->assertDontSee('Submit proposal');
         $this->post('/jobs/'.$job->id.'/apply',[
             'cover_message'=>str_repeat('I can help with this responsive site project. ',2),
