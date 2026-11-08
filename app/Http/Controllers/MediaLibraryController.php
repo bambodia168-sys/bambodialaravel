@@ -22,21 +22,24 @@ class MediaLibraryController extends Controller
 {
     public function index(Request $request): View
     {
-        $studio = $request->routeIs('studio.media.*');
+        $studio = $request->routeIs('studio.media.*', 'account.media.*');
+        $accountMedia = $request->routeIs('account.media.*');
+        $routePrefix = $accountMedia ? 'account.media' : ($studio ? 'studio.media' : 'dashboard.media');
         $assets = MediaAsset::query()
             ->with('owner:id,name,public_id')
             ->withCount('coverListings')
             ->when($studio, fn ($query) => $query->where('user_id', $request->user()->id))
             ->latest()->paginate(10)->withQueryString();
 
-        return view('media.index', compact('assets', 'studio'));
+        return view('media.index', compact('assets', 'studio', 'accountMedia', 'routePrefix'));
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $fromBuilder = $request->routeIs('builder.media.store');
         $fromPost = $request->routeIs('dashboard.posts.media.store');
-        $studio = $request->routeIs('studio.media.*') || $fromBuilder;
+        $fromAccount = $request->routeIs('account.media.*');
+        $studio = $request->routeIs('studio.media.*') || $fromAccount || $fromBuilder;
         if ($fromPost) {
             abort_unless(in_array($request->user()->role, ['admin', 'super_admin'], true), 403);
             $request->validate([
@@ -129,7 +132,7 @@ class MediaLibraryController extends Controller
         }
         return $fromBuilder
             ? redirect($returnTo)->with('status', 'Media uploaded privately. You can select it immediately.')
-            : redirect()->route($studio ? 'studio.media.index' : 'dashboard.media.index')
+            : redirect()->route($fromAccount ? 'account.media.index' : ($studio ? 'studio.media.index' : 'dashboard.media.index'))
                 ->with('status', 'Media uploaded to your private library.');
     }
 
@@ -254,7 +257,7 @@ class MediaLibraryController extends Controller
 
     private function authorizeAsset(Request $request, MediaAsset $asset): void
     {
-        if ($request->routeIs('studio.media.*')) {
+        if ($request->routeIs('studio.media.*', 'account.media.*')) {
             abort_unless((int) $asset->user_id === (int) $request->user()->id, 404);
             return;
         }

@@ -186,6 +186,12 @@ Route::middleware('auth')->group(function (): void {
         ->name('account.licenses.domain')->middleware('throttle:4,1');
     Route::post('/account/licenses/{license}/support-renewals', [ProductLicenseController::class,'requestSupport'])
         ->name('account.licenses.support.request')->middleware('throttle:3,1');
+    // Every signed-in member can manage only their own Media Library.
+    Route::get('/account/media-library', [MediaLibraryController::class, 'index'])->name('account.media.index');
+    Route::post('/account/media-library', [MediaLibraryController::class, 'store'])
+        ->name('account.media.store')->middleware('throttle:10,1');
+    Route::patch('/account/media-library/{asset}', [MediaLibraryController::class, 'update'])->name('account.media.update');
+    Route::delete('/account/media-library/{asset}', [MediaLibraryController::class, 'destroy'])->name('account.media.destroy');
     Route::get('/account/downloads', [ProductDownloadController::class, 'index'])->name('account.downloads');
     Route::get('/account/downloads/{entitlement}/file', [ProductDownloadController::class, 'download'])
         ->name('account.downloads.file')->middleware('throttle:10,1');

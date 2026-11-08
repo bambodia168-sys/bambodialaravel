@@ -111,6 +111,7 @@
         ['route'=>'account','label'=>'Account Overview','icon'=>'layout-dashboard'],
         ['route'=>'account.notifications','label'=>'Notifications','icon'=>'bell'],
         ['route'=>'account.downloads','label'=>'My Downloads','icon'=>'download'],
+        ['route'=>'account.media.index','label'=>'My Media Library','icon'=>'image'],
         ['route'=>'account.licenses.index','label'=>'My Licenses','icon'=>'key-round'],
         ['route'=>'account.saved-listings','label'=>'Saved Listings','icon'=>'star'],
         ['route'=>'account.saved-jobs','label'=>'Saved Jobs','icon'=>'bookmark'],

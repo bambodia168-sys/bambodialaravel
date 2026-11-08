@@ -287,4 +287,38 @@ class ProductMediaLicenseTest extends TestCase
         $this->delete('/dashboard/media-library/'.$asset->id)->assertRedirect();
         $this->assertDatabaseMissing('media_assets', ['id' => $asset->id]);
     }
+
+    public function test_customer_account_library_is_private_and_owner_editable(): void
+    {
+        $owner = $this->member('customer');
+        $other = $this->member('customer');
+
+        $this->actingAs($owner)->post(route('account.media.store'), [
+            'image' => $this->makeImage(),
+            'alt_text' => 'Personal project cover image',
+            'rights_basis' => 'owned',
+            'rights_holder' => $owner->name,
+        ])->assertRedirect(route('account.media.index'));
+        $asset = MediaAsset::query()->latest('id')->firstOrFail();
+        $this->actingAs($owner)->get(route('account.media.index'))
+            ->assertOk()->assertSee($asset->original_name)->assertSee('My Account');
+        $this->patch(route('account.media.update', $asset), [
+            'alt_text' => 'New personal image description',
+            'rights_basis' => 'owned', 'rights_holder' => $owner->name,
+        ])->assertRedirect();
+        $this->assertSame('New personal image description', $asset->fresh()->alt_text);
+
+        $this->actingAs($other)->get(route('account.media.index'))
+            ->assertOk()->assertDontSee($asset->original_name);
+        $this->get($asset->previewUrl())->assertNotFound();
+        $this->patch(route('account.media.update', $asset), [
+            'alt_text' => 'Stolen changes', 'rights_basis' => 'owned',
+            'rights_holder' => $other->name,
+        ])->assertNotFound();
+        $this->delete(route('account.media.destroy', $asset))->assertNotFound();
+
+        $this->actingAs($owner)->delete(route('account.media.destroy', $asset))
+            ->assertRedirect();
+        $this->assertDatabaseMissing('media_assets', ['id' => $asset->id]);
+    }
 }

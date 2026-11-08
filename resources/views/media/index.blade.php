@@ -1,4 +1,7 @@
-@extends($studio ? 'layouts.main' : 'layouts.dashboard')
+@extends($accountMedia ? 'layouts.workspace' : ($studio ? 'layouts.main' : 'layouts.dashboard'))
+@if($accountMedia)
+@section('workspace','account')
+@endif
 @section('title','Media Library')
 @section('content')
 <div class="{{ $studio ? 'container inner-page' : '' }}">
@@ -28,7 +31,7 @@
                 @if($asset->rights_note)<p class="review-text">{{ $asset->rights_note }}</p>@endif
                 
                 @if($studio || in_array(auth()->user()->role,['super_admin','admin'],true))
-                <form method="post" action="{{ route($studio ? 'studio.media.update' : 'dashboard.media.update', $asset) }}">
+                <form method="post" action="{{ route($routePrefix.'.update', $asset) }}">
                   @csrf @method('PATCH')
                   <label for="alt-{{ $asset->id }}">Accessible image description</label>
                   <input id="alt-{{ $asset->id }}" name="alt_text" value="{{ $asset->alt_text }}" maxlength="180" required>
@@ -43,7 +46,7 @@
                 </form>
                 @endif
                 @if($asset->cover_listings_count === 0 && !$asset->featuredListings()->exists() && !$asset->featuredJobs()->exists())
-                  <form method="post" action="{{ route($studio ? 'studio.media.destroy' : 'dashboard.media.destroy', $asset) }}">
+                  <form method="post" action="{{ route($routePrefix.'.destroy', $asset) }}">
                     @csrf @method('DELETE')
                     <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn danger" type="submit">Delete unused media</button></div>
                   </form>
@@ -61,7 +64,7 @@
     </div><x-pagination :paginator="$assets"/>
   </section>
   <dialog id="media-new" class="config-dialog wide-dialog">
-    <form method="post" action="{{ route($studio ? 'studio.media.store' : 'dashboard.media.store') }}" enctype="multipart/form-data">
+    <form method="post" action="{{ route($routePrefix.'.store') }}" enctype="multipart/form-data">
       @csrf
       <h2>Upload marketplace media</h2>
       <p>JPEG, PNG, WebP (4 MB), animated GIF (8 MB), or MP4/WebM (20 MB). Images are limited to 24 megapixels. No SVG or executable files.</p>
