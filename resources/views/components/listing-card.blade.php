@@ -1,7 +1,7 @@
 @props(['listing','isSaved'=>false])
 <article class="marketplace-card">
   <a class="marketplace-card-art" href="{{ $listing->publicUrl() }}" aria-label="View {{ $listing->title }}">
-    @if($listing->type==='product' && $listing->coverAsset?->review_status==='approved')
+    @if($listing->type==='product' && $listing->coverAsset)
       <img src="{{ $listing->coverAsset->previewUrl() }}" alt="{{ $listing->coverAsset->alt_text }}" loading="lazy">
     @else
       <span class="marketplace-card-placeholder"><x-icon :name="match($listing->type){'product'=>'package','project'=>'layers','freelance'=>'briefcase',default=>'settings'}" size="38"/></span>

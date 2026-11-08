@@ -31,9 +31,9 @@
   <div class="premium-detail-layout">
     <main class="premium-detail-main">
       <section class="premium-showcase" aria-label="Job overview">
-        @if($job->featuredAsset?->review_status === 'approved' && in_array($job->featured_kind, ['image','animated'],true))
+        @if($job->featuredAsset && in_array($job->featured_kind, ['image','animated'],true))
           <img class="premium-showcase-cover" src="{{ $job->featuredAsset->previewUrl() }}" alt="{{ $job->featuredAsset->alt_text ?: $job->title }}">
-        @elseif($job->featuredAsset?->review_status === 'approved' && $job->featured_kind === 'video')
+        @elseif($job->featuredAsset && $job->featured_kind === 'video')
           <video class="premium-showcase-cover studio-showcase-video" src="{{ $job->featuredAsset->previewUrl() }}" controls playsinline preload="metadata" aria-label="{{ $job->featuredAsset->alt_text }}"></video>
         @elseif($job->featured_kind === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/', $job->featured_color ?? ''))
           <div class="premium-showcase-placeholder" style="background-color:{{ $job->featured_color }};color:#fff">
@@ -71,7 +71,7 @@
 
       @if($screenshots->isNotEmpty())
         <section class="panel premium-content-section" id="screenshots">
-          <div class="panel-head"><div><span class="eyebrow">Approved visual resources</span><h2>Screenshots &amp; gallery</h2></div></div>
+          <div class="panel-head"><div><span class="eyebrow">Visual resources</span><h2>Screenshots &amp; gallery</h2></div></div>
           <div class="builder-public-gallery">
             @foreach($screenshots as $shot)
               <a href="{{ $shot->previewUrl() }}" target="_blank" rel="noopener noreferrer"

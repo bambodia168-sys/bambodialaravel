@@ -65,10 +65,10 @@
   <div class="premium-detail-layout">
     <main class="premium-detail-main">
       <section class="premium-showcase" aria-label="{{ $kindTitle }} preview">
-        @if($listing->featuredAsset?->review_status === 'approved' && in_array($listing->featured_kind, ['image','animated'],true))
+        @if($listing->featuredAsset && in_array($listing->featured_kind, ['image','animated'],true))
           <img class="premium-showcase-cover" src="{{ $listing->featuredAsset->previewUrl() }}"
                alt="{{ $listing->featuredAsset->alt_text ?: $listing->title }}" decoding="async">
-        @elseif($listing->featuredAsset?->review_status === 'approved' && $listing->featured_kind === 'video')
+        @elseif($listing->featuredAsset && $listing->featured_kind === 'video')
           <video class="premium-showcase-cover studio-showcase-video" src="{{ $listing->featuredAsset->previewUrl() }}" controls playsinline preload="metadata" aria-label="{{ $listing->featuredAsset->alt_text }}"></video>
         @elseif($listing->featured_kind === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/', $listing->featured_color ?? ''))
           <div class="premium-showcase-placeholder" style="background-color:{{ $listing->featured_color }};color:#fff">
@@ -76,7 +76,7 @@
             <span class="eyebrow" style="color:inherit">{{ $kindTitle }}</span>
             <h2>{{ $listing->title }}</h2>
           </div>
-        @elseif($isProduct && $listing->coverAsset?->review_status === 'approved')
+        @elseif($isProduct && $listing->coverAsset)
           <img class="premium-showcase-cover" src="{{ $listing->coverAsset->previewUrl() }}"
             alt="{{ $listing->coverAsset->alt_text ?: $listing->title }}" decoding="async">
         @else
@@ -113,7 +113,7 @@
 
       @if($screenshots->isNotEmpty())
         <section class="panel premium-content-section" id="screenshots">
-          <div class="panel-head"><div><span class="eyebrow">Approved visual resources</span><h2>Screenshots &amp; gallery</h2></div></div>
+          <div class="panel-head"><div><span class="eyebrow">Visual resources</span><h2>Screenshots &amp; gallery</h2></div></div>
           <div class="builder-public-gallery">
             @foreach($screenshots as $shot)
               <a href="{{ $shot->previewUrl() }}" target="_blank" rel="noopener noreferrer"

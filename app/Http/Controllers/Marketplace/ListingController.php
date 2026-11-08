@@ -36,7 +36,7 @@ class ListingController extends Controller
 
         $listings = MarketplaceListing::query()
             ->with(['creator:id,name,public_id', 'creator.creatorProfile:user_id,is_public,headline',
-                'coverAsset:id,public_id,review_status,alt_text', 'category:id,name,type'])
+                'coverAsset:id,public_id,alt_text', 'category:id,name,type'])
             ->publiclyAvailable()
             ->when($type !== '', fn ($builder) => $builder->where('type', $type))
             ->when($selectedCategory!=='',fn($builder)=>$builder->whereHas('category',fn($q)=>
@@ -80,7 +80,7 @@ class ListingController extends Controller
 
         if ($listing->type === 'product') {
             abort_unless($listing->licenseDefinition?->status === 'active'
-                && $listing->coverAsset?->review_status === 'approved', 404);
+                && $listing->coverAsset, 404);
         }
 
         $isSaved=$request->user()
@@ -92,7 +92,7 @@ class ListingController extends Controller
             ->when($listing->category_id!==null,
                 fn($q)=>$q->where('category_id',$listing->category_id))
             ->with(['creator:id,name,public_id','creator.creatorProfile:user_id,is_public,headline',
-                'coverAsset:id,public_id,alt_text,review_status','category:id,name'])
+                'coverAsset:id,public_id,alt_text','category:id,name'])
             ->latest('id')->limit(3)->get();
         $savedRelatedIds=$request->user()
             ? SavedListing::query()->where('user_id',$request->user()->id)

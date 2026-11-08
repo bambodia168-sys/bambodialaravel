@@ -2,7 +2,7 @@
 @section('title','Product Manager')
 @section('content')
 <div class="page-intro"><div class="eyebrow">Marketplace · Catalog Governance</div><h1>Product Manager</h1>
-  <p>Review real digital product records. Published listings require a verified license definition and an approved preview from their creator.</p></div>
+  <p>Review real digital product records. Published listings require an active license definition and a valid cover image from their creator.</p></div>
 <section class="panel">
   <div class="panel-head">
     <h2>Digital products <span class="count">{{ $products->total() }}</span></h2>
@@ -39,12 +39,12 @@
                 @if($product->licenseDefinition && $product->licenseDefinition->status === 'active')
                   <a href="{{ $product->licenseDefinition->publicUrl() }}" class="btn subtle compact" target="_blank" rel="noopener noreferrer">Read license definition</a>
                 @endif
-                <p><strong>Preview review:</strong> {{ $product->coverAsset?->review_status ?? 'Missing' }}</p>
+                
                 @if($product->license_terms)<strong>Additional terms</strong><p class="review-text">{{ $product->license_terms }}</p>@endif
                 @if($product->status === 'pending')
                   <form method="post" action="{{ route('dashboard.products.decide',$product) }}">
                     @csrf @method('PATCH')
-                    <p class="hint">Publishing is rejected unless an active license, approved owned preview and stored image all exist.</p>
+                    <p class="hint">Publishing requires an active license, a valid creator-owned preview, and a securely stored image.</p>
                     <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn subtle" type="submit" name="decision" value="rejected">Reject</button><button class="btn primary" type="submit" name="decision" value="published">Publish product</button></div>
                   </form>
                 @else

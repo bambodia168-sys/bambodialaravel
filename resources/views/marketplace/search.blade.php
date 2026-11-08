@@ -10,7 +10,7 @@
     default=>'Explore the marketplace',
   };
   $browseIntro = match($type){
-    'product'=>'Find published, licensed digital products with approved previews.',
+    'product'=>'Find published, licensed digital products with clear media previews.',
     'project'=>'Discover creator-published projects and discuss requirements privately.',
     'service'=>'Compare published services and contact providers through private inquiries.',
     'freelance'=>'Explore professional offers from creators on Bambodia.',
