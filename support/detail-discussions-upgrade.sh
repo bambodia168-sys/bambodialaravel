@@ -168,6 +168,8 @@ cmp -s "$APP/public/build/manifest.json" "$RELEASE/public/build/manifest.json" \
 
 echo '6. Run additive database migration, compile Blade and restore service'
 (cd "$APP" && runuser -u www -- "$PHP" artisan migrate --force --no-interaction)
+# The app uses some route closures, so clear stale routes without attempting route:cache.
+(cd "$APP" && runuser -u www -- "$PHP" artisan route:clear)
 (cd "$APP" && runuser -u www -- "$PHP" artisan view:clear && \
   runuser -u www -- "$PHP" artisan view:cache)
 [[ "$(sha256sum "$APP/.env" | cut -d' ' -f1)" == "$ENV_SHA" ]] || block '.env changed unexpectedly'
