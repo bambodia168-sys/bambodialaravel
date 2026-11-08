@@ -9,6 +9,10 @@
     ? \App\Support\PolicyContent::sanitize($body)
     : nl2br(e($body));
   $selectedMedia = old('featured_media_id', $post->featured_media_id);
+  $mediaType = old('featured_type', $post->featured_type ?? ($post->featured_media_id ? ($post->featuredMedia && str_starts_with($post->featuredMedia->mime_type, 'video/') ? 'video' : 'image') : 'none'));
+  $mediaType = in_array($mediaType, ['none', 'image', 'video', 'youtube', 'color'], true) ? $mediaType : 'none';
+  $categoryOptions = ['AI', 'Technology', 'Business', 'Finance', 'Design', 'Development', 'Marketing', 'Education', 'Security', 'Trends'];
+  $selectedCategory = old('category', $post->category);
 @endphp
 <div class="policy-builder post-builder" data-post-builder>
   <div class="policy-builder-heading">
@@ -59,7 +63,7 @@
             rows="3" placeholder="Summarize the post for readers and search results.">{{ old('excerpt', $post->excerpt) }}</textarea>
           <div class="policy-editor-heading">
             <label class="policy-builder-label" for="post-body-editor">Post content</label>
-            <small>Headings, paragraphs, lists, quotes, tables and links</small>
+            
           </div>
           <div class="policy-editor-toolbar" role="toolbar" aria-label="Post formatting toolbar">
             <select data-policy-block aria-label="Paragraph or heading style">
@@ -106,29 +110,68 @@
         <section class="panel policy-side-panel">
           <div class="policy-side-head"><x-icon name="settings" size="19"/><strong>Post details</strong></div>
           <label class="policy-builder-label" for="post-category">Category</label>
-          <input id="post-category" name="category" value="{{ old('category', $post->category) }}"
-                 maxlength="80" placeholder="e.g. Marketplace updates">
+          <select id="post-category" name="category" aria-label="Post category">
+            <option value="">Select a category</option>
+            @foreach($categoryOptions as $categoryOption)
+              <option value="{{ $categoryOption }}" @selected($selectedCategory === $categoryOption)>{{ $categoryOption }}</option>
+            @endforeach
+            @if($selectedCategory && !in_array($selectedCategory, $categoryOptions, true))
+              <option value="{{ $selectedCategory }}" selected>{{ $selectedCategory }} (existing)</option>
+            @endif
+          </select>
           <label class="policy-builder-label" for="post-tags">Tags</label>
           <input id="post-tags" name="tags" value="{{ old('tags', $post->tags) }}"
                  maxlength="320" placeholder="News, Product, Creators">
           <p class="policy-help">Use commas to separate up to 10 tags (35 characters per tag).</p>
         </section>
-        <section class="panel policy-side-panel">
-          <div class="policy-side-head"><x-icon name="image" size="19"/><strong>Featured image</strong></div>
-          <label class="policy-builder-label" for="post-featured-media">Choose an approved image</label>
-          <select id="post-featured-media" name="featured_media_id" data-post-featured-select>
-            <option value="">No featured image</option>
-            @foreach($media as $asset)
-              <option value="{{ $asset->id }}" data-image-url="{{ $asset->previewUrl() }}"
-                data-alt="{{ $asset->alt_text }}" @selected((string)$selectedMedia === (string)$asset->id)>
-                {{ \Illuminate\Support\Str::limit($asset->original_name, 55) }}
-              </option>
+        <section class="panel policy-side-panel post-featured-panel" data-post-media data-upload-url="{{ route('dashboard.posts.media.store') }}">
+          <div class="policy-side-head"><x-icon name="image" size="19"/><strong>Featured media</strong></div>
+          <label class="policy-builder-label" for="post-feature-type">Media type</label>
+          <select id="post-feature-type" name="featured_type" data-post-feature-type>
+            @foreach(['none' => 'None', 'image' => 'Image', 'video' => 'Video', 'youtube' => 'YouTube', 'color' => 'Color'] as $type => $label)
+              <option value="{{ $type }}" @selected($mediaType === $type)>{{ $label }}</option>
             @endforeach
           </select>
-          <div class="post-featured-preview" data-post-featured-preview aria-live="polite">
-            <img alt="" hidden><span>Choose an approved Media Library image to preview it.</span>
+          <input type="hidden" name="featured_media_id" data-post-featured-id value="{{ $selectedMedia }}">
+          <div class="post-featured-dropzone" data-post-featured-dropzone tabindex="0" role="button" aria-label="Upload image or video; drag files here">
+            <div data-post-featured-stage class="post-featured-stage" aria-live="polite">
+              <x-icon name="upload-cloud" size="25"/>
+              <span>Drag &amp; drop an image or video here, or choose a source.</span>
+            </div>
           </div>
-          <p class="policy-help">Only images approved by Media Library review are selectable. The selection is saved with the post.</p>
+          <div data-post-featured-files hidden>
+            <div class="post-featured-controls">
+              <button type="button" class="btn subtle compact" data-post-featured-browse>Upload file</button>
+              <button type="button" class="btn subtle compact" data-post-featured-library>Media Library</button>
+            </div>
+            <input data-post-featured-file type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" hidden>
+            <div data-post-featured-library-controls hidden>
+              <label class="policy-builder-label" for="post-featured-media">Select from Media Library</label>
+              <select id="post-featured-media" data-post-featured-select>
+                <option value="">Choose media</option>
+                @foreach($media as $asset)
+                  <option value="{{ $asset->id }}" data-media-url="{{ $asset->previewUrl() }}"
+                    data-alt="{{ $asset->alt_text }}" data-mime="{{ $asset->mime_type }}" data-review="{{ $asset->review_status }}"
+                    @selected((string)$selectedMedia === (string)$asset->id)>
+                    {{ \Illuminate\Support\Str::limit($asset->original_name, 46) }}{{ $asset->review_status === 'pending' ? ' · Pending review' : '' }}
+                  </option>
+                @endforeach
+              </select>
+            </div>
+            <label class="post-featured-rights"><input type="checkbox" data-post-featured-rights> I confirm I own or have permission to use uploaded media.</label>
+          </div>
+          <div data-post-featured-youtube hidden>
+            <label class="policy-builder-label" for="post-featured-youtube">YouTube link</label>
+            <input id="post-featured-youtube" type="url" name="featured_url"
+              data-post-featured-youtube-url value="{{ old('featured_url', $post->featured_url) }}"
+              placeholder="https://www.youtube.com/watch?v=...">
+          </div>
+          <div data-post-featured-color hidden>
+            <label class="policy-builder-label" for="post-featured-color">Feature color</label>
+            <input id="post-featured-color" type="color" name="featured_color"
+              data-post-featured-color-input value="{{ old('featured_color', $post->featured_color ?: '#2563eb') }}">
+          </div>
+          <p class="policy-help" data-post-featured-feedback role="status">Uploaded media is kept private until approved in Media Library. Publish only with approved files.</p>
           <a class="post-builder-side-link" href="{{ route('dashboard.media.index') }}"><x-icon name="image" size="15"/> Open Media Library</a>
         </section>
         <section class="panel policy-side-panel">
