@@ -177,7 +177,7 @@ class PostBuilderExperienceTest extends TestCase
         $this->assertDatabaseHas('media_assets', ['id'=>$media->id]);
     }
 
-    public function test_unapproved_media_cannot_be_attached_to_a_published_post(): void
+    public function test_pending_media_can_be_published_without_admin_approval(): void
     {
         $admin = $this->member();
         $this->actingAs($admin);
@@ -188,11 +188,17 @@ class PostBuilderExperienceTest extends TestCase
             'alt_text'=>'Unreviewed test image','rights_basis'=>'owned',
             'rights_holder'=>'Test author','review_status'=>'pending',
         ]);
+        Storage::fake('local');
+        Storage::disk('local')->put($media->storage_path, 'pending-image-bytes');
         $this->post(route('dashboard.posts.store'), $this->payload([
             'featured_media_id'=>$media->id,
             'status'=>'published',
-        ]))->assertSessionHasErrors('featured_media_id');
-        $this->assertDatabaseCount('content_entries', 0);
+        ]))->assertRedirect();
+        $entry = ContentEntry::query()->where('type', 'post')->firstOrFail();
+        $this->assertSame('published', $entry->status);
+        $this->get($entry->publicUrl())->assertOk()->assertSee($media->previewUrl());
+        $this->post('/logout')->assertRedirect();
+        $this->get($media->previewUrl())->assertOk();
     }
 
     public function test_category_dropdown_and_safe_youtube_or_color_feature(): void
@@ -223,7 +229,7 @@ class PostBuilderExperienceTest extends TestCase
         $this->get(route('dashboard.posts.preview', $post))->assertSee('background-color:#cc55aa', false);
     }
 
-    public function test_post_drag_drop_upload_is_private_and_requires_review_before_publish(): void
+    public function test_post_drag_drop_upload_can_publish_with_owner_attestation(): void
     {
         Storage::fake('local');
         $admin = $this->member();
@@ -252,12 +258,8 @@ class PostBuilderExperienceTest extends TestCase
         $this->patch(route('dashboard.posts.update', $post), $this->payload([
             'featured_type' => 'image', 'featured_media_id' => $asset->id,
             'status' => 'published',
-        ]))->assertSessionHasErrors('featured_media_id');
-        $this->patch(route('dashboard.media.review', $asset), ['decision' => 'approved'])->assertRedirect();
-        $this->patch(route('dashboard.posts.update', $post), $this->payload([
-            'featured_type' => 'image', 'featured_media_id' => $asset->id,
-            'status' => 'published',
         ]))->assertRedirect();
+        $this->assertSame('pending', $asset->fresh()->review_status);
         $this->get($post->fresh()->publicUrl())->assertOk()->assertSee($asset->previewUrl());
     }
 
@@ -289,4 +291,28 @@ class PostBuilderExperienceTest extends TestCase
         $this->get($asset->previewUrl())->assertOk()->assertStreamed()->assertStreamedContent('private-r2-image-bytes');
     }
 
+
+    public function test_administrators_can_use_media_from_any_owner_without_review(): void
+    {
+        Storage::fake('local');
+        $owner = $this->member('customer');
+        $admin = $this->member('admin');
+        $asset = MediaAsset::query()->create([
+            'user_id' => $owner->id, 'original_name' => 'creator-cover.png',
+            'storage_path' => 'marketplace/previews/'.$owner->id.'/creator-cover.png',
+            'mime_type' => 'image/png', 'bytes' => 10, 'width' => 1, 'height' => 1,
+            'alt_text' => 'Creator cover', 'rights_basis' => 'owned',
+            'rights_holder' => 'Creator', 'review_status' => 'pending',
+        ]);
+        Storage::disk('local')->put($asset->storage_path, 'image contents');
+        $this->actingAs($admin)->get(route('dashboard.posts.create'))
+            ->assertOk()->assertSee('creator-cover.png')->assertDontSee('Pending review');
+        $this->post(route('dashboard.posts.store'), $this->payload([
+            'featured_type' => 'image', 'featured_media_id' => $asset->id,
+            'status' => 'published',
+        ]))->assertRedirect();
+        $this->assertDatabaseHas('content_entries', [
+            'type' => 'post', 'status' => 'published', 'featured_media_id' => $asset->id,
+        ]);
+    }
 }

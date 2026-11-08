@@ -149,28 +149,19 @@ class ProductMediaLicenseTest extends TestCase
         $this->assertSame(1, MediaAsset::query()->count());
     }
 
-    public function test_product_publication_requires_license_and_reviewed_owned_preview(): void
+    public function test_product_publication_requires_license_and_owned_preview_without_media_approval(): void
     {
         $creator = $this->member('freelancer');
         $admin = $this->member('admin');
         $license = $this->createLicense($admin);
         $asset = $this->uploadImage($creator);
 
-        $this->actingAs($creator)->post('/studio/products',
-            $this->productForm($license, $asset, 'pending')
-        )->assertSessionHasErrors('cover_media_id');
-
         $this->post('/studio/products', $this->productForm($license, $asset, 'draft'))
             ->assertRedirect('/studio/products');
         $product = MarketplaceListing::query()->where('type', 'product')->firstOrFail();
         $this->assertSame('draft', $product->status);
 
-        $this->actingAs($admin)->patch('/dashboard/media-library/'.$asset->id.'/review', [
-            'decision' => 'approved',
-        ])->assertRedirect();
-        $this->assertSame('approved', $asset->fresh()->review_status);
-
-        // An approved but unlinked image is still not publicly accessible.
+        // A private, unlinked image is not publicly accessible regardless of review status.
         $this->post('/logout')->assertRedirect();
         $this->get($asset->previewUrl())->assertNotFound();
 
@@ -178,6 +169,7 @@ class ProductMediaLicenseTest extends TestCase
             $this->productForm($license, $asset, 'pending')
         )->assertRedirect();
         $this->assertSame('pending', $product->fresh()->status);
+        $this->assertSame('pending', $asset->fresh()->review_status);
 
         $this->actingAs($admin)->patch('/dashboard/product-manager/'.$product->id, [
             'decision' => 'published',
@@ -256,5 +248,43 @@ class ProductMediaLicenseTest extends TestCase
             'decision' => 'published',
         ])->assertForbidden();
         $this->assertSame('pending', $product->fresh()->status);
+    }
+
+    public function test_regular_users_manage_only_owned_files_and_administrators_manage_all(): void
+    {
+        $owner = $this->member('freelancer');
+        $other = $this->member('freelancer');
+        $admin = $this->member('admin');
+        $superAdmin = $this->member('super_admin');
+        $asset = $this->uploadImage($owner);
+
+        $this->actingAs($other)->get('/studio/media-library')
+            ->assertOk()->assertDontSee($asset->original_name);
+        $this->get($asset->previewUrl())->assertNotFound();
+        $this->patch('/studio/media-library/'.$asset->id, [
+            'alt_text' => 'Not my image', 'rights_basis' => 'owned',
+            'rights_holder' => 'Other',
+        ])->assertNotFound();
+        $this->delete('/studio/media-library/'.$asset->id)->assertNotFound();
+
+        $this->actingAs($owner)->patch('/studio/media-library/'.$asset->id, [
+            'alt_text' => 'Owner updated the photo description',
+            'rights_basis' => 'owned', 'rights_holder' => 'Owner',
+        ])->assertRedirect();
+        $this->assertSame('Owner updated the photo description', $asset->fresh()->alt_text);
+
+        // Previously approved files remain editable; review state no longer locks them.
+        $asset->update(['review_status' => 'approved']);
+        $this->actingAs($admin)->get('/dashboard/media-library')
+            ->assertOk()->assertSee($asset->original_name)->assertDontSee('Approve image rights');
+        $this->patch('/dashboard/media-library/'.$asset->id, [
+            'alt_text' => 'Administrator correction', 'rights_basis' => 'owned',
+            'rights_holder' => 'Owner',
+        ])->assertRedirect();
+        $this->assertSame('Administrator correction', $asset->fresh()->alt_text);
+        $this->actingAs($superAdmin)->get('/dashboard/media-library')->assertOk();
+        $this->get($asset->previewUrl())->assertOk();
+        $this->delete('/dashboard/media-library/'.$asset->id)->assertRedirect();
+        $this->assertDatabaseMissing('media_assets', ['id' => $asset->id]);
     }
 }

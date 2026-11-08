@@ -214,7 +214,7 @@ class UnifiedBuilderTest extends TestCase
             ->assertDontSee('javascript:');
     }
 
-    public function test_featured_media_requires_approved_owned_asset_and_matches_kind(): void
+    public function test_featured_media_accepts_pending_owned_asset_and_matches_kind(): void
     {
         $creator = $this->member('freelancer');
         $other = $this->member('freelancer');
@@ -222,7 +222,7 @@ class UnifiedBuilderTest extends TestCase
             'user_id'=>$creator->id,'original_name'=>'demo.gif','storage_path'=>'media/test-animate.gif',
             'mime_type'=>'image/gif','bytes'=>1234,'width'=>10,'height'=>10,
             'alt_text'=>'Original animation','rights_basis'=>'owned','rights_holder'=>'Creator',
-            'review_status'=>'approved',
+            'review_status'=>'pending',
         ]);
         $payload = [
             'type'=>'service',
