@@ -8,6 +8,7 @@ use App\Models\MediaAsset;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class PostBuilderExperienceTest extends TestCase
@@ -45,7 +46,8 @@ class PostBuilderExperienceTest extends TestCase
             ->assertSee('New post')->assertSee('Post Manager');
         $this->get(route('dashboard.posts.create'))->assertOk()
             ->assertSee('Main Content')->assertSee('Publication')
-            ->assertSee('Featured image')->assertSee('Search metadata');
+            ->assertSee('Featured media')->assertSee('Search metadata')
+            ->assertDontSee('Headings, paragraphs, lists, quotes, tables and links');
 
         $response = $this->post(route('dashboard.posts.store'), $this->payload());
         $post = ContentEntry::query()->where('type', 'post')->firstOrFail();
@@ -191,4 +193,99 @@ class PostBuilderExperienceTest extends TestCase
         ]))->assertSessionHasErrors('featured_media_id');
         $this->assertDatabaseCount('content_entries', 0);
     }
+
+    public function test_category_dropdown_and_safe_youtube_or_color_feature(): void
+    {
+        $this->actingAs($this->member());
+        $page = $this->get(route('dashboard.posts.create'))->assertOk();
+        foreach (['AI','Technology','Business','Finance','Design','Development','Marketing','Education','Security','Trends'] as $category) {
+            $page->assertSee('<option value="'.$category.'"', false);
+        }
+        $this->post(route('dashboard.posts.store'), $this->payload([
+            'category' => 'AI',
+            'featured_type' => 'youtube',
+            'featured_url' => 'https://youtu.be/dQw4w9WgXcQ?t=12',
+        ]))->assertRedirect();
+        $post = ContentEntry::query()->where('type', 'post')->firstOrFail();
+        $this->assertSame('https://www.youtube.com/watch?v=dQw4w9WgXcQ', $post->featured_url);
+        $this->get(route('dashboard.posts.preview', $post))->assertSee('youtube-nocookie.com/embed/dQw4w9WgXcQ');
+        $this->patch(route('dashboard.posts.update', $post), $this->payload([
+            'featured_type' => 'youtube',
+            'featured_url' => 'https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ',
+        ]))->assertSessionHasErrors('featured_url');
+        $this->patch(route('dashboard.posts.update', $post), $this->payload([
+            'featured_type' => 'color',
+            'featured_color' => '#cc55aa',
+        ]))->assertRedirect();
+        $this->assertSame('color', $post->fresh()->featured_type);
+        $this->assertSame('#cc55aa', $post->fresh()->featured_color);
+        $this->get(route('dashboard.posts.preview', $post))->assertSee('background-color:#cc55aa', false);
+    }
+
+    public function test_post_drag_drop_upload_is_private_and_requires_review_before_publish(): void
+    {
+        Storage::fake('local');
+        $admin = $this->member();
+        $this->actingAs($admin);
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8B8CkAAAAASUVORK5CYII=');
+        $payload = [
+            'image' => UploadedFile::fake()->createWithContent('post-cover.png', $png),
+            'alt_text' => 'Licensed editorial cover',
+            'rights_basis' => 'owned',
+            'rights_holder' => 'Post Author',
+        ];
+        $this->postJson(route('dashboard.posts.media.store'), $payload)->assertUnprocessable();
+        $response = $this->postJson(route('dashboard.posts.media.store'), [
+            ...$payload,
+            'image' => UploadedFile::fake()->createWithContent('post-cover.png', $png),
+            'rights_confirmed' => '1',
+        ])->assertCreated()->assertJsonPath('review_status', 'pending');
+        $asset = MediaAsset::query()->findOrFail($response->json('id'));
+        $this->assertSame('local', $asset->storage_disk);
+        Storage::disk('local')->assertExists($asset->storage_path);
+        $this->post(route('dashboard.posts.store'), $this->payload([
+            'featured_type' => 'image', 'featured_media_id' => $asset->id,
+        ]))->assertRedirect();
+        $post = ContentEntry::query()->where('type', 'post')->firstOrFail();
+        $this->get(route('dashboard.posts.preview', $post))->assertSee($asset->previewUrl());
+        $this->patch(route('dashboard.posts.update', $post), $this->payload([
+            'featured_type' => 'image', 'featured_media_id' => $asset->id,
+            'status' => 'published',
+        ]))->assertSessionHasErrors('featured_media_id');
+        $this->patch(route('dashboard.media.review', $asset), ['decision' => 'approved'])->assertRedirect();
+        $this->patch(route('dashboard.posts.update', $post), $this->payload([
+            'featured_type' => 'image', 'featured_media_id' => $asset->id,
+            'status' => 'published',
+        ]))->assertRedirect();
+        $this->get($post->fresh()->publicUrl())->assertOk()->assertSee($asset->previewUrl());
+    }
+
+    public function test_approved_media_can_be_privately_streamed_from_r2_disk(): void
+    {
+        Storage::fake('r2');
+        $admin = $this->member();
+        $path = 'marketplace/previews/'.$admin->id.'/remote-test.png';
+        Storage::disk('r2')->put($path, 'private-r2-image-bytes');
+        $asset = MediaAsset::query()->create([
+            'user_id' => $admin->id,
+            'original_name' => 'remote.png',
+            'storage_path' => $path,
+            'storage_disk' => 'r2',
+            'mime_type' => 'image/png',
+            'bytes' => 22,
+            'width' => 1,
+            'height' => 1,
+            'alt_text' => 'Remote image preview',
+            'rights_basis' => 'owned',
+            'rights_holder' => 'Post Author',
+            'review_status' => 'approved',
+        ]);
+        $this->actingAs($admin)->post(route('dashboard.posts.store'), $this->payload([
+            'featured_type' => 'image',
+            'featured_media_id' => $asset->id,
+            'status' => 'published',
+        ]))->assertRedirect();
+        $this->get($asset->previewUrl())->assertOk()->assertSee('private-r2-image-bytes');
+    }
+
 }
