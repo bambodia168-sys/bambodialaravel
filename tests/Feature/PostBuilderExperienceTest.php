@@ -368,4 +368,126 @@ class PostBuilderExperienceTest extends TestCase
                 && $items->total() === 10);
         $filtered->assertSee('name="status" value="published"', false);
     }
+
+    public function test_blog_defaults_to_three_column_grid_and_three_rows_per_page(): void
+    {
+        $author = $this->member();
+        foreach (range(1, 16) as $i) {
+            ContentEntry::query()->create([
+                'type' => 'post',
+                'author_id' => $author->id,
+                'title' => sprintf('Grid News Item %02d', $i),
+                'excerpt' => 'GRID_SUMMARY_'.$i,
+                'body' => '<p>Published news content used to verify public blog pagination.</p>',
+                'status' => 'published',
+                'category' => $i % 2 === 0 ? 'AI' : 'Technology',
+                'published_at' => now()->subMinutes(16 - $i),
+            ]);
+        }
+        $result = $this->get(route('blog'))->assertOk()
+            ->assertViewHas('view', 'grid')->assertViewHas('columns', 3)
+            ->assertViewHas('posts', fn ($posts) => $posts->perPage() === 9
+                && $posts->count() === 9 && $posts->total() === 16)
+            ->assertSee('blog-post-grid columns-3', false)
+            ->assertSee('Grid News Item 16')
+            ->assertDontSee('Grid News Item 01')
+            ->assertDontSee('Insights &amp; Updates', false)
+            ->assertDontSee('Published articles')
+            ->assertSee('Previous')->assertSee('Next')->assertSee('Go To');
+
+        $newest = ContentEntry::query()->where('type', 'post')->orderByDesc('id')->firstOrFail();
+        $result->assertSee('href="'.$newest->publicUrl().'"', false);
+
+        $this->get(route('blog', ['page' => 2]))->assertOk()
+            ->assertViewHas('posts', fn ($posts) => $posts->perPage() === 9
+                && $posts->count() === 7 && $posts->currentPage() === 2)
+            ->assertSee('Grid News Item 01');
+
+        foreach ([2 => 6, 4 => 12, 5 => 15] as $columns => $expected) {
+            $this->get(route('blog', ['view' => 'grid', 'columns' => $columns]))
+                ->assertOk()
+                ->assertViewHas('posts', fn ($posts) => $posts->perPage() === $expected
+                    && $posts->count() === $expected);
+        }
+
+        $this->get(route('blog', ['view' => 'list']))->assertOk()
+            ->assertViewHas('posts', fn ($posts) => $posts->perPage() === 10
+                && $posts->count() === 10)
+            ->assertSee('blog-list-number', false)
+            ->assertSee('Grid News Item 16')
+            ->assertSee('>Read</a>', false)
+            ->assertDontSee('GRID_SUMMARY_')
+            ->assertDontSee('Read article');
+
+        $this->get(route('blog', ['view' => 'list', 'page' => 2]))->assertOk()
+            ->assertViewHas('posts', fn ($posts) => $posts->currentPage() === 2
+                && $posts->count() === 6)
+            ->assertSee('11.')->assertSee('Grid News Item 01');
+
+        $this->get(route('blog', ['category' => 'AI']))->assertOk()
+            ->assertViewHas('posts', fn ($posts) => $posts->total() === 8)
+            ->assertSee('Category:')->assertSee('Clear filter')
+            ->assertDontSee('Grid News Item 15');
+    }
+
+    public function test_public_article_has_sidebar_and_preserves_natural_featured_image_dimensions(): void
+    {
+        Storage::fake('local');
+        $author = $this->member();
+        $asset = MediaAsset::query()->create([
+            'user_id' => $author->id,
+            'original_name' => 'natural-cover.png',
+            'storage_path' => 'marketplace/previews/'.$author->id.'/natural-cover.png',
+            'mime_type' => 'image/png', 'bytes' => 32,
+            'width' => 420, 'height' => 620,
+            'alt_text' => 'Uncropped tall cover', 'rights_basis' => 'owned',
+            'rights_holder' => 'Post Author', 'review_status' => 'pending',
+        ]);
+        Storage::disk('local')->put($asset->storage_path, 'test image bytes');
+        $post = ContentEntry::query()->create([
+            'type' => 'post', 'author_id' => $author->id,
+            'title' => 'Read this featured article',
+            'excerpt' => 'READ_ARTICLE_EXCERPT',
+            'body' => '<p>Article body after media.</p>',
+            'body_format' => 'html',
+            'status' => 'published',
+            'category' => 'Design',
+            'featured_type' => 'image',
+            'featured_media_id' => $asset->id,
+            'published_at' => now(),
+        ]);
+        $other = ContentEntry::query()->create([
+            'type' => 'post', 'author_id' => $author->id,
+            'title' => 'Related design article',
+            'body' => 'Another published article with helpful information.',
+            'status' => 'published',
+            'category' => 'Design',
+            'published_at' => now()->subMinute(),
+        ]);
+        $response = $this->get($post->publicUrl())->assertOk()
+            ->assertSee('blog-article-sidebar', false)
+            ->assertSee('More articles')
+            ->assertSee('Categories')
+            ->assertSee('Related design article')
+            ->assertSee($other->publicUrl())
+            ->assertSee('class="post-public-image"', false)
+            ->assertSee($asset->previewUrl())
+            ->assertSee('post-featured-figure', false);
+        $html = $response->getContent();
+        $this->assertLessThan(strpos($html, 'READ_ARTICLE_EXCERPT'), strpos($html, 'post-featured-figure'));
+
+        $page = ContentEntry::query()->create([
+            'type' => 'page', 'author_id' => $author->id,
+            'title' => 'Public About Page',
+            'body' => 'Information about the platform.',
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+        $this->get($page->publicUrl())->assertOk()->assertDontSee('blog-article-sidebar', false);
+
+        $this->get(route('blog', ['view' => 'list']))->assertSee('Read this featured article');
+        $post->update(['status' => 'draft', 'published_at' => null]);
+        $this->get($post->fresh()->publicUrl())->assertNotFound();
+        $this->get(route('blog'))->assertDontSee('Read this featured article');
+    }
 }
