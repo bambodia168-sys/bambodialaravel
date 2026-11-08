@@ -11,7 +11,6 @@
   $selectedMedia = old('featured_media_id', $post->featured_media_id);
   $mediaType = old('featured_type', $post->featured_type ?? ($post->featured_media_id ? ($post->featuredMedia && str_starts_with($post->featuredMedia->mime_type, 'video/') ? 'video' : 'image') : 'none'));
   $mediaType = in_array($mediaType, ['none', 'image', 'video', 'youtube', 'color'], true) ? $mediaType : 'none';
-  $categoryOptions = ['AI', 'Technology', 'Business', 'Finance', 'Design', 'Development', 'Marketing', 'Education', 'Security', 'Trends'];
   $selectedCategory = old('category', $post->category);
 @endphp
 <div class="policy-builder post-builder" data-post-builder>
