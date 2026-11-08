@@ -32,7 +32,7 @@ class PostBuilderExperienceTest extends TestCase
             'excerpt' => 'An introduction to secure downloads and marketplace licensing.',
             'body' => '<h2>Introducing our marketplace</h2><p>Helpful guidance for buyers and responsible digital creators.</p>',
             'status' => 'draft',
-            'category' => 'Marketplace updates',
+            'category' => 'Technology',
             'tags' => 'Product, Licensing',
             'seo_title' => 'Bambodia Digital Marketplace Guide',
             'seo_description' => 'Discover verified product information and download guidance.',
