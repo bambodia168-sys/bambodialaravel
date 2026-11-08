@@ -13,8 +13,12 @@
             <tr>
               <td>
                 <div class="post-blog-entry">
-                  @if($post->featuredMedia?->isApproved())
+                  @if($post->featuredMedia?->isApproved() && $post->featured_type === 'image')
                     <img src="{{ $post->featuredMedia->previewUrl() }}" alt="{{ $post->featuredMedia->alt_text }}" loading="lazy">
+                  @elseif($post->featuredMedia?->isApproved() && $post->featured_type === 'video')
+                    <video src="{{ $post->featuredMedia->previewUrl() }}" preload="none" muted playsinline aria-label="{{ $post->featuredMedia->alt_text }}"></video>
+                  @elseif($post->featured_type === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/D', (string)$post->featured_color))
+                    <span class="post-blog-color" style="background-color:{{ $post->featured_color }}" aria-label="Featured color"></span>
                   @endif
                   <div>
                     <strong>{{ $post->title }}</strong>
