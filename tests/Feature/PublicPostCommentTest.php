@@ -24,7 +24,7 @@ class PublicPostCommentTest extends TestCase
         ]);
     }
 
-    private function post(User $author, string $status = 'published'): ContentEntry
+    private function createPublishedPost(User $author, string $status = 'published'): ContentEntry
     {
         return ContentEntry::query()->create([
             'type' => 'post',
@@ -56,7 +56,7 @@ class PublicPostCommentTest extends TestCase
             'review_status' => 'pending',
         ]);
         Storage::disk('local')->put($asset->storage_path, 'image-content');
-        $post = $this->post($author);
+        $post = $this->createPublishedPost($author);
         $post->update(['featured_type' => 'image', 'featured_media_id' => $asset->id]);
 
         $response = $this->get($post->publicUrl())->assertOk()
@@ -88,7 +88,7 @@ class PublicPostCommentTest extends TestCase
     public function test_signed_in_user_can_comment_but_guests_cannot_post(): void
     {
         $author = $this->member('admin');
-        $post = $this->post($author);
+        $post = $this->createPublishedPost($author);
         $uri = route('blog.comments.store', ['content' => $post->public_id.'_'.$post->slug]);
 
         $this->get($post->publicUrl())->assertOk()
@@ -117,7 +117,7 @@ class PublicPostCommentTest extends TestCase
     public function test_rejects_invalid_comments_and_escapes_user_supplied_html(): void
     {
         $reader = $this->member();
-        $post = $this->post($reader);
+        $post = $this->createPublishedPost($reader);
         $url = route('blog.comments.store', ['content' => $post->public_id.'_'.$post->slug]);
         $this->actingAs($reader);
 
@@ -137,7 +137,7 @@ class PublicPostCommentTest extends TestCase
         $author = $this->member();
         $other = $this->member();
         $admin = $this->member('admin');
-        $post = $this->post($author);
+        $post = $this->createPublishedPost($author);
         $comment = PostComment::query()->create([
             'content_entry_id' => $post->id,
             'user_id' => $author->id,
@@ -160,7 +160,7 @@ class PublicPostCommentTest extends TestCase
             ->assertRedirect($post->publicUrl().'#comments');
         $this->assertDatabaseCount('post_comments', 0);
 
-        $draft = $this->post($author, 'draft');
+        $draft = $this->createPublishedPost($author, 'draft');
         $this->actingAs($other)->post(route('blog.comments.store', [
             'content' => $draft->public_id.'_'.$draft->slug,
         ]), ['body' => 'Not a public article.'])->assertNotFound();
@@ -182,7 +182,7 @@ class PublicPostCommentTest extends TestCase
     public function test_comments_are_paginated_and_existing_comments_disappear_after_unpublishing(): void
     {
         $reader = $this->member();
-        $post = $this->post($reader);
+        $post = $this->createPublishedPost($reader);
         foreach (range(1, 9) as $number) {
             PostComment::query()->create([
                 'content_entry_id' => $post->id,
