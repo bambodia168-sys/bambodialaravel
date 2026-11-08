@@ -2259,3 +2259,22 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   .site-body .site-header .brand-logo-pair img{width:105px}
   .site-body .site-footer .footer-columns{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* Keep mobile category and search overlays within the visible header container. */
+@media(max-width:720px){
+  .site-body .site-header .site-nav{position:relative}
+  .site-body .site-header .nav-category-menu,
+  .site-body .site-header .nav-mobile-search{position:static}
+  .site-body .site-header .nav-category-panel,
+  .site-body .site-header .nav-mobile-search-panel{
+    left:auto;right:12px;top:calc(100% + 4px);
+    width:calc(100% - 24px);max-width:calc(100% - 24px);
+  }
+}
+@media(max-width:350px){
+  .site-body .site-header .nav-category-panel,
+  .site-body .site-header .nav-mobile-search-panel{
+    right:8px;width:calc(100% - 16px);max-width:calc(100% - 16px);
+  }
+}

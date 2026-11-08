@@ -39,7 +39,9 @@ class PublicNavigationTest extends TestCase
             ->assertSee('data-public-category-menu')
             ->assertSee('Browse marketplace categories')
             ->assertSee('nav-category-groups')
-            ->assertSee('nav-marketplace-links')
+            ->assertDontSee('nav-marketplace-links')
+            ->assertSee('data-public-mobile-search')
+            ->assertSee('nav-language-menu')
             ->assertSee('aria-label="Browse marketplace categories"',false)
             ->assertSee('Original Website Consulting')
             ->assertSee('Professional Design Assets')
@@ -52,7 +54,7 @@ class PublicNavigationTest extends TestCase
         $this->assertSame(4,substr_count($html,'class="nav-category-group"'));
     }
 
-    public function test_theme_is_only_in_profile_and_language_only_in_footer_after_social_links(): void
+    public function test_theme_stays_in_profile_and_language_moves_to_public_header(): void
     {
         $html=$this->get('/')->assertOk()
             ->assertSee('profile-theme-row')
@@ -64,11 +66,13 @@ class PublicNavigationTest extends TestCase
 
         $header=explode('</header>',$html,2)[0];
         $footer=explode('<footer class="site-footer">',$html,2)[1] ?? '';
-        $this->assertStringNotContainsString('language-menu',$header);
+        $this->assertStringContainsString('nav-language-menu',$header);
         $this->assertStringContainsString('data-theme-toggle',$header);
-        $this->assertLessThan(strpos($footer,'language-menu'),strpos($footer,'footer-social'));
+        $this->assertStringNotContainsString('language-menu',$footer);
+        $this->assertStringContainsString('footer-social',$footer);
+        $this->assertLessThan(strpos($header,'profile-dropdown'),strpos($header,'nav-language-menu'));
         $this->assertSame(1,substr_count($html,'data-theme-toggle'));
-        $this->assertSame(1,substr_count($html,'class="language-menu'));
+        $this->assertSame(1,substr_count($header,'nav-language-menu'));
     }
 
     public function test_signed_in_profile_keeps_account_links_and_theme_control_last(): void
@@ -97,7 +101,7 @@ class PublicNavigationTest extends TestCase
         $this->get('/')->assertOk()
             ->assertSee('Freelance Development')
             ->assertSee('category='.$category->public_id)
-            ->assertSee('aria-label="Marketplace"',false);
+            ->assertSee('aria-label="Marketplace categories"',false);
     }
 
     public function test_guest_account_menu_has_consistent_icon_links_and_compact_labels(): void

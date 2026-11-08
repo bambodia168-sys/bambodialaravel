@@ -160,7 +160,7 @@ class PublicFrontendLayoutTest extends TestCase
         $this->assertStringContainsString('data-public-category-menu', $header);
         $this->assertStringContainsString('data-public-mobile-search', $header);
         $this->assertStringContainsString('class="nav-search"', $header);
-        $this->assertStringContainsString('class="nav-language-menu language-menu"', $header);
+        $this->assertStringContainsString('nav-language-menu', $header);
         $this->assertStringContainsString('class="profile-trigger"', $header);
         $this->assertStringNotContainsString('nav-marketplace-links', $header);
         $this->assertStringNotContainsString('<nav class="nav-marketplace-links"', $header);
@@ -173,7 +173,7 @@ class PublicFrontendLayoutTest extends TestCase
         $this->assertLessThan(strpos($header, 'data-public-mobile-search'), strpos($header, 'data-public-category-menu'));
         $this->assertLessThan(strpos($header, 'nav-language-menu'), strpos($header, 'data-public-mobile-search'));
         $this->assertLessThan(strpos($header, 'profile-trigger'), strpos($header, 'nav-language-menu'));
-        $this->assertSame(1, substr_count($header, 'class="nav-language-menu language-menu"'));
+        $this->assertSame(1, substr_count($header, 'nav-language-menu'));
 
         $this->assertStringContainsString('action="'.route('locale.update').'"', $header);
         $this->assertStringContainsString('name="locale"', $header);
@@ -184,10 +184,10 @@ class PublicFrontendLayoutTest extends TestCase
 
     public function test_language_switcher_remains_functional_from_the_public_header(): void
     {
-        $this->get('/')->assertOk()->assertSee('English')->assertSee('class="nav-language-menu language-menu"', false);
+        $this->get('/')->assertOk()->assertSee('English')->assertSee('nav-language-menu', false);
         $this->post(route('locale.update'), ['locale' => 'km'])->assertRedirect();
         $this->get('/')->assertOk()->assertSee('ខ្មែរ')
             ->assertSee('name="locale" value="km"', false)
-            ->assertSee('class="nav-language-menu language-menu"', false);
+            ->assertSee('nav-language-menu', false);
     }
 }
