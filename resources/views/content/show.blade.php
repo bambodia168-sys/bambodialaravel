@@ -22,9 +22,22 @@
     </div>
     @if($entry->type === 'post')
       @if($entry->excerpt)<p class="post-public-excerpt">{{ $entry->excerpt }}</p>@endif
-      @if($entry->featuredMedia?->isApproved())
-        <img class="post-public-image" src="{{ $entry->featuredMedia->previewUrl() }}"
-             alt="{{ $entry->featuredMedia->alt_text }}" loading="lazy">
+      @if(in_array($entry->featured_type, ['image', 'video'], true) && $entry->featuredMedia && ($entry->featuredMedia->isApproved() || !empty($preview)))
+        @if($entry->featured_type === 'video' && str_starts_with($entry->featuredMedia->mime_type, 'video/'))
+          <video class="post-public-video" controls preload="metadata" playsinline
+            src="{{ $entry->featuredMedia->previewUrl() }}" aria-label="{{ $entry->featuredMedia->alt_text }}"></video>
+        @elseif($entry->featured_type === 'image' && str_starts_with($entry->featuredMedia->mime_type, 'image/'))
+          <img class="post-public-image" src="{{ $entry->featuredMedia->previewUrl() }}"
+               alt="{{ $entry->featuredMedia->alt_text }}" loading="lazy">
+        @endif
+      @elseif($entry->featured_type === 'youtube' && preg_match('~^https://www\.youtube\.com/watch\?v=([A-Za-z0-9_-]{11})$~D', (string)$entry->featured_url, $youtubeMatches))
+        <iframe class="post-public-youtube" loading="lazy" title="Featured YouTube video"
+          referrerpolicy="strict-origin-when-cross-origin"
+          src="{{ 'https://www.youtube-nocookie.com/embed/'.$youtubeMatches[1] }}"
+          allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen></iframe>
+      @elseif($entry->featured_type === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/D', (string)$entry->featured_color))
+        <div class="post-public-color" style="background-color:{{ $entry->featured_color }}" role="img" aria-label="Featured color {{ $entry->featured_color }}"></div>
       @endif
       <div class="editorial-copy policy-formatted-content">
         @if($entry->body_format === 'html')
