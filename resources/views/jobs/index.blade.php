@@ -40,33 +40,9 @@
       @auth<a href="{{ route('account.saved-jobs') }}" class="btn subtle"><x-icon name="star" size="16"/> Saved opportunities</a>@endauth
     </div>
     @if($jobs->isNotEmpty())
-    <div class="marketplace-jobs-grid">
+    <div class="bambodia-job-list" aria-label="Approved job search results">
       @foreach($jobs as $job)
-      <article class="marketplace-job-card">
-        <div class="eyebrow">{{ ucfirst($job->category) }} · {{ $job->public_id }}</div>
-        <h3><a href="{{ $job->publicUrl() }}">{{ $job->title }}</a></h3>
-        <p>{{ \Illuminate\Support\Str::limit($job->description,190) }}</p>
-        <div class="marketplace-card-meta">
-          <span>Published by {{ $job->client?->name }} · {{ $job->updated_at->format('d M Y') }}</span>
-          <strong>{{ $job->budget===null?'Budget on request':'USD '.number_format((float)$job->budget,2) }}</strong>
-        </div>
-        <div class="marketplace-card-actions">
-          <a class="btn subtle compact" href="{{ $job->publicUrl() }}">View opportunity</a>
-          @auth
-            @if(in_array((int)$job->id,$savedJobIds,true))
-              <form method="post" action="{{ route('saved-jobs.destroy',$job) }}">
-                @csrf @method('DELETE')
-                <button class="btn subtle compact" type="submit"><x-icon name="star" size="15"/> Saved</button>
-              </form>
-            @else
-              <form method="post" action="{{ route('saved-jobs.store',$job) }}">
-                @csrf
-                <button class="btn subtle compact" type="submit"><x-icon name="star" size="15"/> Save</button>
-              </form>
-            @endif
-          @endauth
-        </div>
-      </article>
+        <x-job-list-row :job="$job" :is-saved="in_array((int)$job->id,$savedJobIds,true)"/>
       @endforeach
     </div>
     @else

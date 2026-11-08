@@ -308,6 +308,40 @@ svg{flex-shrink:0}
 .marketplace-job-card{padding:23px;gap:13px}
 .marketplace-job-card h3{font-size:18px;line-height:1.4;margin:0;letter-spacing:normal}
 .marketplace-job-card .btn{align-self:flex-start;margin-top:8px}
+
+/* Shared public job-board rows: one responsive premium layout for homepage and /jobs. */
+.bambodia-job-list{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.bambodia-job-row{display:grid;grid-template-columns:60px minmax(0,1fr) minmax(165px,auto) max-content;align-items:center;gap:19px;min-width:0;padding:22px 24px;border:1px solid var(--line);border-radius:19px;background:var(--surface);box-shadow:var(--shadow);transition:border-color .18s,transform .18s,box-shadow .18s}
+.bambodia-job-row:hover{border-color:var(--accent);box-shadow:0 12px 30px rgba(16,36,65,.09);transform:translateY(-2px)}
+.bambodia-job-avatar{display:grid;place-items:center;width:60px;height:60px;border-radius:16px;background:color-mix(in srgb,var(--secondary) 12%,var(--surface));color:var(--secondary);font-size:20px;font-weight:850;letter-spacing:-.03em}
+.bambodia-job-avatar--design{background:color-mix(in srgb,#8b5cf6 13%,var(--surface));color:color-mix(in srgb,#8b5cf6 80%,var(--text))}
+.bambodia-job-avatar--marketing{background:color-mix(in srgb,#059669 13%,var(--surface));color:color-mix(in srgb,#059669 80%,var(--text))}
+.bambodia-job-avatar--writing{background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--accent)}
+.bambodia-job-avatar--business{background:color-mix(in srgb,#0e7490 13%,var(--surface));color:color-mix(in srgb,#0e7490 80%,var(--text))}
+.bambodia-job-main{min-width:0}
+.bambodia-job-title-line{display:flex;align-items:center;gap:9px 12px;flex-wrap:wrap;margin-bottom:8px}
+.bambodia-job-title-line h3{margin:0;min-width:0;font-size:17px;line-height:1.42;letter-spacing:-.015em;font-weight:760;overflow-wrap:anywhere}
+.bambodia-job-title-line a{color:var(--text);text-decoration:none}
+.bambodia-job-title-line a:hover{color:var(--accent)}
+.bambodia-job-badge{display:inline-flex;align-items:center;white-space:nowrap;border-radius:999px;padding:5px 9px;font-size:10px;line-height:1.25;font-weight:800;background:color-mix(in srgb,var(--secondary) 11%,var(--surface));color:var(--secondary)}
+.bambodia-job-badge--preview{background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--accent)}
+.bambodia-job-meta{display:flex;align-items:center;flex-wrap:wrap;gap:5px 16px;color:var(--muted);font-size:12px;line-height:1.5}
+.bambodia-job-meta>span{display:inline-flex;align-items:center;gap:5px;min-width:0;overflow-wrap:anywhere}
+.bambodia-job-meta svg{flex:0 0 auto;opacity:.77}
+.bambodia-job-excerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;color:var(--muted);font-size:12px;line-height:1.5;margin:10px 0 0;overflow-wrap:anywhere}
+.bambodia-job-budget{display:flex;flex-direction:column;align-items:flex-end;gap:5px;text-align:right;min-width:0}
+.bambodia-job-budget strong{color:var(--text);font-size:19px;font-weight:800;letter-spacing:-.025em;line-height:1.2;white-space:nowrap}
+.bambodia-job-budget span{font-size:11px;line-height:1.4;color:var(--muted);white-space:nowrap}
+.bambodia-job-actions{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-width:130px}
+.bambodia-job-actions form{margin:0;display:flex}
+.bambodia-job-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;min-width:126px;min-height:42px;padding:9px 15px;border-radius:12px;background:var(--text);color:var(--surface);font-size:12px;font-weight:800;text-decoration:none;transition:background .18s,transform .18s}
+.bambodia-job-button:hover{background:var(--accent);color:var(--accent-contrast)}
+.bambodia-job-save{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:7px;padding:5px 7px;background:transparent;color:var(--muted);font-size:11px;font-weight:750;cursor:pointer}
+.bambodia-job-save:hover{color:var(--accent)}
+.bambodia-job-button:focus-visible,.bambodia-job-save:focus-visible,.bambodia-job-title-line a:focus-visible{outline:3px solid var(--secondary);outline-offset:3px}
+@media(max-width:1050px){.bambodia-job-row{grid-template-columns:56px minmax(0,1fr) max-content;gap:12px 16px;padding:19px}.bambodia-job-avatar{width:56px;height:56px}.bambodia-job-main{grid-column:2;grid-row:1 / span 2}.bambodia-job-budget{grid-column:3;grid-row:1}.bambodia-job-actions{grid-column:3;grid-row:2;align-self:end}.bambodia-job-title-line h3{font-size:16px}}
+@media(max-width:679px){.bambodia-job-row{grid-template-columns:48px minmax(0,1fr);gap:11px 12px;padding:17px;border-radius:16px}.bambodia-job-avatar{width:48px;height:48px;border-radius:13px;font-size:16px;grid-row:1}.bambodia-job-main{grid-column:2;grid-row:1}.bambodia-job-title-line{margin-bottom:7px}.bambodia-job-title-line h3{font-size:15px}.bambodia-job-budget{grid-column:2;grid-row:2;align-items:flex-start;text-align:left}.bambodia-job-budget strong{font-size:17px}.bambodia-job-actions{grid-column:1 / -1;grid-row:3;display:flex;flex-direction:row;justify-content:stretch;align-items:center;gap:10px;min-width:0}.bambodia-job-button{flex:1;min-width:0}.bambodia-job-actions form{flex:0 0 auto}.bambodia-job-meta{gap:4px 10px;font-size:11px}.bambodia-job-excerpt{font-size:11px}.bambodia-job-budget span{white-space:normal}}
+@media(prefers-reduced-motion:reduce){.bambodia-job-row,.bambodia-job-button{transition:none}.bambodia-job-row:hover{transform:none}}
 .marketplace-guidance{padding:26px 30px;border:1px solid var(--line);border-radius:18px;background:var(--surface);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
 .marketplace-guidance h2{margin:6px 0}
 .marketplace-guidance p{margin:0;color:var(--muted);max-width:620px}

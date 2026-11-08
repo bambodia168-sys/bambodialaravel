@@ -164,6 +164,24 @@ try {
         checks+=4;
         if(!(await page.getByText('Browser QA Published Freelance Job').first().isVisible()))
           throw new Error(device.name+' homepage missing approved job');
+        const jobRows=page.locator('#bambodia-jobs .bambodia-job-row');
+        if(await jobRows.count()!==1 || await page.locator('#bambodia-jobs .marketplace-jobs-grid').count())
+          throw new Error(device.name+' homepage job list markup regression');
+        const homeJob=await jobRows.first().evaluate(row=>({
+          title:row.querySelector('h3 a')?.textContent,
+          name:row.querySelector('.bambodia-job-meta')?.textContent,
+          budget:row.querySelector('.bambodia-job-budget strong')?.textContent,
+          action:row.querySelector('.bambodia-job-button')?.getAttribute('href'),
+          width:row.getBoundingClientRect().width,
+          right:row.getBoundingClientRect().right,
+        }));
+        if(!homeJob.title.includes('Browser QA Published Freelance Job') ||
+           !homeJob.name.includes('Browser QA Client') ||
+           !homeJob.budget.includes('$240.00') ||
+           !homeJob.action?.includes('/jobs/') ||
+           homeJob.right>device.viewport.width+4)
+          throw new Error(device.name+' job row incorrect '+JSON.stringify(homeJob));
+        checks+=3;
         await page.screenshot({path:out+'/'+device.name+'-homepage.png',fullPage:true});
         const compactHeader=await page.locator('.site-header').evaluate(el=>{
           const logo=el.querySelector('.brand-logo-pair');
@@ -426,6 +444,27 @@ try {
           throw new Error(device.name+' registration Terms checkbox is missing');
         if(!(await page.getByText('Terms of Service').first().isVisible()))
           throw new Error(device.name+' registration has no published Terms');
+      }
+      if(path==='/jobs'){
+        const jobRows=page.locator('.bambodia-job-list .bambodia-job-row');
+        if(await jobRows.count()!==1)
+          throw new Error(device.name+' public jobs directory must show approved rows');
+        if(await page.locator('.marketplace-jobs-grid').count())
+          throw new Error(device.name+' legacy job grid still renders on /jobs');
+        const jobLink=jobRows.first().locator('.bambodia-job-button');
+        if(!(await jobLink.isVisible()) ||
+           !(await jobLink.getAttribute('href')).includes('/jobs/'))
+          throw new Error(device.name+' job action must link to genuine detail page');
+        const geometry=await jobRows.first().evaluate(row=>({
+          right:row.getBoundingClientRect().right,
+          left:row.getBoundingClientRect().left,
+          avatar:row.querySelector('.bambodia-job-avatar')?.getBoundingClientRect().width,
+          budget:row.querySelector('.bambodia-job-budget strong')?.textContent,
+        }));
+        if(geometry.right>device.viewport.width+4 || geometry.left < -1 ||
+           geometry.avatar<44 || !geometry.budget?.includes('$240.00'))
+          throw new Error(device.name+' responsive job row overflow '+JSON.stringify(geometry));
+        checks+=3;
       }
       if(path==='/creators'){
         if(!(await page.getByText('Original full-stack Laravel consulting').first().isVisible()))

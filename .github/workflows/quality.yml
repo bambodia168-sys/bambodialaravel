@@ -80,6 +80,7 @@ jobs:
           bash -n support/marketplace-card-grid-upgrade.sh
           bash -n support/category-slider-upgrade.sh
           bash -n support/freelancer-showcase-upgrade.sh
+          bash -n support/job-list-upgrade.sh
           php -l examples/license-validation.php
           php -l support/frontend-layout-samples.php
           bash -n support/builder-studio-db-backup.sh
