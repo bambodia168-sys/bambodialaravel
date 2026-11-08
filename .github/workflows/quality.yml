@@ -77,6 +77,7 @@ jobs:
           bash -n support/unified-row-actions-upgrade.sh
           bash -n support/post-builder-upgrade.sh
           bash -n support/frontend-layout-samples-upgrade.sh
+          bash -n support/marketplace-card-grid-upgrade.sh
           php -l examples/license-validation.php
           php -l support/frontend-layout-samples.php
           bash -n support/builder-studio-db-backup.sh

@@ -97,6 +97,39 @@ try {
         }
         if(!(await page.getByText('Browser QA Published Service').first().isVisible()))
           throw new Error(device.name+' homepage missing approved listing');
+        // Shared listing cards: clickable artwork/title, two-line text and
+        // four / two / one responsive columns without clipped or hidden links.
+        const cards=await page.locator('.marketplace-home-feed .marketplace-card').count();
+        if(cards<1 || cards>8)
+          throw new Error(device.name+' homepage must show at most eight balanced cards; saw '+cards);
+        const cardMetrics=await page.evaluate(()=>{
+          const grid=document.querySelector('.marketplace-home-feed');
+          const card=grid?.querySelector('.marketplace-card');
+          const art=card?.querySelector('.marketplace-card-art');
+          const title=card?.querySelector('h3 a');
+          const summary=card?.querySelector('.marketplace-card-summary');
+          if(!grid || !card || !art || !title || !summary)
+            return {missing:true};
+          const titleStyle=getComputedStyle(title), summaryStyle=getComputedStyle(summary);
+          return {
+            columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+            titleClamp:titleStyle.webkitLineClamp,
+            summaryClamp:summaryStyle.webkitLineClamp,
+            fullTitleWidth:Math.abs(title.getBoundingClientRect().width
+              - card.querySelector('h3').getBoundingClientRect().width)<2,
+            sameDestination:art.href===title.href,
+            viewDetails:!!card.querySelector('.marketplace-card-actions a'),
+            summaryHeight:summary.getBoundingClientRect().height,
+            summaryLineHeight:parseFloat(summaryStyle.lineHeight),
+          };
+        });
+        const expectedColumns=device.viewport.width>=1200?4:device.viewport.width>550?2:1;
+        if(cardMetrics.missing || cardMetrics.columns!==expectedColumns
+          || cardMetrics.titleClamp!=='2' || cardMetrics.summaryClamp!=='2'
+          || !cardMetrics.fullTitleWidth || !cardMetrics.sameDestination
+          || cardMetrics.viewDetails
+          || cardMetrics.summaryHeight>cardMetrics.summaryLineHeight*2+3)
+          throw new Error(device.name+' listing card layout regression '+JSON.stringify(cardMetrics));
         if(!(await page.getByText('Browser QA Published Freelance Job').first().isVisible()))
           throw new Error(device.name+' homepage missing approved job');
         await page.screenshot({path:out+'/'+device.name+'-homepage.png',fullPage:true});

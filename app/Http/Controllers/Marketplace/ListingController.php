@@ -36,7 +36,7 @@ class ListingController extends Controller
 
         $listings = MarketplaceListing::query()
             ->with(['creator:id,name,public_id', 'creator.creatorProfile:user_id,is_public,headline',
-                'coverAsset:id,public_id,alt_text', 'category:id,name,type'])
+                'coverAsset:id,public_id,alt_text', 'featuredAsset:id,public_id,alt_text', 'category:id,name,type'])
             ->publiclyAvailable()
             ->when($type !== '', fn ($builder) => $builder->where('type', $type))
             ->when($selectedCategory!=='',fn($builder)=>$builder->whereHas('category',fn($q)=>
@@ -53,7 +53,7 @@ class ListingController extends Controller
             ->when($sort==='oldest',fn($q)=>$q->orderBy('created_at','asc'))
             ->when($sort==='title',fn($q)=>$q->orderBy('title','asc'))
             ->when($sort==='recent',fn($q)=>$q->orderBy('created_at','desc'))
-            ->orderByDesc('id')->paginate(10)->withQueryString();
+            ->orderByDesc('id')->paginate(8)->withQueryString();
 
         $savedIds=$request->user()
             ? SavedListing::query()->where('user_id',$request->user()->id)

@@ -22,13 +22,27 @@ class HomeController extends Controller
         $savedIds=[];
 
         if($searchEnabled){
-            $recentListings=MarketplaceListing::query()->publiclyAvailable()
-                ->with([
-                    'creator:id,name,public_id',
-                    'creator.creatorProfile:user_id,is_public',
-                    'coverAsset:id,public_id,alt_text,review_status',
-                    'category:id,name',
-                ])->latest('id')->limit(6)->get();
+            // Two latest of each type, interleaved, keep all four categories
+            // represented within a compact 4-column, two-row homepage grid.
+            $latestByType=[];
+            foreach (MarketplaceListing::TYPES as $type) {
+                $latestByType[$type]=MarketplaceListing::query()->publiclyAvailable()
+                    ->where('type',$type)
+                    ->with([
+                        'creator:id,name,public_id',
+                        'creator.creatorProfile:user_id,is_public',
+                        'coverAsset:id,public_id,alt_text,review_status',
+                        'featuredAsset:id,public_id,alt_text',
+                        'category:id,name',
+                    ])->latest('id')->limit(2)->get();
+            }
+            for ($index=0;$index<2;$index++) {
+                foreach (MarketplaceListing::TYPES as $type) {
+                    if (isset($latestByType[$type][$index])) {
+                        $recentListings->push($latestByType[$type][$index]);
+                    }
+                }
+            }
 
             $listingTotals=MarketplaceListing::query()->publiclyAvailable()
                 ->selectRaw('type, COUNT(*) as total')->groupBy('type')->pluck('total','type');

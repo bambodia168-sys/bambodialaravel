@@ -64,7 +64,7 @@
     <a class="btn subtle" href="{{ route('marketplace.search') }}">Browse all listings</a>
   </div>
   @if($recentListings->isNotEmpty())
-    <div class="marketplace-card-grid">
+    <div class="marketplace-card-grid marketplace-home-feed">
       @foreach($recentListings as $listing)
         <x-listing-card :listing="$listing" :is-saved="in_array((int)$listing->id,$savedIds,true)"/>
       @endforeach
