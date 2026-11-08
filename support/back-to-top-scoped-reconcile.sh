@@ -24,7 +24,7 @@ stop() { echo "BLOCKED: $*" >&2; exit 1; }
 [[ "$MODE" == "--check" || "$MODE" == "--apply" ]] || stop "Use --check|--apply FULL_SHA"
 [[ "$SHA" =~ ^[a-f0-9]{40}$ ]] || stop "Expected exact 40-character Git SHA"
 [[ "$(id -u)" == "0" ]] || stop "Root access required"
-for bin in git gh unzip cmp tar gzip rsync install sha256sum runuser mktemp curl; do
+for bin in git gh unzip cmp diff tar gzip rsync install sha256sum runuser mktemp curl; do
     command -v "$bin" >/dev/null || stop "Missing required command: $bin"
 done
 [[ -x "$PHP" && -d "$SOURCE/.git" ]] || stop "PHP 8.5 or source checkout missing"
@@ -137,6 +137,26 @@ for file in "${FILES[@]}"; do
     [[ "$file" != *.php ]] || "$PHP" -l "$SOURCE/$file" >/dev/null ||
         stop "PHP syntax check failed: $file"
 done
+
+echo "========== VERIFY CURRENT COMPILED FRONTEND IDENTITY =========="
+BASE_RUN="$(gh api "repos/$REPO/actions/workflows/build-installer.yml/runs?head_sha=$BASE&per_page=20" \
+    --jq '[.workflow_runs[] | select(.head_sha=="'"$BASE"'" and .conclusion=="success")] | sort_by(.created_at) | last | .id')" ||
+    stop "Unable to locate previous installed release artifact"
+[[ "$BASE_RUN" =~ ^[0-9]+$ ]] || stop "Previous installer artifact run not found"
+mkdir -p "$TMP/baseline-download" "$TMP/baseline-unpacked"
+gh run download "$BASE_RUN" --repo "$REPO" --name "$ARTIFACT" --dir "$TMP/baseline-download" ||
+    stop "Unable to download previous release artifact"
+OLD_ZIP="$TMP/baseline-download/Bambodia-Installer.zip"
+[[ -s "$OLD_ZIP" ]] && unzip -tq "$OLD_ZIP" >/dev/null ||
+    stop "Previous installer artifact invalid"
+unzip -q "$OLD_ZIP" -d "$TMP/baseline-unpacked" ||
+    stop "Previous installer could not be extracted"
+OLD_BUILD="$TMP/baseline-unpacked/Bambodia/public/build"
+[[ -f "$OLD_BUILD/manifest.json" ]] || stop "Previous frontend manifest missing"
+if ! diff -qr "$OLD_BUILD" "$APP/public/build" >"$TMP/build-diff.txt"; then
+    stop "Installed compiled frontend differs from verified baseline; refusing to replace it"
+fi
+echo "COMPILED FRONTEND BASELINE: MATCH"
 
 echo "========== VERIFY AND MERGE ONLY BACK TO TOP MARKUP =========="
 python3 - "$SOURCE" "$APP" "$BASE" "$TMP/merged-main.blade.php" <<'PY'
