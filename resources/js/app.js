@@ -1507,3 +1507,90 @@ document.querySelectorAll('[data-public-mobile-search]').forEach((searchMenu) =>
     }
     state();
 })();
+
+
+/* Bambodia detail-tabs progressive navigation.
+ * Separate server URLs remain directly accessible and work without JS.
+ * Switching Comment / Support / Overview swaps only the detail shell,
+ * preserving the global header/footer, browser history and theme. */
+(() => {
+    let navigationController = null;
+    let serial = 0;
+
+    async function navigateDetail(url, updateHistory = true) {
+        const current = document.querySelector('[data-detail-root]');
+        if (!current || !url || url.origin !== window.location.origin) {
+            window.location.assign(url?.href || '/');
+            return;
+        }
+        navigationController?.abort();
+        navigationController = new AbortController();
+        const requestNo = ++serial;
+        current.setAttribute('aria-busy','true');
+        try {
+            const response = await fetch(url.pathname + url.search, {
+                method:'GET',
+                credentials:'same-origin',
+                headers:{'Accept':'text/html','X-Requested-With':'XMLHttpRequest'},
+                signal:navigationController.signal,
+            });
+            if (!response.ok || response.redirected) throw new Error('Navigation response unavailable');
+            const doc = new DOMParser().parseFromString(await response.text(),'text/html');
+            const next = doc.querySelector('[data-detail-root]');
+            if (!next || requestNo !== serial) throw new Error('Detail content unavailable');
+            current.replaceWith(next);
+            if (updateHistory) history.pushState({bambodiaDetailTab:true},'',url.href);
+            document.title = doc.title || document.title;
+            const active = next.querySelector('.premium-detail-tabs a[aria-current="page"]');
+            if (active) active.focus({preventScroll:true});
+            if (url.hash) {
+                const target = next.querySelector(url.hash);
+                if (target) target.scrollIntoView({block:'start'});
+                else next.scrollIntoView({block:'start'});
+            } else {
+                next.scrollIntoView({block:'start'});
+            }
+            document.dispatchEvent(new CustomEvent('bambodia:detail-tab-changed'));
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            window.location.assign(url.href);
+        } finally {
+            document.querySelector('[data-detail-root]')?.removeAttribute('aria-busy');
+        }
+    }
+
+    document.addEventListener('click', event => {
+        const link = event.target.closest('a[data-detail-route]');
+        if (!link || event.defaultPrevented || event.button !== 0
+            || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
+            || link.target || link.hasAttribute('download')) return;
+        const root = link.closest('[data-detail-root]');
+        if (!root) return;
+        const url = new URL(link.href,window.location.href);
+        if (url.origin !== location.origin || !/^\/(?:detail\/|(?:product|project|service|freelance)$|jobs\/)/.test(url.pathname)) return;
+        event.preventDefault();
+        navigateDetail(url);
+    });
+
+    window.addEventListener('popstate', () => {
+        if (!document.querySelector('[data-detail-root]')) return;
+        navigateDetail(new URL(window.location.href),false);
+    });
+
+    document.addEventListener('change',event => {
+        const select=event.target.closest('select[data-detail-license-tier]');
+        if (!select) return;
+        const panel=select.closest('.premium-price-card');
+        const option=select.selectedOptions[0];
+        if (!panel || !option) return;
+        const price=panel.querySelector('[data-detail-license-price]');
+        const summary=panel.querySelector('[data-detail-license-description]');
+        const terms=panel.querySelector('[data-detail-license-terms]');
+        if(price) price.textContent=option.dataset.price || 'Price on request';
+        if(summary) summary.textContent=option.dataset.description || '';
+        if(terms && option.dataset.termsUrl){
+            const url=new URL(option.dataset.termsUrl,window.location.origin);
+            if(url.origin === window.location.origin) terms.href=url.href;
+        }
+    });
+})();

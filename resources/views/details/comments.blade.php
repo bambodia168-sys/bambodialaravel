@@ -1,17 +1,16 @@
 @extends('layouts.main')
 @section('title','Comments · '.$title)
 @section('content')
-<div class="container inner-page detail-workspace">
+<div class="container inner-page detail-workspace" data-detail-root>
+  <x-detail-tabs :kind="$kind" :reference="$params['reference']" :slug="$params['slug']"
+    :public-url="$publicUrl" active="comments"/>
   <div class="detail-workspace-head">
     <div>
       <span class="eyebrow">Bambodia Community</span>
       <h1>Comments</h1>
       <p>Discuss <strong>{{ $title }}</strong> with other signed-in members.</p>
     </div>
-    <div class="detail-workspace-navigation">
-      <a class="btn subtle" href="{{ $publicUrl }}"><x-icon name="arrow-left" size="16"/> Back to {{ ucfirst($kind) }}</a>
-      <a class="btn subtle" href="{{ route('detail.support',$params) }}"><x-icon name="life-buoy" size="16"/> Private Support</a>
-    </div>
+    <a class="premium-detail-context-link" href="{{ $publicUrl }}" data-detail-route><x-icon name="arrow-up-left" size="16"/> {{ ucfirst($kind) }} overview</a>
   </div>
 
   <div class="detail-workspace-grid">

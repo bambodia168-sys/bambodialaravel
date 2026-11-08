@@ -22,6 +22,9 @@
     'freelance' => 'Contact this freelancer',
     default => 'Contact creator',
   };
+  $regularPrice = $listing->regular_price ?? $listing->price;
+  $extendedLicense = $isProduct && $listing->extendedLicenseDefinition?->status === 'active' && $listing->extended_price !== null
+    ? $listing->extendedLicenseDefinition : null;
   $typeIcon = match ($kind) {
     'product' => 'package',
     'project' => 'layers',
@@ -29,16 +32,9 @@
     default => 'briefcase',
   };
 @endphp
-<div class="container inner-page listing-detail premium-detail premium-detail-{{ $kind }}">
-  <nav class="premium-detail-tabs" aria-label="Listing sections">
-    @foreach($pageSections as $section)
-      <a href="#{{ $section['id'] }}">{{ $section['label'] }}</a>
-    @endforeach
-    @auth
-      <a href="{{ route('detail.comments',['kind'=>$kind,'reference'=>$listing->public_id,'slug'=>$listing->slug]) }}">Comment</a>
-      <a href="{{ route('detail.support',['kind'=>$kind,'reference'=>$listing->public_id,'slug'=>$listing->slug]) }}">Support</a>
-    @endauth
-  </nav>
+<div class="container inner-page listing-detail premium-detail premium-detail-{{ $kind }}" data-detail-root>
+  <x-detail-tabs :kind="$kind" :reference="$listing->public_id" :slug="$listing->slug"
+    :public-url="$listing->publicUrl()" :sections="$pageSections" active="overview"/>
 
   <div class="premium-detail-layout">
     <main class="premium-detail-main">
@@ -180,56 +176,72 @@
     </main>
 
     <aside class="premium-detail-sidebar" aria-label="Listing information and actions">
-      <section class="premium-side-card premium-price-card">
+      <section class="premium-side-card premium-price-card" aria-labelledby="detail-offer-heading">
         <div class="premium-side-card-body">
-          <span class="eyebrow">{{ $isProduct ? 'Product information' : ($kind==='project' ? 'Project details' : ($kind==='freelance'?'Freelance offer':'Service details')) }}</span>
-          <div class="premium-side-price">
-            <span>{{ $listing->price!==null ? ($isProduct?'Listed price':'Indicative price') : 'Pricing' }}</span>
-            <strong>{{ $listing->price!==null ? '$'.number_format((float)$listing->price,2) : 'On request' }}</strong>
-          </div>
-          @if($listing->price!==null)<p class="premium-price-note">USD · Informational listing price</p>@endif
-          <div class="premium-side-checks">
-            <span><x-icon name="check" size="17"/> Published marketplace listing</span>
-            @if($isProduct)
-              <span><x-icon name="shield" size="17"/> Active published license</span>
-              <span><x-icon name="lock" size="17"/> Private download entitlement required</span>
-            @else
-              <span><x-icon name="message" size="17"/> Private creator conversations</span>
-              <span><x-icon name="shield" size="17"/> Account-based access controls</span>
-            @endif
-          </div>
-
-          @if($layoutSample)
-            <div class="premium-availability" role="status"><x-icon name="lock" size="18"/>
-              <span>LAYOUT TEST ONLY — no purchases, downloads, private inquiries or real transactions are offered.</span>
+          @if($isProduct)
+            <div class="premium-offer-heading">
+              <span class="eyebrow" id="detail-offer-heading">Available license options</span>
+              @if($layoutSample)<span class="premium-offer-status">Preview listing</span>@endif
             </div>
-          @elseif($isProduct)
-            <div class="premium-availability" role="status"><x-icon name="lock" size="18"/>
-              <span>Direct checkout is not enabled. Licensed downloads are available only to accounts with independently granted entitlements.</span>
-            </div>
-            @auth
-              <a class="btn primary premium-full-action" href="{{ route('account.downloads') }}">My entitled downloads <x-icon name="chevron-right" size="17"/></a>
-            @else
-              <a class="btn primary premium-full-action" href="{{ route('login') }}">Sign in to view downloads <x-icon name="chevron-right" size="17"/></a>
-            @endauth
-          @elseif($canInquire)
-            @auth
-              @if(in_array(auth()->user()->role,['customer','subscriber'],true) && (int)auth()->id() !== (int)$listing->user_id)
-                <button type="button" class="btn primary premium-full-action" data-modal-open="request-service"><x-icon name="message" size="17"/> {{ $inquiryTitle }}</button>
-                <a class="btn subtle premium-full-action" href="{{ route('account.inquiries') }}">My conversations</a>
-              @elseif((int)auth()->id() === (int)$listing->user_id)
-                <a class="btn subtle premium-full-action" href="{{ route('studio.inquiries') }}">Manage my inquiries</a>
-              @else
-                <p class="hint">Private inquiries are available to eligible customer accounts.</p>
+            <label class="premium-license-label" for="detail-license-tier">License type</label>
+            <select id="detail-license-tier" class="premium-license-tier-select" data-detail-license-tier aria-describedby="detail-license-summary">
+              <option value="regular"
+                data-price="{{ $regularPrice !== null ? '$'.number_format((float)$regularPrice,2) : 'Price on request' }}"
+                data-description="{{ \Illuminate\Support\Str::limit($listing->licenseDefinition?->permissions ?: \App\Models\LicenseDefinition::tierDescription('regular'),145) }}"
+                data-terms-url="{{ $listing->licenseDefinition?->publicUrl() }}"
+                >Regular License</option>
+              @if($extendedLicense)
+                <option value="extended"
+                  data-price="{{ '$'.number_format((float)$listing->extended_price,2) }}"
+                  data-description="{{ \Illuminate\Support\Str::limit($extendedLicense->permissions ?: \App\Models\LicenseDefinition::tierDescription('extended'),145) }}"
+                  data-terms-url="{{ $extendedLicense->publicUrl() }}"
+                  >Extended License</option>
               @endif
-            @else
-              <a class="btn primary premium-full-action" href="{{ route('login') }}"><x-icon name="log-in" size="17"/> Sign in to contact <x-icon name="chevron-right" size="17"/></a>
+            </select>
+            <div class="premium-side-price premium-side-price--license">
+              <span>Published license price</span>
+              <strong data-detail-license-price>{{ $regularPrice !== null ? '$'.number_format((float)$regularPrice,2) : 'Price on request' }}</strong>
+            </div>
+            <p class="premium-price-note">{{ $listing->currency ?: 'USD' }} · {{ $layoutSample ? 'Reference price only' : 'Creator-listed amount' }}</p>
+            <p class="premium-license-description" id="detail-license-summary" data-detail-license-description>{{ \Illuminate\Support\Str::limit($listing->licenseDefinition?->permissions ?: \App\Models\LicenseDefinition::tierDescription('regular'),145) }}</p>
+            @if($listing->licenseDefinition)
+              <a class="btn subtle premium-full-action" data-detail-license-terms href="{{ $listing->licenseDefinition->publicUrl() }}">
+                <x-icon name="file-check" size="17"/> View license details <x-icon name="chevron-right" size="16"/>
+              </a>
+            @endif
+            <p class="premium-license-availability"><x-icon name="lock" size="15"/> Direct checkout is not enabled. Downloads require a verified entitlement.</p>
+            @auth
+              <a class="premium-offer-secondary-link" href="{{ route('account.downloads') }}">My entitled downloads <x-icon name="arrow-up-right" size="15"/></a>
             @endauth
+          @else
+            <div class="premium-offer-heading">
+              <span class="eyebrow" id="detail-offer-heading">{{ $kindTitle }} details</span>
+              @if($layoutSample)<span class="premium-offer-status">Preview listing</span>@endif
+            </div>
+            <div class="premium-side-price">
+              <span>{{ $listing->price !== null ? ($layoutSample ? 'Reference price' : 'Listed price') : 'Pricing' }}</span>
+              <strong>{{ $listing->price !== null ? '$'.number_format((float)$listing->price,2) : 'On request' }}</strong>
+            </div>
+            @if($listing->price !== null)<p class="premium-price-note">{{ $listing->currency ?: 'USD' }} · Creator-provided amount</p>@endif
+            @if($canInquire)
+              @auth
+                @if(in_array(auth()->user()->role,['customer','subscriber'],true) && (int)auth()->id() !== (int)$listing->user_id)
+                  <button type="button" class="btn primary premium-full-action" data-modal-open="request-service"><x-icon name="message" size="17"/> {{ $inquiryTitle }}</button>
+                  <a class="premium-offer-secondary-link" href="{{ route('account.inquiries') }}">My conversations</a>
+                @elseif((int)auth()->id() === (int)$listing->user_id)
+                  <a class="btn subtle premium-full-action" href="{{ route('studio.inquiries') }}">Manage inquiries</a>
+                @else
+                  <p class="premium-price-note">Inquiries are available to eligible customer accounts.</p>
+                @endif
+              @else
+                <a class="btn primary premium-full-action" href="{{ route('login') }}"><x-icon name="log-in" size="17"/> Sign in to contact</a>
+              @endauth
+            @else
+              <a class="btn subtle premium-full-action" href="{{ route('marketplace.search',['type'=>$kind]) }}">Explore {{ $kindTitle }} listings <x-icon name="chevron-right" size="16"/></a>
+            @endif
           @endif
-          <p class="premium-action-disclaimer">Saving or contacting a creator does not constitute a purchase, reservation or payment. Checkout, escrow and payouts remain disabled.</p>
         </div>
       </section>
-
       <section class="premium-side-card">
         <div class="premium-side-card-heading"><h2>Information</h2></div>
         <dl class="premium-info-list">

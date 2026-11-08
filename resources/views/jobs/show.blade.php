@@ -2,19 +2,18 @@
 @section('title',$job->title)
 @section('content')
 @php($layoutSample = str_starts_with($job->title, '[LAYOUT TEST] '))
-<div class="container inner-page listing-detail premium-detail premium-job-detail">
-  <nav class="premium-detail-tabs" aria-label="Job opportunity sections">
-    <a href="#overview">Overview</a>
-    <a href="#requirements">How proposals work</a>
-    @auth
-      @if(! $layoutSample && auth()->user()->role==='freelancer')<a href="#apply">Apply</a>@endif
-    @endauth
-    <a href="#client">Client</a>
-    @auth
-      <a href="{{ route('detail.comments',['kind'=>'job','reference'=>$job->public_id,'slug'=>$job->slug]) }}">Comment</a>
-      <a href="{{ route('detail.support',['kind'=>'job','reference'=>$job->public_id,'slug'=>$job->slug]) }}">Support</a>
-    @endauth
-  </nav>
+<div class="container inner-page listing-detail premium-detail premium-job-detail" data-detail-root>
+  @php
+    $jobSections=[
+      ['id'=>'overview','label'=>'Overview'],
+      ['id'=>'requirements','label'=>'How proposals work'],
+      ...(! $layoutSample && auth()->check() && auth()->user()->role === 'freelancer' ? [['id'=>'apply','label'=>'Apply']] : []),
+      ['id'=>'client','label'=>'Client'],
+    ];
+  @endphp
+  <x-detail-tabs kind="job" :reference="$job->public_id" :slug="$job->slug"
+    :public-url="$job->publicUrl()" :sections="$jobSections" active="overview"/>
+
   <div class="premium-detail-layout">
     <main class="premium-detail-main">
       <section class="premium-showcase" aria-label="Job overview">
@@ -121,32 +120,35 @@
       </section>
     </main>
     <aside class="premium-detail-sidebar" aria-label="Opportunity details and actions">
-      <section class="premium-side-card premium-price-card">
+      <section class="premium-side-card premium-price-card" aria-labelledby="job-offer-heading">
         <div class="premium-side-card-body">
-          <span class="eyebrow">Opportunity summary</span>
-          <div class="premium-side-price"><span>Estimated budget</span>
-            <strong>{{ $job->budget===null ? 'On request' : '$'.number_format((float)$job->budget,2) }}</strong></div>
-          <p class="premium-price-note">USD · Client-provided estimate</p>
-          <div class="premium-side-checks">
-            <span><x-icon name="check" size="17"/> Administrator-approved job</span>
-            <span><x-icon name="shield" size="17"/> Private, permission-scoped proposals</span>
+          <div class="premium-offer-heading">
+            <span class="eyebrow" id="job-offer-heading">Opportunity summary</span>
+            @if($layoutSample)<span class="premium-offer-status">Preview listing</span>@endif
           </div>
-          @if($layoutSample)
-            <p class="premium-action-disclaimer">LAYOUT TEST ONLY — fictional job; applications are disabled.</p>
-          @else
-          @auth
-            @if(auth()->user()->role==='freelancer')
-              <a class="btn primary premium-full-action" href="{{ $applied ? route('jobs.applied') : '#apply' }}">{{ $applied?'View my proposal':'Apply to this job' }} <x-icon name="chevron-right" size="16"/></a>
-            @elseif((int)auth()->id()===(int)$job->client_id)
-              <a class="btn primary premium-full-action" href="{{ route('jobs.proposals',$job) }}">Review applications <x-icon name="chevron-right" size="16"/></a>
+          <div class="premium-side-price">
+            <span>Estimated budget</span>
+            <strong>{{ $job->budget===null ? 'On request' : '$'.number_format((float)$job->budget,2) }}</strong>
+          </div>
+          <p class="premium-price-note">{{ $job->currency ?: 'USD' }} · Client-provided estimate</p>
+          @if(! $layoutSample)
+            @auth
+              @if(auth()->user()->role==='freelancer')
+                <a class="btn primary premium-full-action" href="{{ $applied ? route('jobs.applied') : '#apply' }}">
+                  {{ $applied?'View my proposal':'Apply to this job' }} <x-icon name="chevron-right" size="16"/>
+                </a>
+              @elseif((int)auth()->id()===(int)$job->client_id)
+                <a class="btn primary premium-full-action" href="{{ route('jobs.proposals',$job) }}">Review applications <x-icon name="chevron-right" size="16"/></a>
+              @else
+                <a class="btn subtle premium-full-action" href="{{ route('jobs') }}">Explore jobs <x-icon name="chevron-right" size="16"/></a>
+              @endif
             @else
-              <a class="btn subtle premium-full-action" href="{{ route('jobs') }}">Explore other jobs</a>
-            @endif
+              <a class="btn primary premium-full-action" href="{{ route('login') }}">Sign in to apply <x-icon name="chevron-right" size="16"/></a>
+            @endauth
           @else
-            <a class="btn primary premium-full-action" href="{{ route('login') }}">Sign in to apply <x-icon name="chevron-right" size="16"/></a>
-          @endauth
+            <a class="btn subtle premium-full-action" href="{{ route('jobs') }}">Browse job opportunities <x-icon name="chevron-right" size="16"/></a>
           @endif
-          <p class="premium-action-disclaimer">Budgets are informational. Bambodia does not currently process payments, hold escrow or create contracts automatically.</p>
+          <p class="premium-license-availability"><x-icon name="info" size="15"/> Applications do not create a contract or payment.</p>
         </div>
       </section>
       <section class="premium-side-card">

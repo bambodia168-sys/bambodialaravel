@@ -701,6 +701,10 @@ try {
           throw new Error(device.name+' approved product preview failed to load '+JSON.stringify(image));
         if(!(await page.getByText('Direct checkout is not enabled').isVisible()))
           throw new Error(device.name+' product missing truthful checkout restriction');
+        if(!(await page.locator('select[data-detail-license-tier]').isVisible()) ||
+           !(await page.locator('a[data-detail-license-terms]').isVisible()) ||
+           await page.getByRole('button',{name:/buy now/i}).count())
+          throw new Error(device.name+' product license selector or checkout safety regression');
       }else{
         if(!(await page.locator('#workflow').isVisible()))
           throw new Error(device.name+' '+kind+' missing private inquiry workflow');
@@ -1118,6 +1122,31 @@ try {
       checks+=3;
       if(await creator.locator('body').getAttribute('data-workspace')!=='creator')
         throw new Error('Creator workspace route did not render correctly');
+
+      // Tab navigation uses real deep-linkable server URLs but switches only
+      // the resource detail shell (no full-page redirect in JavaScript mode).
+      await creator.goto(origin+'/search?type=service',{waitUntil:'networkidle'});
+      const serviceLink=creator.locator('article.marketplace-card a.marketplace-card-art').first();
+      if(!(await serviceLink.isVisible()))
+        throw new Error('Authenticated detail test service missing');
+      await serviceLink.click();
+      await creator.waitForURL(/\/service\?=/);
+      await creator.locator('.premium-detail-tabs a', {hasText:'Comment'}).click();
+      await creator.waitForURL(/\/detail\/service\/[^/]+\/comments/);
+      if(!(await creator.locator('.premium-detail-tabs a[aria-current="page"]',{hasText:'Comment'}).isVisible()) ||
+         !(await creator.getByRole('heading',{name:'Community conversation'}).isVisible()))
+        throw new Error('Comment tab did not retain shared detail navigation');
+      await creator.locator('.premium-detail-tabs a',{hasText:'Support'}).click();
+      await creator.waitForURL(/\/detail\/service\/[^/]+\/support/);
+      if(!(await creator.getByRole('heading',{name:'Support resources'}).isVisible()) ||
+         !(await creator.locator('.premium-detail-tabs a[aria-current="page"]',{hasText:'Support'}).isVisible()))
+        throw new Error('Support tab lost the shared navigation or resources');
+      await creator.locator('.premium-detail-tabs a',{hasText:'Overview'}).click();
+      await creator.waitForURL(/\/service\?=/);
+      if(!(await creator.locator('.premium-showcase').isVisible()))
+        throw new Error('Overview tab failed to restore featured media');
+      checks+=5;
+
       await creator.screenshot({path:out+'/desktop-creator-workspace.png',fullPage:false});
       await creator.goto(origin+'/en/studio/products?status=draft',{waitUntil:'networkidle'});
       if(!(await creator.locator('[aria-label="Your products by status"] a[aria-current="page"]').count()))

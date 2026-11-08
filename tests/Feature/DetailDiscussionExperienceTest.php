@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AccountNotification;
 use App\Models\DetailComment;
+use App\Models\DetailSupportResource;
 use App\Models\LicenseDefinition;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
@@ -233,5 +234,147 @@ class DetailDiscussionExperienceTest extends TestCase
         ])->assertSessionHasErrors(['subject','message']);
         $this->assertDatabaseCount('detail_comments',0);
         $this->assertDatabaseCount('support_tickets',0);
+    }
+
+    public function test_shared_detail_tabs_remain_visible_when_switching_to_comments_and_support(): void
+    {
+        $creator=$this->member('freelancer');
+        $client=$this->member('customer');
+        $items=[];
+        foreach(MarketplaceListing::TYPES as $type) $items[]=$this->listing($creator,$type);
+        $items[]=$this->job($client);
+
+        $this->actingAs($client);
+        foreach($items as $item){
+            $params=$this->params($item);
+            $detail=$this->get($item->publicUrl())->assertOk();
+            $detail->assertSee('data-detail-root',false)
+                ->assertSee('data-detail-tabs',false)
+                ->assertSee('data-detail-route',false)
+                ->assertSee('Comment')
+                ->assertSee('Support');
+            $comment=$this->get(route('detail.comments',$params))->assertOk();
+            $comment->assertSee('premium-detail-tabs--shared',false)
+                ->assertSee('aria-current="page"',false)
+                ->assertSee('data-detail-route',false)
+                ->assertSee('Community conversation');
+            $support=$this->get(route('detail.support',$params))->assertOk();
+            $support->assertSee('premium-detail-tabs--shared',false)
+                ->assertSee('aria-current="page"',false)
+                ->assertSee('data-detail-route',false)
+                ->assertSee('Support resources');
+        }
+    }
+
+    public function test_published_product_license_sidebar_uses_actual_tiers_and_never_offers_checkout(): void
+    {
+        $owner=$this->member('freelancer');
+        $product=$this->listing($owner,'product');
+        $extended=LicenseDefinition::query()->create([
+            'code'=>'DETAIL_EXT_'.uniqid(),'tier'=>'extended',
+            'name'=>'Additional Usage License','version'=>'2.1.0',
+            'permissions'=>'Additional permitted installations subject to written terms',
+            'restrictions'=>'No redistribution','status'=>'active','created_by'=>$owner->id,
+        ]);
+        $product->update([
+            'regular_price'=>'15.00','extended_price'=>'45.00',
+            'extended_license_definition_id'=>$extended->id,
+        ]);
+        $response=$this->get($product->publicUrl())->assertOk();
+        $response->assertSee('data-detail-license-tier',false)
+            ->assertSee('Regular License')
+            ->assertSee('Extended License')
+            ->assertSee('data-price="$15.00"',false)
+            ->assertSee('data-price="$45.00"',false)
+            ->assertSee('View license details')
+            ->assertSee('Direct checkout is not enabled')
+            ->assertDontSee('Buy Now')
+            ->assertDontSee('PayPal')
+            ->assertDontSee('Quality checked by');
+        $product->update(['extended_price'=>null]);
+        $this->get($product->publicUrl())->assertOk()
+            ->assertDontSee('value="extended"',false);
+    }
+
+    public function test_author_resources_can_be_enabled_edited_and_disabled_without_leaking_to_other_items(): void
+    {
+        $publisher=$this->member('freelancer');
+        $viewer=$this->member('customer');
+        $other=$this->member('customer');
+        $listing=$this->listing($publisher,'service');
+        $another=$this->listing($publisher,'project');
+        $params=$this->params($listing);
+        $body=[
+            'kind'=>'documentation','title'=>'Official service documentation',
+            'description'=>'Detailed installation and configuration guidance',
+            'url'=>'https://docs.example.org/guides/service','is_enabled'=>'1',
+        ];
+
+        $this->actingAs($viewer)
+            ->post(route('detail.support.resources.store',$params),$body)->assertForbidden();
+        $this->actingAs($publisher)
+            ->post(route('detail.support.resources.store',$params),$body)->assertRedirect();
+        $item=DetailSupportResource::query()->firstOrFail();
+        $this->assertSame($publisher->id,(int)$item->author_id);
+        $this->assertTrue($item->is_enabled);
+        $this->assertDatabaseHas('audit_events',['event'=>'detail.support.resource.created']);
+
+        $this->actingAs($viewer)->get(route('detail.support',$params))->assertOk()
+            ->assertSee($body['title'])->assertSee($body['url'])
+            ->assertDontSee('Manage publisher resources');
+        $this->get(route('detail.support',$this->params($another)))->assertOk()
+            ->assertDontSee($body['title']);
+        $this->actingAs($other)->patch(route('detail.support.resources.update',[...$params,'resource'=>$item->id]),$body)
+            ->assertForbidden();
+        $this->actingAs($publisher)
+            ->patch(route('detail.support.resources.update',[...$params,'resource'=>$item->id]),[
+                ...$body,'title'=>'Updated service documentation','is_enabled'=>'0',
+            ])->assertRedirect();
+        $this->assertFalse($item->fresh()->is_enabled);
+        $this->actingAs($viewer)->get(route('detail.support',$params))->assertOk()
+            ->assertDontSee('Updated service documentation');
+        $this->actingAs($publisher)->get(route('detail.support',$params))->assertOk()
+            ->assertSee('Updated service documentation')->assertSee('Not published');
+        $this->post(route('detail.support.resources.store',$params),[
+            ...$body,'url'=>'http://unsafe.example.org',
+        ])->assertSessionHasErrors('url');
+        $this->delete(route('detail.support.resources.destroy',[
+            ...$this->params($another),'resource'=>$item->id,
+        ]))->assertNotFound();
+        $this->delete(route('detail.support.resources.destroy',[
+            ...$params,'resource'=>$item->id,
+        ]))->assertRedirect();
+        $this->assertDatabaseCount('detail_support_resources',0);
+    }
+
+    public function test_client_can_publish_help_for_jobs_and_member_can_read_only_enabled_resources(): void
+    {
+        $client=$this->member('customer');
+        $freelancer=$this->member('freelancer');
+        $job=$this->job($client);
+        $params=$this->params($job);
+        $data=[
+            'kind'=>'faq','title'=>'Application guidelines',
+            'url'=>'https://help.example.org/job-guidelines','is_enabled'=>'1',
+        ];
+        $this->actingAs($client)
+            ->post(route('detail.support.resources.store',$params),$data)->assertRedirect();
+        $this->actingAs($freelancer)->get(route('detail.support',$params))->assertOk()
+            ->assertSee('Application guidelines');
+        $this->post(route('detail.support.resources.store',$params),$data)->assertForbidden();
+        $this->assertDatabaseCount('detail_support_resources',1);
+    }
+
+    public function test_preview_listing_does_not_show_repeated_demo_notices_or_fake_purchase_actions(): void
+    {
+        $owner=$this->member('freelancer');
+        $listing=$this->listing($owner,'project');
+        $listing->update(['title'=>'[LAYOUT TEST] Internal project placeholder']);
+        $html=$this->get($listing->publicUrl())->assertOk()->getContent();
+        $this->assertStringContainsString('Preview listing',$html);
+        $this->assertStringNotContainsString('LAYOUT TEST ONLY — no purchases',$html);
+        $this->assertStringNotContainsString('Checkout, escrow and payouts remain disabled',$html);
+        $this->assertStringNotContainsString('Sign in to contact',$html);
+        $this->assertStringNotContainsString('Buy Now',$html);
     }
 }

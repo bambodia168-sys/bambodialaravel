@@ -108,6 +108,12 @@ Route::middleware('auth')->prefix('detail')->group(function (): void {
         ->name('detail.support');
     Route::post('/{kind}/{reference}-{slug}/support', [DetailDiscussionController::class,'storeSupport'])
         ->middleware('throttle:5,1')->name('detail.support.store');
+    Route::post('/{kind}/{reference}-{slug}/support/resources', [DetailDiscussionController::class,'storeResource'])
+        ->middleware('throttle:8,1')->name('detail.support.resources.store');
+    Route::patch('/{kind}/{reference}-{slug}/support/resources/{resource}', [DetailDiscussionController::class,'updateResource'])
+        ->whereNumber('resource')->middleware('throttle:12,1')->name('detail.support.resources.update');
+    Route::delete('/{kind}/{reference}-{slug}/support/resources/{resource}', [DetailDiscussionController::class,'deleteResource'])
+        ->whereNumber('resource')->middleware('throttle:12,1')->name('detail.support.resources.destroy');
 });
 
 Route::middleware('guest')->group(function (): void {

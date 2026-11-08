@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AccountNotification;
 use App\Models\AuditEvent;
 use App\Models\DetailComment;
+use App\Models\DetailSupportResource;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\SupportTicket;
@@ -12,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DetailDiscussionController extends Controller
@@ -128,9 +130,15 @@ class DetailDiscussionController extends Controller
         $tickets=SupportTicket::query()->where('user_id',$request->user()->id)
             ->where('context_type',$subject[0])->where('context_id',$subject[1]->id)
             ->latest()->paginate(10);
+        $canManageResources = (int) $request->user()->id === $subject[4];
+        $resources = DetailSupportResource::query()
+            ->where('subject_type',$subject[0])->where('subject_id',$subject[1]->id)
+            ->when(! $canManageResources,fn($query)=>$query->where('is_enabled',true))
+            ->orderBy('sort_order')->orderBy('id')->get();
         return view('details.support',[
             'kind'=>$kind,'title'=>$subject[2],'publicUrl'=>$subject[3],
             'params'=>$this->params($kind,$reference,$slug),'tickets'=>$tickets,
+            'resources'=>$resources,'canManageResources'=>$canManageResources,
         ]);
     }
 
@@ -158,5 +166,79 @@ class DetailDiscussionController extends Controller
         });
         return redirect()->route('support.show',$ticket->public_id)
             ->with('status','Your private support request was created.');
+    }
+
+    private function requireOwner(Request $request, array $subject): void
+    {
+        abort_unless((int) $request->user()->id === $subject[4], 403);
+    }
+
+    private function checkResource(array $subject, DetailSupportResource $resource): void
+    {
+        abort_unless($resource->subject_type === $subject[0]
+            && (int) $resource->subject_id === (int) $subject[1]->id
+            && (int) $resource->author_id === $subject[4], 404);
+    }
+
+    private function resourceInput(Request $request): array
+    {
+        $data = $request->validate([
+            'kind'=>['required',Rule::in(DetailSupportResource::KINDS)],
+            'title'=>['required','string','min:3','max:120'],
+            'description'=>['nullable','string','max:300'],
+            'url'=>['required','string','max:2048','url:https'],
+            'sort_order'=>['nullable','integer','min:0','max:1000'],
+            'is_enabled'=>['sometimes','boolean'],
+        ]);
+        $data['title']=trim($data['title']);
+        $data['url']=trim($data['url']);
+        $data['description']=isset($data['description']) ? trim($data['description']) : null;
+        $data['is_enabled']=$request->boolean('is_enabled');
+        $data['sort_order']=$data['sort_order'] ?? 0;
+        return $data;
+    }
+
+    public function storeResource(Request $request, string $kind, string $reference, string $slug): RedirectResponse
+    {
+        $subject=$this->subject($kind,$reference,$slug);
+        $this->requireOwner($request,$subject);
+        $data=$this->resourceInput($request);
+        DB::transaction(function() use($request,$subject,$data): void {
+            // Explicitly lock the associated subject to serialize resource-limit checks.
+            if($subject[0] === 'job') MarketplaceJob::query()->lockForUpdate()->findOrFail($subject[1]->id);
+            else MarketplaceListing::query()->lockForUpdate()->findOrFail($subject[1]->id);
+            $count=DetailSupportResource::query()
+                ->where('subject_type',$subject[0])->where('subject_id',$subject[1]->id)->count();
+            abort_if($count >= 20,409,'This item already has the maximum of 20 support resources.');
+            DetailSupportResource::query()->create([
+                ...$data,'subject_type'=>$subject[0],'subject_id'=>$subject[1]->id,
+                'author_id'=>$request->user()->id,
+            ]);
+            AuditEvent::record('detail.support.resource.created',$request->user(),$request);
+        });
+        return redirect()->route('detail.support',$this->params($kind,$reference,$slug))
+            ->with('status','Support resource added.');
+    }
+
+    public function updateResource(Request $request, string $kind, string $reference, string $slug, DetailSupportResource $resource): RedirectResponse
+    {
+        $subject=$this->subject($kind,$reference,$slug);
+        $this->checkResource($subject,$resource);
+        $this->requireOwner($request,$subject);
+        $resource->update($this->resourceInput($request));
+        AuditEvent::record('detail.support.resource.updated',$request->user(),$request);
+        return redirect()->route('detail.support',$this->params($kind,$reference,$slug))
+            ->with('status','Support resource updated.');
+    }
+
+    public function deleteResource(Request $request, string $kind, string $reference, string $slug, DetailSupportResource $resource): RedirectResponse
+    {
+        $subject=$this->subject($kind,$reference,$slug);
+        $this->checkResource($subject,$resource);
+        $this->requireOwner($request,$subject);
+        $resource->delete();
+        AuditEvent::record('detail.support.resource.deleted',$request->user(),$request);
+        return redirect()->route('detail.support',$this->params($kind,$reference,$slug))
+            ->with('status','Support resource deleted.');
     }
 }
