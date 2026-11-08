@@ -182,6 +182,46 @@ try {
            homeJob.right>device.viewport.width+4)
           throw new Error(device.name+' job row incorrect '+JSON.stringify(homeJob));
         checks+=3;
+        // CTA buttons are real guest routes; full-bleed Advantage still aligns
+        // its cards to the same global content container.
+        const join=page.locator('#bambodia-join');
+        const joinPanel=join.locator('.bambodia-join-panel');
+        const advantage=page.locator('#bambodia-advantage');
+        if(await join.count()!==1 || await advantage.count()!==1)
+          throw new Error(device.name+' missing homepage CTA or Advantage section');
+        const joinLink=join.getByRole('link',{name:/Join Free/i});
+        const signInLink=join.getByRole('link',{name:/Sign In/i});
+        if(!(await joinLink.isVisible()) || !(await signInLink.isVisible()) ||
+           !(await joinLink.getAttribute('href')).includes('/register') ||
+           !(await signInLink.getAttribute('href')).includes('/login'))
+          throw new Error(device.name+' guest CTA links are missing or incorrect');
+        const layout=await page.evaluate(()=>{
+          const panel=document.querySelector('#bambodia-join .bambodia-join-panel');
+          const section=document.querySelector('#bambodia-advantage');
+          const cards=[...section.querySelectorAll('.bambodia-advantage-card')];
+          const content=section.querySelector('.bambodia-advantage-inner');
+          const bounds=el=>el.getBoundingClientRect();
+          return {
+            panelWidth:bounds(panel).width,
+            advantageLeft:bounds(section).left,
+            advantageRight:bounds(section).right,
+            viewportWidth:document.documentElement.clientWidth,
+            contentLeft:bounds(content).left,
+            cardCount:cards.length,
+            cardRight:Math.max(...cards.map(c=>bounds(c).right)),
+            cardColumns:getComputedStyle(section.querySelector('.bambodia-advantage-grid')).gridTemplateColumns.split(' ').length,
+            actionColumns:getComputedStyle(panel.querySelector('.bambodia-join-actions')).gridTemplateColumns.split(' ').length,
+          };
+        });
+        const expectedAdvantageColumns=device.viewport.width>720?3:1;
+        if(layout.advantageLeft!==0 || Math.abs(layout.advantageRight-layout.viewportWidth)>4 ||
+           layout.cardCount!==3 || layout.cardColumns!==expectedAdvantageColumns ||
+           layout.actionColumns!==2 || layout.cardRight>layout.viewportWidth+4 ||
+           layout.contentLeft<-1 || layout.panelWidth>layout.viewportWidth+4)
+          throw new Error(device.name+' CTA/Advantage responsive regression '+JSON.stringify(layout));
+        if(await advantage.getByText(/escrow|instant khqr|verified cambodian entities|enforceable digital contracts/i).count())
+          throw new Error(device.name+' unavailable service claims were introduced');
+        checks+=5;
         await page.screenshot({path:out+'/'+device.name+'-homepage.png',fullPage:true});
         const compactHeader=await page.locator('.site-header').evaluate(el=>{
           const logo=el.querySelector('.brand-logo-pair');

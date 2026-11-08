@@ -129,19 +129,58 @@
   @endif
 </section>
 
-<section class="container marketplace-section marketplace-guidance">
-  <div>
-    <span class="eyebrow">Get started</span><h2>One platform, different workspaces</h2>
-    <p>Find independent services, present your professional work, or manage approved projects within the account permissions assigned to you.</p>
+<section id="bambodia-join" class="container bambodia-join-section" aria-labelledby="bambodia-join-title">
+  <div class="bambodia-join-panel">
+    <div class="bambodia-join-content">
+      <span class="bambodia-join-kicker">Start your journey</span>
+      <h2 id="bambodia-join-title">Ready to grow your business or freelance career in Cambodia?</h2>
+      <p>Discover approved opportunities, share your professional work, and manage your activity through Bambodia.</p>
+    </div>
+    <div class="bambodia-join-actions">
+      @auth
+        <a class="bambodia-join-button bambodia-join-button--primary" href="{{ route('account') }}">My Account <x-icon name="arrow-up-right" size="18"/></a>
+        <a class="bambodia-join-button bambodia-join-button--secondary" href="{{ route('jobs') }}">Find Jobs <x-icon name="arrow-up-right" size="18"/></a>
+      @else
+        <a class="bambodia-join-button bambodia-join-button--primary" href="{{ route('register') }}">Join Free <x-icon name="arrow-up-right" size="18"/></a>
+        <a class="bambodia-join-button bambodia-join-button--secondary" href="{{ route('login') }}">Sign In <x-icon name="arrow-up-right" size="18"/></a>
+      @endauth
+    </div>
   </div>
-  <div class="toolbar-actions">
-    @auth
-      <a class="btn primary" href="{{ route('account') }}">Open my account</a>
-      @if(auth()->user()->isCreator())<a class="btn subtle" href="{{ route('studio') }}">Creator Studio</a>@endif
-    @else
-      <a class="btn primary" href="{{ route('register') }}">Create an account</a>
-      <a class="btn subtle" href="{{ route('login') }}">Sign in</a>
-    @endauth
+</section>
+
+<section id="bambodia-advantage" class="bambodia-advantage-section" aria-labelledby="bambodia-advantage-title">
+  <div class="container bambodia-advantage-inner">
+    <header class="bambodia-advantage-header">
+      <span class="bambodia-advantage-kicker">THE BAMBODIA ADVANTAGE</span>
+      <h2 id="bambodia-advantage-title">Built for Cambodia's growing digital marketplace</h2>
+      <p>Discover a practical space for creators, freelancers, and clients, with clear publishing and account workflows.</p>
+    </header>
+    <div class="bambodia-advantage-grid">
+      <article class="bambodia-advantage-card">
+        <span class="bambodia-advantage-icon bambodia-advantage-icon--rose" aria-hidden="true"><x-icon name="clipboard-check" size="28"/></span>
+        <h3>Reviewed Marketplace Listings</h3>
+        <p>Products, projects, services, and job briefs are reviewed before appearing in public marketplace results.</p>
+      </article>
+      <article class="bambodia-advantage-card">
+        <span class="bambodia-advantage-icon bambodia-advantage-icon--green" aria-hidden="true"><x-icon name="users" size="28"/></span>
+        <h3>Public Creator Portfolios</h3>
+        <p>Creators can choose to publish a profile, introduce their expertise, and show approved work to potential clients.</p>
+      </article>
+      <article class="bambodia-advantage-card">
+        <span class="bambodia-advantage-icon bambodia-advantage-icon--gold" aria-hidden="true"><x-icon name="shield" size="28"/></span>
+        <h3>Controlled Job Proposals</h3>
+        <p>Freelancers with a published resume can apply to approved jobs through role-based, account-managed proposal workflows.</p>
+      </article>
+    </div>
+    <div class="bambodia-advantage-footer">
+      <p>BUILT AROUND YOUR DIGITAL WORK</p>
+      <div class="bambodia-advantage-capabilities" aria-label="Bambodia marketplace capabilities">
+        <span><x-icon name="package" size="18"/> Digital Products</span>
+        <span><x-icon name="users" size="18"/> Creator Portfolios</span>
+        <span><x-icon name="briefcase" size="18"/> Approved Jobs</span>
+        <span><x-icon name="shield" size="18"/> Account Workspaces</span>
+      </div>
+    </div>
   </div>
 </section>
 @endsection

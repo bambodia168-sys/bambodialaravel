@@ -81,6 +81,7 @@ jobs:
           bash -n support/category-slider-upgrade.sh
           bash -n support/freelancer-showcase-upgrade.sh
           bash -n support/job-list-upgrade.sh
+          bash -n support/homepage-advantage-upgrade.sh
           php -l examples/license-validation.php
           php -l support/frontend-layout-samples.php
           bash -n support/builder-studio-db-backup.sh
