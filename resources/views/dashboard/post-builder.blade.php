@@ -150,9 +150,9 @@
                 <option value="">Choose media</option>
                 @foreach($media as $asset)
                   <option value="{{ $asset->id }}" data-media-url="{{ $asset->previewUrl() }}"
-                    data-alt="{{ $asset->alt_text }}" data-mime="{{ $asset->mime_type }}" data-review="{{ $asset->review_status }}"
+                    data-alt="{{ $asset->alt_text }}" data-mime="{{ $asset->mime_type }}"
                     @selected((string)$selectedMedia === (string)$asset->id)>
-                    {{ \Illuminate\Support\Str::limit($asset->original_name, 46) }}{{ $asset->review_status === 'pending' ? ' · Pending review' : '' }}
+                    {{ \Illuminate\Support\Str::limit($asset->original_name, 46) }}
                   </option>
                 @endforeach
               </select>
@@ -170,7 +170,7 @@
             <input id="post-featured-color" type="color" name="featured_color"
               data-post-featured-color-input value="{{ old('featured_color', $post->featured_color ?: '#2563eb') }}">
           </div>
-          <p class="policy-help" data-post-featured-feedback role="status">Uploaded media is kept private until approved in Media Library. Publish only with approved files.</p>
+          <p class="policy-help" data-post-featured-feedback role="status">Choose an image or video from Media Library, or upload one. Private files become public only when used in published content.</p>
           <a class="post-builder-side-link" href="{{ route('dashboard.media.index') }}"><x-icon name="image" size="15"/> Open Media Library</a>
         </section>
         <section class="panel policy-side-panel">

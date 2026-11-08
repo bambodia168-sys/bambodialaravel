@@ -22,7 +22,7 @@
     </div>
     @if($entry->type === 'post')
       @if($entry->excerpt)<p class="post-public-excerpt">{{ $entry->excerpt }}</p>@endif
-      @if(in_array($entry->featured_type, ['image', 'video'], true) && $entry->featuredMedia && ($entry->featuredMedia->isApproved() || !empty($preview)))
+      @if(in_array($entry->featured_type, ['image', 'video'], true) && $entry->featuredMedia)
         @if($entry->featured_type === 'video' && str_starts_with($entry->featuredMedia->mime_type, 'video/'))
           <video class="post-public-video" controls preload="metadata" playsinline
             src="{{ $entry->featuredMedia->previewUrl() }}" aria-label="{{ $entry->featuredMedia->alt_text }}"></video>

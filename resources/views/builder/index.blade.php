@@ -316,7 +316,7 @@
                 <div><span class="studio-step">03</span><h3 id="studio-featured-title">Featured media</h3></div>
                 <span class="studio-step-caption">Cover your {{ strtolower($types[$type]['label']) }}</span>
               </div>
-              <p class="studio-help">Choose an approved image, animated GIF, video, or a solid color. Media remains private until it passes review.</p>
+              <p class="studio-help">Choose an image, animated GIF, video, or color from your own library. Media is private until attached to published content.</p>
               <div class="studio-media-types" role="group" aria-label="Featured media type">
                 @foreach([
                   'none'=>['label'=>'None','icon'=>'slash'],
@@ -333,11 +333,11 @@
               </div>
               <div class="studio-media-chooser" data-featured-media-select>
                 <div class="studio-field">
-                  <label for="studio-featured-media">Select reviewed media from your library</label>
+                  <label for="studio-featured-media">Select media from your library</label>
                   <select id="studio-featured-media" name="featured_media_id" data-featured-media @disabled(!$canEdit)>
-                    <option value="">Choose approved media</option>
+                    <option value="">Choose media</option>
                     @foreach($assets as $asset)
-                      @continue($asset->review_status !== 'approved')
+                      
                       <option value="{{ $asset->id }}" data-media-mime="{{ $asset->mime_type }}" data-media-url="{{ $asset->previewUrl() }}"
                               data-media-alt="{{ $asset->alt_text }}" @selected((string)$selectedMedia===(string)$asset->id)>
                         {{ $asset->alt_text }} · {{ $asset->public_id }} ({{ strtoupper(explode('/',$asset->mime_type)[1] ?? 'media') }})
@@ -364,7 +364,7 @@
                 <div class="studio-gallery-heading">
                   <div>
                     <h4>Images & screenshots</h4>
-                    <p class="hint">Choose up to eight images from your Media Library. Upload screenshots here without leaving the builder. New uploads await administrator rights review.</p>
+                    <p class="hint">Choose up to eight images from your Media Library. Upload screenshots here without leaving the builder. New uploads can be used immediately.</p>
                   </div>
                   @if($canEdit)<button type="button" class="studio-tool-action" data-modal-open="studio-media-upload"><x-icon name="upload" size="17"/> Upload screenshots</button>@endif
                 </div>
@@ -380,7 +380,7 @@
                         @disabled(!$canEdit)>
                       <img src="{{ $asset->previewUrl() }}" alt="{{ $asset->alt_text }}" loading="lazy">
                       <span>{{ $asset->alt_text }}</span>
-                      <small>{{ ucfirst($asset->review_status) }}</small>
+                      
                     </label>
                   @endforeach
                 </div>
@@ -455,15 +455,15 @@
                 <div class="studio-field">
                   <label for="studio-cover">Required static product preview</label>
                   <select id="studio-cover" name="cover_media_id" @disabled(!$canEdit)>
-                    <option value="">Select an approved static image</option>
+                    <option value="">Select a static image</option>
                     @foreach($assets as $asset)
-                      @if($asset->review_status === 'approved' && in_array($asset->mime_type,['image/jpeg','image/png','image/webp'],true))
+                      @if(in_array($asset->mime_type,['image/jpeg','image/png','image/webp'],true))
                         <option value="{{ $asset->id }}" @selected((string)old('cover_media_id',$record?->cover_media_id)===(string)$asset->id)>{{ $asset->alt_text }} · {{ $asset->public_id }}</option>
                       @endif
                     @endforeach
                   </select>
                 </div>
-                <p class="hint">Lifetime license validity and six-month standard support are separate. License definitions govern permitted use; support has its own expiry. An approved static preview and Regular definition are required for publication. Automatic paid issuance requires verified checkout.</p>
+                <p class="hint">Lifetime license validity and six-month standard support are separate. License definitions govern permitted use; support has its own expiry. A static preview and an active Regular License definition are required for publication. Automatic paid issuance requires verified checkout.</p>
               </section>
             @endif
 
@@ -587,7 +587,7 @@
           <h3>Ready to publish?</h3>
           <div class="studio-checklist">
             <div><x-icon name="check-circle" size="18"/> Clear title and description</div>
-            <div><x-icon name="image" size="18"/> Approved media and rights</div>
+            <div><x-icon name="image" size="18"/> Media ownership and usage rights</div>
             <div><x-icon name="shield" size="18"/> Follow platform policies</div>
             <div><x-icon name="clipboard-check" size="18"/> Administrator review</div>
           </div>
@@ -637,7 +637,7 @@
         @csrf
         <input type="hidden" name="return_to" value="{{ $returnTo }}">
         <div class="studio-card-heading"><h3>Upload media or screenshots</h3><button type="button" class="studio-editor-icon" data-modal-close title="Close"><x-icon name="x" size="19"/></button></div>
-        <p>Files stay private until approved. Static image: 4 MB · GIF: 8 MB · MP4/WebM: 20 MB.</p>
+        <p>Files stay private until used in published content. Static image: 4 MB · GIF: 8 MB · MP4/WebM: 20 MB.</p>
         <div class="studio-field">
           <label for="studio-upload-file">Image, screenshots, animation or video</label>
           <input id="studio-upload-file" name="image" type="file" data-builder-upload-files accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" required>

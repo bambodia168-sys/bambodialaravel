@@ -4,7 +4,7 @@
 @section('content')
 <div class="container inner-page">
   <div class="page-intro"><div class="eyebrow">Creator Studio · Digital Products</div><h1>Product Manager</h1>
-    <p>Create and manage digital product listings. Only products with an approved preview and an active license can be submitted for publication.</p></div>
+    <p>Create and manage digital product listings. Products need a valid image from your library and an active Regular License before submission.</p></div>
   <section class="panel">
     <div class="panel-head">
       <h2>My products <span class="count">{{ $products->total() }}</span></h2>

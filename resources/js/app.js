@@ -666,7 +666,7 @@ function initializeBuilderStudio() {
             return;
         }
         const empty = document.createElement('span');
-        empty.textContent = kind === 'none' ? 'No featured media selected' : 'Select approved ' + kind + ' media above';
+        empty.textContent = kind === 'none' ? 'No featured media selected' : 'Select ' + kind + ' media above';
         mediaPreview.appendChild(empty);
     }
 
@@ -1128,7 +1128,7 @@ document.addEventListener('DOMContentLoaded', initializeGlobalFeedback);
 
 /* Post Builder: one progressive featured-media workspace. Uploaded objects
    enter Media Library rights review; drafts may reference owned pending objects,
-   but publication is validated again by the server. */
+   and publication permissions are validated again by the server. */
 document.addEventListener('DOMContentLoaded', () => {
     const root = document.querySelector('[data-post-builder]');
     const panel = root?.querySelector('[data-post-media]');
@@ -1204,13 +1204,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (option && (kind === 'video' ? option.dataset.mime?.startsWith('video/') : option.dataset.mime?.startsWith('image/'))) {
                 select.value = option.value;
                 renderAsset(option.dataset.mediaUrl, option.dataset.mime, option.dataset.alt);
-                if (option.dataset.review === 'pending') message('Saved in Media Library · Pending rights review. This media is available for drafts only.');
-                else message('Media Library selection is ready to save.');
+                message('Media Library selection is ready to save.');
             } else {
                 id.value = '';
                 select.value = '';
                 placeholder('Drag & drop a ' + kind + ' here, or click to upload.');
-                message('Upload once to Media Library. Only approved media can appear on published posts.');
+                message('Upload once to Media Library. You can publish with media you have the rights to use.');
             }
         } else if (kind === 'youtube') {
             id.value = '';
@@ -1288,16 +1287,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const result = await reply.json();
             if (!reply.ok) throw new Error(Object.values(result.errors || {}).flat()[0] || result.message || 'Upload failed.');
-            const option = new Option(incoming.name + ' · Pending review', String(result.id), true, true);
+            const option = new Option(incoming.name, String(result.id), true, true);
             option.dataset.mediaUrl = result.preview_url;
             option.dataset.mime = result.mime_type;
             option.dataset.alt = result.alt_text;
-            option.dataset.review = result.review_status;
             select.append(option);
             id.value = String(result.id);
             select.value = id.value;
             sync();
-            message('Uploaded to Media Library. Preview ready. Save as Draft until this media is approved.');
+            message('Uploaded to Media Library. Your featured media is ready to save or publish.');
         } catch (error) {
             sync();
             message(error?.message || 'Upload failed. No post media was selected.');
