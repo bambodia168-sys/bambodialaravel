@@ -46,9 +46,14 @@ class PostManagerController extends Controller
 
     private function builder(ContentEntry $post): View
     {
-        $media = MediaAsset::query()->where('review_status', 'approved')
-            ->whereIn('mime_type', ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
-            ->latest()->limit(80)->get(['id', 'public_id', 'alt_text', 'original_name', 'mime_type']);
+        $media = MediaAsset::query()
+            ->where(function ($query): void {
+                $query->where('review_status', 'approved')
+                    ->orWhere(fn ($owned) => $owned->where('review_status', 'pending')
+                        ->where('user_id', auth()->id()));
+            })
+            ->whereIn('mime_type', MediaAsset::ALLOWED_MIME)
+            ->latest()->limit(80)->get(['id', 'public_id', 'alt_text', 'original_name', 'mime_type', 'review_status']);
         return view('dashboard.post-builder', compact('post', 'media'));
     }
 
@@ -117,12 +122,10 @@ class PostManagerController extends Controller
             'tags' => ['nullable', 'string', 'max:320'],
             'seo_title' => ['nullable', 'string', 'max:180'],
             'seo_description' => ['nullable', 'string', 'max:320'],
-            'featured_media_id' => [
-                'nullable', 'integer',
-                Rule::exists('media_assets', 'id')->where(fn ($q) => $q
-                    ->where('review_status', 'approved')
-                    ->whereIn('mime_type', ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])),
-            ],
+            'featured_type' => ['nullable', Rule::in(['none', 'image', 'video', 'youtube', 'color'])],
+            'featured_media_id' => ['nullable', 'integer'],
+            'featured_url' => ['nullable', 'string', 'max:255'],
+            'featured_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/D'],
         ]);
         $html = PolicyContent::sanitize($data['body']);
         $plain = PolicyContent::plain($html);
@@ -142,7 +145,55 @@ class PostManagerController extends Controller
             throw ValidationException::withMessages(['tags' => 'Use no more than 10 tags, each up to 35 characters.']);
         }
         $data['tags'] = $tags ? implode(', ', $tags) : null;
-        $data['featured_media_id'] = $data['featured_media_id'] ?? null;
+        $media = empty($data['featured_media_id']) ? null : MediaAsset::query()->find($data['featured_media_id']);
+        $type = $data['featured_type'] ?? ($media
+            ? (str_starts_with($media->mime_type, 'video/') ? 'video' : 'image') : 'none');
+        $data['featured_type'] = $type;
+        $data['featured_media_id'] = null;
+        $data['featured_url'] = null;
+        $data['featured_color'] = null;
+
+        if (in_array($type, ['image', 'video'], true)) {
+            $validFormat = $media && ($type === 'image'
+                ? str_starts_with($media->mime_type, 'image/')
+                : str_starts_with($media->mime_type, 'video/'));
+            $authorized = $media && ($media->review_status === 'approved'
+                || ($data['status'] !== 'published' && $media->review_status === 'pending'
+                    && (int) $media->user_id === (int) $request->user()->id));
+            if (! $validFormat || ! $authorized) {
+                throw ValidationException::withMessages(['featured_media_id' =>
+                    'Choose approved media, or your pending upload for a private draft.']);
+            }
+            $data['featured_media_id'] = $media->id;
+        } elseif ($type === 'youtube') {
+            $url = $request->input('featured_url');
+            $parts = is_string($url) ? parse_url(trim($url)) : false;
+            $host = strtolower((string) ($parts['host'] ?? ''));
+            $videoId = null;
+            if (($parts['scheme'] ?? '') === 'https'
+                && in_array($host, ['youtube.com', 'www.youtube.com', 'm.youtube.com',
+                    'youtu.be', 'www.youtu.be'], true)) {
+                if (str_ends_with($host, 'youtu.be')) {
+                    $videoId = trim($parts['path'] ?? '', '/');
+                } elseif (($parts['path'] ?? '') === '/watch') {
+                    parse_str($parts['query'] ?? '', $query);
+                    $videoId = $query['v'] ?? null;
+                } elseif (preg_match('~^/(?:shorts|embed)/([a-zA-Z0-9_-]{11})/?$~D',
+                    $parts['path'] ?? '', $matches)) {
+                    $videoId = $matches[1];
+                }
+            }
+            if (! is_string($videoId) || ! preg_match('/^[A-Za-z0-9_-]{11}$/D', $videoId)) {
+                throw ValidationException::withMessages(['featured_url' => 'Enter a valid HTTPS YouTube video link.']);
+            }
+            $data['featured_url'] = 'https://www.youtube.com/watch?v='.$videoId;
+        } elseif ($type === 'color') {
+            if (! isset($request->featured_color)
+                || ! preg_match('/^#[0-9a-fA-F]{6}$/D', (string) $request->featured_color)) {
+                throw ValidationException::withMessages(['featured_color' => 'Choose a valid color.']);
+            }
+            $data['featured_color'] = strtolower((string) $request->featured_color);
+        }
 
         return $data;
     }
