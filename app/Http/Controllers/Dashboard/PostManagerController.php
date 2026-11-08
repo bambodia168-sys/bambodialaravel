@@ -16,6 +16,9 @@ use Illuminate\View\View;
 
 class PostManagerController extends Controller
 {
+    public const CATEGORIES = ['AI', 'Technology', 'Business', 'Finance', 'Design',
+        'Development', 'Marketing', 'Education', 'Security', 'Trends'];
+
     public function index(Request $request): View
     {
         $filters = $request->validate([
@@ -54,7 +57,8 @@ class PostManagerController extends Controller
             })
             ->whereIn('mime_type', MediaAsset::ALLOWED_MIME)
             ->latest()->limit(80)->get(['id', 'public_id', 'alt_text', 'original_name', 'mime_type', 'review_status']);
-        return view('dashboard.post-builder', compact('post', 'media'));
+        $categoryOptions = self::CATEGORIES;
+        return view('dashboard.post-builder', compact('post', 'media', 'categoryOptions'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -74,7 +78,7 @@ class PostManagerController extends Controller
     public function update(Request $request, ContentEntry $entry): RedirectResponse
     {
         $this->ensurePost($entry);
-        $data = $this->validated($request);
+        $data = $this->validated($request, $entry);
         $data['published_at'] = $data['status'] === 'published'
             ? ($entry->status === 'published' ? ($entry->published_at ?? now()) : now())
             : null;
@@ -111,14 +115,15 @@ class PostManagerController extends Controller
         abort_unless($entry->type === 'post', 404);
     }
 
-    private function validated(Request $request): array
+    private function validated(Request $request, ?ContentEntry $existing = null): array
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'min:4', 'max:180'],
             'excerpt' => ['nullable', 'string', 'max:320'],
             'body' => ['required', 'string', 'max:100000'],
             'status' => ['required', Rule::in(['draft', 'published', 'archived'])],
-            'category' => ['nullable', 'string', 'max:80'],
+            'category' => ['nullable', 'string', 'max:80',
+                Rule::in(array_merge(self::CATEGORIES, $existing?->category ? [$existing->category] : []))],
             'tags' => ['nullable', 'string', 'max:320'],
             'seo_title' => ['nullable', 'string', 'max:180'],
             'seo_description' => ['nullable', 'string', 'max:320'],
