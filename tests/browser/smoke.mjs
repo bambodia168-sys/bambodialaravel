@@ -181,8 +181,8 @@ try {
           value=>document.querySelector('#marketplace-category-track').scrollLeft<value-5,
           afterForward,{timeout:5000}
         );
-        const firstCategory=await sliderCategories.first.getAttribute('href');
-        const finalCategory=await sliderCategories.last.getAttribute('href');
+        const firstCategory=await sliderCategories.first().getAttribute('href');
+        const finalCategory=await sliderCategories.last().getAttribute('href');
         if(!firstCategory?.includes('category=') || !finalCategory?.includes('category='))
           throw new Error(device.name+' slider category links must preserve filters');
         checks+=6;
