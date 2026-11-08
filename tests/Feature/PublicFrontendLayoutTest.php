@@ -148,4 +148,46 @@ class PublicFrontendLayoutTest extends TestCase
             ->assertDontSee('Unlicensed Restricted Product Private');
         $this->get('/')->assertOk()->assertDontSee('Unlicensed Restricted Product Private');
     }
+
+
+    public function test_public_header_uses_category_search_language_and_profile_without_redundant_links(): void
+    {
+        $response = $this->get('/')->assertOk();
+        $html = $response->getContent();
+        $header = explode('</header>', explode('<header class="site-header">', $html, 2)[1], 2)[0];
+        $footer = explode('</footer>', explode('<footer class="site-footer">', $html, 2)[1], 2)[0];
+
+        $this->assertStringContainsString('data-public-category-menu', $header);
+        $this->assertStringContainsString('data-public-mobile-search', $header);
+        $this->assertStringContainsString('class="nav-search"', $header);
+        $this->assertStringContainsString('class="nav-language-menu language-menu"', $header);
+        $this->assertStringContainsString('class="profile-trigger"', $header);
+        $this->assertStringNotContainsString('nav-marketplace-links', $header);
+        $this->assertStringNotContainsString('<nav class="nav-marketplace-links"', $header);
+        $this->assertStringContainsString('Product', $header);
+        $this->assertStringContainsString('Project', $header);
+        $this->assertStringContainsString('Service', $header);
+        $this->assertStringContainsString('Freelance', $header);
+
+        $this->assertLessThan(strpos($header, 'data-public-category-menu'), strpos($header, 'class="brand"'));
+        $this->assertLessThan(strpos($header, 'data-public-mobile-search'), strpos($header, 'data-public-category-menu'));
+        $this->assertLessThan(strpos($header, 'nav-language-menu'), strpos($header, 'data-public-mobile-search'));
+        $this->assertLessThan(strpos($header, 'profile-trigger'), strpos($header, 'nav-language-menu'));
+        $this->assertSame(1, substr_count($header, 'class="nav-language-menu language-menu"'));
+
+        $this->assertStringContainsString('action="'.route('locale.update').'"', $header);
+        $this->assertStringContainsString('name="locale"', $header);
+        $this->assertStringNotContainsString('class="language-menu"', $footer);
+        $this->assertStringContainsString('class="footer-social"', $footer);
+        $this->assertStringContainsString('footer-columns', $footer);
+    }
+
+    public function test_language_switcher_remains_functional_from_the_public_header(): void
+    {
+        $this->get('/')->assertOk()->assertSee('English')->assertSee('class="nav-language-menu language-menu"', false);
+        $this->post(route('locale.update'), ['locale' => 'km'])->assertRedirect();
+        $this->get('/')->assertOk()->assertSee('ខ្មែរ')
+            ->assertSee('name="locale" value="km"', false)
+            ->assertSee('class="nav-language-menu language-menu"', false);
+    }
 }

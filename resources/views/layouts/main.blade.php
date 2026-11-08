@@ -71,15 +71,25 @@
       <button type="submit">{{ __('ui.search') }}</button>
     </form>
     @endif
+    @if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))
+    <details class="dropdown nav-mobile-search" data-public-mobile-search>
+      <summary class="nav-mobile-search-trigger" aria-label="Open marketplace search" title="Search marketplace">
+        <x-icon name="search" size="21"/>
+        <span class="sr-only">Search</span>
+      </summary>
+      <div class="nav-mobile-search-panel">
+        <form action="{{ url('/search') }}" method="get" role="search" class="nav-mobile-search-form">
+          <label class="sr-only" for="mobile-marketplace-query">Search products, projects and services</label>
+          <x-icon name="search" size="19"/>
+          <input id="mobile-marketplace-query" type="search" name="q" value="{{ request('q') }}"
+            autocomplete="off" placeholder="{{ __('ui.search_placeholder') }}">
+          <button type="submit">{{ __('ui.search') }}</button>
+        </form>
+      </div>
+    </details>
+    @endif
     <div class="nav-actions">
-      @if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))
-        <nav class="nav-marketplace-links" aria-label="Marketplace">
-          <a href="{{ route('marketplace.search',['type'=>'product']) }}">Product</a>
-          <a href="{{ route('marketplace.search',['type'=>'project']) }}">Project</a>
-          <a href="{{ route('marketplace.search',['type'=>'service']) }}">Service</a>
-          <a href="{{ route('marketplace.search',['type'=>'freelance']) }}">Freelance</a>
-        </nav>
-      @endif
+      <x-language-menu class="nav-language-menu"/>
       @auth
       <details class="dropdown profile-dropdown">
         <summary class="profile-trigger" aria-label="Profile menu"><x-icon name="user" size="19"/></summary>
@@ -168,7 +178,6 @@
         <a href="https://tonsamith.com" target="_blank" rel="noopener noreferrer" aria-label="Author website"><x-icon name="globe" size="18"/></a>
         <a href="https://github.com/bambodia168-sys/bambodialaravel" target="_blank" rel="noopener noreferrer" aria-label="Bambodia GitHub repository"><x-icon name="github" size="18"/></a>
       </div>
-      <x-language-menu/>
     </div>
   </div>
 </footer>

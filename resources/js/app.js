@@ -1360,3 +1360,24 @@ document.addEventListener('click', async (event) => {
     window.prompt('Copy article link:', url);
     feedback('Share link ready');
 });
+
+
+/* Native mobile marketplace search panel: focus input on open and close on outside/Escape. */
+document.querySelectorAll('[data-public-mobile-search]').forEach((searchMenu) => {
+    searchMenu.addEventListener('toggle', () => {
+        if (searchMenu.open) {
+            const categoryMenu = document.querySelector('[data-public-category-menu]');
+            if (categoryMenu) categoryMenu.open = false;
+            searchMenu.querySelector('input[type="search"]')?.focus();
+        }
+    });
+    document.addEventListener('click', (event) => {
+        if (searchMenu.open && !searchMenu.contains(event.target)) searchMenu.open = false;
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && searchMenu.open) {
+            searchMenu.open = false;
+            searchMenu.querySelector('summary')?.focus();
+        }
+    });
+});
