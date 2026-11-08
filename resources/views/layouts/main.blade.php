@@ -149,7 +149,13 @@
 @endphp
 <footer class="site-footer">
   <div class="container footer-columns">
-    <div><div class="brand footer-brand"><span class="brand-mark">B</span><span>Bambodia</span></div>
+    <div>
+      <a class="brand footer-brand" href="{{ route('home') }}" aria-label="Bambodia home">
+        <span class="brand-logo-pair">
+          <img class="brand-logo-light" src="{{ asset('images/bambodia-logo.webp') }}" alt="Bambodia" width="550" height="144" loading="lazy" decoding="async">
+          <img class="brand-logo-dark" src="{{ asset('images/bambodia-logo-dark.svg') }}" alt="Bambodia" width="550" height="144" loading="lazy" decoding="async">
+        </span>
+      </a>
       @if($aboutPage)<a href="{{ $aboutPage->publicUrl() }}">About</a>@endif
       <a href="https://tonsamith.com" target="_blank" rel="noopener noreferrer">Author</a>
       @if(Route::has('blog'))<a href="{{ route('blog') }}">Blog</a>@endif
@@ -172,7 +178,7 @@
       @if($footerPolicies->has('terms'))<a href="{{ $footerPolicies->get('terms')->publicUrl() }}">Terms of Service</a>@endif
     </div>
   </div>
-  <div class="container footer-bottom"><span>© {{ date('Y') }} Bambodia · All Rights Reserved.</span>
+  <div class="container footer-bottom"><span class="footer-copyright">© {{ date('Y') }} Bambodia · All Rights Reserved.</span>
     <div class="footer-actions">
       <div class="footer-social" aria-label="Social media">
         <a href="https://tonsamith.com" target="_blank" rel="noopener noreferrer" aria-label="Author website"><x-icon name="globe" size="18"/></a>
@@ -181,5 +187,9 @@
     </div>
   </div>
 </footer>
+<button type="button" class="back-to-top" data-back-to-top aria-label="Back to top" title="Back to top">
+  <x-icon name="arrow-up" size="19"/>
+  <span>Back to top</span>
+</button>
 </body>
 </html>

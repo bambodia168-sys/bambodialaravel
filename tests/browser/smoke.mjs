@@ -264,7 +264,48 @@ try {
           getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
         if(footerColumns!==(device.viewport.width>1020?4:2))
           throw new Error(device.name+' responsive footer grid has '+footerColumns+' columns');
-        checks+=2;
+
+        const footerLayout=await page.evaluate(()=>{
+          const footer=document.querySelector('.site-footer');
+          const bounds=(selector)=>{
+            const node=footer?.querySelector(selector);if(!node)return null;
+            const box=node.getBoundingClientRect();
+            return {left:box.left,right:box.right,centerY:(box.top+box.bottom)/2};
+          };
+          const logo=footer.querySelector('.footer-brand');
+          const logoImages=[...logo.querySelectorAll('.brand-logo-pair img')];
+          return {
+            legacyBadge:!!footer.querySelector('.footer-brand .brand-mark'),
+            logoImages:logoImages.map(img=>({src:img.getAttribute('src'),naturalWidth:img.naturalWidth})),
+            copyright:bounds('.footer-copyright'),
+            social:bounds('.footer-actions'),
+            copyrightRowDirection:getComputedStyle(footer.querySelector('.footer-bottom')).flexDirection,
+            width:document.documentElement.scrollWidth
+          };
+        });
+        if(footerLayout.legacyBadge || footerLayout.logoImages.length!==2 ||
+           !footerLayout.logoImages.some(x=>x.src.includes('bambodia-logo.webp')) ||
+           !footerLayout.logoImages.some(x=>x.src.includes('bambodia-logo-dark.svg')))
+          throw new Error(device.name+' footer logo still uses old badge '+JSON.stringify(footerLayout));
+        if(footerLayout.copyrightRowDirection!=='row' ||
+           Math.abs(footerLayout.copyright.centerY-footerLayout.social.centerY)>12 ||
+           footerLayout.copyright.right>footerLayout.social.left+3 ||
+           footerLayout.width>device.viewport.width+5)
+          throw new Error(device.name+' copyright/social must remain one row '+JSON.stringify(footerLayout));
+
+        const backToTop=page.locator('[data-back-to-top]');
+        if(await backToTop.isVisible())
+          throw new Error(device.name+' Back to Top should be hidden at page start');
+        await page.evaluate(()=>window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
+        await page.waitForFunction(()=>window.scrollY>360,{timeout:3000}).catch(()=>{
+          throw new Error(device.name+' homepage is unexpectedly not scrollable');
+        });
+        await backToTop.waitFor({state:'visible',timeout:3000});
+        await backToTop.click();
+        await page.waitForFunction(()=>window.scrollY<20,null,{timeout:7000});
+        if(await backToTop.isVisible())
+          throw new Error(device.name+' Back to Top must disappear at page start');
+        checks+=8;
 
       }
       if(path==='/search'){

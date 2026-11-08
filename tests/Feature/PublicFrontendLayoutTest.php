@@ -190,4 +190,33 @@ class PublicFrontendLayoutTest extends TestCase
             ->assertSee('name="locale" value="km"', false)
             ->assertSee('nav-language-menu', false);
     }
+
+
+    public function test_footer_reuses_header_brand_and_preserves_copyright_social_row_with_back_to_top(): void
+    {
+        $response = $this->get('/')->assertOk();
+        $html = $response->getContent();
+        $header = explode('</header>', explode('<header class="site-header">', $html, 2)[1], 2)[0];
+        $footer = explode('</footer>', explode('<footer class="site-footer">', $html, 2)[1], 2)[0];
+
+        $this->assertSame(2, substr_count($html, 'images/bambodia-logo.webp'));
+        $this->assertSame(2, substr_count($html, 'images/bambodia-logo-dark.svg'));
+        $this->assertStringContainsString('brand-logo-pair', $header);
+        $this->assertStringContainsString('class="brand footer-brand"', $footer);
+        $this->assertStringContainsString('class="brand-logo-light"', $footer);
+        $this->assertStringContainsString('class="brand-logo-dark"', $footer);
+        $this->assertStringNotContainsString('class="brand-mark"', $footer);
+        $this->assertStringContainsString('class="footer-copyright"', $footer);
+        $this->assertStringContainsString('© '.date('Y').' Bambodia', $footer);
+        $this->assertSame(2, substr_count($footer, 'class="footer-social"') === 1
+            ? substr_count(explode('class="footer-social"', $footer, 2)[1], 'aria-label=')
+            : -1);
+        $this->assertStringContainsString('aria-label="Author website"', $footer);
+        $this->assertStringContainsString('aria-label="Bambodia GitHub repository"', $footer);
+        $this->assertStringContainsString('class="back-to-top"', $html);
+        $this->assertStringContainsString('data-back-to-top', $html);
+        $this->assertStringContainsString('aria-label="Back to top"', $html);
+        $this->assertStringContainsString('Back to top</span>', $html);
+        $this->assertStringNotContainsString('nav-marketplace-links', $header);
+    }
 }

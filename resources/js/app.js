@@ -1381,3 +1381,31 @@ document.querySelectorAll('[data-public-mobile-search]').forEach((searchMenu) =>
         }
     });
 });
+
+
+/* Accessible public Back to Top: visible only after scrolling, reduced-motion aware. */
+(() => {
+    const button = document.querySelector('[data-back-to-top]');
+    if (!button) return;
+    const showAfter = 360;
+    let scheduled = false;
+    const update = () => {
+        const visible = window.scrollY > showAfter;
+        button.classList.toggle('is-visible', visible);
+        button.tabIndex = visible ? 0 : -1;
+        button.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        scheduled = false;
+    };
+    const onScroll = () => {
+        if (scheduled) return;
+        scheduled = true;
+        window.requestAnimationFrame(update);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    button.addEventListener('click', () => {
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({ top: 0, behavior: reduceMotion ? 'instant' : 'smooth' });
+    });
+    update();
+})();

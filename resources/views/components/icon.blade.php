@@ -101,6 +101,7 @@ $paths = [
     'video' => '<rect x="2" y="5" width="15" height="14" rx="2"/><path d="m17 10 5-3v10l-5-3"/>',
     'sparkles' => '<path d="m12 2 2.2 6 6 2.2-6 2.2L12 18l-2.2-5.6L4 10.2l5.8-2.2zM19 17l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/>',
     'external-link' => '<path d="M14 4h6v6m0-6-9 9M20 13v6H4V4h7"/>',
+    'arrow-up' => '<path d="M12 19V5m-7 7 7-7 7 7"/>',
     'arrow-up-right' => '<path d="M7 17 17 7M8 7h9v9"/>',
     'check-circle' => '<circle cx="12" cy="12" r="9"/><path d="m7 12 3.3 3.3L17 8"/>',
     'star' => '<path d="m12 2 3.1 6.3 7 .9-5 4.9 1.2 7-6.3-3.3-6.3 3.3 1.2-7-5-4.9 7-.9z"/>',
