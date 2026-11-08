@@ -29,7 +29,7 @@ class PostManagerController extends Controller
             ->with('author:id,name')
             ->when(($filters['q'] ?? '') !== '', fn ($query) => $query->where('title', 'like', '%'.$filters['q'].'%'))
             ->when(! empty($filters['status']), fn ($query) => $query->where('status', $filters['status']))
-            ->latest('updated_at')->paginate(10)->withQueryString();
+            ->latest('updated_at')->orderByDesc('id')->paginate(10)->withQueryString();
         $counts = ContentEntry::query()->where('type', 'post')
             ->selectRaw('status, COUNT(*) AS total')->groupBy('status')->pluck('total', 'status');
 

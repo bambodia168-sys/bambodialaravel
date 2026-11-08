@@ -1,7 +1,7 @@
-@props(['paginator'])
-@if($paginator->lastPage() > 1)
+@props(['paginator', 'always' => false])
+@if($always || $paginator->lastPage() > 1)
 <div class="pager">
-  <p>Showing {{ $paginator->firstItem() }}–{{ $paginator->lastItem() }} of {{ $paginator->total() }}</p>
+  <p>Showing {{ $paginator->firstItem() ?? 0 }}–{{ $paginator->lastItem() ?? 0 }} of {{ $paginator->total() }}</p>
   <div class="pager-controls">
     @if($paginator->onFirstPage())
       <span class="btn subtle disabled"><x-icon name="chevron-left" size="16"/> Previous</span>

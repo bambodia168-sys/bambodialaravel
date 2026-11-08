@@ -4,10 +4,13 @@
 @php
   $statuses = ['draft' => 'Draft', 'published' => 'Published', 'archived' => 'Archived'];
 @endphp
-<div class="page-intro">
-  <div class="eyebrow">Appearance &amp; Content · Publishing</div>
-  <h1>Post Manager</h1>
-  <p>Create, edit and publish Bambodia news, announcements and editorial articles.</p>
+<div class="page-intro post-manager-page-heading">
+  <div class="post-manager-page-copy">
+    <div class="eyebrow">Appearance &amp; Content · Publishing</div>
+    <h1>Post Manager</h1>
+    <p>Create, edit and publish Bambodia news, announcements and editorial articles.</p>
+  </div>
+  <a class="btn primary post-manager-create" href="{{ route('dashboard.posts.create') }}"><x-icon name="edit" size="17"/> New post</a>
 </div>
 <section class="panel">
   <header class="panel-head post-manager-heading">
@@ -17,7 +20,6 @@
         Published {{ $counts['published'] ?? 0 }} · Drafts {{ $counts['draft'] ?? 0 }} · Archived {{ $counts['archived'] ?? 0 }}
       </p>
     </div>
-    <a class="btn primary" href="{{ route('dashboard.posts.create') }}"><x-icon name="edit" size="17"/> New post</a>
   </header>
   <form method="get" action="{{ route('dashboard.posts') }}" class="post-manager-filters">
     <label class="sr-only" for="post-search">Search posts</label>
@@ -31,16 +33,14 @@
     @if(!empty($filters['q']) || !empty($filters['status']))<a class="btn subtle" href="{{ route('dashboard.posts') }}">Clear</a>@endif
   </form>
   <div class="table-scroll">
-    <table class="data-table">
+    <table class="data-table post-manager-table">
       <thead><tr><th>Post ID</th><th>Title</th><th>Category</th><th>Author</th><th>Status</th><th>Updated</th><th>Action</th></tr></thead>
       <tbody>
       @forelse($posts as $post)
         <tr>
           <td class="mono">{{ $post->public_id }}</td>
-          <td>
-            <strong>{{ $post->title }}</strong>
-            @if($post->excerpt)<div class="text-muted post-manager-excerpt">{{ $post->excerpt }}</div>@endif
-          </td>
+          <td><a class="post-manager-title-link" href="{{ route('dashboard.posts.edit', $post) }}"
+              aria-label="Edit post: {{ $post->title }}">{{ $post->title }}</a></td>
           <td>{{ $post->category ?: 'Uncategorized' }}</td>
           <td>{{ $post->author?->name ?? 'Unknown' }}</td>
           <td><span class="role-pill">{{ $statuses[$post->status] ?? ucfirst($post->status) }}</span></td>
@@ -61,6 +61,6 @@
       </tbody>
     </table>
   </div>
-  <x-pagination :paginator="$posts"/>
+  <div class="post-manager-pagination"><x-pagination :paginator="$posts" :always="true"/></div>
 </section>
 @endsection

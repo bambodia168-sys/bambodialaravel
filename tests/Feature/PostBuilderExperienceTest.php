@@ -315,4 +315,57 @@ class PostBuilderExperienceTest extends TestCase
             'type' => 'post', 'status' => 'published', 'featured_media_id' => $asset->id,
         ]);
     }
+
+    public function test_post_manager_uses_top_right_action_clickable_titles_and_ten_row_page_navigation(): void
+    {
+        $admin = $this->member();
+        $this->actingAs($admin);
+        foreach (range(1, 21) as $i) {
+            ContentEntry::query()->create([
+                'type' => 'post',
+                'author_id' => $admin->id,
+                'title' => sprintf('QA Compact Post %02d', $i),
+                'excerpt' => 'HIDDEN_ROW_SUMMARY_'.$i,
+                'body' => '<p>Readable text for the post manager table and editing workflow.</p>',
+                'status' => $i % 2 === 0 ? 'published' : 'draft',
+                'category' => 'Technology',
+            ]);
+        }
+
+        $response = $this->get(route('dashboard.posts'))->assertOk();
+        $response->assertViewHas('posts', fn ($items) => $items->count() === 10
+            && $items->perPage() === 10 && $items->total() === 21
+            && $items->currentPage() === 1);
+        $response->assertSee('class="page-intro post-manager-page-heading"', false)
+            ->assertSee('class="btn primary post-manager-create"', false)
+            ->assertSee('class="post-manager-title-link"', false)
+            ->assertSee('Previous')->assertSee('Next')->assertSee('Go To')
+            ->assertSee('name="page"', false)
+            ->assertDontSee('HIDDEN_ROW_SUMMARY_');
+
+        $newest = ContentEntry::query()->where('type', 'post')->orderByDesc('id')->firstOrFail();
+        $response->assertSee('href="'.route('dashboard.posts.edit', $newest).'"', false);
+        $this->get(route('dashboard.posts.edit', $newest))->assertOk()
+            ->assertSee($newest->title);
+
+        $second = $this->get(route('dashboard.posts', ['q' => 'QA Compact', 'page' => 2]))
+            ->assertOk()
+            ->assertViewHas('posts', fn ($items) => $items->count() === 10
+                && $items->currentPage() === 2);
+        $second->assertSee('name="q" value="QA Compact"', false)
+            ->assertSee('name="page"', false)
+            ->assertSee('Go To');
+
+        $third = $this->get(route('dashboard.posts', ['q' => 'QA Compact', 'page' => 3]))
+            ->assertOk()
+            ->assertViewHas('posts', fn ($items) => $items->count() === 1
+                && $items->currentPage() === 3);
+        $third->assertSee('Showing 21–21 of 21');
+
+        $filtered = $this->get(route('dashboard.posts', ['status' => 'published', 'page' => 2]))
+            ->assertOk()
+            ->assertViewHas('posts', fn ($items) => $items->count() === 0
+                && $items->total() === 10);
+        $filtered->assertSee('name="status" value="published"', false);
+    }
 }
