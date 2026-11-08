@@ -1331,3 +1331,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     sync();
 });
+
+
+/* Public article sharing: native sharing on supported devices, secure copy fallback. */
+document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-article-share]');
+    if (!button) return;
+    const url = button.dataset.shareUrl || window.location.href;
+    const title = button.dataset.shareTitle || document.title;
+    const status = button.parentElement?.querySelector('[data-article-share-status]');
+    const feedback = (message) => { if (status) status.textContent = message; };
+    if (navigator.share) {
+        try {
+            await navigator.share({ title, url });
+            feedback('Shared');
+            return;
+        } catch (error) {
+            if (error?.name === 'AbortError') return;
+        }
+    }
+    if (navigator.clipboard?.writeText) {
+        try {
+            await navigator.clipboard.writeText(url);
+            feedback('Link copied');
+            return;
+        } catch (_) { /* Offer a manual copy if clipboard permission is denied. */ }
+    }
+    window.prompt('Copy article link:', url);
+    feedback('Share link ready');
+});

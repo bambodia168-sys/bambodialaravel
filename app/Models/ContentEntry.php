@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class ContentEntry extends Model
@@ -43,6 +44,11 @@ class ContentEntry extends Model
     public function featuredMedia(): BelongsTo
     {
         return $this->belongsTo(MediaAsset::class, 'featured_media_id');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(PostComment::class, 'content_entry_id');
     }
 
     public function isPublic(): bool

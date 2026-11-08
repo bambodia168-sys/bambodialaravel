@@ -22,7 +22,11 @@ class ContentController extends Controller
 
         $relatedPosts = collect();
         $blogCategories = collect();
+        $comments = null;
         if ($entry->type === 'post') {
+            $comments = $entry->comments()->with('user:id,name')
+                ->latest('created_at')->orderByDesc('id')
+                ->paginate(8, ['*'], 'comments_page')->withQueryString();
             $relatedPosts = ContentEntry::query()
                 ->where('type', 'post')->where('status', 'published')
                 ->where('id', '!=', $entry->id)
@@ -36,7 +40,7 @@ class ContentController extends Controller
                 ->groupBy('category')->orderBy('category')->get();
         }
 
-        return view('content.show', compact('entry', 'relatedPosts', 'blogCategories'));
+        return view('content.show', compact('entry', 'relatedPosts', 'blogCategories', 'comments'));
     }
 
     public function blog(Request $request): View
@@ -47,7 +51,7 @@ class ContentController extends Controller
             'category' => ['nullable', 'string', 'max:80'],
         ]);
         $view = $filters['view'] ?? 'grid';
-        $columns = (int) ($filters['columns'] ?? 3);
+        $columns = (int) ($filters['columns'] ?? 4);
         $category = trim((string) ($filters['category'] ?? ''));
         $perPage = $view === 'grid' ? $columns * 3 : 3;
 

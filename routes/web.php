@@ -50,6 +50,7 @@ use App\Http\Controllers\Dashboard\UserManagerController;
 use App\Http\Controllers\Marketplace\ListingController;
 use App\Http\Controllers\PolicyCenterController;
 use App\Http\Controllers\ContentController;
+use App\Http\Controllers\PostCommentController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\KnowledgeBaseController;
@@ -67,6 +68,11 @@ Route::get('/creators/{creator}', [CreatorProfileController::class,'show'])
     ->where('creator','[0-9]{8}')->name('creators.show');
 Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 Route::get('/blog', [ContentController::class, 'blog'])->name('blog');
+Route::post('/blog/{content}/comments', [PostCommentController::class, 'store'])
+    ->where('content', '[0-9]{9}_[a-z0-9-]+')
+    ->middleware(['auth', 'throttle:5,1'])->name('blog.comments.store');
+Route::delete('/blog/comments/{comment}', [PostCommentController::class, 'destroy'])
+    ->middleware(['auth', 'throttle:15,1'])->name('blog.comments.destroy');
 Route::get('/jobs', [JobBoardController::class, 'index'])->name('jobs');
 Route::get('/jobs/{job}', [JobBoardController::class, 'show'])->name('jobs.show')
     ->where('job','[0-9]{9}-[a-z0-9-]+');

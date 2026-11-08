@@ -69,6 +69,7 @@ $paths = [
     'file' => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8"/>',
     'filter' => '<path d="M4 7h16M7 12h10M10 17h4"/>',
     'copy' => '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+    'share-2' => '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.5 6.6-4M8.7 13.5l6.6 4"/>',
     'bold' => '<path d="M6 4h7a4 4 0 0 1 0 8H6zM6 12h8a4 4 0 0 1 0 8H6z"/>',
     'italic' => '<path d="M18 4h-9m6 16H6M14 4 10 20"/>',
     'underline' => '<path d="M6 4v8a6 6 0 0 0 12 0V4M4 21h16"/>',

@@ -369,7 +369,7 @@ class PostBuilderExperienceTest extends TestCase
         $filtered->assertSee('name="status" value="published"', false);
     }
 
-    public function test_blog_defaults_to_three_column_grid_and_three_rows_per_page(): void
+    public function test_blog_defaults_to_four_column_grid_and_three_rows_per_page(): void
     {
         $author = $this->member();
         foreach (range(1, 16) as $i) {
@@ -385,10 +385,10 @@ class PostBuilderExperienceTest extends TestCase
             ]);
         }
         $result = $this->get(route('blog'))->assertOk()
-            ->assertViewHas('view', 'grid')->assertViewHas('columns', 3)
-            ->assertViewHas('posts', fn ($posts) => $posts->perPage() === 9
-                && $posts->count() === 9 && $posts->total() === 16)
-            ->assertSee('blog-post-grid columns-3', false)
+            ->assertViewHas('view', 'grid')->assertViewHas('columns', 4)
+            ->assertViewHas('posts', fn ($posts) => $posts->perPage() === 12
+                && $posts->count() === 12 && $posts->total() === 16)
+            ->assertSee('blog-post-grid columns-4', false)
             ->assertSee('Grid News Item 16')
             ->assertDontSee('Grid News Item 01')
             ->assertDontSee('Insights &amp; Updates', false)
@@ -399,8 +399,8 @@ class PostBuilderExperienceTest extends TestCase
         $result->assertSee('href="'.$newest->publicUrl().'"', false);
 
         $this->get(route('blog', ['page' => 2]))->assertOk()
-            ->assertViewHas('posts', fn ($posts) => $posts->perPage() === 9
-                && $posts->count() === 7 && $posts->currentPage() === 2)
+            ->assertViewHas('posts', fn ($posts) => $posts->perPage() === 12
+                && $posts->count() === 4 && $posts->currentPage() === 2)
             ->assertSee('Grid News Item 01');
 
         foreach ([2 => 6, 4 => 12, 5 => 15] as $columns => $expected) {
