@@ -49,7 +49,7 @@ class ContentController extends Controller
         $view = $filters['view'] ?? 'grid';
         $columns = (int) ($filters['columns'] ?? 3);
         $category = trim((string) ($filters['category'] ?? ''));
-        $perPage = $view === 'grid' ? $columns * 3 : 10;
+        $perPage = $view === 'grid' ? $columns * 3 : 3;
 
         $posts = ContentEntry::query()
             ->with('author:id,name', 'featuredMedia:id,public_id,alt_text,mime_type')

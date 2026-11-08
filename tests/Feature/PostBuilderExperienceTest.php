@@ -411,8 +411,8 @@ class PostBuilderExperienceTest extends TestCase
         }
 
         $this->get(route('blog', ['view' => 'list']))->assertOk()
-            ->assertViewHas('posts', fn ($posts) => $posts->perPage() === 10
-                && $posts->count() === 10)
+            ->assertViewHas('posts', fn ($posts) => $posts->perPage() === 3
+                && $posts->count() === 3)
             ->assertSee('blog-list-number', false)
             ->assertSee('Grid News Item 16')
             ->assertSee('>Read</a>', false)
@@ -421,8 +421,12 @@ class PostBuilderExperienceTest extends TestCase
 
         $this->get(route('blog', ['view' => 'list', 'page' => 2]))->assertOk()
             ->assertViewHas('posts', fn ($posts) => $posts->currentPage() === 2
-                && $posts->count() === 6)
-            ->assertSee('11.')->assertSee('Grid News Item 01');
+                && $posts->count() === 3)
+            ->assertSee('4.')->assertSee('Grid News Item 13');
+        $this->get(route('blog', ['view' => 'list', 'page' => 6]))->assertOk()
+            ->assertViewHas('posts', fn ($posts) => $posts->currentPage() === 6
+                && $posts->count() === 1)
+            ->assertSee('16.')->assertSee('Grid News Item 01');
 
         $this->get(route('blog', ['category' => 'AI']))->assertOk()
             ->assertViewHas('posts', fn ($posts) => $posts->total() === 8)
