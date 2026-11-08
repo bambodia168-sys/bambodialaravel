@@ -2460,3 +2460,33 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 @media(max-width:720px){.bambodia-join-panel{padding-block:32px;min-height:0}.bambodia-join-content h2{font-size:clamp(27px,6.4vw,36px)}.bambodia-join-button{min-height:52px;font-size:14px;padding:10px 12px}.bambodia-advantage-section{border-radius:0;padding:52px 0 46px}.bambodia-advantage-grid{grid-template-columns:minmax(0,1fr);gap:13px}.bambodia-advantage-card{min-height:0;padding:25px}.bambodia-advantage-icon{margin-bottom:18px}.bambodia-advantage-footer{margin-top:31px}.bambodia-advantage-capabilities{gap:13px 23px}}
 @media(max-width:420px){.bambodia-join-panel{padding-block:29px}.bambodia-join-kicker{padding:7px 12px;font-size:11px}.bambodia-join-content h2{font-size:28px}.bambodia-join-actions{gap:9px}.bambodia-join-button{min-height:50px;padding:10px 8px;font-size:13px;gap:6px}.bambodia-join-button svg{width:15px;height:15px;flex-basis:15px}.bambodia-advantage-header h2{font-size:29px}.bambodia-advantage-card h3{font-size:18px}}
 @media(prefers-reduced-motion:reduce){.bambodia-join-button{transition:none}.bambodia-join-button:hover{transform:none}}
+
+/* Homepage Blog: scroll-snap rail of latest published posts, five per desktop view. */
+.home-blog-section{margin-top:52px;margin-bottom:62px;min-width:0}
+.home-blog-heading-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:12px}
+.home-blog-controls{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.home-blog-arrow{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;transition:border-color .15s,background .15s}
+.home-blog-arrow:not(:disabled):hover{border-color:var(--accent);color:var(--accent);background:var(--surface-2)}
+.home-blog-arrow:disabled{opacity:.42;cursor:default}
+.home-blog-position{min-width:77px;text-align:center;color:var(--muted);font-size:12px;font-weight:750;font-variant-numeric:tabular-nums}
+.home-blog-slider{min-width:0;position:relative}
+.home-blog-track{--home-blog-gap:16px;--home-blog-width:calc((100% - 64px)/5);display:flex;align-items:stretch;gap:var(--home-blog-gap);overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-padding-inline:1px;overscroll-behavior-inline:contain;scrollbar-width:none;padding:3px 1px 15px;min-width:0;-webkit-overflow-scrolling:touch}
+.home-blog-track::-webkit-scrollbar{display:none}
+.home-blog-track:focus-visible{outline:3px solid var(--secondary);outline-offset:1px;border-radius:12px}
+.home-blog-track .home-blog-card{flex:0 0 var(--home-blog-width);width:var(--home-blog-width);scroll-snap-align:start;box-shadow:0 10px 30px rgba(17,41,68,.065);min-height:286px}
+.home-blog-section .blog-card-media{aspect-ratio:16/10}
+.home-blog-section .blog-card-media img{object-fit:cover}
+.home-blog-section .blog-card-content{gap:9px;padding:14px 14px 15px}
+.home-blog-section .home-blog-card h3{margin:0;font-size:14px;line-height:1.45;font-weight:800;letter-spacing:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.home-blog-section .home-blog-card h3 a:hover{color:var(--accent)}
+.home-blog-section .home-blog-card h3 a:focus-visible{outline:3px solid var(--secondary);outline-offset:3px}
+.home-blog-section .home-blog-card .blog-card-excerpt{font-size:11px;line-height:1.6;-webkit-line-clamp:2;line-clamp:2}
+.home-blog-section .home-blog-card .blog-card-bottom{gap:5px}
+.home-blog-section .home-blog-card .blog-card-bottom time{font-size:10px}
+.home-blog-section .home-blog-card .blog-card-read{font-size:11px}
+.home-blog-empty{min-height:165px}
+@media(max-width:1199px){.home-blog-track{--home-blog-width:calc((100% - 48px)/4)}}
+@media(max-width:1023px){.home-blog-track{--home-blog-width:calc((100% - 32px)/3)}}
+@media(max-width:719px){.home-blog-track{--home-blog-width:calc((100% - 16px)/2)}.home-blog-heading-actions{justify-content:flex-start}.home-blog-section{margin-top:37px;margin-bottom:44px}}
+@media(max-width:519px){.home-blog-track{--home-blog-width:100%}.home-blog-heading-actions{width:100%;justify-content:space-between}.home-blog-position{min-width:72px}.home-blog-section .marketplace-section-heading{align-items:flex-start;gap:14px}}
+@media(prefers-reduced-motion:reduce){.home-blog-arrow{transition:none}.home-blog-track{scroll-behavior:auto}}

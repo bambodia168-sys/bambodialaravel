@@ -129,6 +129,71 @@
   @endif
 </section>
 
+<section id="bambodia-blog" class="container marketplace-section home-blog-section" aria-labelledby="home-blog-title">
+  <div class="marketplace-section-heading home-blog-heading">
+    <div>
+      <span class="eyebrow">Stories &amp; insights</span>
+      <h2 id="home-blog-title">Latest from the Blog</h2>
+      <p>Explore news, ideas and practical guides from Bambodia.</p>
+    </div>
+    <div class="home-blog-heading-actions">
+      <a class="btn subtle" href="{{ route('blog') }}">View all posts <x-icon name="arrow-up-right" size="16"/></a>
+      @if($recentPosts->isNotEmpty())
+        <div class="home-blog-controls" aria-label="Blog slider navigation">
+          <button type="button" class="home-blog-arrow" data-home-blog-prev aria-label="Previous blog posts" disabled><x-icon name="chevron-left" size="19"/></button>
+          <span class="home-blog-position" data-home-blog-position aria-live="off">1–{{ min(5,$recentPosts->count()) }} of {{ $recentPosts->count() }}</span>
+          <button type="button" class="home-blog-arrow" data-home-blog-next aria-label="Next blog posts" @disabled($recentPosts->count() <= 5)><x-icon name="chevron-right" size="19"/></button>
+        </div>
+      @endif
+    </div>
+  </div>
+  @if($recentPosts->isNotEmpty())
+    <div class="home-blog-slider" data-home-blog-slider>
+      <div class="home-blog-track" id="home-blog-track" data-home-blog-track role="region"
+        aria-roledescription="carousel" aria-label="Latest published Bambodia blog posts" tabindex="0">
+        @foreach($recentPosts as $post)
+          <article class="blog-post-card home-blog-card">
+            <a class="blog-card-media" href="{{ $post->publicUrl() }}" aria-label="Read {{ $post->title }}">
+              @if($post->featured_type === 'image' && $post->featuredMedia && str_starts_with($post->featuredMedia->mime_type,'image/'))
+                <img src="{{ $post->featuredMedia->previewUrl() }}" alt="{{ $post->featuredMedia->alt_text ?: $post->title }}" loading="lazy" decoding="async">
+              @elseif($post->featured_type === 'youtube' && preg_match('~^https://www\.youtube\.com/watch\?v=([A-Za-z0-9_-]{11})$~D',(string)$post->featured_url,$video))
+                <span class="blog-card-placeholder blog-card-youtube"><x-icon name="play-circle" size="29"/><span>Video article</span></span>
+                <img class="blog-card-youtube-thumbnail" src="{{ 'https://i.ytimg.com/vi/'.$video[1].'/hqdefault.jpg' }}" alt="" loading="lazy" referrerpolicy="no-referrer">
+              @elseif($post->featured_type === 'video')
+                <span class="blog-card-placeholder"><x-icon name="play-circle" size="32"/><span>Video article</span></span>
+              @elseif($post->featured_type === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/D',(string)$post->featured_color))
+                <span class="blog-card-color" style="background-color:{{ $post->featured_color }}" role="img" aria-label="Featured color"></span>
+              @else
+                <span class="blog-card-placeholder"><x-icon name="file-text" size="34"/><span>Blog article</span></span>
+              @endif
+            </a>
+            <div class="blog-card-content">
+              @if($post->category)
+                <a class="blog-card-category" href="{{ route('blog',['category'=>$post->category]) }}">{{ $post->category }}</a>
+              @else
+                <span class="blog-card-category">Blog</span>
+              @endif
+              <h3><a href="{{ $post->publicUrl() }}">{{ $post->title }}</a></h3>
+              @if($post->excerpt)<p class="blog-card-excerpt">{{ \Illuminate\Support\Str::limit($post->excerpt,108) }}</p>@endif
+              <div class="blog-card-bottom">
+                <time datetime="{{ $post->published_at->toDateString() }}">{{ $post->published_at->format('d M Y') }}</time>
+                <a href="{{ $post->publicUrl() }}" class="blog-card-read">Read <x-icon name="arrow-up-right" size="15"/></a>
+              </div>
+            </div>
+          </article>
+        @endforeach
+      </div>
+    </div>
+  @else
+    <div class="marketplace-empty home-blog-empty">
+      <x-icon name="book-open" size="29"/>
+      <strong>Blog posts will appear here soon.</strong>
+      <p>New stories are shown here as soon as they are published.</p>
+      <a class="btn subtle compact" href="{{ route('blog') }}">Visit the Blog</a>
+    </div>
+  @endif
+</section>
+
 <section id="bambodia-advantage" class="bambodia-advantage-section" aria-labelledby="bambodia-advantage-title">
   <div class="container bambodia-advantage-inner">
     <header class="bambodia-advantage-header">

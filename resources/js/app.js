@@ -1416,3 +1416,94 @@ document.querySelectorAll('[data-public-mobile-search]').forEach((searchMenu) =>
     });
     update();
 })();
+
+
+/* Homepage Blog slider: newest cards move from right to left on advancement.
+   Native scroll-snap preserves touch, keyboard and accessible links. */
+(() => {
+    const slider = document.querySelector('[data-home-blog-slider]');
+    const track = slider?.querySelector('[data-home-blog-track]');
+    const section = slider?.closest('#bambodia-blog');
+    const prev = section?.querySelector('[data-home-blog-prev]');
+    const next = section?.querySelector('[data-home-blog-next]');
+    const position = section?.querySelector('[data-home-blog-position]');
+    if (!slider || !track || !prev || !next || !position) return;
+    const cards = [...track.querySelectorAll('.home-blog-card')];
+    if (!cards.length) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let timer = null, onscreen = false, paused = false;
+    let hover = false, focused = false, frame = 0;
+    const step = () => cards.length >= 2
+        ? cards[1].offsetLeft - cards[0].offsetLeft
+        : cards[0].getBoundingClientRect().width;
+    const limit = () => Math.max(0,track.scrollWidth-track.clientWidth);
+    const visible = () => Math.min(cards.length,Math.max(1,Math.round(
+        (track.clientWidth + 1) / Math.max(1,step())
+    )));
+    const state = () => {
+        const max = limit();
+        const per = visible();
+        const index = Math.min(cards.length-per,Math.max(0,
+            Math.round(track.scrollLeft/Math.max(1,step()))));
+        prev.disabled = track.scrollLeft <= 2;
+        next.disabled = max <= 2 || track.scrollLeft >= max-2;
+        position.textContent = (index+1)+'–'+Math.min(cards.length,index+per)+' of '+cards.length;
+    };
+    function stop() {
+        if (timer !== null) { window.clearInterval(timer); timer = null; }
+    }
+    const move = (direction,automatic = false) => {
+        if (!automatic) { paused = true; stop(); }
+        const max = limit();
+        if (max <= 2) return;
+        const target = direction > 0 ? Math.min(max,track.scrollLeft+step())
+            : Math.max(0,track.scrollLeft-step());
+        track.scrollTo({left:target,behavior:reducedMotion.matches?'instant':'smooth'});
+    };
+    const start = () => {
+        stop();
+        if (!onscreen || paused || hover || focused || reducedMotion.matches || limit() <= 2) return;
+        timer = window.setInterval(() => {
+            if (document.hidden) return;
+            if (track.scrollLeft >= limit()-2) track.scrollTo({left:0,behavior:'instant'});
+            else move(1,true);
+        },6500);
+    };
+    prev.addEventListener('click',() => move(-1));
+    next.addEventListener('click',() => move(1));
+    track.addEventListener('keydown',event => {
+        if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+        event.preventDefault();
+        move(event.key === 'ArrowRight' ? 1 : -1);
+    });
+    track.addEventListener('pointerdown',event => {
+        if (event.pointerType === 'touch' || event.pointerType === 'pen') {
+            paused = true; stop();
+        }
+    },{passive:true});
+    slider.addEventListener('mouseenter',() => { hover = true; stop(); });
+    slider.addEventListener('mouseleave',() => { hover = false; start(); });
+    section.addEventListener('focusin',() => { focused = true; stop(); });
+    section.addEventListener('focusout',() => {
+        focused = section.contains(document.activeElement);
+        if (!focused) start();
+    });
+    track.addEventListener('scroll',() => {
+        if (frame) return;
+        frame = window.requestAnimationFrame(() => { frame = 0; state(); });
+    },{passive:true});
+    window.addEventListener('resize',() => { state(); start(); },{passive:true});
+    reducedMotion.addEventListener?.('change',start);
+    document.addEventListener('visibilitychange',() => {
+        if (document.hidden) stop();
+        else start();
+    });
+    if ('IntersectionObserver' in window) {
+        const watcher = new IntersectionObserver(entries => {
+            onscreen = entries.some(e=>e.isIntersecting);
+            if (onscreen) start(); else stop();
+        },{threshold:.12});
+        watcher.observe(section);
+    }
+    state();
+})();

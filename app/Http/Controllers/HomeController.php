@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ContentEntry;
 use App\Models\FeatureFlag;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
@@ -66,6 +67,14 @@ class HomeController extends Controller
             }
         }
 
+        // A bounded feed of real, published articles; future and drafts stay private.
+        $recentPosts=ContentEntry::query()
+            ->where('type','post')->where('status','published')
+            ->whereNotNull('published_at')->where('published_at','<=',now())
+            ->with(['featuredMedia:id,public_id,mime_type,alt_text', 'author:id,name'])
+            ->latest('published_at')->orderByDesc('id')
+            ->limit(10)->get();
+
         $recentJobs=MarketplaceJob::query()->where('status','published')
             ->latest('id')->limit(5)->with('client:id,name,public_id')->get();
         $savedJobIds=$request->user()
@@ -75,7 +84,7 @@ class HomeController extends Controller
             : [];
 
         return view('home',compact(
-            'searchEnabled','recentListings','freelancers','listingTotals','savedIds','recentJobs','savedJobIds'
+            'searchEnabled','recentListings','freelancers','listingTotals','savedIds','recentJobs','savedJobIds','recentPosts'
         ));
     }
 }

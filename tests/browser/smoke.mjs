@@ -182,6 +182,57 @@ try {
            homeJob.right>device.viewport.width+4)
           throw new Error(device.name+' job row incorrect '+JSON.stringify(homeJob));
         checks+=3;
+        // Ten newest real posts; a responsive scroll rail exposes five cards
+        // per desktop view, with older posts moving right-to-left on Next.
+        const blog=page.locator('#bambodia-blog');
+        const blogTrack=blog.locator('[data-home-blog-track]');
+        const blogCards=blog.locator('.home-blog-card');
+        if(await blog.count()!==1 || await blogCards.count()!==10 ||
+           !(await blog.getByRole('heading',{name:'Latest from the Blog'}).isVisible()))
+          throw new Error(device.name+' homepage blog is not ten published cards');
+        if(await blog.getByText('Browser QA Hidden Draft Article').count() ||
+           await blog.getByText('Browser QA Blog Article 11').count())
+          throw new Error(device.name+' hidden or older blog article leaked');
+        if(!(await blogCards.first().getByRole('link',{name:/Browser QA Blog Article 01/}).count()) ||
+           !(await blogCards.first().locator('.blog-card-media img').count()))
+          throw new Error(device.name+' homepage blog card media missing');
+        const blogMetrics=await blogTrack.evaluate(track=>{
+          const cards=[...track.querySelectorAll('.home-blog-card')];
+          const rect=track.getBoundingClientRect();
+          return {
+            left:rect.left,right:rect.right,
+            width:track.clientWidth,scrollWidth:track.scrollWidth,
+            count:cards.length,
+            visible:Math.round((track.clientWidth+1)/(cards[1].offsetLeft-cards[0].offsetLeft)),
+            firstLink:cards[0].querySelector('h3 a')?.getAttribute('href'),
+            lastLink:cards[9].querySelector('h3 a')?.getAttribute('href'),
+          };
+        });
+        const expectedBlogCards=device.viewport.width>=1200?5:device.viewport.width>=1024?4:device.viewport.width>=720?3:device.viewport.width>=520?2:1;
+        if(blogMetrics.visible!==expectedBlogCards || blogMetrics.left < -1 ||
+           blogMetrics.right>device.viewport.width+4 ||
+           blogMetrics.scrollWidth<=blogMetrics.width ||
+           !blogMetrics.firstLink?.match(/\/[0-9]{9}_[a-z0-9-]+$/) ||
+           !blogMetrics.lastLink?.match(/\/[0-9]{9}_[a-z0-9-]+$/))
+          throw new Error(device.name+' blog responsive slider regression '+JSON.stringify(blogMetrics));
+        const indicator=blog.locator('[data-home-blog-position]');
+        if(!(await indicator.textContent()).startsWith('1–') ||
+           !(await blog.locator('[data-home-blog-prev]').isDisabled()))
+          throw new Error(device.name+' blog first position incorrect');
+        await blog.locator('[data-home-blog-next]').click();
+        await page.waitForFunction(()=>{
+          const track=document.querySelector('[data-home-blog-track]');
+          return track && track.scrollLeft>8;
+        },null,{timeout:4000});
+        if(await blog.locator('[data-home-blog-prev]').isDisabled())
+          throw new Error(device.name+' blog Previous did not enable');
+        await blogTrack.focus();
+        await page.keyboard.press('ArrowLeft');
+        await page.waitForFunction(()=>{
+          const track=document.querySelector('[data-home-blog-track]');
+          return track && track.scrollLeft<6;
+        },null,{timeout:4000});
+        checks+=7;
         // CTA buttons are real guest routes; full-bleed Advantage still aligns
         // its cards to the same global content container.
         const join=page.locator('#bambodia-join');

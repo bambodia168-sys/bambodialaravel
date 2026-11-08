@@ -142,4 +142,26 @@ foreach ([
         'author_id' => $admin->id, 'reviewed_by' => $admin->id, 'published_at' => now(),
     ]);
 }
+
+// Newest ten posts are browsable; the eleventh oldest and a draft stay hidden.
+foreach(range(1,11) as $i) {
+    \App\Models\ContentEntry::query()->create([
+        'author_id'=>$admin->id,'type'=>'post',
+        'title'=>sprintf('Browser QA Blog Article %02d',$i),
+        'body'=>str_repeat('Original isolated community guide for blog acceptance. ',4),
+        'excerpt'=>'Helpful tested editorial summary for our digital marketplace.',
+        'category'=>$i % 2 ? 'Technology' : 'Business',
+        'status'=>'published',
+        'published_at'=>now()->subHours($i),
+        'featured_type'=>$i===1?'image':($i===2?'color':'none'),
+        'featured_media_id'=>$i===1?$cover->id:null,
+        'featured_color'=>$i===2?'#155e75':null,
+    ]);
+}
+\App\Models\ContentEntry::query()->create([
+    'author_id'=>$admin->id,'type'=>'post','title'=>'Browser QA Hidden Draft Article',
+    'body'=>'Never display unpublished material on the homepage.',
+    'status'=>'draft',
+]);
+
 echo "Public browser fixtures, including test-only published Terms, seeded in an isolated test database.\n";
