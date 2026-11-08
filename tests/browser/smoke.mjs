@@ -95,7 +95,10 @@ try {
               throw new Error(device.name+' '+theme+' '+name+' insufficient contrast ratio '+value.toFixed(2));
           }
         }
-        if(!(await page.getByText('Browser QA Published Service').first().isVisible()))
+        // The compact phone homepage renders only two previews; remaining
+        // approved types stay available through the category/search pages.
+        const service=page.getByText('Browser QA Published Service').first();
+        if(!(await service.count()) || (device.viewport.width>550 && !(await service.isVisible())))
           throw new Error(device.name+' homepage missing approved listing');
         // Shared listing cards: clickable artwork/title, two-line text and
         // four / two / one responsive columns without clipped or hidden links.
