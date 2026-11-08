@@ -277,6 +277,18 @@ try {
           return {
             legacyBadge:!!footer.querySelector('.footer-brand .brand-mark'),
             logoImages:logoImages.map(img=>({src:img.getAttribute('src'),naturalWidth:img.naturalWidth})),
+            themeVisibility:(()=>{
+              const root=document.documentElement;
+              const initial=root.dataset.theme;
+              const visible=(theme)=>{
+                root.dataset.theme=theme;
+                return logoImages.filter(img=>
+                  getComputedStyle(img).display!=='none' &&
+                  img.getBoundingClientRect().width>0).map(img=>img.getAttribute('src'));
+              };
+              try{return {light:visible('light'),dark:visible('dark')};}
+              finally{root.dataset.theme=initial;}
+            })(),
             copyright:bounds('.footer-copyright'),
             social:bounds('.footer-actions'),
             copyrightRowDirection:getComputedStyle(footer.querySelector('.footer-bottom')).flexDirection,
@@ -285,8 +297,12 @@ try {
         });
         if(footerLayout.legacyBadge || footerLayout.logoImages.length!==2 ||
            !footerLayout.logoImages.some(x=>x.src.includes('bambodia-logo.webp')) ||
-           !footerLayout.logoImages.some(x=>x.src.includes('bambodia-logo-dark.svg')))
-          throw new Error(device.name+' footer logo still uses old badge '+JSON.stringify(footerLayout));
+           !footerLayout.logoImages.some(x=>x.src.includes('bambodia-logo-dark.svg')) ||
+           footerLayout.themeVisibility.light.length!==1 ||
+           !footerLayout.themeVisibility.light[0].includes('bambodia-logo.webp') ||
+           footerLayout.themeVisibility.dark.length!==1 ||
+           !footerLayout.themeVisibility.dark[0].includes('bambodia-logo-dark.svg'))
+          throw new Error(device.name+' duplicate/missing footer logo in light or dark mode '+JSON.stringify(footerLayout));
         if(footerLayout.copyrightRowDirection!=='row' ||
            Math.abs(footerLayout.copyright.centerY-footerLayout.social.centerY)>12 ||
            footerLayout.copyright.right>footerLayout.social.left+3 ||
@@ -302,6 +318,9 @@ try {
         });
         await backToTop.waitFor({state:'visible',timeout:3000});
         const floatBounds=await backToTop.boundingBox();
+        if(!floatBounds || floatBounds.height<=floatBounds.width+8 ||
+           !(await backToTop.locator('.back-to-top-label').isVisible()))
+          throw new Error(device.name+' Back to Top must be a vertical labeled control '+JSON.stringify(floatBounds));
         const socialBounds=await footer.boundingBox();
         if(floatBounds && socialBounds && socialBounds.y<device.viewport.height &&
            floatBounds.y+floatBounds.height>socialBounds.y-4)

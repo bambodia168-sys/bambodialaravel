@@ -215,7 +215,7 @@ class PublicFrontendLayoutTest extends TestCase
         $this->assertStringContainsString('class="back-to-top"', $html);
         $this->assertStringContainsString('data-back-to-top', $html);
         $this->assertStringContainsString('aria-label="Back to top"', $html);
-        $this->assertStringContainsString('Back to top</span>', $html);
+        $this->assertStringContainsString('<span class="back-to-top-label">Back<span>to top</span></span>', $html);
         $this->assertStringNotContainsString('nav-marketplace-links', $header);
     }
 }
