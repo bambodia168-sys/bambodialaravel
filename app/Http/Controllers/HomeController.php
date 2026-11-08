@@ -44,7 +44,7 @@ class HomeController extends Controller
         }
 
         $recentJobs=MarketplaceJob::query()->where('status','published')
-            ->latest('id')->limit(4)->with('client:id,name,public_id')->get();
+            ->latest('id')->limit(5)->with('client:id,name,public_id')->get();
         $savedJobIds=$request->user()
             ? SavedJob::query()->where('user_id',$request->user()->id)
                 ->whereIn('marketplace_job_id',$recentJobs->pluck('id'))

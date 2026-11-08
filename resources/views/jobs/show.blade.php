@@ -1,6 +1,7 @@
 @extends('layouts.main')
 @section('title',$job->title)
 @section('content')
+@php($layoutSample = str_starts_with($job->title, '[LAYOUT TEST] '))
 <div class="container inner-page listing-detail premium-detail premium-job-detail">
   <nav class="marketplace-breadcrumb" aria-label="Breadcrumb">
     <a href="{{ route('home') }}">Home</a><x-icon name="chevron-right" size="14"/>
@@ -16,7 +17,7 @@
     <div class="premium-detail-byline">
       <span><x-icon name="user" size="16"/> {{ $job->client?->name ?? 'Bambodia client' }}</span>
       <span><x-icon name="layers" size="16"/> {{ ucfirst($job->category) }}</span>
-      <span><x-icon name="check" size="16"/> Open for proposals</span>
+      <span><x-icon name="check" size="16"/> {{ $layoutSample ? "Preview only — applications disabled" : "Open for proposals" }}</span>
     </div>
   </header>
 
@@ -24,7 +25,7 @@
     <a href="#overview">Overview</a>
     <a href="#requirements">How proposals work</a>
     @auth
-      @if(auth()->user()->role==='freelancer')<a href="#apply">Apply</a>@endif
+      @if(! $layoutSample && auth()->user()->role==='freelancer')<a href="#apply">Apply</a>@endif
     @endauth
     <a href="#client">Client</a>
   </nav>
@@ -96,7 +97,7 @@
         </div>
       </section>
       @auth
-        @if(auth()->user()->role==='freelancer')
+        @if(! $layoutSample && auth()->user()->role==='freelancer')
           <section class="panel premium-content-section" id="apply">
             <div class="panel-head"><div><span class="eyebrow">Work with this client</span><h2>Submit a proposal</h2></div></div>
             <div class="onboarding-content">
@@ -115,7 +116,7 @@
               @endif
             </div>
           </section>
-        @elseif((int)auth()->id()===(int)$job->client_id)
+        @elseif(! $layoutSample && (int)auth()->id()===(int)$job->client_id)
           <section class="panel premium-content-section" id="apply">
             <div class="panel-head"><h2>Manage applications</h2></div>
             <div class="listing-body"><a class="btn primary" href="{{ route('jobs.proposals',$job) }}">Review applications</a></div>
@@ -142,6 +143,9 @@
             <span><x-icon name="check" size="17"/> Administrator-approved job</span>
             <span><x-icon name="shield" size="17"/> Private, permission-scoped proposals</span>
           </div>
+          @if($layoutSample)
+            <p class="premium-action-disclaimer">LAYOUT TEST ONLY — fictional job; applications are disabled.</p>
+          @else
           @auth
             @if(auth()->user()->role==='freelancer')
               <a class="btn primary premium-full-action" href="{{ $applied ? route('jobs.applied') : '#apply' }}">{{ $applied?'View my proposal':'Apply to this job' }} <x-icon name="chevron-right" size="16"/></a>
@@ -153,6 +157,7 @@
           @else
             <a class="btn primary premium-full-action" href="{{ route('login') }}">Sign in to apply <x-icon name="chevron-right" size="16"/></a>
           @endauth
+          @endif
           <p class="premium-action-disclaimer">Budgets are informational. Bambodia does not currently process payments, hold escrow or create contracts automatically.</p>
         </div>
       </section>

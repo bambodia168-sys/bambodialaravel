@@ -5,7 +5,8 @@
   $kind = $listing->type;
   $kindTitle = ucfirst($kind);
   $isProduct = $kind === 'product';
-  $canInquire = in_array($kind,['project','service','freelance'],true);
+  $layoutSample = str_starts_with($listing->title, '[LAYOUT TEST] ');
+  $canInquire = ! $layoutSample && in_array($kind,['project','service','freelance'],true);
   $ownerProfile = $listing->creator?->creatorProfile;
   $publicCreator = $ownerProfile?->is_public === true;
   $ownerName = $listing->creator?->name ?? 'Bambodia creator';
@@ -219,7 +220,11 @@
             @endif
           </div>
 
-          @if($isProduct)
+          @if($layoutSample)
+            <div class="premium-availability" role="status"><x-icon name="lock" size="18"/>
+              <span>LAYOUT TEST ONLY — no purchases, downloads, private inquiries or real transactions are offered.</span>
+            </div>
+          @elseif($isProduct)
             <div class="premium-availability" role="status"><x-icon name="lock" size="18"/>
               <span>Direct checkout is not enabled. Licensed downloads are available only to accounts with independently granted entitlements.</span>
             </div>

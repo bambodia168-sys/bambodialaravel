@@ -135,6 +135,7 @@ class JobBoardController extends Controller
 
         DB::transaction(function()use($job,$request,$values){
             $locked=MarketplaceJob::query()->lockForUpdate()->findOrFail($job->id);
+            abort_if(str_starts_with($locked->title,'[LAYOUT TEST] '),409,'Layout preview only; applications are disabled.');
             abort_unless($locked->status==='published' && (int)$locked->client_id !== (int)$request->user()->id,409);
             abort_if(JobProposal::query()->where('marketplace_job_id',$locked->id)
                 ->where('freelancer_id',$request->user()->id)->exists(),409,'Already applied to this job.');

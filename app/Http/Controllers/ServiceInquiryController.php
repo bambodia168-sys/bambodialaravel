@@ -52,6 +52,7 @@ class ServiceInquiryController extends Controller
 
         $id = DB::transaction(function () use ($request,$listing,$values): int {
             $listing=MarketplaceListing::query()->lockForUpdate()->findOrFail($listing->id);
+            abort_if(str_starts_with($listing->title,'[LAYOUT TEST] '),409,'Layout preview only; inquiries are disabled.');
             abort_unless($listing->status==='published'
                 && in_array($listing->type,['service','freelance','project'],true),409,
                 'This listing is not accepting inquiries.');
