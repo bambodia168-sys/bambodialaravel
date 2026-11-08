@@ -38,7 +38,7 @@ try {
   const title='Verified Post Builder '+Date.now();
   await page.locator('#post-title').fill(title);
   await page.locator('#post-excerpt').fill('A reliable announcement about Bambodia digital products.');
-  await page.locator('#post-category').fill('Platform news');
+  await page.locator('#post-category').selectOption('Technology');
   await page.locator('#post-tags').fill('News, Updates');
   await page.locator('#post-status').selectOption('draft');
   await page.locator('#post-body-editor').fill('This is a complete professional post with enough useful editorial content for the new Post Builder.');
