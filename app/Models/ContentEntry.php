@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class ContentEntry extends Model
 {
-    protected $fillable = ['type', 'title', 'body', 'body_format', 'status', 'author_id', 'published_at', 'excerpt', 'category', 'tags', 'seo_title', 'seo_description', 'featured_media_id'];
+    protected $fillable = ['type', 'title', 'body', 'body_format', 'status', 'author_id', 'published_at', 'excerpt', 'category', 'tags', 'seo_title', 'seo_description', 'featured_media_id', 'featured_type', 'featured_url', 'featured_color'];
 
     protected function casts(): array
     {
