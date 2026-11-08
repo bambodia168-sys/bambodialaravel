@@ -124,7 +124,7 @@
                  maxlength="320" placeholder="News, Product, Creators">
           <p class="policy-help">Use commas to separate up to 10 tags (35 characters per tag).</p>
         </section>
-        <section class="panel policy-side-panel post-featured-panel" data-post-media data-upload-url="{{ route('dashboard.posts.media.store') }}">
+        <section class="panel policy-side-panel post-featured-panel" data-post-media data-upload-url="{{ route('dashboard.posts.media.store') }}" data-rights-holder="{{ auth()->user()->name }}">
           <div class="policy-side-head"><x-icon name="image" size="19"/><strong>Featured media</strong></div>
           <label class="policy-builder-label" for="post-feature-type">Media type</label>
           <select id="post-feature-type" name="featured_type" data-post-feature-type>
@@ -158,7 +158,7 @@
                 @endforeach
               </select>
             </div>
-            <label class="post-featured-rights"><input type="checkbox" data-post-featured-rights> I confirm I own or have permission to use uploaded media.</label>
+            <label class="post-featured-rights"><input type="checkbox" data-post-featured-rights> I confirm I own this media and have the rights to publish it.</label>
           </div>
           <div data-post-featured-youtube hidden>
             <label class="policy-builder-label" for="post-featured-youtube">YouTube link</label>
