@@ -2553,3 +2553,53 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 @media(prefers-reduced-motion:reduce){
   .marketplace-hero-scene::before{animation:none!important;transform:none!important}
 }
+
+/* Premium separate detail-comment and resource-support workspaces. */
+.detail-workspace{padding-top:clamp(32px,4vw,55px);padding-bottom:70px}
+.detail-workspace-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px 32px;flex-wrap:wrap;margin-bottom:26px}
+.detail-workspace-head h1{margin:7px 0 8px;font-size:clamp(28px,3vw,42px);letter-spacing:-.03em;color:var(--text);line-height:1.2}
+.detail-workspace-head p{margin:0;max-width:760px;color:var(--muted);line-height:1.65;font-size:14px;overflow-wrap:anywhere}
+.detail-workspace-head strong{color:var(--text)}
+.detail-workspace-navigation{display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+.detail-workspace-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(290px,.8fr);gap:20px;align-items:start}
+.detail-workspace-panel,.detail-compose{min-width:0}
+.detail-workspace-panel{padding:0 20px 18px}
+.detail-workspace-panel .panel-head{padding:19px 0}
+.detail-compose{padding:22px}
+.detail-compose h2{font-size:20px;margin:0 0 11px;color:var(--text)}
+.detail-compose p{color:var(--muted);font-size:13px;line-height:1.65}
+.detail-compose form,.detail-comment-edit form,.detail-comment-reply form{display:grid;gap:10px;margin:15px 0 0}
+.detail-compose form label,.detail-comment-edit label,.detail-comment-reply label{font-size:12px;color:var(--text);font-weight:750}
+.detail-compose form textarea,.detail-compose form input,
+.detail-comment-edit textarea,.detail-comment-reply textarea{
+  width:100%;max-width:100%;min-width:0;padding:12px 13px;
+  border:1px solid var(--line);border-radius:11px;background:var(--surface);
+  color:var(--text);font:inherit;font-size:13px;line-height:1.5
+}
+.detail-compose form button{justify-self:start;margin-top:3px}
+.detail-workspace-empty{padding:34px 15px;color:var(--muted);font-size:13px;line-height:1.6;text-align:center}
+.detail-comment{min-width:0;padding:19px 0;border-bottom:1px solid var(--line)}
+.detail-comment--reply{padding:13px 0;border:0}
+.detail-comment-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.detail-comment-author{display:flex;align-items:center;gap:11px}
+.detail-comment-avatar{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 12%,var(--surface));border:1px solid var(--line);color:var(--accent);font-weight:800;border-radius:12px}
+.detail-comment-author strong{display:block;color:var(--text);font-size:13px}
+.detail-comment-author time,.detail-comment-edited{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.detail-comment-body{color:var(--text);line-height:1.7;font-size:13px;overflow-wrap:anywhere;margin:14px 0}
+.detail-comment-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.detail-comment-actions form{margin:0}
+.detail-comment-actions summary,.detail-comment-reply summary,.detail-comment-delete{cursor:pointer;font-size:12px;font-weight:750;color:var(--muted)}
+.detail-comment-actions summary:hover,.detail-comment-reply summary:hover,.detail-comment-delete:hover{color:var(--accent)}
+.detail-comment-delete{background:none;border:0;padding:0;font:inherit}
+.detail-comment-edit{width:100%}
+.detail-comment-edit[open]{flex-basis:100%;order:5}
+.detail-comment-reply{margin-top:12px}
+.detail-comment-reply summary{display:inline-flex;align-items:center;gap:6px}
+.detail-comment-replies{margin-top:17px;margin-left:25px;border-left:2px solid var(--line);padding-left:16px}
+.detail-support-ticket{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:18px 0;border-bottom:1px solid var(--line)}
+.detail-support-ticket>div{display:grid;gap:6px}
+.detail-support-ticket strong{color:var(--text);font-size:13px;overflow-wrap:anywhere}
+.detail-support-ticket .hint{font-size:11px}
+.detail-support-ticket .btn{justify-self:start}
+@media(max-width:900px){.detail-workspace-grid{grid-template-columns:minmax(0,1fr)}.detail-compose{max-width:100%}}
+@media(max-width:520px){.detail-workspace-panel{padding-inline:15px}.detail-workspace-navigation{width:100%}.detail-workspace-navigation .btn{flex:1}.detail-support-ticket{align-items:flex-start;flex-direction:column}.detail-comment-replies{margin-left:12px;padding-left:10px}}

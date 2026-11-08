@@ -23,6 +23,7 @@ class AccountNotification extends Model
         'license.support.reviewed',
         'listing.reviewed',
         'vault.version.reviewed',
+        'detail.comment.received',
         'support.replied',
         'support.status_changed',
         'contract.offered',

@@ -664,6 +664,27 @@ try {
       const aside=primary.locator('aside.premium-detail-sidebar');
       if(!(await primary.isVisible())||!(await preview.isVisible())||!(await aside.isVisible()))
         throw new Error(device.name+' '+kind+' premium detail split layout missing');
+      if(await page.locator('.marketplace-breadcrumb').count() ||
+         await page.locator('.premium-detail-intro').count())
+        throw new Error(device.name+' '+kind+' old duplicate breadcrumb/header visible');
+      const lowerTitle=primary.locator('.premium-detail-below-title');
+      const floating=preview.locator('.premium-detail-floating-type');
+      if(!(await lowerTitle.isVisible()) || !(await floating.isVisible()) ||
+         await page.locator('.premium-detail-tabs a[href*="/comments"]').count() ||
+         await page.locator('.premium-detail-tabs a[href*="/support"]').count())
+        throw new Error(device.name+' '+kind+' new guest detail layout is incomplete');
+      const structure=await page.evaluate(()=>{
+        const preview=document.querySelector('.premium-showcase').getBoundingClientRect();
+        const title=document.querySelector('.premium-detail-below-title').getBoundingClientRect();
+        const label=document.querySelector('.premium-detail-floating-type').getBoundingClientRect();
+        return {titleTop:title.top,previewBottom:preview.bottom,labelLeft:label.left,previewLeft:preview.left,
+          titleHeight:title.height,right:title.right,viewport:document.documentElement.clientWidth};
+      });
+      if(structure.titleTop < structure.previewBottom-3 || structure.titleHeight<24 ||
+         structure.right>structure.viewport+3 ||
+         structure.labelLeft < structure.previewLeft-1)
+        throw new Error(device.name+' '+kind+' title placement or label regression '+JSON.stringify(structure));
+      checks+=3;
       for(const section of ['overview','seller']){
         if(!(await page.locator('#'+section+'.premium-content-section').isVisible()))
           throw new Error(device.name+' '+kind+' missing real '+section+' section');

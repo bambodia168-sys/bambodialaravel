@@ -30,42 +30,20 @@
   };
 @endphp
 <div class="container inner-page listing-detail premium-detail premium-detail-{{ $kind }}">
-  <nav class="marketplace-breadcrumb" aria-label="Breadcrumb">
-    <a href="{{ route('home') }}">Home</a><x-icon name="chevron-right" size="14"/>
-    <a href="{{ route('marketplace.search',['type'=>$kind]) }}">{{ $kindTitle }}</a>
-    <x-icon name="chevron-right" size="14"/>
-    <span aria-current="page">{{ $listing->public_id }}</span>
-  </nav>
-
-  <header class="premium-detail-intro">
-    <div class="premium-detail-kicker">
-      <span class="premium-detail-type"><x-icon :name="$typeIcon" size="16"/> {{ $kindTitle }}</span>
-      <span class="premium-detail-id">Listing #{{ $listing->public_id }}</span>
-    </div>
-    <h1>{{ $listing->title }}</h1>
-    <div class="premium-detail-byline">
-      <span><x-icon name="user" size="16"/> By
-        @if($publicCreator)
-          <a class="marketplace-creator-link" href="{{ route('creators.show',$listing->creator->public_id) }}">{{ $ownerName }}</a>
-        @else
-          <strong>{{ $ownerName }}</strong>
-        @endif
-      </span>
-      @if($listing->category)<span><x-icon name="layers" size="16"/> {{ $listing->category->name }}</span>@endif
-      <span><x-icon name="check" size="16"/> Published</span>
-    </div>
-  </header>
-
-
   <nav class="premium-detail-tabs" aria-label="Listing sections">
     @foreach($pageSections as $section)
       <a href="#{{ $section['id'] }}">{{ $section['label'] }}</a>
     @endforeach
+    @auth
+      <a href="{{ route('detail.comments',['kind'=>$kind,'reference'=>$listing->public_id,'slug'=>$listing->slug]) }}">Comment</a>
+      <a href="{{ route('detail.support',['kind'=>$kind,'reference'=>$listing->public_id,'slug'=>$listing->slug]) }}">Support</a>
+    @endauth
   </nav>
 
   <div class="premium-detail-layout">
     <main class="premium-detail-main">
       <section class="premium-showcase" aria-label="{{ $kindTitle }} preview">
+        <span class="premium-detail-floating-type"><x-icon :name="$typeIcon" size="16"/> {{ $kindTitle }}</span>
         @if($listing->featuredAsset && in_array($listing->featured_kind, ['image','animated'],true))
           <img class="premium-showcase-cover" src="{{ $listing->featuredAsset->previewUrl() }}"
                alt="{{ $listing->featuredAsset->alt_text ?: $listing->title }}" decoding="async">
@@ -75,7 +53,7 @@
           <div class="premium-showcase-placeholder" style="background-color:{{ $listing->featured_color }};color:#fff">
             <span class="premium-showcase-symbol"><x-icon :name="$typeIcon" size="58"/></span>
             <span class="eyebrow" style="color:inherit">{{ $kindTitle }}</span>
-            <h2>{{ $listing->title }}</h2>
+            <span class="premium-showcase-secondary">Marketplace listing preview</span>
           </div>
         @elseif($isProduct && $listing->coverAsset)
           <img class="premium-showcase-cover" src="{{ $listing->coverAsset->previewUrl() }}"
@@ -85,10 +63,11 @@
             <div class="premium-showcase-symbol"><x-icon :name="$typeIcon" size="58"/></div>
             <span class="eyebrow">{{ $kindTitle }} on Bambodia</span>
             <h2>{{ $listing->category?->name ?? $kindTitle }}</h2>
-            <p>{{ $listing->title }}</p>
+            <span class="premium-showcase-secondary">Explore this listing below</span>
           </div>
         @endif
       </section>
+      <h1 class="premium-detail-below-title">{{ $listing->title }}</h1>
       <div class="premium-showcase-actions">
         <div class="marketplace-detail-actions">
           @auth

@@ -3,24 +3,6 @@
 @section('content')
 @php($layoutSample = str_starts_with($job->title, '[LAYOUT TEST] '))
 <div class="container inner-page listing-detail premium-detail premium-job-detail">
-  <nav class="marketplace-breadcrumb" aria-label="Breadcrumb">
-    <a href="{{ route('home') }}">Home</a><x-icon name="chevron-right" size="14"/>
-    <a href="{{ route('jobs') }}">Jobs</a><x-icon name="chevron-right" size="14"/>
-    <span aria-current="page">{{ $job->public_id }}</span>
-  </nav>
-  <header class="premium-detail-intro">
-    <div class="premium-detail-kicker">
-      <span class="premium-detail-type"><x-icon name="briefcase" size="16"/> Approved job opportunity</span>
-      <span class="premium-detail-id">Job #{{ $job->public_id }}</span>
-    </div>
-    <h1>{{ $job->title }}</h1>
-    <div class="premium-detail-byline">
-      <span><x-icon name="user" size="16"/> {{ $job->client?->name ?? 'Bambodia client' }}</span>
-      <span><x-icon name="layers" size="16"/> {{ ucfirst($job->category) }}</span>
-      <span><x-icon name="check" size="16"/> {{ $layoutSample ? "Preview only — applications disabled" : "Open for proposals" }}</span>
-    </div>
-  </header>
-
   <nav class="premium-detail-tabs" aria-label="Job opportunity sections">
     <a href="#overview">Overview</a>
     <a href="#requirements">How proposals work</a>
@@ -28,10 +10,15 @@
       @if(! $layoutSample && auth()->user()->role==='freelancer')<a href="#apply">Apply</a>@endif
     @endauth
     <a href="#client">Client</a>
+    @auth
+      <a href="{{ route('detail.comments',['kind'=>'job','reference'=>$job->public_id,'slug'=>$job->slug]) }}">Comment</a>
+      <a href="{{ route('detail.support',['kind'=>'job','reference'=>$job->public_id,'slug'=>$job->slug]) }}">Support</a>
+    @endauth
   </nav>
   <div class="premium-detail-layout">
     <main class="premium-detail-main">
       <section class="premium-showcase" aria-label="Job overview">
+        <span class="premium-detail-floating-type"><x-icon name="briefcase" size="16"/> Job</span>
         @if($job->featuredAsset && in_array($job->featured_kind, ['image','animated'],true))
           <img class="premium-showcase-cover" src="{{ $job->featuredAsset->previewUrl() }}" alt="{{ $job->featuredAsset->alt_text ?: $job->title }}">
         @elseif($job->featuredAsset && $job->featured_kind === 'video')
@@ -39,17 +26,18 @@
         @elseif($job->featured_kind === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/', $job->featured_color ?? ''))
           <div class="premium-showcase-placeholder" style="background-color:{{ $job->featured_color }};color:#fff">
             <span class="premium-showcase-symbol"><x-icon name="briefcase" size="58"/></span>
-            <h2>{{ $job->title }}</h2>
+            <span class="premium-showcase-secondary">Client opportunity preview</span>
           </div>
         @else
         <div class="premium-showcase-placeholder premium-showcase-job">
           <span class="premium-showcase-symbol"><x-icon name="briefcase" size="58"/></span>
           <span class="eyebrow">Approved client opportunity</span>
           <h2>{{ ucfirst($job->category) }}</h2>
-          <p>{{ $job->title }}</p>
+          <span class="premium-showcase-secondary">Read the job brief below</span>
         </div>
         @endif
       </section>
+      <h1 class="premium-detail-below-title">{{ $job->title }}</h1>
       <div class="premium-showcase-actions">
         <div class="marketplace-detail-actions">
           @auth
@@ -164,7 +152,9 @@
       <section class="premium-side-card">
         <div class="premium-side-card-heading"><h2>Information</h2></div>
         <dl class="premium-info-list">
+          <div><dt>Client</dt><dd>{{ $job->client?->name ?? 'Bambodia client' }}</dd></div>
           <div><dt>Category</dt><dd>{{ ucfirst($job->category) }}</dd></div>
+          <div><dt>Status</dt><dd>{{ $layoutSample ? 'Preview only' : 'Published' }}</dd></div>
           <div><dt>Created</dt><dd>{{ $job->created_at->format('d M Y') }}</dd></div>
           <div><dt>Last updated</dt><dd>{{ $job->updated_at->format('d M Y') }}</dd></div>
           <div><dt>Currency</dt><dd>{{ $job->currency ?: 'USD' }}</dd></div>

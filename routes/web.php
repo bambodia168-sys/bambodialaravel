@@ -24,6 +24,7 @@ use App\Http\Controllers\ServiceInquiryController;
 use App\Http\Controllers\Dashboard\ServiceManagerController;
 use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\JobBoardController;
+use App\Http\Controllers\DetailDiscussionController;
 use App\Http\Controllers\Dashboard\JobManagerController;
 use App\Http\Controllers\Account\ProductDownloadController;
 use App\Http\Controllers\Creator\ProductVaultController;
@@ -91,6 +92,23 @@ Route::get('/search', [ListingController::class, 'search'])->name('marketplace.s
 foreach (['product', 'project', 'freelance', 'service'] as $type) {
     Route::get('/'.$type, fn (\Illuminate\Http\Request $request) => app(ListingController::class)->show($request, $type))->name('marketplace.'.$type);
 }
+
+// Dedicated authenticated pages for resource comments and private support.
+// Public listing/job detail URLs remain unchanged.
+Route::middleware('auth')->prefix('detail')->group(function (): void {
+    Route::get('/{kind}/{reference}-{slug}/comments', [DetailDiscussionController::class,'comments'])
+        ->name('detail.comments');
+    Route::post('/{kind}/{reference}-{slug}/comments', [DetailDiscussionController::class,'storeComment'])
+        ->middleware('throttle:8,1')->name('detail.comments.store');
+    Route::patch('/{kind}/{reference}-{slug}/comments/{comment}', [DetailDiscussionController::class,'updateComment'])
+        ->whereNumber('comment')->middleware('throttle:15,1')->name('detail.comments.update');
+    Route::delete('/{kind}/{reference}-{slug}/comments/{comment}', [DetailDiscussionController::class,'destroyComment'])
+        ->whereNumber('comment')->middleware('throttle:15,1')->name('detail.comments.destroy');
+    Route::get('/{kind}/{reference}-{slug}/support', [DetailDiscussionController::class,'support'])
+        ->name('detail.support');
+    Route::post('/{kind}/{reference}-{slug}/support', [DetailDiscussionController::class,'storeSupport'])
+        ->middleware('throttle:5,1')->name('detail.support.store');
+});
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthController::class, 'login'])->name('login');
