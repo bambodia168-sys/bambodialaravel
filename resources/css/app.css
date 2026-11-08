@@ -2324,7 +2324,7 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 /* Floating scroll-to-top is inactive until the reader has actually scrolled. */
 .site-body .back-to-top{
   position:fixed;z-index:58;right:clamp(13px,2.3vw,28px);
-  bottom:calc(17px + env(safe-area-inset-bottom,0px));
+  bottom:calc(var(--back-to-top-offset,17px) + env(safe-area-inset-bottom,0px));
   display:flex;align-items:center;justify-content:center;gap:8px;
   min-height:44px;padding:10px 15px;border:1px solid var(--line);
   border-radius:999px;box-shadow:0 10px 32px rgba(13,25,42,.16);

@@ -301,10 +301,14 @@ try {
           throw new Error(device.name+' homepage is unexpectedly not scrollable');
         });
         await backToTop.waitFor({state:'visible',timeout:3000});
+        const floatBounds=await backToTop.boundingBox();
+        const socialBounds=await footer.boundingBox();
+        if(floatBounds && socialBounds && socialBounds.y<device.viewport.height &&
+           floatBounds.y+floatBounds.height>socialBounds.y-4)
+          throw new Error(device.name+' Back to Top overlaps footer social links');
         await backToTop.click();
         await page.waitForFunction(()=>window.scrollY<20,null,{timeout:7000});
-        if(await backToTop.isVisible())
-          throw new Error(device.name+' Back to Top must disappear at page start');
+        await backToTop.waitFor({state:'hidden',timeout:3000});
         checks+=8;
 
       }

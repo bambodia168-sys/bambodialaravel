@@ -1388,9 +1388,16 @@ document.querySelectorAll('[data-public-mobile-search]').forEach((searchMenu) =>
     const button = document.querySelector('[data-back-to-top]');
     if (!button) return;
     const showAfter = 360;
+    const footerBottom = document.querySelector('.site-footer .footer-bottom');
     let scheduled = false;
     const update = () => {
         const visible = window.scrollY > showAfter;
+        // When the footer enters view, lift the button so it never covers social links.
+        const footerTop = footerBottom?.getBoundingClientRect().top ?? window.innerHeight;
+        const offset = visible && footerTop < window.innerHeight
+            ? Math.max(17, Math.ceil(window.innerHeight - footerTop + 14))
+            : 17;
+        button.style.setProperty('--back-to-top-offset', offset + 'px');
         button.classList.toggle('is-visible', visible);
         button.tabIndex = visible ? 0 : -1;
         button.setAttribute('aria-hidden', visible ? 'false' : 'true');
