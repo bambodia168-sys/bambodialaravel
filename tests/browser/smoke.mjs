@@ -153,8 +153,7 @@ try {
         }));
         const freelancerColumns=device.viewport.width>=1200?4:device.viewport.width>=680?2:1;
         if(freelancerGeometry.columns!==freelancerColumns ||
-           freelancerGeometry.items.some(c=>!c.href?.startsWith('/creators/') ||
-             !/^[0-9]{8}$/.test(c.href.split('/').pop()) ||
+           freelancerGeometry.items.some(c=>!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(c.href??'') ||
              c.href!==c.footer || c.right>device.viewport.width+3))
           throw new Error(device.name+' freelancer grid regression '+JSON.stringify(freelancerGeometry));
         const firstFreelancer=freelancerCards.first();
