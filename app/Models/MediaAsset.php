@@ -11,7 +11,7 @@ class MediaAsset extends Model
     public const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'];
 
     protected $fillable = [
-        'user_id', 'original_name', 'storage_path', 'mime_type', 'bytes',
+        'user_id', 'original_name', 'storage_path', 'storage_disk', 'mime_type', 'bytes',
         'width', 'height', 'alt_text', 'rights_basis', 'rights_holder',
         'rights_note', 'review_status', 'review_note', 'reviewed_by', 'reviewed_at',
     ];
