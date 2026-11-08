@@ -171,12 +171,15 @@ try {
           value=>document.querySelector('#marketplace-category-track').scrollLeft>value+5,
           before,{timeout:5000}
         );
-        if(await back.isDisabled())
-          throw new Error(device.name+' previous category arrow stayed disabled after scrolling');
+        await page.waitForFunction(
+          ()=>!document.querySelector('[data-category-prev]').disabled,
+          null,{timeout:5000}
+        );
+        const afterForward=await rail.evaluate(el=>el.scrollLeft);
         await back.click();
         await page.waitForFunction(
           value=>document.querySelector('#marketplace-category-track').scrollLeft<value-5,
-          await rail.evaluate(el=>el.scrollLeft),{timeout:5000}
+          afterForward,{timeout:5000}
         );
         const firstCategory=await sliderCategories.first.getAttribute('href');
         const finalCategory=await sliderCategories.last.getAttribute('href');
