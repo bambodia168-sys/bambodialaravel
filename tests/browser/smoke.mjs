@@ -133,6 +133,56 @@ try {
           || cardMetrics.viewDetails
           || cardMetrics.summaryHeight>cardMetrics.summaryLineHeight*2+3)
           throw new Error(device.name+' listing card layout regression '+JSON.stringify(cardMetrics));
+        // All active categories stay available in one native horizontal rail.
+        const rail=page.locator('#marketplace-category-track');
+        const sliderCategories=rail.locator('a.marketplace-category-tile');
+        if(await sliderCategories.count()!==13)
+          throw new Error(device.name+' slider must contain all 13 active categories');
+        if(await rail.getByText('Hidden Browser QA Category').count())
+          throw new Error(device.name+' inactive category leaked into slider');
+        const sliderGeometry=await rail.evaluate(track=>{
+          const children=[...track.querySelectorAll('.marketplace-category-tile')];
+          const section=track.closest('.marketplace-category-section');
+          const view=parseInt(getComputedStyle(section).getPropertyValue('--category-visible'),10);
+          const rect=children[0].getBoundingClientRect();
+          return {
+            visibleCount:view,
+            cardWidth:rect.width,
+            maxScroll:track.scrollWidth-track.clientWidth,
+            viewportWidth:track.clientWidth,
+            status:section.querySelector('[data-category-position]')?.textContent,
+            nextDisabled:section.querySelector('[data-category-next]')?.disabled,
+          };
+        });
+        const expectedVisible=device.viewport.width>=1400?6:device.viewport.width>=1200?5:
+          device.viewport.width>=980?4:device.viewport.width>=680?3:2;
+        const expectedWidth=(sliderGeometry.viewportWidth-(expectedVisible-1)*(expectedVisible===2?10:14))/expectedVisible;
+        if(sliderGeometry.visibleCount!==expectedVisible ||
+           Math.abs(sliderGeometry.cardWidth-expectedWidth)>6 ||
+           sliderGeometry.maxScroll<100 ||
+           sliderGeometry.nextDisabled ||
+           !sliderGeometry.status?.includes('of 13'))
+          throw new Error(device.name+' responsive category rail mismatch: '+JSON.stringify(sliderGeometry));
+        const forward=page.locator('[data-category-next]');
+        const back=page.locator('[data-category-prev]');
+        const before=await rail.evaluate(el=>el.scrollLeft);
+        await forward.click();
+        await page.waitForFunction(
+          value=>document.querySelector('#marketplace-category-track').scrollLeft>value+5,
+          before,{timeout:5000}
+        );
+        if(await back.isDisabled())
+          throw new Error(device.name+' previous category arrow stayed disabled after scrolling');
+        await back.click();
+        await page.waitForFunction(
+          value=>document.querySelector('#marketplace-category-track').scrollLeft<value-5,
+          await rail.evaluate(el=>el.scrollLeft),{timeout:5000}
+        );
+        const firstCategory=await sliderCategories.first.getAttribute('href');
+        const finalCategory=await sliderCategories.last.getAttribute('href');
+        if(!firstCategory?.includes('category=') || !finalCategory?.includes('category='))
+          throw new Error(device.name+' slider category links must preserve filters');
+        checks+=6;
         if(!(await page.getByText('Browser QA Published Freelance Job').first().isVisible()))
           throw new Error(device.name+' homepage missing approved job');
         await page.screenshot({path:out+'/'+device.name+'-homepage.png',fullPage:true});

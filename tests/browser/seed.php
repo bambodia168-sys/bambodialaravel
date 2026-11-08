@@ -34,6 +34,18 @@ $serviceCategory=\App\Models\MarketplaceCategory::query()->create([
     'type'=>'service','name'=>'Hidden Browser QA Category',
     'is_active'=>false,'sort_order'=>2,'created_by'=>$creator->id,
 ]);
+// More than six active categories ensures desktop, tablet and phone sliders
+// must expose every link via native scrolling and working arrow controls.
+foreach (range(1,12) as $index) {
+    \App\Models\MarketplaceCategory::query()->create([
+        'type'=>['product','project','service','freelance'][($index-1)%4],
+        'name'=>'Browser QA Slider Category '.$index,
+        'description'=>'Original isolated browser fixture for the category rail.',
+        'is_active'=>true,
+        'sort_order'=>$index+5,
+        'created_by'=>$creator->id,
+    ]);
+}
 \App\Models\MarketplaceListing::query()->create([
     'user_id'=>$creator->id,'type'=>'service','category_id'=>$serviceCategory->id,
     'title'=>'Browser QA Published Service',

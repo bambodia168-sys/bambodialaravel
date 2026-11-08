@@ -1416,3 +1416,54 @@ document.querySelectorAll('[data-public-mobile-search]').forEach((searchMenu) =>
     });
     update();
 })();
+
+
+/* Accessible category carousel: native scroll-snap plus optional controls.
+   All active categories remain real links in the DOM; no cloning or autoplay. */
+document.addEventListener('DOMContentLoaded', () => {
+    const slider = document.querySelector('[data-category-slider]');
+    const section = slider?.closest('.marketplace-category-section');
+    const track = slider?.querySelector('[data-category-track]');
+    if (!section || !track) return;
+    const cards = [...track.querySelectorAll('.marketplace-category-tile')];
+    const previous = section.querySelector('[data-category-prev]');
+    const next = section.querySelector('[data-category-next]');
+    const position = section.querySelector('[data-category-position]');
+    if (!cards.length || !previous || !next || !position) return;
+
+    const metrics = () => {
+        const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+        const step = (cards[0]?.getBoundingClientRect().width || track.clientWidth) + gap;
+        const count = parseInt(getComputedStyle(section).getPropertyValue('--category-visible'), 10);
+        const shown = Math.min(cards.length, Math.max(1, count || 1));
+        return { step, shown, maxScroll: Math.max(0, track.scrollWidth - track.clientWidth) };
+    };
+    const refresh = () => {
+        const { step, shown, maxScroll } = metrics();
+        const scroll = Math.max(0, track.scrollLeft);
+        const start = Math.min(Math.max(0, cards.length - shown), Math.max(0, Math.round(scroll / step)));
+        const end = Math.min(cards.length, start + shown);
+        const scrollable = maxScroll > 2;
+        previous.disabled = !scrollable || scroll <= 2;
+        next.disabled = !scrollable || scroll >= maxScroll - 2;
+        section.classList.toggle('is-static', !scrollable);
+        position.textContent = (start + 1) + '–' + end + ' of ' + cards.length;
+    };
+    const shift = direction => {
+        const { step, shown } = metrics();
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        track.scrollBy({ left: direction * step * shown, behavior: reduceMotion ? 'instant' : 'smooth' });
+    };
+    previous.addEventListener('click', () => shift(-1));
+    next.addEventListener('click', () => shift(1));
+    track.addEventListener('scroll', refresh, { passive: true });
+    track.addEventListener('keydown', event => {
+        if (event.target !== track) return;
+        if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+            event.preventDefault();
+            shift(event.key === 'ArrowRight' ? 1 : -1);
+        }
+    });
+    window.addEventListener('resize', refresh, { passive: true });
+    refresh();
+});

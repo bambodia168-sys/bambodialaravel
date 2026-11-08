@@ -48,7 +48,7 @@ class HomeController extends Controller
                 ->selectRaw('type, COUNT(*) as total')->groupBy('type')->pluck('total','type');
 
             $categories=MarketplaceCategory::query()->where('is_active',true)
-                ->orderBy('sort_order')->orderBy('name')->limit(8)->get();
+                ->orderBy('sort_order')->orderBy('name')->get();
 
             if($request->user()){
                 $savedIds=SavedListing::query()->where('user_id',$request->user()->id)

@@ -76,18 +76,35 @@
   @endif
 </section>
 @if($categories->isNotEmpty())
-<section class="container marketplace-section">
-  <div class="marketplace-section-heading">
-    <div><span class="eyebrow">Find the right specialty</span><h2>Explore categories</h2></div>
+<section class="container marketplace-section marketplace-category-section" aria-labelledby="marketplace-categories-title">
+  <div class="marketplace-section-heading marketplace-category-heading">
+    <div>
+      <span class="eyebrow">Find the right specialty</span>
+      <h2 id="marketplace-categories-title">Explore categories</h2>
+      <p>Browse all active specialties across Bambodia.</p>
+    </div>
+    <div class="marketplace-category-slider-controls" aria-label="Category slider controls">
+      <span class="marketplace-category-slider-status" data-category-position aria-live="polite"></span>
+      <button type="button" class="marketplace-category-arrow" data-category-prev aria-label="Previous categories" aria-controls="marketplace-category-track" disabled>
+        <x-icon name="chevron-left" size="18"/>
+      </button>
+      <button type="button" class="marketplace-category-arrow" data-category-next aria-label="Next categories" aria-controls="marketplace-category-track">
+        <x-icon name="chevron-right" size="18"/>
+      </button>
+    </div>
   </div>
-  <div class="marketplace-category-grid">
-    @foreach($categories as $category)
-      <a class="marketplace-category-tile" href="{{ route('marketplace.search',['type'=>$category->type,'category'=>$category->public_id]) }}">
-        <x-icon name="layers" size="22"/>
-        <span><strong>{{ $category->name }}</strong><small>{{ ucfirst($category->type) }}</small></span>
-        <x-icon name="chevron-right" size="17"/>
-      </a>
-    @endforeach
+  <div class="marketplace-category-slider" data-category-slider>
+    <div id="marketplace-category-track" class="marketplace-category-track" data-category-track role="region" aria-label="All active marketplace categories" tabindex="0" style="--category-total: {{ $categories->count() }};">
+      @foreach($categories as $category)
+        <a class="marketplace-category-tile" href="{{ route('marketplace.search',['type'=>$category->type,'category'=>$category->public_id]) }}" title="{{ $category->name }}">
+          <span class="marketplace-category-icon" aria-hidden="true"><x-icon :name="match($category->type){'product'=>'package','project'=>'layers','service'=>'settings','freelance'=>'briefcase',default=>'layers'}" size="24"/></span>
+          <span class="marketplace-category-type">{{ ucfirst($category->type) }}</span>
+          <strong class="marketplace-category-name">{{ $category->name }}</strong>
+          <small class="marketplace-category-description">{{ $category->description ?: 'Explore approved listings in this category.' }}</small>
+          <span class="marketplace-category-footer"><span>Explore listings</span><x-icon name="arrow-up-right" size="17"/></span>
+        </a>
+      @endforeach
+    </div>
   </div>
 </section>
 @endif
