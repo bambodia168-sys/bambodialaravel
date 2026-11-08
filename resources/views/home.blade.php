@@ -1,6 +1,7 @@
 @extends('layouts.main')
 @section('title','Home')
 @section('content')
+<div class="marketplace-hero-scene">
 <section class="hero container marketplace-home-hero">
   <div class="eyebrow">{{ \App\Models\SiteSetting::setting('appearance.hero_eyebrow') }}</div>
   <h1>{{ app()->getLocale()==='en' ? \App\Models\SiteSetting::setting('appearance.hero_title_en') : __('ui.hero_title') }}</h1>
@@ -28,6 +29,7 @@
     @endauth
   </div>
 </section>
+</div>
 
 @if($searchEnabled)
 <section class="container marketplace-type-directory" aria-labelledby="browse-by-type-heading">

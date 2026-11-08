@@ -2490,3 +2490,66 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 @media(max-width:719px){.home-blog-track{--home-blog-width:calc((100% - 16px)/2)}.home-blog-heading-actions{justify-content:flex-start}.home-blog-section{margin-top:37px;margin-bottom:44px}}
 @media(max-width:519px){.home-blog-track{--home-blog-width:100%}.home-blog-heading-actions{width:100%;justify-content:space-between}.home-blog-position{min-width:72px}.home-blog-section .marketplace-section-heading{align-items:flex-start;gap:14px}}
 @media(prefers-reduced-motion:reduce){.home-blog-arrow{transition:none}.home-blog-track{scroll-behavior:auto}}
+
+
+/* Bambodia homepage hero only: a theme-aware ambient background without a
+   carousel, controls, imagery requests or layout changes to surrounding pages. */
+.marketplace-hero-scene{
+  --hero-scene-base:#f6f9ff;
+  --hero-glow-blue:rgba(121,176,246,.31);
+  --hero-glow-mint:rgba(73,202,172,.26);
+  --hero-glow-warm:rgba(243,193,145,.12);
+  --hero-grid-line:rgba(76,115,170,.055);
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  width:100%;
+  background-color:var(--hero-scene-base);
+}
+:root[data-theme="dark"] .marketplace-hero-scene{
+  --hero-scene-base:#0c182b;
+  --hero-glow-blue:rgba(44,89,167,.40);
+  --hero-glow-mint:rgba(1,138,129,.29);
+  --hero-glow-warm:rgba(51,81,146,.12);
+  --hero-grid-line:rgba(154,189,238,.050);
+}
+.marketplace-hero-scene::before{
+  content:"";
+  position:absolute;
+  inset:-8% -4%;
+  z-index:0;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse 55% 75% at 9% 11%,var(--hero-glow-blue),transparent 74%),
+    radial-gradient(ellipse 51% 75% at 91% 83%,var(--hero-glow-mint),transparent 76%),
+    radial-gradient(ellipse 45% 58% at 66% 12%,var(--hero-glow-warm),transparent 74%);
+  animation:bambodia-hero-ambient-drift 28s ease-in-out infinite alternate;
+}
+.marketplace-hero-scene::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background-image:
+    linear-gradient(to right,var(--hero-grid-line) 1px,transparent 1px),
+    linear-gradient(to bottom,var(--hero-grid-line) 1px,transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.57),transparent 94%);
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.57),transparent 94%);
+}
+.marketplace-hero-scene > .marketplace-home-hero{
+  position:relative;
+  z-index:1;
+}
+@keyframes bambodia-hero-ambient-drift{
+  from{transform:translate3d(-1.6%,-.7%,0)}
+  to{transform:translate3d(1.6%,.7%,0)}
+}
+@media(max-width:719px){
+  .marketplace-hero-scene::before{inset:-6% -10%}
+  .marketplace-hero-scene::after{background-size:38px 38px}
+}
+@media(prefers-reduced-motion:reduce){
+  .marketplace-hero-scene::before{animation:none!important;transform:none!important}
+}

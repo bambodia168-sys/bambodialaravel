@@ -39,6 +39,57 @@ try {
         throw new Error(device.name+' '+path+' body font must use 14px platform token, saw '+typeSize);
       checks++;
       if(path==='/'){
+        // The ambient hero is the only new homepage layer: background adapts to
+        // theme, retains the original container geometry and has no slide controls.
+        const hero=page.locator('.marketplace-hero-scene');
+        if(await hero.count()!==1 ||
+           await hero.locator('.marketplace-home-hero').count()!==1 ||
+           await hero.locator('h1').count()!==1 ||
+           await hero.locator('.hero-search').count()!==1 ||
+           await hero.locator('.hero-links a').count()!==4 ||
+           await hero.locator('.hero-quick-actions a').count()<2)
+          throw new Error(device.name+' homepage hero structure changed');
+        const heroResults=[];
+        for(const theme of ['light','dark']){
+          const result=await hero.evaluate((element,theme)=>{
+            document.documentElement.dataset.theme=theme;
+            const rect=element.getBoundingClientRect();
+            const inner=element.querySelector('.marketplace-home-hero').getBoundingClientRect();
+            const backdrop=getComputedStyle(element);
+            const effect=getComputedStyle(element,'::before');
+            const grid=getComputedStyle(element,'::after');
+            return {
+              theme,
+              base:backdrop.backgroundColor,
+              image:effect.backgroundImage,
+              animation:effect.animationName,
+              grid:grid.backgroundImage,
+              left:rect.left,right:rect.right,
+              innerLeft:inner.left,innerRight:inner.right,
+              rootWidth:document.documentElement.clientWidth,
+              scrollWidth:document.documentElement.scrollWidth,
+            };
+          },theme);
+          if(!result.image.includes('radial-gradient') ||
+             !result.grid.includes('linear-gradient') ||
+             result.animation!=='bambodia-hero-ambient-drift' ||
+             Math.abs(result.left)>1 ||
+             Math.abs(result.right-result.rootWidth)>4 ||
+             result.scrollWidth>result.rootWidth+5 ||
+             result.innerLeft<0 || result.innerRight>result.rootWidth+4)
+            throw new Error(device.name+' '+theme+' ambient hero regression '+JSON.stringify(result));
+          heroResults.push(result);
+        }
+        if(heroResults[0].base===heroResults[1].base ||
+           !heroResults[0].base.includes('246, 249, 255') ||
+           !heroResults[1].base.includes('12, 24, 43'))
+          throw new Error(device.name+' hero background does not respond to theme');
+        await page.emulateMedia({reducedMotion:'reduce'});
+        const still=await hero.evaluate(element=>getComputedStyle(element,'::before').animationName);
+        if(still!=='none')throw new Error(device.name+' hero animation ignores reduced motion');
+        await page.emulateMedia({reducedMotion:'no-preference'});
+        await page.evaluate(()=>{document.documentElement.dataset.theme=localStorage.getItem('bambodia-theme')||'light';});
+        checks+=5;
         // Validate readable type sizing and WCAG AA color tokens on both theme palettes.
         const textMetrics=await page.evaluate(()=>{
           const heading=document.querySelector('.hero h1');

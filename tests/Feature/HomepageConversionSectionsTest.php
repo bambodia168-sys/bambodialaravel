@@ -13,6 +13,7 @@ class HomepageConversionSectionsTest extends TestCase
     public function test_guest_homepage_contains_correct_join_and_sign_in_cta(): void
     {
         $response=$this->get('/')->assertOk()
+            ->assertSee('class="marketplace-hero-scene"',false)
             ->assertSee('id="bambodia-join"',false)
             ->assertSee('id="bambodia-join-title"',false)
             ->assertSee('Join Now')
