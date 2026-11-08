@@ -48,7 +48,8 @@ class FrontendLayoutSamplesSafetyTest extends TestCase
             'category'=>'design','budget'=>'300.00','status'=>'published',
         ]);
         $this->actingAs($client)->get($listing->publicUrl())->assertOk()
-            ->assertSee('LAYOUT TEST ONLY')->assertDontSee('id="request-service"',false);
+            ->assertSee('Preview listing')->assertDontSee('id="request-service"',false)
+            ->assertDontSee('LAYOUT TEST ONLY');
         $this->post('/inquiries/for/'.$listing->id,[
             'subject'=>'A real inquiry about the test service',
             'body'=>str_repeat('I would like more information about this project. ',2),

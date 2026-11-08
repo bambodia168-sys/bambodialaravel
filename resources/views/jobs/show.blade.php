@@ -3,14 +3,6 @@
 @section('content')
 @php($layoutSample = str_starts_with($job->title, '[LAYOUT TEST] '))
 <div class="container inner-page listing-detail premium-detail premium-job-detail" data-detail-root>
-  @php
-    $jobSections=[
-      ['id'=>'overview','label'=>'Overview'],
-      ['id'=>'requirements','label'=>'How proposals work'],
-      ...(! $layoutSample && auth()->check() && auth()->user()->role === 'freelancer' ? [['id'=>'apply','label'=>'Apply']] : []),
-      ['id'=>'client','label'=>'Client'],
-    ];
-  @endphp
   <x-detail-tabs kind="job" :reference="$job->public_id" :slug="$job->slug"
     :public-url="$job->publicUrl()" :sections="$jobSections" active="overview"/>
 

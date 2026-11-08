@@ -59,7 +59,18 @@ class JobBoardController extends Controller
                 ->where('marketplace_job_id',$listing->id)->exists()
             : false;
         $screenshots = BuilderGallery::approvedFor($listing->gallery_media_ids, (int)$listing->client_id);
-        return view('jobs.show',['job'=>$listing,'applied'=>$applied,'isSaved'=>$isSaved,'screenshots'=>$screenshots]);
+        $jobSections=[
+            ['id'=>'overview','label'=>'Overview'],
+            ['id'=>'requirements','label'=>'How proposals work'],
+            ...(!str_starts_with($listing->title,'[LAYOUT TEST] ')
+                && $request->user()?->role === 'freelancer'
+                ? [['id'=>'apply','label'=>'Apply']] : []),
+            ['id'=>'client','label'=>'Client'],
+        ];
+        return view('jobs.show',[
+            'job'=>$listing,'applied'=>$applied,'isSaved'=>$isSaved,
+            'screenshots'=>$screenshots,'jobSections'=>$jobSections,
+        ]);
     }
 
     public function mine(Request $request): View
