@@ -56,6 +56,12 @@ FILES=(
     app/Support/BuilderGallery.php
     app/Support/ProductReadiness.php
     app/Models/MarketplaceListing.php
+    app/Http/Controllers/Marketplace/ListingController.php
+    resources/views/components/listing-card.blade.php
+    resources/views/marketplace/detail.blade.php
+    resources/views/marketplace/search.blade.php
+    resources/views/dashboard/products.blade.php
+    resources/views/jobs/show.blade.php
     resources/views/dashboard/post-builder.blade.php
     resources/views/media/index.blade.php
     resources/views/builder/index.blade.php
