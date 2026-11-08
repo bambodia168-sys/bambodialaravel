@@ -218,6 +218,10 @@ try {
           await page.locator('.nav-mobile-search-trigger').click();
           if(!(await page.locator('#mobile-marketplace-query').isVisible()))
             throw new Error(device.name+' search icon did not open input panel');
+          const searchBounds=await page.locator('.nav-mobile-search-panel').boundingBox();
+          if(!searchBounds || searchBounds.x < -3 ||
+             searchBounds.x+searchBounds.width > device.viewport.width+3)
+            throw new Error(device.name+' mobile search panel leaves viewport '+JSON.stringify(searchBounds));
           await page.locator('#mobile-marketplace-query').fill('Browser QA');
           await page.locator('.nav-mobile-search-form button').click();
           await page.waitForLoadState('networkidle');
@@ -230,6 +234,10 @@ try {
         }
 
         await page.locator('.nav-category-menu summary').click();
+        const categoryBounds=await page.locator('.nav-category-panel').boundingBox();
+        if(!categoryBounds || categoryBounds.x < -3 ||
+           categoryBounds.x+categoryBounds.width > device.viewport.width+3)
+          throw new Error(device.name+' category dropdown leaves viewport '+JSON.stringify(categoryBounds));
         if(!(await page.locator('.nav-category-panel .nav-category-entry')
           .getByText('Browser QA Consulting Category').isVisible()))
           throw new Error(device.name+' active category missing');

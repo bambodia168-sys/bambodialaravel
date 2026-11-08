@@ -2278,3 +2278,14 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
     right:8px;width:calc(100% - 16px);max-width:calc(100% - 16px);
   }
 }
+
+
+/* On tablets, anchor the category panel to the header, not the icon, to prevent edge overflow. */
+@media(min-width:721px) and (max-width:1020px){
+  .site-body .site-header .site-nav{position:relative}
+  .site-body .site-header .nav-category-menu{position:static}
+  .site-body .site-header .nav-category-panel{
+    left:auto;right:12px;top:calc(100% + 4px);
+    width:min(740px,calc(100% - 24px));max-width:calc(100% - 24px);
+  }
+}
