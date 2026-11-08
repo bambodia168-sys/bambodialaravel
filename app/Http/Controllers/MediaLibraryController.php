@@ -16,6 +16,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MediaLibraryController extends Controller
 {
@@ -34,7 +35,15 @@ class MediaLibraryController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $fromBuilder = $request->routeIs('builder.media.store');
+        $fromPost = $request->routeIs('dashboard.posts.media.store');
         $studio = $request->routeIs('studio.media.*') || $fromBuilder;
+        if ($fromPost) {
+            abort_unless(in_array($request->user()->role, ['admin', 'super_admin'], true), 403);
+            $request->validate([
+                'rights_confirmed' => ['accepted'],
+                'rights_basis' => ['required', Rule::in(['owned'])],
+            ]);
+        }
         if ($fromBuilder) {
             abort_unless(in_array($request->user()->role, [
                 'freelancer', 'super_admin', 'customer', 'subscriber',
@@ -76,7 +85,9 @@ class MediaLibraryController extends Controller
             'image/gif' => 'gif', 'video/mp4' => 'mp4', 'video/webm' => 'webm',
         };
         $path = 'marketplace/previews/'.$request->user()->id.'/'.bin2hex(random_bytes(24)).'.'.$extension;
-        if (! Storage::disk('local')->putFileAs(dirname($path), $file, basename($path))) {
+        $storageDisk = config('filesystems.media_library_disk', 'local');
+        abort_unless(in_array($storageDisk, ['local', 'r2'], true), 500, 'Invalid Media Library disk.');
+        if (! Storage::disk($storageDisk)->putFileAs(dirname($path), $file, basename($path))) {
             throw ValidationException::withMessages(['image' => 'The image could not be saved securely.']);
         }
 
@@ -86,6 +97,7 @@ class MediaLibraryController extends Controller
                 'user_id' => $request->user()->id,
                 'original_name' => mb_substr(basename(str_replace('\\', '/', $file->getClientOriginalName())), 0, 180),
                 'storage_path' => $path,
+                'storage_disk' => $storageDisk,
                 'mime_type' => $mime,
                 'bytes' => $file->getSize(),
                 'width' => $video ? 0 : $info[0],
@@ -93,13 +105,13 @@ class MediaLibraryController extends Controller
                 'review_status' => 'pending',
             ]);
         } catch (\Throwable $error) {
-            Storage::disk('local')->delete($path);
+            Storage::disk($storageDisk)->delete($path);
             throw $error;
         }
 
         AuditEvent::record('media.uploaded', $request->user(), $request);
 
-        if ($fromBuilder && $request->expectsJson()) {
+        if (($fromBuilder || $fromPost) && $request->expectsJson()) {
             return response()->json([
                 'id' => $asset->id,
                 'public_id' => $asset->public_id,
@@ -111,6 +123,10 @@ class MediaLibraryController extends Controller
             ], 201);
         }
 
+        if ($fromPost) {
+            return redirect()->route('dashboard.posts.create')
+                ->with('status', 'Media uploaded to Media Library for review.');
+        }
         return $fromBuilder
             ? redirect($returnTo)->with('status', 'Media uploaded privately. Choose it here after administrator rights review.')
             : redirect()->route($studio ? 'studio.media.index' : 'dashboard.media.index')
@@ -132,7 +148,7 @@ class MediaLibraryController extends Controller
     {
         $this->authorizeAsset($request, $asset);
 
-        $path = DB::transaction(function () use ($asset): string {
+        $fileLocation = DB::transaction(function () use ($asset): array {
             $asset = MediaAsset::query()->lockForUpdate()->findOrFail($asset->id);
             abort_if($asset->coverListings()->exists() || $asset->featuredListings()->exists()
                 || $asset->featuredJobs()->exists()
@@ -142,10 +158,10 @@ class MediaLibraryController extends Controller
                 409, 'This media is attached to a listing or job and cannot be deleted.');
             $path = $asset->storage_path;
             $asset->delete();
-            return $path;
+            return [$asset->storage_disk ?: 'local', $path];
         });
 
-        Storage::disk('local')->delete($path);
+        Storage::disk($fileLocation[0])->delete($fileLocation[1]);
         AuditEvent::record('media.deleted', $request->user(), $request);
 
         return back()->with('status', 'Unlinked media item deleted.');
@@ -161,7 +177,7 @@ class MediaLibraryController extends Controller
         DB::transaction(function () use ($asset, $data, $request): void {
             $asset = MediaAsset::query()->lockForUpdate()->findOrFail($asset->id);
             abort_unless($asset->review_status === 'pending', 409, 'This image is not awaiting review.');
-            abort_unless(Storage::disk('local')->exists($asset->storage_path), 409, 'The stored image is missing.');
+            abort_unless(Storage::disk($asset->storage_disk ?: 'local')->exists($asset->storage_path), 409, 'The stored image is missing.');
             $asset->update([
                 'review_status' => $data['decision'],
                 'review_note' => $data['review_note'] ?? null,
@@ -174,7 +190,7 @@ class MediaLibraryController extends Controller
         return back()->with('status', 'Media review recorded.');
     }
 
-    public function preview(Request $request, string $publicId): BinaryFileResponse
+    public function preview(Request $request, string $publicId): BinaryFileResponse|StreamedResponse
     {
         abort_unless(preg_match('/^\d{9}$/D', $publicId) === 1, 404);
         $asset = MediaAsset::query()->where('public_id', $publicId)->firstOrFail();
@@ -205,16 +221,35 @@ class MediaLibraryController extends Controller
 
         abort_unless($owner || $admin || $public, 404);
         abort_unless(in_array($asset->mime_type, MediaAsset::ALLOWED_MIME, true), 404);
-        $disk = Storage::disk('local');
+        $storageDisk = $asset->storage_disk ?: 'local';
+        abort_unless(in_array($storageDisk, ['local', 'r2'], true), 404);
+        $disk = Storage::disk($storageDisk);
         abort_unless($disk->exists($asset->storage_path), 404);
-
-        return response()->file($disk->path($asset->storage_path), [
+        $headers = [
             'Content-Type' => $asset->mime_type,
             'Content-Disposition' => 'inline; filename="bambodia-preview-'.$asset->public_id.'"',
             'Cache-Control' => 'private, no-store, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
             'Cross-Origin-Resource-Policy' => 'same-origin',
-        ]);
+        ];
+        if ($storageDisk === 'local') {
+            return response()->file($disk->path($asset->storage_path), $headers);
+        }
+        // Stream R2 objects through this access-controlled endpoint; never expose
+        // permanent public R2 URLs or unrestricted object keys.
+        return response()->stream(function () use ($disk, $asset): void {
+            $stream = $disk->readStream($asset->storage_path);
+            if (! is_resource($stream)) {
+                return;
+            }
+            try {
+                while (! feof($stream)) {
+                    echo fread($stream, 8192);
+                }
+            } finally {
+                fclose($stream);
+            }
+        }, 200, $headers);
     }
 
     private function authorizeAsset(Request $request, MediaAsset $asset): void
