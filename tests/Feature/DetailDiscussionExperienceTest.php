@@ -73,6 +73,17 @@ class DetailDiscussionExperienceTest extends TestCase
         ];
     }
 
+    public function test_detail_stylesheet_contains_floating_badge_wrapped_title_and_discussion_styles(): void
+    {
+        $css=file_get_contents(resource_path('css/app.css'));
+        $this->assertNotFalse($css);
+        foreach (['.premium-detail-floating-type', '.premium-detail-below-title', '.detail-workspace-grid'] as $selector) {
+            $this->assertStringContainsString($selector, $css);
+        }
+        $this->assertStringContainsString('white-space:normal', $css);
+        $this->assertStringContainsString('overflow-wrap:break-word', $css);
+    }
+
     public function test_five_public_detail_pages_keep_title_below_media_and_hide_guest_discussions(): void
     {
         $creator=$this->member('freelancer');

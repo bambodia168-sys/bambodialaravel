@@ -2603,3 +2603,39 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .detail-support-ticket .btn{justify-self:start}
 @media(max-width:900px){.detail-workspace-grid{grid-template-columns:minmax(0,1fr)}.detail-compose{max-width:100%}}
 @media(max-width:520px){.detail-workspace-panel{padding-inline:15px}.detail-workspace-navigation{width:100%}.detail-workspace-navigation .btn{flex:1}.detail-support-ticket{align-items:flex-start;flex-direction:column}.detail-comment-replies{margin-left:12px;padding-left:10px}}
+
+/* Media-first detail layout: shared by all five public listing types. */
+.listing-detail.premium-detail{padding-top:clamp(24px,3vw,42px)}
+.listing-detail.premium-detail .premium-showcase{isolation:isolate}
+.listing-detail.premium-detail .premium-detail-floating-type{
+  position:absolute;z-index:3;top:16px;left:16px;
+  display:inline-flex;align-items:center;gap:7px;
+  max-width:calc(100% - 32px);min-height:37px;
+  padding:8px 13px;border:1px solid rgba(255,255,255,.3);
+  border-radius:11px;background:rgba(13,26,48,.88);color:#fff;
+  font-size:12px;font-weight:800;line-height:1.35;letter-spacing:.02em;
+  box-shadow:0 8px 23px rgba(0,0,0,.17);pointer-events:none;
+}
+.listing-detail.premium-detail .premium-detail-floating-type svg{
+  flex:0 0 auto;color:#ff9d42;
+}
+.listing-detail.premium-detail .premium-detail-below-title{
+  min-width:0;width:100%;max-width:none;max-height:none;
+  margin:-1px 0 0;font-size:clamp(25px,2.6vw,39px);
+  line-height:1.22;letter-spacing:-.027em;font-weight:800;
+  color:var(--text);overflow-wrap:break-word;word-break:normal;
+  white-space:normal;display:block;text-overflow:clip;
+}
+.listing-detail.premium-detail .premium-showcase-secondary{
+  display:block;font-size:13px;font-weight:650;line-height:1.5;
+  color:inherit;opacity:.82;
+}
+.listing-detail.premium-detail .premium-detail-main{gap:18px}
+@media(max-width:719px){
+  .listing-detail.premium-detail .premium-detail-floating-type{
+    top:12px;left:12px;padding:7px 11px;min-height:33px;font-size:11px;
+  }
+  .listing-detail.premium-detail .premium-detail-below-title{
+    font-size:clamp(23px,6vw,31px);line-height:1.25;
+  }
+}
