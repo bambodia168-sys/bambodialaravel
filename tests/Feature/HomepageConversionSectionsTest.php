@@ -15,13 +15,20 @@ class HomepageConversionSectionsTest extends TestCase
         $response=$this->get('/')->assertOk()
             ->assertSee('id="bambodia-join"',false)
             ->assertSee('id="bambodia-join-title"',false)
-            ->assertSee('Join Free')
+            ->assertSee('Join Now')
             ->assertSee('Sign In')
             ->assertSee('href="'.route('register').'"',false)
             ->assertSee('href="'.route('login').'"',false)
             ->assertDontSee('One platform, different workspaces');
 
         $this->assertSame(1,substr_count($response->getContent(),'id="bambodia-join"'));
+        $this->assertStringContainsString('<x-icon', file_get_contents(resource_path('views/home.blade.php')));
+        $this->assertDontSeeOldJoinLabel($response->getContent());
+    }
+
+    private function assertDontSeeOldJoinLabel(string $html): void
+    {
+        $this->assertStringNotContainsString('Join Free',$html);
     }
 
     public function test_advantage_has_three_grounded_cards_and_preserves_existing_homepage_sections(): void
@@ -38,6 +45,17 @@ class HomepageConversionSectionsTest extends TestCase
             ->assertDontSee('Enforceable digital contracts');
 
         $this->assertSame(3,substr_count($response->getContent(),'class="bambodia-advantage-card"'));
+        $html=$response->getContent();
+        $jobs=strpos($html,'id="bambodia-jobs"');
+        $advantage=strpos($html,'id="bambodia-advantage"');
+        $join=strpos($html,'id="bambodia-join"');
+        $this->assertNotFalse($jobs);
+        $this->assertNotFalse($advantage);
+        $this->assertNotFalse($join);
+        $this->assertTrue($jobs<$advantage && $advantage<$join);
+        $this->assertSame(1,substr_count($html,'id="bambodia-advantage"'));
+        $this->assertStringContainsString('name="user-plus" size="16"',file_get_contents(resource_path('views/home.blade.php')));
+        $this->assertStringContainsString('name="log-in" size="16"',file_get_contents(resource_path('views/home.blade.php')));
     }
 
     public function test_authenticated_cta_routes_to_account_and_job_board(): void
@@ -53,6 +71,6 @@ class HomepageConversionSectionsTest extends TestCase
             ->assertSee('Find Jobs')
             ->assertSee('href="'.route('account').'"',false)
             ->assertSee('href="'.route('jobs').'"',false)
-            ->assertDontSee('Join Free');
+            ->assertDontSee('Join Now');
     }
 }

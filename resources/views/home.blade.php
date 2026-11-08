@@ -129,25 +129,6 @@
   @endif
 </section>
 
-<section id="bambodia-join" class="container bambodia-join-section" aria-labelledby="bambodia-join-title">
-  <div class="bambodia-join-panel">
-    <div class="bambodia-join-content">
-      <span class="bambodia-join-kicker">Start your journey</span>
-      <h2 id="bambodia-join-title">Ready to grow your business or freelance career in Cambodia?</h2>
-      <p>Discover approved opportunities, share your professional work, and manage your activity through Bambodia.</p>
-    </div>
-    <div class="bambodia-join-actions">
-      @auth
-        <a class="bambodia-join-button bambodia-join-button--primary" href="{{ route('account') }}">My Account <x-icon name="arrow-up-right" size="18"/></a>
-        <a class="bambodia-join-button bambodia-join-button--secondary" href="{{ route('jobs') }}">Find Jobs <x-icon name="arrow-up-right" size="18"/></a>
-      @else
-        <a class="bambodia-join-button bambodia-join-button--primary" href="{{ route('register') }}">Join Free <x-icon name="arrow-up-right" size="18"/></a>
-        <a class="bambodia-join-button bambodia-join-button--secondary" href="{{ route('login') }}">Sign In <x-icon name="arrow-up-right" size="18"/></a>
-      @endauth
-    </div>
-  </div>
-</section>
-
 <section id="bambodia-advantage" class="bambodia-advantage-section" aria-labelledby="bambodia-advantage-title">
   <div class="container bambodia-advantage-inner">
     <header class="bambodia-advantage-header">
@@ -180,6 +161,25 @@
         <span><x-icon name="briefcase" size="18"/> Approved Jobs</span>
         <span><x-icon name="shield" size="18"/> Account Workspaces</span>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="bambodia-join" class="bambodia-join-section" aria-labelledby="bambodia-join-title">
+  <div class="container bambodia-join-panel">
+    <div class="bambodia-join-content">
+      <span class="bambodia-join-kicker">Start your journey</span>
+      <h2 id="bambodia-join-title">Ready to grow your business or freelance career in Cambodia?</h2>
+      <p>Discover approved opportunities, share your professional work, and manage your activity through Bambodia.</p>
+    </div>
+    <div class="bambodia-join-actions">
+      @auth
+        <a class="bambodia-join-button bambodia-join-button--primary" href="{{ route('account') }}">My Account <x-icon name="user" size="16"/></a>
+        <a class="bambodia-join-button bambodia-join-button--secondary" href="{{ route('jobs') }}">Find Jobs <x-icon name="briefcase" size="16"/></a>
+      @else
+        <a class="bambodia-join-button bambodia-join-button--primary" href="{{ route('register') }}">Join Now <x-icon name="user-plus" size="16"/></a>
+        <a class="bambodia-join-button bambodia-join-button--secondary" href="{{ route('login') }}">Sign In <x-icon name="log-in" size="16"/></a>
+      @endauth
     </div>
   </div>
 </section>

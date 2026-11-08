@@ -189,7 +189,7 @@ try {
         const advantage=page.locator('#bambodia-advantage');
         if(await join.count()!==1 || await advantage.count()!==1)
           throw new Error(device.name+' missing homepage CTA or Advantage section');
-        const joinLink=join.getByRole('link',{name:/Join Free/i});
+        const joinLink=join.getByRole('link',{name:/Join Now/i});
         const signInLink=join.getByRole('link',{name:/Sign In/i});
         if(!(await joinLink.isVisible()) || !(await signInLink.isVisible()) ||
            !(await joinLink.getAttribute('href')).includes('/register') ||
@@ -211,17 +211,46 @@ try {
             cardRight:Math.max(...cards.map(c=>bounds(c).right)),
             cardColumns:getComputedStyle(section.querySelector('.bambodia-advantage-grid')).gridTemplateColumns.split(' ').length,
             actionColumns:getComputedStyle(panel.querySelector('.bambodia-join-actions')).gridTemplateColumns.split(' ').length,
+            advantageRadius:getComputedStyle(section).borderTopLeftRadius,
+            joinRadius:getComputedStyle(document.querySelector('#bambodia-join')).borderTopLeftRadius,
+            joinPanelRadius:getComputedStyle(panel).borderTopLeftRadius,
+            joinLeft:bounds(document.querySelector('#bambodia-join')).left,
+            joinRight:bounds(document.querySelector('#bambodia-join')).right,
+            footerStart:document.querySelector('footer.site-footer')?.getBoundingClientRect().top,
+            joinStart:bounds(document.querySelector('#bambodia-join')).top,
+            joinEnd:bounds(document.querySelector('#bambodia-join')).bottom,
+            advStart:bounds(section).top,
+            advEnd:bounds(section).bottom,
+            jobsEnd:bounds(document.querySelector('#bambodia-jobs')).bottom,
+            iconAlignment:[...panel.querySelectorAll('.bambodia-join-button')].every(link=>{
+              const icon=link.querySelector('svg');
+              const labelText=link.textContent.trim();
+              const box=bounds(link), svg=bounds(icon);
+              return svg.width<=17 && Math.abs((svg.top+svg.height/2)-(box.top+box.height/2))<=4
+                && link.getAttribute('href') && labelText.length>0;
+            }),
           };
         });
         const expectedAdvantageColumns=device.viewport.width>720?3:1;
         if(layout.advantageLeft!==0 || Math.abs(layout.advantageRight-layout.viewportWidth)>4 ||
            layout.cardCount!==3 || layout.cardColumns!==expectedAdvantageColumns ||
            layout.actionColumns!==2 || layout.cardRight>layout.viewportWidth+4 ||
-           layout.contentLeft<-1 || layout.panelWidth>layout.viewportWidth+4)
+           layout.contentLeft<-1 || layout.panelWidth>layout.viewportWidth+4 ||
+           layout.advantageRadius!=='0px' || layout.joinRadius!=='0px' ||
+           layout.joinPanelRadius!=='0px' || Math.abs(layout.joinLeft)>1 ||
+           Math.abs(layout.joinRight-layout.viewportWidth)>4 || !layout.iconAlignment ||
+           layout.advStart < layout.jobsEnd-1 || layout.joinEnd > layout.footerStart+1 ||
+           Math.abs(layout.joinEnd-layout.footerStart)>2 ||
+           layout.joinStart < layout.advEnd-1)
           throw new Error(device.name+' CTA/Advantage responsive regression '+JSON.stringify(layout));
         if(await advantage.getByText(/escrow|instant khqr|verified cambodian entities|enforceable digital contracts/i).count())
           throw new Error(device.name+' unavailable service claims were introduced');
-        checks+=5;
+        const advantageContainer=await page.locator('#bambodia-advantage .bambodia-advantage-inner').evaluate(el=>{const rect=el.getBoundingClientRect();return {left:rect.left,right:rect.right};});
+        const navContainer=await page.locator('.site-header .container').first().evaluate(el=>{const rect=el.getBoundingClientRect();return {left:rect.left,right:rect.right};});
+        if(Math.abs(advantageContainer.left-navContainer.left)>3 ||
+           Math.abs(advantageContainer.right-navContainer.right)>3)
+          throw new Error(device.name+' Advantage inner content no longer matches global layout');
+        checks+=6;
         await page.screenshot({path:out+'/'+device.name+'-homepage.png',fullPage:true});
         const compactHeader=await page.locator('.site-header').evaluate(el=>{
           const logo=el.querySelector('.brand-logo-pair');
