@@ -19,10 +19,12 @@ final class ProductReadiness
         }
 
         $cover = $coverId ? MediaAsset::query()->find($coverId) : null;
-        if (! $cover || (int) $cover->user_id !== $ownerId || ! $cover->isApproved()
+        $disk = $cover?->storage_disk ?: 'local';
+        if (! $cover || (int) $cover->user_id !== $ownerId
             || ! in_array($cover->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true)
-            || ! Storage::disk('local')->exists($cover->storage_path)) {
-            $errors['cover_media_id'] = 'Select an approved, available preview image belonging to this creator.';
+            || ! in_array($disk, ['local', 'r2'], true)
+            || ! Storage::disk($disk)->exists($cover->storage_path)) {
+            $errors['cover_media_id'] = 'Select an available static image from this creator\'s Media Library.';
         }
 
         if ($errors) {

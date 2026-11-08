@@ -81,8 +81,7 @@ class BuilderController extends Controller
         $extendedLicenses = $licenses->filter(fn (LicenseDefinition $definition) => $definition->allowsTier('extended'));
         $assets = $type !== null
             ? MediaAsset::query()->where('user_id', $request->user()->id)
-                ->whereIn('review_status', ['approved', 'pending'])->latest()
-                ->get(['id', 'public_id', 'alt_text', 'mime_type', 'review_status'])
+                ->latest()->get(['id', 'public_id', 'alt_text', 'mime_type'])
             : collect();
 
         $productVersions = $type === 'product' && $record

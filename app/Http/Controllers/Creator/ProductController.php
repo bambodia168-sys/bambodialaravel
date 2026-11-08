@@ -46,7 +46,6 @@ class ProductController extends Controller
 
         $licenses = LicenseDefinition::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'version']);
         $assets = MediaAsset::query()->where('user_id', $request->user()->id)
-            ->where('review_status', 'approved')
             ->latest()->get(['id', 'public_id', 'alt_text']);
 
         $categories=MarketplaceCategory::query()->where('type','product')

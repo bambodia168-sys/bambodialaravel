@@ -52,12 +52,12 @@ final class BuilderFeaturedMedia
 
         $asset = ! empty($data['featured_media_id'])
             ? MediaAsset::query()->whereKey($data['featured_media_id'])
-                ->where('user_id', $ownerId)->where('review_status', 'approved')->first()
+                ->where('user_id', $ownerId)->first()
             : null;
 
         if (! $asset || ! in_array($asset->mime_type, $mimes, true)) {
             throw ValidationException::withMessages([
-                'featured_media_id' => 'Select an approved matching media file from your own library.',
+                'featured_media_id' => 'Select a matching media file from your own library.',
             ]);
         }
     }

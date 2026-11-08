@@ -49,14 +49,11 @@ class PostManagerController extends Controller
 
     private function builder(ContentEntry $post): View
     {
+        $canManageAll = in_array(auth()->user()?->role, ['super_admin', 'admin'], true);
         $media = MediaAsset::query()
-            ->where(function ($query): void {
-                $query->where('review_status', 'approved')
-                    ->orWhere(fn ($owned) => $owned->where('review_status', 'pending')
-                        ->where('user_id', auth()->id()));
-            })
+            ->when(! $canManageAll, fn ($query) => $query->where('user_id', auth()->id()))
             ->whereIn('mime_type', MediaAsset::ALLOWED_MIME)
-            ->latest()->limit(80)->get(['id', 'public_id', 'alt_text', 'original_name', 'mime_type', 'review_status']);
+            ->latest()->limit(80)->get(['id', 'public_id', 'alt_text', 'original_name', 'mime_type']);
         $categoryOptions = self::CATEGORIES;
         return view('dashboard.post-builder', compact('post', 'media', 'categoryOptions'));
     }
@@ -162,12 +159,13 @@ class PostManagerController extends Controller
             $validFormat = $media && ($type === 'image'
                 ? str_starts_with($media->mime_type, 'image/')
                 : str_starts_with($media->mime_type, 'video/'));
-            $authorized = $media && ($media->review_status === 'approved'
-                || ($data['status'] !== 'published' && $media->review_status === 'pending'
-                    && (int) $media->user_id === (int) $request->user()->id));
+            // Permissions depend on user ownership or administrator status, not review state.
+            $canManageAll = in_array($request->user()->role, ['super_admin', 'admin'], true);
+            $authorized = $media && ($canManageAll
+                || (int) $media->user_id === (int) $request->user()->id);
             if (! $validFormat || ! $authorized) {
                 throw ValidationException::withMessages(['featured_media_id' =>
-                    'Choose approved media, or your pending upload for a private draft.']);
+                    'Choose an image or video you are allowed to use.']);
             }
             $data['featured_media_id'] = $media->id;
         } elseif ($type === 'youtube') {

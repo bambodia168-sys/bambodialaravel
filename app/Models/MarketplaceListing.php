@@ -45,7 +45,7 @@ class MarketplaceListing extends Model
                 $q->where('type','!=','product')->orWhere(function(Builder $products): void {
                     $products->where('type','product')
                         ->whereHas('licenseDefinition',fn(Builder $license)=>$license->where('status','active'))
-                        ->whereHas('coverAsset',fn(Builder $media)=>$media->where('review_status','approved'));
+                        ->whereHas('coverAsset');
                 });
             });
     }

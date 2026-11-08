@@ -119,29 +119,27 @@ class MediaLibraryController extends Controller
                 'mime_type' => $asset->mime_type,
                 'review_status' => $asset->review_status,
                 'preview_url' => $asset->previewUrl(),
-                'message' => 'Media stored privately and queued for rights review.',
+                'message' => 'Media uploaded to your private library. Ready to use.',
             ], 201);
         }
 
         if ($fromPost) {
             return redirect()->route('dashboard.posts.create')
-                ->with('status', 'Media uploaded to Media Library for review.');
+                ->with('status', 'Media uploaded to your Media Library.');
         }
         return $fromBuilder
-            ? redirect($returnTo)->with('status', 'Media uploaded privately. Choose it here after administrator rights review.')
+            ? redirect($returnTo)->with('status', 'Media uploaded privately. You can select it immediately.')
             : redirect()->route($studio ? 'studio.media.index' : 'dashboard.media.index')
-                ->with('status', 'Private media uploaded for rights review.');
+                ->with('status', 'Media uploaded to your private library.');
     }
 
     public function update(Request $request, MediaAsset $asset): RedirectResponse
     {
         $this->authorizeAsset($request, $asset);
-        abort_unless($asset->review_status !== 'approved', 409, 'Reviewed image metadata is locked. Upload a new asset for changes.');
-
         $values = $this->validateMetadata($request);
-        $asset->update([...$values, 'review_status' => 'pending', 'review_note' => null]);
+        $asset->update($values);
 
-        return back()->with('status', 'Image details updated for review.');
+        return back()->with('status', 'Media details updated.');
     }
 
     public function destroy(Request $request, MediaAsset $asset): RedirectResponse
@@ -197,7 +195,9 @@ class MediaLibraryController extends Controller
         $actor = $request->user();
         $owner = $actor && (int) $actor->id === (int) $asset->user_id;
         $admin = $actor && in_array($actor->role, ['super_admin', 'admin'], true);
-        $public = $asset->review_status === 'approved' && (
+        // Private assets are accessible to their owners and administrators.
+        // Public access is granted only when linked to published content.
+        $public = (
             MarketplaceListing::query()
                 ->where('cover_media_id', $asset->id)
                 ->where('status', 'published')

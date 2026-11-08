@@ -45,7 +45,6 @@ final class BuilderGallery
 
         return MediaAsset::query()->whereIn('id', $ids)
             ->where('user_id', $ownerId)
-            ->where('review_status', 'approved')
             ->whereIn('mime_type', ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
             ->get()->sortBy(fn ($asset) => array_search($asset->id, $ids, false))->values();
     }
