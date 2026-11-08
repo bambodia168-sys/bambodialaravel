@@ -112,35 +112,50 @@
       </section>
     </main>
     <aside class="premium-detail-sidebar" aria-label="Opportunity details and actions">
-      <section class="premium-side-card premium-price-card" aria-labelledby="job-offer-heading">
+      <section class="premium-side-card premium-price-card premium-offer-v3" aria-labelledby="job-offer-heading">
         <div class="premium-side-card-body">
           <div class="premium-offer-heading">
-            <span class="eyebrow" id="job-offer-heading">Opportunity summary</span>
+            <div>
+              <span class="eyebrow">JOB OPPORTUNITY</span>
+              <h2 id="job-offer-heading" class="premium-offer-title">Opportunity summary</h2>
+            </div>
             @if($layoutSample)<span class="premium-offer-status">Preview listing</span>@endif
           </div>
-          <div class="premium-side-price">
-            <span>Estimated budget</span>
-            <strong>{{ $job->budget===null ? 'On request' : '$'.number_format((float)$job->budget,2) }}</strong>
+          <div class="premium-offer-pricing">
+            <div class="premium-offer-pricing-main">
+              <span class="premium-offer-pricing-label">Client-provided budget</span>
+              <strong>{{ $job->budget===null ? 'On request' : '$'.number_format((float)$job->budget,2) }}</strong>
+            </div>
+            <span class="premium-offer-currency">{{ $job->currency ?: 'USD' }}</span>
           </div>
-          <p class="premium-price-note">{{ $job->currency ?: 'USD' }} · Client-provided estimate</p>
-          @if(! $layoutSample)
-            @auth
-              @if(auth()->user()->role==='freelancer')
-                <a class="btn primary premium-full-action" href="{{ $applied ? route('jobs.applied') : '#apply' }}">
-                  {{ $applied?'View my proposal':'Apply to this job' }} <x-icon name="chevron-right" size="16"/>
-                </a>
-              @elseif((int)auth()->id()===(int)$job->client_id)
-                <a class="btn primary premium-full-action" href="{{ route('jobs.proposals',$job) }}">Review applications <x-icon name="chevron-right" size="16"/></a>
+          <ul class="premium-feature-checklist" aria-label="Job opportunity information">
+            <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Published job opportunity</span></li>
+            <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Save this opportunity to your account</span></li>
+            <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Member comments and private support requests</span></li>
+            @if(! $layoutSample)
+              <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Private proposals for eligible freelancers</span></li>
+            @endif
+          </ul>
+          <div class="premium-offer-actions">
+            @if(! $layoutSample)
+              @auth
+                @if(auth()->user()->role==='freelancer')
+                  <a class="btn primary premium-full-action" href="{{ $applied ? route('jobs.applied') : '#apply' }}">
+                    {{ $applied?'View my proposal':'Apply to this job' }} <x-icon name="arrow-up-right" size="16"/>
+                  </a>
+                @elseif((int)auth()->id()===(int)$job->client_id)
+                  <a class="btn primary premium-full-action" href="{{ route('jobs.proposals',$job) }}">Review applications <x-icon name="arrow-up-right" size="16"/></a>
+                @else
+                  <a class="btn subtle premium-full-action" href="{{ route('jobs') }}">Explore jobs <x-icon name="arrow-up-right" size="16"/></a>
+                @endif
               @else
-                <a class="btn subtle premium-full-action" href="{{ route('jobs') }}">Explore jobs <x-icon name="chevron-right" size="16"/></a>
-              @endif
+                <a class="btn primary premium-full-action" href="{{ route('login') }}">Sign in to apply <x-icon name="arrow-up-right" size="16"/></a>
+              @endauth
             @else
-              <a class="btn primary premium-full-action" href="{{ route('login') }}">Sign in to apply <x-icon name="chevron-right" size="16"/></a>
-            @endauth
-          @else
-            <a class="btn subtle premium-full-action" href="{{ route('jobs') }}">Browse job opportunities <x-icon name="chevron-right" size="16"/></a>
-          @endif
-          <p class="premium-license-availability"><x-icon name="info" size="15"/> Applications do not create a contract or payment.</p>
+              <a class="btn subtle premium-full-action" href="{{ route('jobs') }}">Browse job opportunities <x-icon name="arrow-up-right" size="16"/></a>
+            @endif
+          </div>
+          <p class="premium-offer-footnote"><x-icon name="info" size="15"/> {{ $layoutSample ? 'Preview only — applications are not available.' : 'Applications do not constitute a contract or payment.' }}</p>
         </div>
       </section>
       <section class="premium-side-card">

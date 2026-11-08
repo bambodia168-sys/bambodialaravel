@@ -365,6 +365,41 @@ class DetailDiscussionExperienceTest extends TestCase
         $this->assertDatabaseCount('detail_support_resources',1);
     }
 
+    public function test_premium_offer_has_verified_checkmarks_compact_license_scope_and_no_unverified_benefits(): void
+    {
+        $owner=$this->member('freelancer');
+        $product=$this->listing($owner,'product');
+        $service=$this->listing($owner,'service');
+        $job=$this->job($this->member('customer'));
+
+        $html=$this->get($product->publicUrl())->assertOk()->getContent();
+        $this->assertStringContainsString('premium-offer-v3',$html);
+        $this->assertStringContainsString('premium-feature-checklist',$html);
+        $this->assertStringContainsString('Published license terms available',$html);
+        $this->assertStringContainsString('Downloads protected by verified entitlements',$html);
+        $this->assertStringContainsString('<details class="premium-license-scope"',$html);
+        $this->assertStringContainsString('data-detail-license-price',$html);
+        $this->assertStringContainsString('data-detail-license-description',$html);
+        $this->assertStringContainsString('Direct checkout is not enabled',$html);
+        $this->assertStringNotContainsString('Free support',$html);
+        $this->assertStringNotContainsString('Future product updates',$html);
+        $this->assertStringNotContainsString('Quality checked by Codester',$html);
+        $this->assertStringNotContainsString('Buy Now',$html);
+
+        $html=$this->get($service->publicUrl())->assertOk()->getContent();
+        $this->assertStringContainsString('premium-offer-v3',$html);
+        $this->assertStringContainsString('premium-feature-checklist',$html);
+        $this->assertStringContainsString('Published marketplace listing',$html);
+        $this->assertStringContainsString('Member comments and private support requests',$html);
+        $this->assertStringContainsString('Private creator inquiries for eligible clients',$html);
+
+        $html=$this->get($job->publicUrl())->assertOk()->getContent();
+        $this->assertStringContainsString('premium-offer-v3',$html);
+        $this->assertStringContainsString('premium-feature-checklist',$html);
+        $this->assertStringContainsString('Published job opportunity',$html);
+        $this->assertStringNotContainsString('Buy Now',$html);
+    }
+
     public function test_preview_listing_does_not_show_repeated_demo_notices_or_fake_purchase_actions(): void
     {
         $owner=$this->member('freelancer');

@@ -2732,3 +2732,137 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   .premium-detail-tabs--shared a{padding:11px 14px}
   .premium-price-card .premium-full-action{width:100%}
 }
+
+
+/* Bambodia premium offer cards v3 — consistent on Product, Project, Service,
+   Freelance and Job pages, with verified checkmarks and accessible license UI. */
+.premium-offer-v3{
+  border-color:var(--line);border-radius:16px;
+  box-shadow:var(--shadow);overflow:hidden
+}
+.premium-offer-v3 .premium-side-card-body{padding:0}
+.premium-offer-v3 .premium-offer-heading{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:21px 22px 17px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(125deg,
+    color-mix(in srgb,var(--accent) 6%,var(--surface)),
+    var(--surface) 75%);
+}
+.premium-offer-v3 .premium-offer-heading .eyebrow{
+  display:block;margin:0 0 7px;font-size:10px;letter-spacing:.12em
+}
+.premium-offer-v3 .premium-offer-title{
+  margin:0;color:var(--text);font-size:18px;line-height:1.35;
+  font-weight:800;letter-spacing:-.02em
+}
+.premium-offer-v3 .premium-offer-status{
+  align-self:start;white-space:nowrap;font-size:10px
+}
+.premium-offer-v3 .premium-license-choice{padding:18px 22px 0}
+.premium-offer-v3 .premium-license-label{
+  display:block;margin:0 0 9px;font-weight:750;font-size:12px;color:var(--muted)
+}
+.premium-offer-v3 .premium-license-tier-select{
+  display:block;width:100%;height:48px;border-radius:10px;
+  border:1px solid var(--line);
+  padding:10px 37px 10px 13px;background-color:var(--surface);
+  color:var(--text);font-size:14px;font-weight:800;
+}
+.premium-offer-v3 .premium-license-tier-select:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px
+}
+.premium-offer-v3 .premium-offer-pricing{
+  display:flex;gap:10px;align-items:end;justify-content:space-between;
+  padding:20px 22px 18px;
+  border-bottom:1px solid var(--line)
+}
+.premium-offer-v3 .premium-offer-pricing-main{
+  display:flex;min-width:0;flex-direction:column;gap:8px
+}
+.premium-offer-v3 .premium-offer-pricing-label{
+  color:var(--muted);font-size:12px;font-weight:700;line-height:1.45
+}
+.premium-offer-v3 .premium-offer-pricing strong{
+  font-size:clamp(27px,2.7vw,39px);line-height:1.1;
+  font-variant-numeric:tabular-nums;letter-spacing:-.04em;
+  font-weight:850;color:var(--text);overflow-wrap:anywhere
+}
+.premium-offer-v3 .premium-offer-currency{
+  display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;padding:5px 9px;border:1px solid var(--line);
+  border-radius:8px;color:var(--muted);font-size:10px;font-weight:750;
+  background:var(--surface-2);margin-bottom:4px
+}
+.premium-offer-v3 .premium-feature-checklist{
+  display:grid;gap:14px;margin:0;padding:20px 22px;
+  list-style:none;border:0
+}
+.premium-offer-v3 .premium-feature-checklist li{
+  display:flex;align-items:flex-start;gap:11px;min-width:0;
+  color:var(--text);font-size:12px;line-height:1.55;font-weight:600
+}
+.premium-offer-v3 .premium-feature-check{
+  width:21px;height:21px;flex:0 0 21px;display:grid;place-items:center;
+  margin-top:0;border-radius:50%;
+  color:#15754e;background:#dff7e8;border:1px solid #abe5c4;
+}
+:root[data-theme="dark"] .premium-offer-v3 .premium-feature-check{
+  color:#a8f1d1;background:rgba(34,197,128,.14);
+  border-color:rgba(80,209,155,.29)
+}
+.premium-offer-v3 .premium-feature-check svg{width:13px;height:13px;stroke-width:3px}
+.premium-offer-v3 .premium-license-scope{
+  margin:0 22px 19px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface-2);overflow:hidden
+}
+.premium-offer-v3 .premium-license-scope summary{
+  cursor:pointer;display:flex;gap:9px;align-items:center;
+  justify-content:space-between;padding:11px 13px;color:var(--text);
+  font-size:12px;font-weight:750;list-style:none
+}
+.premium-offer-v3 .premium-license-scope summary::-webkit-details-marker{display:none}
+.premium-offer-v3 .premium-license-scope summary svg{
+  color:var(--muted);transition:transform .18s ease;flex:0 0 auto
+}
+.premium-offer-v3 .premium-license-scope[open] summary svg{transform:rotate(180deg)}
+.premium-offer-v3 .premium-license-scope p{
+  margin:0;padding:0 13px 13px;
+  color:var(--muted);font-size:12px;line-height:1.65;
+  overflow-wrap:anywhere
+}
+.premium-offer-v3 .premium-offer-actions{
+  display:grid;gap:10px;padding:0 22px 19px
+}
+.premium-offer-v3 .premium-full-action{
+  display:flex;width:100%;min-height:46px;
+  align-items:center;justify-content:center;
+  gap:9px;margin:0;padding:10px 13px;
+  font-size:13px;font-weight:800;text-align:center;border-radius:10px;
+}
+.premium-offer-v3 .premium-full-action svg{flex:0 0 16px;width:16px;height:16px}
+.premium-offer-v3 .premium-offer-secondary-link{
+  display:inline-flex;justify-content:center;align-items:center;
+  gap:6px;margin:1px 0 0;font-size:12px;font-weight:750
+}
+.premium-offer-v3 .premium-offer-footnote{
+  display:flex;align-items:flex-start;gap:8px;
+  border-top:1px solid var(--line);
+  margin:0;padding:12px 22px 15px;background:var(--surface-2);
+  color:var(--muted);font-size:11px;line-height:1.65
+}
+.premium-offer-v3 .premium-offer-footnote svg{
+  flex:0 0 15px;margin-top:1px;color:var(--muted)
+}
+@media(max-width:520px){
+  .premium-offer-v3 .premium-offer-heading{padding:19px 18px 16px}
+  .premium-offer-v3 .premium-license-choice{padding:16px 18px 0}
+  .premium-offer-v3 .premium-offer-pricing{padding:19px 18px 16px}
+  .premium-offer-v3 .premium-feature-checklist{padding:18px;gap:12px}
+  .premium-offer-v3 .premium-license-scope{margin-inline:18px}
+  .premium-offer-v3 .premium-offer-actions{padding-inline:18px}
+  .premium-offer-v3 .premium-offer-footnote{padding-inline:18px}
+}
+@media(prefers-reduced-motion:reduce){
+  .premium-offer-v3 .premium-license-scope summary svg{transition:none}
+}

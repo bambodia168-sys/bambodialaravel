@@ -705,11 +705,32 @@ try {
            !(await page.locator('a[data-detail-license-terms]').isVisible()) ||
            await page.getByRole('button',{name:/buy now/i}).count())
           throw new Error(device.name+' product license selector or checkout safety regression');
+        const card=page.locator('.premium-offer-v3');
+        if(!(await card.isVisible()) ||
+           !(await card.locator('.premium-feature-checklist li').count() >= 3) ||
+           !(await card.locator('details.premium-license-scope').isVisible()) ||
+           await card.getByText(/free support|future product updates|quality checked by codester/i).count())
+          throw new Error(device.name+' product premium benefit list or license scope regression');
+        await card.locator('details.premium-license-scope summary').click();
+        if(!(await card.locator('[data-detail-license-description]').isVisible()))
+          throw new Error(device.name+' product license scope disclosure does not expand');
+        const tier=card.locator('select[data-detail-license-tier]');
+        const options=await tier.locator('option').count();
+        if(options>1){
+          await tier.selectOption('extended');
+          const selected=await tier.locator('option:checked').getAttribute('data-price');
+          if((await card.locator('[data-detail-license-price]').innerText()).trim()!==selected)
+            throw new Error(device.name+' license tier price did not update');
+        }
+        checks+=3;
       }else{
         if(!(await page.locator('#workflow').isVisible()))
           throw new Error(device.name+' '+kind+' missing private inquiry workflow');
         if(!(await page.getByRole('link',{name:/sign in to contact/i}).isVisible()))
           throw new Error(device.name+' '+kind+' missing guest sign-in action');
+        if(!(await page.locator('.premium-offer-v3').isVisible()) ||
+           await page.locator('.premium-offer-v3 .premium-feature-checklist li').count()<3)
+          throw new Error(device.name+' '+kind+' professional checkmark list missing');
       }
       for(const theme of ['light','dark']){
         await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;},theme);

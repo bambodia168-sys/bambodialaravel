@@ -176,68 +176,113 @@
     </main>
 
     <aside class="premium-detail-sidebar" aria-label="Listing information and actions">
-      <section class="premium-side-card premium-price-card" aria-labelledby="detail-offer-heading">
+      <section class="premium-side-card premium-price-card premium-offer-v3" aria-labelledby="detail-offer-heading">
         <div class="premium-side-card-body">
           @if($isProduct)
             <div class="premium-offer-heading">
-              <span class="eyebrow" id="detail-offer-heading">Available license options</span>
+              <div>
+                <span class="eyebrow">PRODUCT LICENSE</span>
+                <h2 id="detail-offer-heading" class="premium-offer-title">Choose your license</h2>
+              </div>
               @if($layoutSample)<span class="premium-offer-status">Preview listing</span>@endif
             </div>
-            <label class="premium-license-label" for="detail-license-tier">License type</label>
-            <select id="detail-license-tier" class="premium-license-tier-select" data-detail-license-tier aria-describedby="detail-license-summary">
-              <option value="regular"
-                data-price="{{ $regularPrice !== null ? '$'.number_format((float)$regularPrice,2) : 'Price on request' }}"
-                data-description="{{ \Illuminate\Support\Str::limit($listing->licenseDefinition?->permissions ?: \App\Models\LicenseDefinition::tierDescription('regular'),145) }}"
-                data-terms-url="{{ $listing->licenseDefinition?->publicUrl() }}"
-                >Regular License</option>
-              @if($extendedLicense)
-                <option value="extended"
-                  data-price="{{ '$'.number_format((float)$listing->extended_price,2) }}"
-                  data-description="{{ \Illuminate\Support\Str::limit($extendedLicense->permissions ?: \App\Models\LicenseDefinition::tierDescription('extended'),145) }}"
-                  data-terms-url="{{ $extendedLicense->publicUrl() }}"
-                  >Extended License</option>
-              @endif
-            </select>
-            <div class="premium-side-price premium-side-price--license">
-              <span>Published license price</span>
-              <strong data-detail-license-price>{{ $regularPrice !== null ? '$'.number_format((float)$regularPrice,2) : 'Price on request' }}</strong>
+
+            <div class="premium-license-choice">
+              <label class="premium-license-label" for="detail-license-tier">License type</label>
+              <select id="detail-license-tier" class="premium-license-tier-select" data-detail-license-tier
+                aria-describedby="detail-license-scope">
+                <option value="regular"
+                  data-price="{{ $regularPrice !== null ? '$'.number_format((float)$regularPrice,2) : 'Price on request' }}"
+                  data-description="{{ $listing->licenseDefinition?->permissions ?: \App\Models\LicenseDefinition::tierDescription('regular') }}"
+                  data-terms-url="{{ $listing->licenseDefinition?->publicUrl() }}">Regular License</option>
+                @if($extendedLicense)
+                  <option value="extended"
+                    data-price="{{ '$'.number_format((float)$listing->extended_price,2) }}"
+                    data-description="{{ $extendedLicense->permissions ?: \App\Models\LicenseDefinition::tierDescription('extended') }}"
+                    data-terms-url="{{ $extendedLicense->publicUrl() }}">Extended License</option>
+                @endif
+              </select>
             </div>
-            <p class="premium-price-note">{{ $listing->currency ?: 'USD' }} · {{ $layoutSample ? 'Reference price only' : 'Creator-listed amount' }}</p>
-            <p class="premium-license-description" id="detail-license-summary" data-detail-license-description>{{ \Illuminate\Support\Str::limit($listing->licenseDefinition?->permissions ?: \App\Models\LicenseDefinition::tierDescription('regular'),145) }}</p>
-            @if($listing->licenseDefinition)
-              <a class="btn subtle premium-full-action" data-detail-license-terms href="{{ $listing->licenseDefinition->publicUrl() }}">
-                <x-icon name="file-check" size="17"/> View license details <x-icon name="chevron-right" size="16"/>
-              </a>
-            @endif
-            <p class="premium-license-availability"><x-icon name="lock" size="15"/> Direct checkout is not enabled. Downloads require a verified entitlement.</p>
-            @auth
-              <a class="premium-offer-secondary-link" href="{{ route('account.downloads') }}">My entitled downloads <x-icon name="arrow-up-right" size="15"/></a>
-            @endauth
+
+            <div class="premium-offer-pricing">
+              <div class="premium-offer-pricing-main">
+                <span class="premium-offer-pricing-label">{{ $layoutSample ? 'Reference price' : 'Creator-listed price' }}</span>
+                <strong data-detail-license-price aria-live="polite">{{ $regularPrice !== null ? '$'.number_format((float)$regularPrice,2) : 'Price on request' }}</strong>
+              </div>
+              <span class="premium-offer-currency">{{ $listing->currency ?: 'USD' }}</span>
+            </div>
+
+            <ul class="premium-feature-checklist" aria-label="Product access and license information">
+              @if($listing->licenseDefinition?->status === 'active')
+                <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Published license terms available</span></li>
+              @endif
+              <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Downloads protected by verified entitlements</span></li>
+              <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Save this product to your account</span></li>
+              <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Member comments and private support requests</span></li>
+            </ul>
+
+            <details class="premium-license-scope" id="detail-license-scope">
+              <summary>License scope <x-icon name="chevron-down" size="16"/></summary>
+              <p data-detail-license-description>{{ $listing->licenseDefinition?->permissions ?: \App\Models\LicenseDefinition::tierDescription('regular') }}</p>
+            </details>
+
+            <div class="premium-offer-actions">
+              @if($listing->licenseDefinition)
+                <a class="btn primary premium-full-action" data-detail-license-terms
+                   href="{{ $listing->licenseDefinition->publicUrl() }}">
+                  <x-icon name="file-check" size="17"/> View license details <x-icon name="arrow-up-right" size="16"/>
+                </a>
+              @endif
+              @auth
+                <a class="premium-offer-secondary-link" href="{{ route('account.downloads') }}">My entitled downloads <x-icon name="arrow-up-right" size="15"/></a>
+              @endauth
+            </div>
+            <p class="premium-offer-footnote"><x-icon name="lock" size="15"/> Direct checkout is not enabled. Download access requires an existing verified entitlement.</p>
           @else
             <div class="premium-offer-heading">
-              <span class="eyebrow" id="detail-offer-heading">{{ $kindTitle }} details</span>
+              <div>
+                <span class="eyebrow">{{ strtoupper($kindTitle) }} LISTING</span>
+                <h2 id="detail-offer-heading" class="premium-offer-title">{{ $kindTitle }} overview</h2>
+              </div>
               @if($layoutSample)<span class="premium-offer-status">Preview listing</span>@endif
             </div>
-            <div class="premium-side-price">
-              <span>{{ $listing->price !== null ? ($layoutSample ? 'Reference price' : 'Listed price') : 'Pricing' }}</span>
-              <strong>{{ $listing->price !== null ? '$'.number_format((float)$listing->price,2) : 'On request' }}</strong>
+            <div class="premium-offer-pricing">
+              <div class="premium-offer-pricing-main">
+                <span class="premium-offer-pricing-label">{{ $listing->price !== null ? ($layoutSample ? 'Reference price' : 'Creator-listed price') : 'Price' }}</span>
+                <strong>{{ $listing->price !== null ? '$'.number_format((float)$listing->price,2) : 'On request' }}</strong>
+              </div>
+              <span class="premium-offer-currency">{{ $listing->currency ?: 'USD' }}</span>
             </div>
-            @if($listing->price !== null)<p class="premium-price-note">{{ $listing->currency ?: 'USD' }} · Creator-provided amount</p>@endif
-            @if($canInquire)
-              @auth
-                @if(in_array(auth()->user()->role,['customer','subscriber'],true) && (int)auth()->id() !== (int)$listing->user_id)
-                  <button type="button" class="btn primary premium-full-action" data-modal-open="request-service"><x-icon name="message" size="17"/> {{ $inquiryTitle }}</button>
-                  <a class="premium-offer-secondary-link" href="{{ route('account.inquiries') }}">My conversations</a>
-                @elseif((int)auth()->id() === (int)$listing->user_id)
-                  <a class="btn subtle premium-full-action" href="{{ route('studio.inquiries') }}">Manage inquiries</a>
+
+            <ul class="premium-feature-checklist" aria-label="{{ $kindTitle }} listing features">
+              <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Published marketplace listing</span></li>
+              <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Save to your account for later</span></li>
+              <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Member comments and private support requests</span></li>
+              @if($canInquire)
+                <li><span class="premium-feature-check" aria-hidden="true"><x-icon name="check" size="14"/></span><span>Private creator inquiries for eligible clients</span></li>
+              @endif
+            </ul>
+
+            <div class="premium-offer-actions">
+              @if($canInquire)
+                @auth
+                  @if(in_array(auth()->user()->role,['customer','subscriber'],true) && (int)auth()->id() !== (int)$listing->user_id)
+                    <button type="button" class="btn primary premium-full-action" data-modal-open="request-service"><x-icon name="message" size="17"/> {{ $inquiryTitle }}</button>
+                    <a class="premium-offer-secondary-link" href="{{ route('account.inquiries') }}">My conversations <x-icon name="arrow-up-right" size="15"/></a>
+                  @elseif((int)auth()->id() === (int)$listing->user_id)
+                    <a class="btn subtle premium-full-action" href="{{ route('studio.inquiries') }}">Manage inquiries <x-icon name="arrow-up-right" size="16"/></a>
+                  @else
+                    <p class="premium-offer-footnote">Private inquiries are available to eligible client accounts.</p>
+                  @endif
                 @else
-                  <p class="premium-price-note">Inquiries are available to eligible customer accounts.</p>
-                @endif
+                  <a class="btn primary premium-full-action" href="{{ route('login') }}"><x-icon name="log-in" size="17"/> Sign in to contact <x-icon name="arrow-up-right" size="16"/></a>
+                @endauth
               @else
-                <a class="btn primary premium-full-action" href="{{ route('login') }}"><x-icon name="log-in" size="17"/> Sign in to contact</a>
-              @endauth
-            @else
-              <a class="btn subtle premium-full-action" href="{{ route('marketplace.search',['type'=>$kind]) }}">Explore {{ $kindTitle }} listings <x-icon name="chevron-right" size="16"/></a>
+                <a class="btn subtle premium-full-action" href="{{ route('marketplace.search',['type'=>$kind]) }}">Explore {{ $kindTitle }} listings <x-icon name="arrow-up-right" size="16"/></a>
+              @endif
+            </div>
+            @if($layoutSample)
+              <p class="premium-offer-footnote"><x-icon name="info" size="15"/> Preview listing — not an active commercial offer.</p>
             @endif
           @endif
         </div>
