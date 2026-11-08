@@ -177,7 +177,7 @@ class PostBuilderExperienceTest extends TestCase
         $this->assertDatabaseHas('media_assets', ['id'=>$media->id]);
     }
 
-    public function test_unapproved_media_cannot_be_attached_to_a_post(): void
+    public function test_unapproved_media_cannot_be_attached_to_a_published_post(): void
     {
         $admin = $this->member();
         $this->actingAs($admin);
@@ -190,6 +190,7 @@ class PostBuilderExperienceTest extends TestCase
         ]);
         $this->post(route('dashboard.posts.store'), $this->payload([
             'featured_media_id'=>$media->id,
+            'status'=>'published',
         ]))->assertSessionHasErrors('featured_media_id');
         $this->assertDatabaseCount('content_entries', 0);
     }
@@ -285,7 +286,7 @@ class PostBuilderExperienceTest extends TestCase
             'featured_media_id' => $asset->id,
             'status' => 'published',
         ]))->assertRedirect();
-        $this->get($asset->previewUrl())->assertOk()->assertSee('private-r2-image-bytes');
+        $this->get($asset->previewUrl())->assertOk()->assertStreamed()->assertStreamedContent('private-r2-image-bytes');
     }
 
 }
