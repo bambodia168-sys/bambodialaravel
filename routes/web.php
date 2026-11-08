@@ -286,6 +286,7 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/page-manager', [ContentManagerController::class, 'storePage'])->name('dashboard.pages.store');
             Route::patch('/page-manager/{entry}', [ContentManagerController::class, 'updatePage'])->name('dashboard.pages.update');
             Route::get('/post-manager', [PostManagerController::class, 'index'])->name('dashboard.posts');
+            Route::post('/post-manager/featured-upload', [MediaLibraryController::class, 'store'])->name('dashboard.posts.media.store')->middleware('throttle:10,1');
             Route::get('/post-manager/create', [PostManagerController::class, 'create'])->name('dashboard.posts.create');
             Route::get('/post-manager/{entry}/edit', [PostManagerController::class, 'edit'])->name('dashboard.posts.edit');
             Route::get('/post-manager/{entry}/preview', [PostManagerController::class, 'preview'])->name('dashboard.posts.preview');
