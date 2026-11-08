@@ -24,6 +24,22 @@ $creator=\App\Models\User::query()->create([
     'biography'=>str_repeat('Original test content for responsive UI verification. ',3),
     'is_public'=>true,
 ]);
+
+// Three additional public freelancers and one private profile for browser acceptance.
+foreach (['Browser QA Designer','Browser QA Developer','Browser QA Writer','Browser QA Private Freelancer'] as $name) {
+    $person=\App\Models\User::query()->create([
+        'name'=>$name,
+        'email'=>strtolower(str_replace(' ','-',$name)).'@example.test',
+        'password'=>'BrowserOnlyPassword123!',
+        'role'=>'freelancer',
+    ]);
+    \App\Models\CreatorProfile::query()->create([
+        'user_id'=>$person->id,
+        'headline'=>'Professional independent freelance services',
+        'biography'=>str_repeat('Original public freelancer portfolio fixture for responsive acceptance. ',3),
+        'is_public'=>$name!=='Browser QA Private Freelancer',
+    ]);
+}
 $serviceCategory=\App\Models\MarketplaceCategory::query()->create([
     'type'=>'service',
     'name'=>'Browser QA Consulting Category',
@@ -34,8 +50,7 @@ $serviceCategory=\App\Models\MarketplaceCategory::query()->create([
     'type'=>'service','name'=>'Hidden Browser QA Category',
     'is_active'=>false,'sort_order'=>2,'created_by'=>$creator->id,
 ]);
-// More than six active categories ensures desktop, tablet and phone sliders
-// must expose every link via native scrolling and working arrow controls.
+// Keep active category fixtures for the header dropdown and search filters.
 foreach (range(1,12) as $index) {
     \App\Models\MarketplaceCategory::query()->create([
         'type'=>['product','project','service','freelance'][($index-1)%4],

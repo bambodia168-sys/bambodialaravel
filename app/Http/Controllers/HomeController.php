@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\FeatureFlag;
-use App\Models\MarketplaceCategory;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
 use App\Models\SavedJob;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -17,7 +17,7 @@ class HomeController extends Controller
     {
         $searchEnabled=FeatureFlag::isEnabled('marketplace_search');
         $recentListings=collect();
-        $categories=collect();
+        $freelancers=collect();
         $listingTotals=collect();
         $savedIds=[];
 
@@ -47,8 +47,17 @@ class HomeController extends Controller
             $listingTotals=MarketplaceListing::query()->publiclyAvailable()
                 ->selectRaw('type, COUNT(*) as total')->groupBy('type')->pluck('total','type');
 
-            $categories=MarketplaceCategory::query()->where('is_active',true)
-                ->orderBy('sort_order')->orderBy('name')->get();
+            // Ratings are not stored yet; do not invent a top-rated ranking.
+            // Prioritize approved work and still show new opted-in freelancers.
+            $freelancers=User::query()
+                ->select(['id','public_id','name'])
+                ->where('role','freelancer')
+                ->whereHas('creatorProfile',fn($query)=>$query->where('is_public',true))
+                ->with('creatorProfile:user_id,headline,biography,is_public')
+                ->withCount(['publishedListings as public_listings_count'])
+                ->orderByDesc('public_listings_count')
+                ->orderByDesc('id')
+                ->limit(8)->get();
 
             if($request->user()){
                 $savedIds=SavedListing::query()->where('user_id',$request->user()->id)
@@ -66,7 +75,7 @@ class HomeController extends Controller
             : [];
 
         return view('home',compact(
-            'searchEnabled','recentListings','categories','listingTotals','savedIds','recentJobs','savedJobIds'
+            'searchEnabled','recentListings','freelancers','listingTotals','savedIds','recentJobs','savedJobIds'
         ));
     }
 }

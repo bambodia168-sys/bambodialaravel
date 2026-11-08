@@ -75,39 +75,42 @@
     </div>
   @endif
 </section>
-@if($categories->isNotEmpty())
-<section class="container marketplace-section marketplace-category-section" aria-labelledby="marketplace-categories-title">
-  <div class="marketplace-section-heading marketplace-category-heading">
+<section id="bambodia-freelancers" class="container marketplace-section marketplace-freelancer-section" aria-labelledby="freelancer-section-title">
+  <div class="marketplace-section-heading">
     <div>
-      <span class="eyebrow">Find the right specialty</span>
-      <h2 id="marketplace-categories-title">Explore categories</h2>
-      <p>Browse all active specialties across Bambodia.</p>
+      <span class="eyebrow">Discover independent talent</span>
+      <h2 id="freelancer-section-title">Freelancer</h2>
+      <p>Meet professionals with public portfolios and explore their approved work.</p>
     </div>
-    <div class="marketplace-category-slider-controls" aria-label="Category slider controls">
-      <span class="marketplace-category-slider-status" data-category-position aria-live="polite"></span>
-      <button type="button" class="marketplace-category-arrow" data-category-prev aria-label="Previous categories" aria-controls="marketplace-category-track" disabled>
-        <x-icon name="chevron-left" size="18"/>
-      </button>
-      <button type="button" class="marketplace-category-arrow" data-category-next aria-label="Next categories" aria-controls="marketplace-category-track">
-        <x-icon name="chevron-right" size="18"/>
-      </button>
-    </div>
+    <a class="btn subtle" href="{{ route('creators.index') }}">View all freelancers <x-icon name="arrow-up-right" size="17"/></a>
   </div>
-  <div class="marketplace-category-slider" data-category-slider>
-    <div id="marketplace-category-track" class="marketplace-category-track" data-category-track role="region" aria-label="All active marketplace categories" tabindex="0" style="--category-total: {{ $categories->count() }};">
-      @foreach($categories as $category)
-        <a class="marketplace-category-tile" href="{{ route('marketplace.search',['type'=>$category->type,'category'=>$category->public_id]) }}" title="{{ $category->name }}">
-          <span class="marketplace-category-icon" aria-hidden="true"><x-icon :name="match($category->type){'product'=>'package','project'=>'layers','service'=>'settings','freelance'=>'briefcase',default=>'layers'}" size="24"/></span>
-          <span class="marketplace-category-type">{{ ucfirst($category->type) }}</span>
-          <strong class="marketplace-category-name">{{ $category->name }}</strong>
-          <small class="marketplace-category-description">{{ $category->description ?: 'Explore approved listings in this category.' }}</small>
-          <span class="marketplace-category-footer"><span>Explore listings</span><x-icon name="arrow-up-right" size="17"/></span>
-        </a>
+  @if($freelancers->isNotEmpty())
+    <div class="marketplace-freelancer-grid" aria-label="Public freelancer profiles">
+      @foreach($freelancers as $freelancer)
+        <article class="marketplace-freelancer-card">
+          <div class="marketplace-freelancer-card-heading">
+            <span class="marketplace-freelancer-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($freelancer->name,0,1)) }}</span>
+            <span class="marketplace-freelancer-visibility"><x-icon name="user-round" size="14"/> Public profile</span>
+          </div>
+          <h3><a href="{{ route('creators.show',$freelancer->public_id) }}">{{ $freelancer->name }}</a></h3>
+          <p class="marketplace-freelancer-headline">{{ $freelancer->creatorProfile->headline }}</p>
+          <p class="marketplace-freelancer-bio">{{ \Illuminate\Support\Str::limit($freelancer->creatorProfile->biography,135) }}</p>
+          <div class="marketplace-freelancer-card-footer">
+            <span><x-icon name="briefcase" size="15"/> {{ number_format($freelancer->public_listings_count) }} approved {{ \Illuminate\Support\Str::plural('listing',$freelancer->public_listings_count) }}</span>
+            <a href="{{ route('creators.show',$freelancer->public_id) }}">View portfolio <x-icon name="arrow-up-right" size="16"/></a>
+          </div>
+        </article>
       @endforeach
     </div>
-  </div>
+  @else
+    <div class="marketplace-empty marketplace-freelancer-empty">
+      <x-icon name="users" size="30"/>
+      <strong>Freelancer profiles are coming soon.</strong>
+      <p>Public portfolios will appear here when freelancers choose to publish them.</p>
+      <a class="btn subtle compact" href="{{ route('creators.index') }}">Browse the freelancer directory</a>
+    </div>
+  @endif
 </section>
-@endif
 @endif
 
 <section class="container marketplace-section">
