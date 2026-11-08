@@ -318,9 +318,20 @@ try {
         });
         await backToTop.waitFor({state:'visible',timeout:3000});
         const floatBounds=await backToTop.boundingBox();
-        if(!floatBounds || floatBounds.height<=floatBounds.width+8 ||
-           !(await backToTop.locator('.back-to-top-label').isVisible()))
-          throw new Error(device.name+' Back to Top must be a vertical labeled control '+JSON.stringify(floatBounds));
+        const verticalLabel=await backToTop.locator('.back-to-top-label').evaluate(el=>{
+          const style=getComputedStyle(el);
+          const bounds=el.getBoundingClientRect();
+          return {text:el.textContent.trim(),writingMode:style.writingMode,
+            transform:style.transform,width:bounds.width,height:bounds.height,
+            children:el.children.length};
+        });
+        if(!floatBounds || floatBounds.height<=floatBounds.width*1.7 ||
+           verticalLabel.text!=='Back to Top' ||
+           verticalLabel.writingMode!=='vertical-rl' ||
+           verticalLabel.transform==='none' ||
+           verticalLabel.height<=verticalLabel.width*2 ||
+           verticalLabel.children!==0)
+          throw new Error(device.name+' Back to Top text must be truly vertical, not multi-line '+JSON.stringify({floatBounds,verticalLabel}));
         const socialBounds=await footer.boundingBox();
         if(floatBounds && socialBounds && socialBounds.y<device.viewport.height &&
            floatBounds.y+floatBounds.height>socialBounds.y-4)

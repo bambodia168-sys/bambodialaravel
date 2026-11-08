@@ -189,7 +189,7 @@
 </footer>
 <button type="button" class="back-to-top" data-back-to-top aria-label="Back to top" title="Back to top">
   <x-icon name="arrow-up" size="19"/>
-  <span class="back-to-top-label">Back<span>to top</span></span>
+  <span class="back-to-top-label">Back to Top</span>
 </button>
 </body>
 </html>
