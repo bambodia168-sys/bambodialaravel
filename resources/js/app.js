@@ -1258,7 +1258,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!kind || !['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'].includes(incoming.type)) {
             return message('Choose JPEG, PNG, WebP, GIF, MP4 or WebM only.');
         }
-        if (!rights.checked) return message('Confirm you own this media and have publishing rights before uploading.');
+        if (!rights.checked) {
+            mode.value = kind;
+            sync();
+            return message('Confirm you own this media and have publishing rights before uploading.');
+        }
         const size = incoming.type === 'image/gif' ? 8 : kind === 'video' ? 20 : 4;
         if (incoming.size > size * 1024 * 1024) return message('File exceeds the ' + size + ' MB limit.');
         mode.value = kind;
