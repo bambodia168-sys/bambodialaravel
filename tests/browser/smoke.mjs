@@ -170,59 +170,92 @@ try {
         await page.evaluate(()=>{document.documentElement.dataset.theme=localStorage.getItem('bambodia-theme')||'light';});
         await publicMenu.locator('summary').click();
 
-        // Real active categories, category-first header, and live listing filter.
-        if(await page.locator('.site-header .language-menu').count())
-          throw new Error(device.name+' language selector must be in footer');
-        if(await page.locator('.site-nav .nav-actions > [data-theme-toggle]').count())
-          throw new Error(device.name+' theme toggle must be in profile dropdown');
+        // Categories own the four marketplace types; language is in the header.
+        if(await page.locator('.nav-marketplace-links').count())
+          throw new Error(device.name+' duplicate marketplace type links remain in the header');
+        if(!(await page.locator('.site-header .nav-language-menu summary .locale-flag').isVisible()))
+          throw new Error(device.name+' active language flag missing in header');
         if(!(await page.locator('.site-nav .nav-category-menu summary svg').isVisible()))
-          throw new Error(device.name+' missing four-square category grid icon');
-        if(!(await page.locator('.nav-marketplace-links').getByText('Product').isVisible()))
-          throw new Error(device.name+' missing Product menu');
-        if(!(await page.locator('.nav-marketplace-links').getByText('Project').isVisible()))
-          throw new Error(device.name+' missing Project menu');
-        if(!(await page.locator('.nav-marketplace-links').getByText('Service').isVisible()))
-          throw new Error(device.name+' missing Service menu');
-        if(!(await page.locator('.nav-marketplace-links').getByText('Freelance').isVisible()))
-          throw new Error(device.name+' missing Freelance menu');
-        const order=await page.evaluate(()=>{
-          const category=document.querySelector('.nav-category-menu');
-          const search=document.querySelector('.nav-search');
-          const links=document.querySelector('.nav-marketplace-links');
-          const profile=document.querySelector('.profile-dropdown');
-          const parent=document.querySelector('.site-nav');
-          return [category,search,links,profile].map(el=>({
-            order:[...parent.querySelectorAll('*')].indexOf(el),
-            top:el.getBoundingClientRect().top,
-            left:el.getBoundingClientRect().left,
-          }));
+          throw new Error(device.name+' category grid icon is not visible');
+
+        const geometry=await page.evaluate(()=>{
+          const box=selector=>{
+            const node=document.querySelector(selector);
+            if(!node)return null;
+            const r=node.getBoundingClientRect();
+            return {left:r.left,right:r.right,centerY:(r.top+r.bottom)/2,
+              visible:getComputedStyle(node).display!=='none'};
+          };
+          return {
+            headerHeight:document.querySelector('.site-header').getBoundingClientRect().height,
+            documentWidth:document.documentElement.scrollWidth,
+            controls:[
+              box('.site-header .site-nav>.brand'),
+              box('.site-header .nav-category-trigger'),
+              box('.site-header .nav-mobile-search-trigger'),
+              box('.site-header .nav-language-menu summary'),
+              box('.site-header .profile-trigger')
+            ],
+            desktopSearch:box('.site-header .nav-search'),
+            mobileSearch:box('.site-header .nav-mobile-search'),
+            languageName:box('.site-header .nav-language-menu .language-current'),
+          };
         });
-        const before=(a,b)=> a.top<=b.top+25
-          && (Math.abs(a.top-b.top)>25 || a.left<b.left);
-        if(!(before(order[0],order[1]) && before(order[1],order[2])
-          && before(order[2],order[3])))
-          throw new Error(device.name+' header navigation visual order incorrect: '+JSON.stringify(order));
+        if(geometry.documentWidth>device.viewport.width+5)
+          throw new Error(device.name+' header horizontal overflow '+JSON.stringify(geometry));
+        if(device.viewport.width<=720){
+          const controls=geometry.controls;
+          if(geometry.headerHeight>80 || controls.some(x=>!x?.visible)
+             || geometry.desktopSearch?.visible || !geometry.mobileSearch?.visible
+             || geometry.languageName?.visible)
+            throw new Error(device.name+' expected a single-row compact header '+JSON.stringify(geometry));
+          for(let i=1;i<controls.length;i++){
+            if(controls[i-1].right>controls[i].left+3)
+              throw new Error(device.name+' mobile controls collide '+JSON.stringify(controls));
+          }
+          if(Math.max(...controls.map(x=>x.centerY))-Math.min(...controls.map(x=>x.centerY))>12)
+            throw new Error(device.name+' mobile controls wrapped '+JSON.stringify(controls));
+          await page.locator('.nav-mobile-search-trigger').click();
+          if(!(await page.locator('#mobile-marketplace-query').isVisible()))
+            throw new Error(device.name+' search icon did not open input panel');
+          await page.locator('#mobile-marketplace-query').fill('Browser QA');
+          await page.locator('.nav-mobile-search-form button').click();
+          await page.waitForLoadState('networkidle');
+          if(!page.url().includes('/search') || !page.url().includes('q=Browser'))
+            throw new Error(device.name+' mobile search was not submitted');
+          await page.goto(origin+'/',{waitUntil:'networkidle'});
+        }else if(geometry.mobileSearch?.visible || !geometry.desktopSearch?.visible
+                || !geometry.languageName?.visible){
+          throw new Error(device.name+' desktop search/language visibility is wrong '+JSON.stringify(geometry));
+        }
+
         await page.locator('.nav-category-menu summary').click();
-        if(!(await page.locator('.nav-category-panel .nav-category-entry').getByText('Browser QA Consulting Category').isVisible()))
-          throw new Error(device.name+' real active category missing');
+        if(!(await page.locator('.nav-category-panel .nav-category-entry')
+          .getByText('Browser QA Consulting Category').isVisible()))
+          throw new Error(device.name+' active category missing');
         if(await page.locator('.nav-category-panel').getByText('Hidden Browser QA Category').count())
-          throw new Error(device.name+' inactive category is exposed');
+          throw new Error(device.name+' inactive category leaked');
         await page.locator('.nav-category-entry').getByText('Browser QA Consulting Category').click();
         await page.waitForLoadState('networkidle');
         if(!page.url().includes('category=') || !page.url().includes('type=service'))
-          throw new Error(device.name+' category link did not preserve filter');
-        checks+=9;
+          throw new Error(device.name+' category selection failed');
+        checks+=10;
+
         await page.goto(origin+'/',{waitUntil:'networkidle'});
         const footer=page.locator('.footer-actions');
-        if(!(await footer.locator('.language-menu summary .locale-flag').isVisible()))
-          throw new Error(device.name+' footer language selector missing');
+        if(await footer.locator('.language-menu').count())
+          throw new Error(device.name+' language switcher must not be duplicated in footer');
         const social=await footer.locator('.footer-social a').evaluateAll(anchors=>anchors.map(x=>({
           top:x.getBoundingClientRect().top,
           background:getComputedStyle(x).backgroundColor,
         })));
         if(social.length!==2 || Math.abs(social[0].top-social[1].top)>3
             || social.some(x=>x.background!=='rgba(0, 0, 0, 0)'))
-          throw new Error(device.name+' footer social icons are not horizontal/transparent '+JSON.stringify(social));
+          throw new Error(device.name+' footer social layout broken '+JSON.stringify(social));
+        const footerColumns=await page.locator('.footer-columns').evaluate(el=>
+          getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
+        if(footerColumns!==(device.viewport.width>1020?4:2))
+          throw new Error(device.name+' responsive footer grid has '+footerColumns+' columns');
         checks+=2;
 
       }
