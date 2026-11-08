@@ -474,7 +474,7 @@ class PostBuilderExperienceTest extends TestCase
             ->assertSee($asset->previewUrl())
             ->assertSee('post-featured-figure', false);
         $html = $response->getContent();
-        $this->assertLessThan(strpos($html, 'READ_ARTICLE_EXCERPT'), strpos($html, 'post-featured-figure'));
+        $this->assertLessThan(strpos($html, '<p class="post-public-excerpt">READ_ARTICLE_EXCERPT'), strpos($html, 'post-featured-figure'));
 
         $page = ContentEntry::query()->create([
             'type' => 'page', 'author_id' => $author->id,

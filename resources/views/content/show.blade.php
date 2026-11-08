@@ -5,7 +5,7 @@
 @endif
 @section('content')
 <div class="container inner-page">
-  <div class="{{ $entry->type === 'post' ? 'blog-article-layout' : '' }}">
+  <div class="{{ $entry->type === 'post' && empty($preview) ? 'blog-article-layout' : '' }}">
     <article class="panel editorial-page {{ $entry->type === 'post' ? 'blog-article-main' : '' }}">
       @if($entry->type === 'post')
         <nav class="blog-article-breadcrumb" aria-label="Breadcrumb">
@@ -69,7 +69,7 @@
         <div class="editorial-copy">{!! nl2br(e($entry->body)) !!}</div>
       @endif
     </article>
-    @if($entry->type === 'post')
+    @if($entry->type === 'post' && empty($preview))
       <aside class="blog-article-sidebar" aria-label="Blog sidebar">
         <section class="panel blog-sidebar-panel">
           <h2>More articles</h2>
