@@ -7,16 +7,13 @@
   $isProduct = $kind === 'product';
   $layoutSample = str_starts_with($listing->title, '[LAYOUT TEST] ');
   $canInquire = ! $layoutSample && in_array($kind,['project','service','freelance'],true);
-  $ownerProfile = $listing->creator?->creatorProfile;
-  $publicCreator = $ownerProfile?->is_public === true
-    || ($listing->creator && \App\Support\CreatorBadgeAwards::isDesignatedOwner($listing->creator));
   $creatorBadges = $listing->creator
     ? \App\Support\CreatorBadgeAwards::earned($listing->creator) : collect();
   $ownerName = $listing->creator?->name ?? 'Bambodia creator';
   $pageSections = [
     ['id'=>'overview','label'=>'Overview'],
     ...($isProduct ? [['id'=>'license','label'=>'License']] : [['id'=>'workflow','label'=>'How it works']]),
-    ['id'=>'seller','label'=>'Creator'],
+    ['id'=>'publisher','label'=>'Creator'],
     ...($relatedListings->isNotEmpty() ? [['id'=>'related','label'=>'Related']] : []),
   ];
   $inquiryTitle = match ($kind) {
@@ -141,24 +138,7 @@
         </section>
       @endif
 
-      <section class="panel premium-content-section" id="seller">
-        <div class="panel-head"><div><span class="eyebrow">The publisher</span><h2>About the creator</h2></div></div>
-        <div class="premium-creator-body">
-          <div class="premium-creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($ownerName,0,1)) }}</div>
-          <div>
-            <strong>{{ $ownerName }}</strong>
-            @if($creatorBadges->isNotEmpty())
-              <x-creator-badges :badges="$creatorBadges" variant="compact"/>
-            @endif
-            <p>{{ $ownerProfile?->is_public && $ownerProfile?->headline ? $ownerProfile->headline : 'Publisher of this approved marketplace listing.' }}</p>
-            @if($publicCreator)
-              <a class="btn subtle compact" href="{{ route('creators.show',$listing->creator->public_id) }}">View creator portfolio <x-icon name="chevron-right" size="15"/></a>
-            @else
-              <p class="hint">This creator has not made a public portfolio available.</p>
-            @endif
-          </div>
-        </div>
-      </section>
+
     </main>
 
     <aside class="premium-detail-sidebar" aria-label="Listing information and actions">
@@ -287,20 +267,27 @@
           <div><dt>Reference</dt><dd>{{ $listing->public_id }}</dd></div>
         </dl>
       </section>
-      <section class="premium-side-card premium-side-creator">
-        <div class="premium-side-card-heading"><h2>Published by</h2></div>
+      <section class="premium-side-card premium-side-creator" id="publisher" aria-labelledby="publisher-heading">
+        <div class="premium-side-card-heading"><h2 id="publisher-heading">Published by</h2></div>
         <div class="premium-side-card-body">
           <div class="premium-side-creator-row">
             <div class="premium-creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($ownerName,0,1)) }}</div>
-            <div><strong>{{ $ownerName }}</strong><small>Bambodia creator</small></div>
+            <div>
+              @if($listing->creator?->isCreator())
+                <a class="premium-side-creator-name" href="{{ route('creators.show',$listing->creator->public_id) }}" aria-label="View {{ $ownerName }}'s public creator profile">{{ $ownerName }}</a>
+              @else
+                <strong>{{ $ownerName }}</strong>
+              @endif
+              <small>Bambodia creator</small>
+            </div>
           </div>
           @if($creatorBadges->isNotEmpty())
             <x-creator-badges :badges="$creatorBadges" variant="compact" mode="badge"/>
           @endif
-          @if($publicCreator)
-            <a class="btn subtle premium-full-action" href="{{ route('creators.show',$listing->creator->public_id) }}">View public profile</a>
-          @else
-            <p class="hint">No public creator profile is available.</p>
+          @if($listing->creator?->isCreator())
+            <a class="btn subtle premium-full-action" href="{{ route('creators.show',$listing->creator->public_id) }}">
+              <x-icon name="user-round" size="16"/> View creator profile <x-icon name="arrow-up-right" size="15"/>
+            </a>
           @endif
         </div>
       </section>

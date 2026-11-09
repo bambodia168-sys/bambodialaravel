@@ -37,17 +37,17 @@ class CreatorBadgePublicDisplayTest extends TestCase
         ]);
     }
 
-    public function test_owner_public_badge_profile_exists_without_publishing_private_biography(): void
+    public function test_designated_owner_profile_exists_without_publishing_private_biography(): void
     {
-        $owner = $this->creator('Bamboo Cambodia', 'super_admin', CreatorBadgeAwards::OWNER_EMAIL);
+        $owner=$this->creator('Bamboo Cambodia','super_admin',CreatorBadgeAwards::OWNER_EMAIL);
         CreatorProfile::query()->create([
-            'user_id' => $owner->id,
-            'headline' => 'PRIVATE HEADLINE SHOULD NOT BE PUBLIC',
-            'biography' => str_repeat('PRIVATE BIOGRAPHY IS NOT PUBLIC. ', 4),
-            'is_public' => false,
+            'user_id'=>$owner->id,
+            'headline'=>'PRIVATE HEADLINE SHOULD NOT BE PUBLIC',
+            'biography'=>str_repeat('PRIVATE BIOGRAPHY IS NOT PUBLIC. ',4),
+            'is_public'=>false,
         ]);
 
-        $this->get(route('creators.show', $owner->public_id))
+        $this->get(route('creators.show',$owner->public_id))
             ->assertOk()
             ->assertSee('Bamboo Cambodia')
             ->assertSee('Top Rated')
@@ -58,77 +58,108 @@ class CreatorBadgePublicDisplayTest extends TestCase
             ->assertDontSee(CreatorBadgeAwards::OWNER_EMAIL);
 
         $this->get(route('creators.index'))
-            ->assertOk()
-            ->assertSee('Bamboo Cambodia')
+            ->assertOk()->assertSee('Bamboo Cambodia')
             ->assertSee('images/badges/top-rated.svg')
             ->assertDontSee('PRIVATE BIOGRAPHY IS NOT PUBLIC');
     }
 
-    public function test_badges_display_on_correct_listing_publisher_even_without_public_biography(): void
+    public function test_single_sidebar_replaces_duplicate_about_creator_section(): void
     {
-        $owner = $this->creator('Bamboo Cambodia', 'super_admin', CreatorBadgeAwards::OWNER_EMAIL);
-        $listing = $this->publicProject($owner, 'Bamboo owner published project');
-
-        $this->get($listing->publicUrl())
-            ->assertOk()
-            ->assertSee('About the creator')
+        $owner=$this->creator('Bamboo Cambodia','super_admin',CreatorBadgeAwards::OWNER_EMAIL);
+        $listing=$this->publicProject($owner,'Bamboo owner published project');
+        $html=$this->get($listing->publicUrl())->assertOk()
             ->assertSee('Published by')
+            ->assertDontSee('About the creator')
             ->assertSee('Bamboo Cambodia')
+            ->assertSee('View creator profile')
             ->assertSee('images/badges/top-rated.svg')
-            ->assertSee('View public profile');
+            ->assertSee(route('creators.show',$owner->public_id))
+            ->getContent();
+
+        $this->assertStringNotContainsString('id="seller"',$html);
+        $this->assertStringContainsString('id="publisher"',$html);
+        $this->assertStringContainsString('href="#publisher"',$html);
+        $this->assertSame(1,substr_count($html,'class="premium-side-card premium-side-creator"'));
+        $this->assertSame(16,substr_count($html,'class="creator-badge creator-badge--'));
+        $this->assertSame(16,substr_count($html,'class="creator-badge-tooltip" role="tooltip"'));
+        $this->assertSame(1,substr_count($html,'images/badges/top-rated.svg'));
     }
 
-    public function test_unrelated_listing_does_not_inherit_designated_owner_badges(): void
+    public function test_publisher_profile_link_works_without_published_biography_but_private_data_stays_hidden(): void
     {
-        $this->creator('Bamboo Cambodia', 'super_admin', CreatorBadgeAwards::OWNER_EMAIL);
-        $otherCreator = $this->creator('Bambodia Layout Preview (Demo Creator)');
-        $listing = $this->publicProject($otherCreator, 'Unrelated demo creator listing');
-
-        $this->get($listing->publicUrl())
-            ->assertOk()
-            ->assertSee('Bambodia Layout Preview (Demo Creator)')
-            ->assertDontSee('images/badges/top-rated.svg')
-            ->assertDontSee('VIP Client Favorite');
-        $this->get(route('creators.show', $otherCreator->public_id))->assertNotFound();
-    }
-
-    public function test_manual_badge_is_visible_for_publisher_without_public_biography(): void
-    {
-        $creator = $this->creator('Independent freelancer');
-        $badge = CreatorBadge::query()->where('slug', 'skill-certified')->firstOrFail();
-        CreatorBadgeGrant::query()->create([
-            'user_id' => $creator->id,
-            'creator_badge_id' => $badge->id,
-            'source' => 'manual',
-            'evidence_note' => 'Independent assessment record',
+        $creator=$this->creator('Independent freelancer');
+        CreatorProfile::query()->create([
+            'user_id'=>$creator->id,
+            'headline'=>'PRIVATE UNPUBLISHED HEADLINE',
+            'biography'=>str_repeat('PERSONAL PRIVATE BIOGRAPHY. ',4),
+            'website_url'=>'https://private.example.test',
+            'is_public'=>false,
         ]);
-        $listing = $this->publicProject($creator, 'Independent freelance listing');
+        $badge=CreatorBadge::query()->where('slug','skill-certified')->firstOrFail();
+        CreatorBadgeGrant::query()->create([
+            'user_id'=>$creator->id,
+            'creator_badge_id'=>$badge->id,
+            'source'=>'manual',
+            'evidence_note'=>'Independent test fixture review',
+        ]);
+        $listing=$this->publicProject($creator,'Independent freelancer published project');
 
         $this->get($listing->publicUrl())
             ->assertOk()
             ->assertSee('Skill Certified')
-            ->assertSee('images/badges/skill-certified.svg')
-            ->assertDontSee('View public profile');
+            ->assertDontSee('About the creator')
+            ->assertSee(route('creators.show',$creator->public_id))
+            ->assertSee('View creator profile');
 
-        $this->get(route('creators.show', $creator->public_id))->assertNotFound();
-    }
+        $this->get(route('creators.show',$creator->public_id))
+            ->assertOk()
+            ->assertSee('Independent freelancer')
+            ->assertSee('Skill Certified')
+            ->assertSee('Independent freelancer published project')
+            ->assertDontSee('PRIVATE UNPUBLISHED HEADLINE')
+            ->assertDontSee('PERSONAL PRIVATE BIOGRAPHY')
+            ->assertDontSee('private.example.test')
+            ->assertDontSee($creator->email);
 
-    public function test_normal_creator_private_profile_remains_private(): void
-    {
-        $private = $this->creator('Private talent');
-        CreatorProfile::query()->create([
-            'user_id' => $private->id,
-            'headline' => 'PRIVATE TITLE NOT FOR PUBLICATION',
-            'biography' => str_repeat('Personal unpublished profile content. ', 4),
-            'is_public' => false,
-        ]);
-        $this->get(route('creators.show', $private->public_id))->assertNotFound();
+        // Opt-in directory remains separate; listing-derived profiles are not indexed there.
         $this->get(route('creators.index'))
-            ->assertOk()->assertDontSee('PRIVATE TITLE NOT FOR PUBLICATION');
+            ->assertOk()->assertDontSee('Independent freelancer');
     }
-    public function test_all_sixteen_awarded_badges_render_in_both_listing_sections_without_truncation(): void
+
+    public function test_creator_without_public_biography_or_published_work_remains_private(): void
     {
-        $creator=$this->creator('Samith QA', 'freelancer');
+        $private=$this->creator('Private talent');
+        CreatorProfile::query()->create([
+            'user_id'=>$private->id,
+            'headline'=>'PRIVATE TITLE NOT FOR PUBLICATION',
+            'biography'=>str_repeat('Personal unpublished profile content. ',4),
+            'is_public'=>false,
+        ]);
+        $this->get(route('creators.show',$private->public_id))->assertNotFound();
+        $this->get(route('creators.index'))->assertOk()
+            ->assertDontSee('Private talent')
+            ->assertDontSee('PRIVATE TITLE NOT FOR PUBLICATION');
+    }
+
+    public function test_unrelated_listing_does_not_inherit_designated_owner_badges(): void
+    {
+        $this->creator('Bamboo Cambodia','super_admin',CreatorBadgeAwards::OWNER_EMAIL);
+        $other=$this->creator('Bambodia Layout Preview (Demo Creator)');
+        $listing=$this->publicProject($other,'Unrelated demo creator listing');
+
+        $this->get($listing->publicUrl())->assertOk()
+            ->assertSee('Bambodia Layout Preview (Demo Creator)')
+            ->assertDontSee('images/badges/top-rated.svg')
+            ->assertDontSee('VIP Client Favorite');
+        $this->get(route('creators.show',$other->public_id))
+            ->assertOk()
+            ->assertSee('Bambodia Layout Preview (Demo Creator)')
+            ->assertDontSee('VIP Client Favorite');
+    }
+
+    public function test_all_sixteen_awarded_badges_render_once_in_sidebar_with_tooltips(): void
+    {
+        $creator=$this->creator('Samith QA');
         $badges=CreatorBadge::query()->where('enabled',true)->orderBy('sort_order')->get();
         $this->assertCount(16,$badges);
         foreach($badges as $badge) {
@@ -136,31 +167,27 @@ class CreatorBadgePublicDisplayTest extends TestCase
                 'user_id'=>$creator->id,
                 'creator_badge_id'=>$badge->id,
                 'source'=>'manual',
-                'evidence_note'=>'Dedicated test fixture only; no actual credential verification.',
+                'evidence_note'=>'Dedicated test fixture only; no credential verification implied',
             ]);
         }
         $listing=$this->publicProject($creator,'Full medal publication QA project');
         $response=$this->get($listing->publicUrl())->assertOk();
         $html=$response->getContent();
-        $this->assertSame('badge',
-            \App\Support\CreatorBadgeDisplay::settings()->display_mode);
-        $sellerStart=strpos($html,'id="seller"');
-        $sidebarStart=strpos($html,'premium-side-card premium-side-creator');
-        $this->assertNotFalse($sellerStart);
-        $this->assertNotFalse($sidebarStart);
-        $seller=substr($html,$sellerStart, $sidebarStart-$sellerStart);
-        $sidebar=substr($html,$sidebarStart);
-
-        $this->assertSame(16,substr_count($seller,'class="creator-badge creator-badge--'));
-        $this->assertSame(16,substr_count($sidebar,'class="creator-badge creator-badge--'));
-        $this->assertStringContainsString('creator-badge-row--badge',$seller);
-        $this->assertStringContainsString('creator-badge-row--badge',$sidebar);
-        $this->assertStringNotContainsString('class="creator-badge-name"',$seller);
-        $this->assertStringNotContainsString('class="creator-badge-name"',$sidebar);
-        $this->assertSame(32,substr_count($html,'class="creator-badge-tooltip" role="tooltip"'));
-        $this->assertSame(2,substr_count($html,'images/badges/vip-client-favorite.svg'));
+        $sideAt=strpos($html,'class="premium-side-card premium-side-creator"');
+        $this->assertNotFalse($sideAt);
+        $this->assertStringNotContainsString('id="seller"',$html);
+        $this->assertStringNotContainsString('About the creator',$html);
+        $this->assertSame(16,substr_count($html,'class="creator-badge creator-badge--'));
+        $this->assertSame(16,substr_count($html,'class="creator-badge-tooltip" role="tooltip"'));
+        $this->assertSame(1,substr_count($html,'images/badges/vip-client-favorite.svg'));
+        $this->assertStringContainsString('creator-badge-row--badge',$html);
+        $this->assertStringNotContainsString('class="creator-badge-name"',$html);
         $this->assertStringContainsString('aria-label="VIP Client Favorite:', $html);
-        $this->assertStringNotContainsString('View the creator profile for all', $html);
+        $this->assertStringContainsString('href="'.route('creators.show',$creator->public_id).'"',$html);
+        $this->get(route('creators.show',$creator->public_id))->assertOk()
+            ->assertSee('VIP Client Favorite')
+            ->assertSee('Full medal publication QA project')
+            ->assertDontSee($creator->email);
     }
 
     public function test_sidebar_remains_artwork_only_when_admin_enables_badge_with_name(): void
@@ -168,8 +195,10 @@ class CreatorBadgePublicDisplayTest extends TestCase
         $creator=$this->creator('Display-mode QA');
         $badge=CreatorBadge::query()->where('slug','expert-vetted')->firstOrFail();
         CreatorBadgeGrant::query()->create([
-            'user_id'=>$creator->id,'creator_badge_id'=>$badge->id,
-            'source'=>'manual','evidence_note'=>'Independent test-only assessment.',
+            'user_id'=>$creator->id,
+            'creator_badge_id'=>$badge->id,
+            'source'=>'manual',
+            'evidence_note'=>'Independent test fixture',
         ]);
         $admin=$this->creator('System Admin','admin');
         $this->actingAs($admin)->patch(route('dashboard.badges.display.update'),[
@@ -177,15 +206,12 @@ class CreatorBadgePublicDisplayTest extends TestCase
         ])->assertRedirect();
         $listing=$this->publicProject($creator,'Display-mode QA listing');
         $html=$this->get($listing->publicUrl())->assertOk()->getContent();
-        $start=strpos($html,'id="seller"');
-        $side=strpos($html,'premium-side-card premium-side-creator');
-        $main=substr($html,$start,$side-$start);
-        $sidebar=substr($html,$side);
-        $this->assertStringContainsString('class="creator-badge-name"',$main);
-        $this->assertStringNotContainsString('class="creator-badge-name"',$sidebar);
-        $this->assertStringContainsString('creator-badge-row--badge',$sidebar);
-        $this->assertStringContainsString('aria-label="Expert Vetted:', $sidebar);
-        $this->assertStringContainsString('class="creator-badge-tooltip" role="tooltip"',$sidebar);
+        $this->assertStringContainsString('creator-badge-row--badge',$html);
+        $this->assertStringNotContainsString('class="creator-badge-name"',$html);
+        $this->assertStringContainsString('aria-label="Expert Vetted:', $html);
+        $this->assertStringContainsString('class="creator-badge-tooltip" role="tooltip"',$html);
+        // Standalone profile follows the selected mode.
+        $profile=$this->get(route('creators.show',$creator->public_id))->assertOk()->getContent();
+        $this->assertStringContainsString('class="creator-badge-name"',$profile);
     }
-
 }

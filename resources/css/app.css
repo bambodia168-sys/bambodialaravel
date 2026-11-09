@@ -3645,3 +3645,41 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   width:42px;
   height:42px;
 }
+
+
+/* One public creator panel per listing: complete compact medal grid, accessible profile link. */
+.premium-side-creator { scroll-margin-top:90px; overflow:visible; }
+.premium-side-creator .premium-side-card-body{min-width:0}
+.premium-side-creator-name{
+  display:inline-block;
+  max-width:100%;
+  color:var(--text);
+  font-weight:800;
+  font-size:14px;
+  line-height:1.4;
+  overflow-wrap:anywhere;
+  text-decoration:none;
+}
+.premium-side-creator-name:hover,.premium-side-creator-name:focus-visible{
+  color:var(--accent);
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+.premium-side-creator .creator-badge-row--compact{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-start;
+  gap:7px;
+  width:100%;
+  max-width:100%;
+  overflow:visible;
+  margin:15px 0 18px;
+}
+.premium-side-creator .creator-badge-row--compact .creator-badge{
+  flex-shrink:0;
+}
+.premium-side-creator .premium-full-action{
+  width:100%;
+  justify-content:center;
+}

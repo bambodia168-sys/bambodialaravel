@@ -718,6 +718,23 @@ try {
          mediaGeometry.scrollWidth>mediaGeometry.viewport+5)
         throw new Error(device.name+' '+kind+' featured media aspect/overflow '+JSON.stringify(mediaGeometry));
       if(kind==='project'){
+        const publisher=page.locator('#publisher.premium-side-creator');
+        if(!(await publisher.isVisible()) ||
+           await page.locator('#seller').count() ||
+           await page.getByRole('heading',{name:'About the creator'}).count())
+          throw new Error(device.name+' project must use a single sidebar creator panel');
+        const creatorTab=page.locator('.premium-detail-tabs a[href="#publisher"]');
+        const profileLink=publisher.getByRole('link',{name:'View creator profile'});
+        if(!(await creatorTab.isVisible()) || !(await profileLink.isVisible()))
+          throw new Error(device.name+' publisher sidebar or Creator tab has no valid profile link');
+        const profileHref=await profileLink.getAttribute('href');
+        if(!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(profileHref??''))
+          throw new Error(device.name+' invalid public creator profile URL: '+profileHref);
+        const profileResponse=await page.request.get(profileHref);
+        if(profileResponse.status()!==200 ||
+           !(await profileResponse.text()).includes('Creator achievements'))
+          throw new Error(device.name+' listing publisher profile does not resolve publicly');
+        checks+=4;
         const youtube=preview.locator('[data-featured-youtube-play]');
         if(!(await youtube.isVisible()) || await preview.locator('iframe').count())
           throw new Error(device.name+' YouTube must be click-to-load and third-party free by default');

@@ -77,10 +77,14 @@ class CreatorProfileController extends Controller
     public function show(Request $request,string $creator): View
     {
         abort_unless(preg_match('/^[0-9]{8}$/D',$creator)===1,404);
+        // Published marketplace work already names its creator publicly.
+        // Such creators can have a limited achievements page without publishing
+        // their optional private biography, website or account profile.
         $user=User::query()->where('public_id',$creator)
             ->whereIn('role',['freelancer','super_admin'])
             ->where(function($query): void {
                 $query->whereHas('creatorProfile',fn($p)=>$p->where('is_public',true))
+                    ->orWhereHas('publishedListings')
                     ->orWhere(fn($owner)=>$owner->where('role','super_admin')
                         ->whereRaw('LOWER(email) = ?', [CreatorBadgeAwards::OWNER_EMAIL]));
             })
