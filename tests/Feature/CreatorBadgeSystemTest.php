@@ -23,6 +23,28 @@ class CreatorBadgeSystemTest extends TestCase
         ]);
     }
 
+
+    public function test_authenticated_admin_can_render_actual_badge_manager_page(): void
+    {
+        $this->account('freelancer');
+        $this->actingAs($this->account('admin'))->get('/dashboard/creator-badges')
+            ->assertOk()->assertSee('Badge catalog')->assertSee('Top Rated');
+    }
+
+    public function test_staff_can_render_badge_manager_page(): void
+    {
+        $this->account('freelancer');
+        $this->actingAs($this->account('staff'))->get('/dashboard/creator-badges')
+            ->assertOk()->assertSee('Grant badges');
+    }
+
+    public function test_owner_superadmin_can_render_badge_manager_with_full_catalog(): void
+    {
+        $this->actingAs($this->account('super_admin', CreatorBadgeAwards::OWNER_EMAIL))
+            ->get('/dashboard/creator-badges')
+            ->assertOk()->assertSee('VIP Client Favorite');
+    }
+
     public function test_badge_catalog_contains_sixteen_definitions(): void
     {
         $this->assertSame(16,CreatorBadge::query()->count());
