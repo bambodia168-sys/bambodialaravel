@@ -773,10 +773,9 @@ try {
         await page.emulateMedia({reducedMotion:'no-preference'});
       }
       checks+=4;
-      for(const section of ['overview','seller']){
-        if(!(await page.locator('#'+section+'.premium-content-section').isVisible()))
-          throw new Error(device.name+' '+kind+' missing real '+section+' section');
-      }
+      if(!(await page.locator('#overview.premium-content-section').isVisible()) ||
+         !(await page.locator('#publisher.premium-side-creator').isVisible()))
+        throw new Error(device.name+' '+kind+' missing overview or publisher sidebar');
       if(await page.getByRole('button',{name:/buy now/i}).count())
         throw new Error(device.name+' '+kind+' invented checkout button on payment-disabled platform');
       if(kind==='product'){
