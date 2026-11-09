@@ -3623,3 +3623,25 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .premium-side-creator .creator-badge-tooltip{max-width:min(270px,calc(100vw - 40px))}
 .premium-side-creator .creator-badge:hover,.premium-side-creator .creator-badge:focus-visible{z-index:60}
 @media(max-width:760px){.badge-public-display-actions{justify-content:flex-start;width:100%}.badge-public-display-form{width:100%}}
+
+
+/* Standard public creator profile: artwork-only mode stays compact.
+   Do not alter the showcase size used by the premium admin catalog. */
+.creator-badge-row--badge .creator-badge:not(.creator-badge--compact):not(.creator-badge--showcase) {
+  width:50px;
+  min-width:50px;
+  height:50px;
+  min-height:50px;
+  flex:0 0 50px;
+  border-radius:50%;
+  padding:3px;
+  gap:0;
+}
+.creator-badge-row--badge .creator-badge:not(.creator-badge--compact):not(.creator-badge--showcase) .creator-badge-artwork {
+  width:44px;
+  height:44px;
+}
+.creator-badge-row--badge .creator-badge:not(.creator-badge--compact):not(.creator-badge--showcase) .creator-badge-fallback {
+  width:42px;
+  height:42px;
+}
