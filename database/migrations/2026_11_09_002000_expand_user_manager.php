@@ -47,6 +47,7 @@ return new class extends Migration {
             $table->string('resource_public_id',24);
             $table->string('resource_title',180);
             $table->string('reason',500);
+            $table->text('media_asset_ids')->nullable();
             $table->timestamp('created_at')->useCurrent();
             $table->index(['from_user_id','created_at']);
             $table->index(['to_user_id','created_at']);

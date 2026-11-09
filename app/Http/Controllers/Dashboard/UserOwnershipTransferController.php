@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
+use App\Models\MediaAsset;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,7 +64,7 @@ class UserOwnershipTransferController extends Controller
                     ->join('job_proposals','job_proposals.id','=','freelance_contracts.job_proposal_id')
                     ->where('job_proposals.marketplace_job_id',$item->id)->exists(),409,
                     'This job has contracts; ownership cannot be silently changed.');
-                $this->checkMedia($item,$user->id);
+                $mediaIds=$this->reassignMedia($item,$user->id,$target->id);
                 $item->client_id=$target->id;
             } else {
                 abort_if(DB::table('service_inquiries')->where('marketplace_listing_id',$item->id)->exists(),409,
@@ -74,7 +75,7 @@ class UserOwnershipTransferController extends Controller
                     abort_if(DB::table('product_licenses')->where('marketplace_listing_id',$item->id)->exists(),409,
                         'This product has issued licenses and cannot be transferred automatically.');
                 }
-                $this->checkMedia($item,$user->id);
+                $mediaIds=$this->reassignMedia($item,$user->id,$target->id);
                 $item->user_id=$target->id;
             }
             $item->save();
@@ -82,7 +83,8 @@ class UserOwnershipTransferController extends Controller
                 'actor_id'=>$request->user()->id,'from_user_id'=>$user->id,
                 'to_user_id'=>$target->id,'resource_type'=>$data['type'],
                 'resource_id'=>$item->id,'resource_public_id'=>$item->public_id,
-                'resource_title'=>$item->title,'reason'=>$data['reason'],'created_at'=>now(),
+                'resource_title'=>$item->title,'reason'=>$data['reason'],
+                'media_asset_ids'=>json_encode($mediaIds,JSON_THROW_ON_ERROR),'created_at'=>now(),
             ]);
             AuditEvent::record('user.resource.transferred',$request->user(),$request);
         },3);
@@ -102,15 +104,43 @@ class UserOwnershipTransferController extends Controller
         return ($lock?$query->lockForUpdate():$query)->firstOrFail();
     }
 
-    private function checkMedia(MarketplaceListing|MarketplaceJob $item,int $ownerId): void
+    private function reassignMedia(MarketplaceListing|MarketplaceJob $item,int $oldOwner,int $newOwner): array
     {
-        // Reusing another person's media without transferring its rights/storage access
-        // can break the new owner's editor and may violate upload permissions.
-        // Such cases require a separate, explicit media and rights review.
-        $attachments=$item->gallery_media_ids ?: [];
-        abort_if(!is_array($attachments) || count($attachments)>0 ||
-            $item->featured_media_id !== null ||
-            ($item instanceof MarketplaceListing && $item->cover_media_id !== null),409,
-            'This item contains media assets. Transfer requires a separate rights/media review.');
+        // Reassign exclusively used, owned media along with the listing/job.
+        // Storage objects stay in place: permission checks use media_assets.user_id.
+        // Licensed/shared assets need independent copyright and operational review.
+        $gallery=$item->gallery_media_ids ?? [];
+        abort_unless(is_array($gallery),409,'Invalid media gallery requires review.');
+        $ids=array_values(array_unique(array_filter(array_map('intval',[
+            ...$gallery,
+            $item->featured_media_id,
+            $item instanceof MarketplaceListing ? $item->cover_media_id : null,
+        ]))));
+        if (!$ids) return [];
+
+        $assets=MediaAsset::query()->whereIn('id',$ids)->orderBy('id')->lockForUpdate()->get();
+        abort_unless($assets->count()===count($ids),409,'An attached media file is missing.');
+        foreach($assets as $asset){
+            abort_unless((int)$asset->user_id===$oldOwner && $asset->rights_basis==='owned',409,
+                'A shared or licensed media asset requires a separate rights review.');
+            $linkedToOtherListing=MarketplaceListing::query()
+                ->when($item instanceof MarketplaceListing,fn($q)=>$q->whereKeyNot($item->id))
+                ->where(function($q)use($asset){
+                    $q->where('cover_media_id',$asset->id)
+                      ->orWhere('featured_media_id',$asset->id)
+                      ->orWhereJsonContains('gallery_media_ids',$asset->id);
+                })->exists();
+            $linkedToOtherJob=MarketplaceJob::query()
+                ->when($item instanceof MarketplaceJob,fn($q)=>$q->whereKeyNot($item->id))
+                ->where(function($q)use($asset){
+                    $q->where('featured_media_id',$asset->id)
+                      ->orWhereJsonContains('gallery_media_ids',$asset->id);
+                })->exists();
+            $usedInPosts=DB::table('content_entries')->where('featured_media_id',$asset->id)->exists();
+            abort_if($linkedToOtherListing || $linkedToOtherJob || $usedInPosts,409,
+                'This media is also used by another record and cannot be reassigned automatically.');
+        }
+        MediaAsset::query()->whereIn('id',$ids)->update(['user_id'=>$newOwner]);
+        return $ids;
     }
 }

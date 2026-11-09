@@ -17,7 +17,7 @@
         <div><dt>Status</dt><dd>{{ ucfirst($item->status) }}</dd></div>
         <div><dt>Current owner</dt><dd>{{ $member->name }} ({{ $member->public_id }})</dd></div>
       </dl>
-      <div class="user-manager-note"><x-icon name="shield-alert" size="18"/> Items with media, private product versions, issued licenses, proposals or private inquiries require a separate rights/contract review. Unsafe transfers are blocked rather than partly applied.</div>
+      <div class="user-manager-note"><x-icon name="shield-alert" size="18"/> Exclusive media owned by the current publisher can move with the resource. Shared or licensed media, private product versions, issued licenses, proposals and private inquiries require separate review. Unsafe transfers are blocked rather than partly applied.</div>
     </section>
     <section class="panel">
       <div class="panel-head"><h2>New owner</h2></div>
@@ -32,7 +32,7 @@
         <label>Reason / evidence
           <textarea name="reason" rows="4" minlength="20" maxlength="500" required placeholder="Why this transfer is authorized">{{ old('reason') }}</textarea>
         </label>
-        <label class="user-manager-inline-check"><input name="rights_confirmed" type="checkbox" value="1" required> I confirm this administrative reassignment is authorized and does not transfer unrelated contracts, copyright or purchases.</label>
+        <label class="user-manager-inline-check"><input name="rights_confirmed" type="checkbox" value="1" required> I confirm the reassignment and any attached owned-media access transfer are authorized. Existing copyright claims, unrelated contracts and purchases are not transferred.</label>
         <label>Type TRANSFER to confirm <input name="confirmation" required pattern="TRANSFER" placeholder="TRANSFER" autocomplete="off"></label>
         <button type="submit" class="btn primary"><x-icon name="arrow-left-right" size="16"/> Transfer ownership</button>
       </form>

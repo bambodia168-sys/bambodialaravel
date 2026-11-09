@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Models\JobProposal;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
+use App\Models\MediaAsset;
 use App\Models\User;
 use App\Support\CreatorBadgeAwards;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 final class UserManagerCrudTest extends TestCase
@@ -172,6 +174,35 @@ final class UserManagerCrudTest extends TestCase
         ])->assertRedirect();
         $this->assertSame($client2->id,$job->fresh()->client_id);
         $this->assertDatabaseCount('user_ownership_transfers',5);
+    }
+
+    public function test_draft_product_with_exclusively_owned_cover_image_transfers_both(): void
+    {
+        Storage::fake('local');
+        $admin=$this->account('super_admin',CreatorBadgeAwards::OWNER_EMAIL);
+        $old=$this->account('freelancer');
+        $new=$this->account('freelancer');
+        $asset=MediaAsset::query()->create([
+            'user_id'=>$old->id,
+            'original_name'=>'product-cover.png','storage_path'=>'test/cover.png',
+            'storage_disk'=>'local','mime_type'=>'image/png','bytes'=>120,
+            'width'=>100,'height'=>100,'alt_text'=>'Product artwork',
+            'rights_basis'=>'owned','rights_holder'=>$old->name,
+            'review_status'=>'approved',
+        ]);
+        Storage::disk('local')->put('test/cover.png','fake media');
+        $product=$this->listing($old,'product');
+        $product->update(['status'=>'draft','cover_media_id'=>$asset->id]);
+        $this->actingAs($admin)->post(route('dashboard.users.transfer.store',$old),[
+            'type'=>'product','id'=>$product->id,'recipient'=>$new->public_id,
+            'reason'=>'Copyright ownership reassignment verified by administrators',
+            'rights_confirmed'=>1,'confirmation'=>'TRANSFER',
+        ])->assertRedirect();
+        $this->assertSame($new->id,$product->fresh()->user_id);
+        $this->assertSame($new->id,$asset->fresh()->user_id);
+        $this->assertDatabaseHas('user_ownership_transfers',[
+            'resource_type'=>'product','resource_id'=>$product->id,
+        ]);
     }
 
     public function test_transfer_rejects_jobs_with_proposals_and_does_not_partially_apply(): void
