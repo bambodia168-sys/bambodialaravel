@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="skill certified medal">
+<defs>
+ <linearGradient id="rim" x1=".12" y1="0" x2=".86" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#e5fffc"/><stop offset=".21" stop-color="#8cfff1"/><stop offset=".49" stop-color="#099e97"/><stop offset=".74" stop-color="#0c4b6d"/><stop offset="1" stop-color="#8cfff1"/></linearGradient>
+ <radialGradient id="disk" cx=".38" cy=".25" r=".9"><stop stop-color="#099e97"/><stop offset=".54" stop-color="#0c4b6d"/><stop offset="1" stop-color="#0a0d1b"/></radialGradient>
+ <linearGradient id="gold" x1=".2" y1="0" x2=".8" y2="1"><stop stop-color="#fffbe3"/><stop offset=".30" stop-color="#ffe58a"/><stop offset=".63" stop-color="#d89925"/><stop offset="1" stop-color="#774112"/></linearGradient>
+ <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e5fffc"/><stop offset=".48" stop-color="#8cfff1"/><stop offset="1" stop-color="#0c4b6d"/></linearGradient>
+ <linearGradient id="pearl" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset=".45" stop-color="#e5fffc"/><stop offset="1" stop-color="#099e97"/></linearGradient>
+ <filter id="shadow" x="-40%" y="-40%" width="180%" height="190%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0c4b6d" flood-opacity=".58"/></filter>
+ <filter id="shine" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="1.5" dy="2" stdDeviation="2" flood-color="#090e1e" flood-opacity=".75"/></filter>
+</defs>
+<g filter="url(#shadow)"><path d="M100 13C124 30 148 33 166 39L168 107Q168 150 100 182Q32 150 32 107L34 39C52 33 76 30 100 13Z" fill="url(#rim)" stroke="#e5fffc" stroke-width="3.2"/><path d="M100 29C123 43 140 44 151 48L152 105Q153 141 100 166Q47 141 48 105L49 48C60 44 77 43 100 29Z" fill="url(#disk)" stroke="#0c4b6d" stroke-width="8"/><path d="M100 29C123 43 140 44 151 48L152 105Q153 141 100 166Q47 141 48 105L49 48C60 44 77 43 100 29Z" fill="none" stroke="#8cfff1" stroke-width="2.5" opacity=".85"/></g>
+<g opacity=".7"><path d="M48 69Q65 23 118 30" fill="none" stroke="#e5fffc" stroke-width="4" stroke-linecap="round"/><path d="M137 155Q167 134 166 101" fill="none" stroke="#8cfff1" stroke-width="2.8" stroke-linecap="round"/></g>
+<circle cx="100" cy="100" r="60" fill="none" stroke="#8cfff1" stroke-opacity=".32" stroke-width="2" stroke-dasharray="3 8"/>
+
+<g stroke="#fff6d4" stroke-width="6.8" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#shine)"><path d="M62 61h76v86H62z" fill="url(#metal)"/><path d="M77 82h45M77 97h32m-32 15h20"/><circle cx="127" cy="127" r="22" fill="url(#gold)" stroke-width="3"/><path d="m116 127 9 8 16-18" stroke="#fff" stroke-width="5"/></g>
+<path d="m34 43 5-10 4 10 10 4-10 4-4 10-5-10-10-4z" fill="#fffdec" opacity=".92"/>
+<path d="m157 142 3-7 3 7 7 3-7 3-3 7-3-7-7-3z" fill="#e5fffc" opacity=".86"/>
+</svg>

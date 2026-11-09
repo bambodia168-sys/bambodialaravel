@@ -9,7 +9,7 @@
       @foreach($badges as $badge)
         <form class="creator-badge-admin-card" method="post" action="{{ route('dashboard.badges.update',$badge) }}">
           @csrf @method('PATCH')
-          <div class="creator-badge-admin-preview"><x-creator-badges :badges="collect([$badge])"/></div>
+          <div class="creator-badge-admin-preview"><x-creator-badges :badges="collect([$badge])" variant="showcase"/></div>
           <label>Badge name<input name="name" value="{{ $badge->name }}" maxlength="90" required></label>
           <label>Hover description<textarea name="description" rows="3" maxlength="1000" required>{{ $badge->description }}</textarea></label>
           <div class="creator-badge-admin-options">
@@ -30,7 +30,7 @@
     @foreach($creators as $creator)
       <article class="creator-badge-person">
         <div><strong>{{ $creator->name }}</strong> <small>· {{ $creator->public_id }}</small></div>
-        <x-creator-badges :badges="\App\Support\CreatorBadgeAwards::earned($creator,$badges)"/>
+        <x-creator-badges :badges="\App\Support\CreatorBadgeAwards::earned($creator,$badges)" variant="compact"/>
         <form method="post" action="{{ route('dashboard.badges.grant',$creator) }}" class="creator-badge-grant-form">
           @csrf
           <label>Manual badge<select name="badge_id" required>

@@ -28,6 +28,15 @@ class CreatorBadgeSystemTest extends TestCase
         $this->assertSame(16,CreatorBadge::query()->count());
     }
 
+    public function test_every_catalog_badge_has_a_local_svg_medal(): void
+    {
+        foreach (CreatorBadge::query()->get() as $badge) {
+            $file = public_path('images/badges/'.$badge->slug.'.svg');
+            $this->assertFileExists($file, $badge->slug);
+            $this->assertStringContainsString('<svg', file_get_contents($file));
+        }
+    }
+
     public function test_new_freelancer_cannot_claim_verification(): void
     {
         $user=$this->account('freelancer');
