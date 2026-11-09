@@ -38,31 +38,11 @@
 
   <div class="premium-detail-layout">
     <main class="premium-detail-main">
-      <section class="premium-showcase" aria-label="{{ $kindTitle }} preview">
-        <span class="premium-detail-floating-type"><x-icon :name="$typeIcon" size="16"/> {{ $kindTitle }}</span>
-        @if($listing->featuredAsset && in_array($listing->featured_kind, ['image','animated'],true))
-          <img class="premium-showcase-cover" src="{{ $listing->featuredAsset->previewUrl() }}"
-               alt="{{ $listing->featuredAsset->alt_text ?: $listing->title }}" decoding="async">
-        @elseif($listing->featuredAsset && $listing->featured_kind === 'video')
-          <video class="premium-showcase-cover studio-showcase-video" src="{{ $listing->featuredAsset->previewUrl() }}" controls playsinline preload="metadata" aria-label="{{ $listing->featuredAsset->alt_text }}"></video>
-        @elseif($listing->featured_kind === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/', $listing->featured_color ?? ''))
-          <div class="premium-showcase-placeholder" style="background-color:{{ $listing->featured_color }};color:#fff">
-            <span class="premium-showcase-symbol"><x-icon :name="$typeIcon" size="58"/></span>
-            <span class="eyebrow" style="color:inherit">{{ $kindTitle }}</span>
-            <span class="premium-showcase-secondary">Marketplace listing preview</span>
-          </div>
-        @elseif($isProduct && $listing->coverAsset)
-          <img class="premium-showcase-cover" src="{{ $listing->coverAsset->previewUrl() }}"
-            alt="{{ $listing->coverAsset->alt_text ?: $listing->title }}" decoding="async">
-        @else
-          <div class="premium-showcase-placeholder premium-showcase-{{ $kind }}">
-            <div class="premium-showcase-symbol"><x-icon :name="$typeIcon" size="58"/></div>
-            <span class="eyebrow">{{ $kindTitle }} on Bambodia</span>
-            <h2>{{ $listing->category?->name ?? $kindTitle }}</h2>
-            <span class="premium-showcase-secondary">Explore this listing below</span>
-          </div>
-        @endif
-      </section>
+      <x-detail-featured-media :item="$listing" :kind="$kind" :type-icon="$typeIcon"
+        :fallback-title="$listing->category?->name ?? $kindTitle"
+        fallback-text="Explore this listing below"
+        :product-cover="$isProduct ? $listing->coverAsset : null"/>
+
       <h1 class="premium-detail-below-title">{{ $listing->title }}</h1>
       <div class="premium-showcase-actions">
         <div class="marketplace-detail-actions">
@@ -342,8 +322,8 @@
         <div><span class="eyebrow">Continue exploring</span><h2>Related approved listings</h2></div>
         <a class="btn subtle compact" href="{{ route('marketplace.search',['type'=>$kind]) }}">Browse {{ $kindTitle }} listings</a>
       </div>
-      <div class="marketplace-card-grid">
-        @foreach($relatedListings as $related)
+      <div class="marketplace-card-grid premium-related-grid" data-related-grid>
+        @foreach($relatedListings->take(8) as $related)
           <x-listing-card :listing="$related" :is-saved="in_array((int)$related->id,$savedRelatedIds,true)"/>
         @endforeach
       </div>

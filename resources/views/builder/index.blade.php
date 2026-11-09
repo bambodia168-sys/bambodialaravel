@@ -24,6 +24,8 @@
   $selectedKind = old('featured_kind', $record?->featured_kind ?? 'none');
   $selectedMedia = old('featured_media_id', $record?->featured_media_id);
   $selectedColor = old('featured_color', $record?->featured_color ?: '#c2410c');
+  $selectedYoutube = old('featured_youtube_url', $record?->featured_youtube_id
+    ? 'https://www.youtube.com/watch?v='.$record->featured_youtube_id : '');
   $returnTo = $editing ? '/builder?='.$record->public_id : ($type ? '/builder?type='.$type : '/builder');
   $previousHtml = old('description_html', $record?->description_html);
   $previousText = old('description', $record?->description ?? '');
@@ -316,12 +318,13 @@
                 <div><span class="studio-step">03</span><h3 id="studio-featured-title">Featured media</h3></div>
                 <span class="studio-step-caption">Cover your {{ strtolower($types[$type]['label']) }}</span>
               </div>
-              <p class="studio-help">Choose an image, animated GIF, video, or color from your own library. Media is private until attached to published content.</p>
+              <p class="studio-help">Choose an image, animated GIF, uploaded video, YouTube link, or solid color. Uploaded files stay private until attached to approved content.</p>
               <div class="studio-media-types" role="group" aria-label="Featured media type">
                 @foreach([
                   'none'=>['label'=>'None','icon'=>'slash'],
                   'image'=>['label'=>'Image','icon'=>'image'],
                   'video'=>['label'=>'Video','icon'=>'video'],
+                  'youtube'=>['label'=>'YouTube','icon'=>'youtube'],
                   'animated'=>['label'=>'Animate','icon'=>'sparkles'],
                   'color'=>['label'=>'Color','icon'=>'palette']
                 ] as $kind=>$meta)
@@ -347,6 +350,15 @@
                 </div>
                 @if($canEdit)<button class="studio-tool-action" type="button" data-modal-open="studio-media-upload"><x-icon name="upload" size="16"/> Upload new media</button>@endif
                 <small class="hint">Files uploaded here must pass rights review before they can be selected.</small>
+              </div>
+              <div class="studio-field studio-media-youtube" data-featured-youtube-wrap hidden>
+                <label for="studio-youtube-url">YouTube video URL (HTTPS)</label>
+                <input id="studio-youtube-url" type="url" name="featured_youtube_url"
+                  data-featured-youtube-url inputmode="url" autocomplete="off" maxlength="2048"
+                  placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX"
+                  value="{{ $selectedYoutube }}" @disabled(!$canEdit)>
+                <small class="hint">A normal YouTube link, Shorts, or youtu.be URL. The public player uses the privacy-enhanced YouTube embed.</small>
+                @error('featured_youtube_url')<small class="builder-field-error">{{ $message }}</small>@enderror
               </div>
               <div class="studio-field studio-media-color" data-featured-color-wrap>
                 <label for="studio-color">Featured background color</label>

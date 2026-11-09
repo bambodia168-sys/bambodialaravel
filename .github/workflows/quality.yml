@@ -88,6 +88,7 @@ jobs:
           bash -n support/detail-discussions-upgrade.sh
           bash -n support/detail-tabs-resources-upgrade.sh
           bash -n support/detail-offer-card-upgrade.sh
+          bash -n support/detail-media-related-upgrade.sh
           php -l examples/license-validation.php
           php -l support/frontend-layout-samples.php
           bash -n support/builder-studio-db-backup.sh

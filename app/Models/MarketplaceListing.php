@@ -13,7 +13,7 @@ class MarketplaceListing extends Model
     public const TYPES = ['product', 'project', 'freelance', 'service'];
     public const STATUSES = ['draft', 'pending', 'published', 'rejected'];
 
-    protected $fillable = ['user_id', 'type', 'title', 'description', 'description_html', 'featured_kind', 'featured_media_id', 'featured_color', 'price', 'software_version', 'software_published_on', 'software_updated_on', 'regular_price', 'extended_price', 'extended_license_definition_id', 'gallery_media_ids', 'currency', 'license_terms', 'license_definition_id', 'cover_media_id', 'category_id', 'status'];
+    protected $fillable = ['user_id', 'type', 'title', 'description', 'description_html', 'featured_kind', 'featured_media_id', 'featured_color', 'featured_youtube_id', 'price', 'software_version', 'software_published_on', 'software_updated_on', 'regular_price', 'extended_price', 'extended_license_definition_id', 'gallery_media_ids', 'currency', 'license_terms', 'license_definition_id', 'cover_media_id', 'category_id', 'status'];
 
     protected function casts(): array
     {

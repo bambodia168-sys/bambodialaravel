@@ -685,6 +685,65 @@ try {
          structure.labelLeft < structure.previewLeft-1)
         throw new Error(device.name+' '+kind+' title placement or label regression '+JSON.stringify(structure));
       checks+=3;
+      const mediaGeometry=await preview.evaluate(stage=>{
+        const box=stage.getBoundingClientRect();
+        const child=stage.querySelector('.premium-detail-media-content');
+        const media=child?.getBoundingClientRect();
+        const style=getComputedStyle(stage);
+        return {
+          width:box.width,height:box.height,
+          ratio:box.width/box.height,
+          childWidth:media?.width,childHeight:media?.height,
+          overflow:style.overflow,animation:style.animationName,
+          scrollWidth:document.documentElement.scrollWidth,
+          viewport:window.innerWidth,
+        };
+      });
+      if(!await preview.evaluate(node=>node.classList.contains('premium-detail-media')) ||
+         Math.abs(mediaGeometry.ratio-16/9)>0.08 ||
+         mediaGeometry.width<200 || mediaGeometry.childWidth<mediaGeometry.width-5 ||
+         mediaGeometry.childHeight<mediaGeometry.height-5 ||
+         mediaGeometry.scrollWidth>mediaGeometry.viewport+5)
+        throw new Error(device.name+' '+kind+' featured media aspect/overflow '+JSON.stringify(mediaGeometry));
+      if(kind==='project'){
+        const youtube=preview.locator('[data-featured-youtube-play]');
+        if(!(await youtube.isVisible()) || await preview.locator('iframe').count())
+          throw new Error(device.name+' YouTube must be click-to-load and third-party free by default');
+        await youtube.click();
+        const frame=preview.locator('iframe.premium-detail-youtube');
+        if(!(await frame.count()) ||
+           !(await frame.getAttribute('src')).startsWith('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'))
+          throw new Error(device.name+' YouTube player did not load after a deliberate click');
+      }
+      const relatedGrid=page.locator('.premium-related-grid');
+      if(kind==='project'){
+        const grid=await relatedGrid.evaluate(node=>{
+          const style=getComputedStyle(node);
+          return {count:node.querySelectorAll('.marketplace-card').length,
+            columns:style.gridTemplateColumns.split(' ').length,
+            visible:[...node.querySelectorAll('.marketplace-card')]
+              .filter(card=>getComputedStyle(card).display!=='none').length,
+            right:node.getBoundingClientRect().right,
+            viewport:window.innerWidth};
+        });
+        const cols=device.viewport.width>1100?4:device.viewport.width>610?2:1;
+        if(grid.count!==8 || grid.columns!==cols || grid.visible!==cols*2 ||
+           grid.right>grid.viewport+5)
+          throw new Error(device.name+' related grid must be 4/2/1 columns and two rows '+JSON.stringify(grid));
+      }
+      if(device.name==='desktop'){
+        const motion=await preview.evaluate(node=>{
+          const s=getComputedStyle(node);
+          return {animation:s.animationName,transition:s.transitionProperty};
+        });
+        if(!motion.animation.includes('bambodia-media-shadow') || !motion.transition.includes('transform'))
+          throw new Error('Desktop media shadow motion not active '+JSON.stringify(motion));
+        await page.emulateMedia({reducedMotion:'reduce'});
+        const reduced=await preview.evaluate(node=>getComputedStyle(node).animationName);
+        if(reduced!=='none') throw new Error('Reduced-motion accessibility not honored');
+        await page.emulateMedia({reducedMotion:'no-preference'});
+      }
+      checks+=4;
       for(const section of ['overview','seller']){
         if(!(await page.locator('#'+section+'.premium-content-section').isVisible()))
           throw new Error(device.name+' '+kind+' missing real '+section+' section');

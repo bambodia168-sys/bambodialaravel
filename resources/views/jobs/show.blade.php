@@ -8,26 +8,9 @@
 
   <div class="premium-detail-layout">
     <main class="premium-detail-main">
-      <section class="premium-showcase" aria-label="Job overview">
-        <span class="premium-detail-floating-type"><x-icon name="briefcase" size="16"/> Job</span>
-        @if($job->featuredAsset && in_array($job->featured_kind, ['image','animated'],true))
-          <img class="premium-showcase-cover" src="{{ $job->featuredAsset->previewUrl() }}" alt="{{ $job->featuredAsset->alt_text ?: $job->title }}">
-        @elseif($job->featuredAsset && $job->featured_kind === 'video')
-          <video class="premium-showcase-cover studio-showcase-video" src="{{ $job->featuredAsset->previewUrl() }}" controls playsinline preload="metadata" aria-label="{{ $job->featuredAsset->alt_text }}"></video>
-        @elseif($job->featured_kind === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/', $job->featured_color ?? ''))
-          <div class="premium-showcase-placeholder" style="background-color:{{ $job->featured_color }};color:#fff">
-            <span class="premium-showcase-symbol"><x-icon name="briefcase" size="58"/></span>
-            <span class="premium-showcase-secondary">Client opportunity preview</span>
-          </div>
-        @else
-        <div class="premium-showcase-placeholder premium-showcase-job">
-          <span class="premium-showcase-symbol"><x-icon name="briefcase" size="58"/></span>
-          <span class="eyebrow">Approved client opportunity</span>
-          <h2>{{ ucfirst($job->category) }}</h2>
-          <span class="premium-showcase-secondary">Read the job brief below</span>
-        </div>
-        @endif
-      </section>
+      <x-detail-featured-media :item="$job" kind="job" type-icon="briefcase"
+        :fallback-title="ucfirst($job->category)" fallback-text="Read the job brief below"/>
+
       <h1 class="premium-detail-below-title">{{ $job->title }}</h1>
       <div class="premium-showcase-actions">
         <div class="marketplace-detail-actions">
@@ -172,5 +155,19 @@
       </section>
     </aside>
   </div>
+
+  @if($relatedJobs->isNotEmpty())
+    <section class="marketplace-section premium-related" id="related">
+      <div class="marketplace-section-heading">
+        <div><span class="eyebrow">Continue exploring</span><h2>Related approved jobs</h2></div>
+        <a class="btn subtle compact" href="{{ route('jobs') }}">Browse job opportunities</a>
+      </div>
+      <div class="marketplace-card-grid premium-related-grid" data-related-grid>
+        @foreach($relatedJobs->take(8) as $relatedJob)
+          <x-related-job-card :job="$relatedJob"/>
+        @endforeach
+      </div>
+    </section>
+  @endif
 </div>
 @endsection

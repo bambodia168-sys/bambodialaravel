@@ -625,6 +625,8 @@ function initializeBuilderStudio() {
         });
     });
 
+    const featuredYoutubeWrap = studio.querySelector('[data-featured-youtube-wrap]');
+    const featuredYoutubeUrl = studio.querySelector('[data-featured-youtube-url]');
     const mediaType = studio.querySelectorAll('[name="featured_kind"]');
     const mediaSelect = studio.querySelector('[data-featured-media]');
     const chooser = studio.querySelector('[data-featured-media-select]');
@@ -648,6 +650,26 @@ function initializeBuilderStudio() {
             swatch.textContent = color.value.toUpperCase();
             mediaPreview.appendChild(swatch);
             if (colorLabel) colorLabel.textContent = color.value;
+            return;
+        }
+        if(kind === 'youtube') {
+            const source = youtubeSource(featuredYoutubeUrl?.value || '');
+            if(source) {
+                const frame=document.createElement('iframe');
+                frame.className='studio-featured-youtube';
+                frame.src=source;
+                frame.title='Featured YouTube video preview';
+                frame.loading='lazy';
+                frame.referrerPolicy='strict-origin-when-cross-origin';
+                frame.setAttribute('sandbox','allow-scripts allow-same-origin allow-presentation');
+                frame.allow='encrypted-media; picture-in-picture; fullscreen';
+                frame.allowFullscreen=true;
+                mediaPreview.appendChild(frame);
+                return;
+            }
+            const hint=document.createElement('span');
+            hint.textContent='Enter a valid HTTPS YouTube video link.';
+            mediaPreview.appendChild(hint);
             return;
         }
         const option = mediaSelect?.selectedOptions?.[0];
@@ -674,6 +696,7 @@ function initializeBuilderStudio() {
         const kind = currentKind();
         if (chooser) chooser.hidden = !['image','animated','video'].includes(kind);
         if (colorWrap) colorWrap.hidden = kind !== 'color';
+        if (featuredYoutubeWrap) featuredYoutubeWrap.hidden = kind !== 'youtube';
         if (mediaSelect) {
             let selectedValid = mediaSelect.value === '';
             Array.from(mediaSelect.options).forEach((option) => {
@@ -694,6 +717,7 @@ function initializeBuilderStudio() {
     mediaType.forEach(input => input.addEventListener('change', toggleMedia));
     mediaSelect?.addEventListener('change', showMediaPreview);
     color?.addEventListener('input', showMediaPreview);
+    featuredYoutubeUrl?.addEventListener('input', showMediaPreview);
     toggleMedia();
 
     // Terms are always re-accepted for a new submission or edit. Server-side
@@ -1594,3 +1618,28 @@ document.querySelectorAll('[data-public-mobile-search]').forEach((searchMenu) =>
         }
     });
 })();
+
+
+/* Lazy, consent-on-click YouTube featured player. Only validated 11-character
+ * IDs from persisted listing data can be used to build the embed URL. */
+document.addEventListener('click', event => {
+    const link=event.target.closest('a[data-featured-youtube-play]');
+    if(!link || event.button!==0 || event.metaKey || event.ctrlKey ||
+       event.shiftKey || event.altKey || event.defaultPrevented) return;
+    const id=link.dataset.youtubeId || '';
+    if(!/^[A-Za-z0-9_-]{11}$/.test(id)) return;
+    const stage=link.closest('[data-youtube-stage]');
+    if(!stage) return;
+    event.preventDefault();
+    const frame=document.createElement('iframe');
+    frame.className='premium-detail-media-content premium-detail-youtube';
+    frame.src='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1';
+    frame.title='Featured YouTube video';
+    frame.loading='eager';
+    frame.referrerPolicy='strict-origin-when-cross-origin';
+    frame.setAttribute('sandbox','allow-scripts allow-same-origin allow-presentation');
+    frame.setAttribute('allow','autoplay; encrypted-media; picture-in-picture; fullscreen');
+    frame.allowFullscreen=true;
+    stage.replaceWith(frame);
+    frame.focus({preventScroll:true});
+});

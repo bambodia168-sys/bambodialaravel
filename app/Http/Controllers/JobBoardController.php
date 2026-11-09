@@ -49,7 +49,7 @@ class JobBoardController extends Controller
     public function show(Request $request, string $job): View
     {
         abort_unless(preg_match('/^(\d{9})-([a-z0-9-]+)$/D', $job, $match)===1,404);
-        $listing = MarketplaceJob::query()->with('client:id,name,public_id')
+        $listing = MarketplaceJob::query()->with(['client:id,name,public_id','featuredAsset'])
             ->where('public_id',$match[1])->where('slug',$match[2])->where('status','published')->firstOrFail();
         $applied = $request->user()
             ? JobProposal::query()->where('marketplace_job_id',$listing->id)->where('freelancer_id',$request->user()->id)->exists()
@@ -59,6 +59,12 @@ class JobBoardController extends Controller
                 ->where('marketplace_job_id',$listing->id)->exists()
             : false;
         $screenshots = BuilderGallery::approvedFor($listing->gallery_media_ids, (int)$listing->client_id);
+        $relatedJobs=MarketplaceJob::query()
+            ->where('status','published')
+            ->whereKeyNot($listing->id)
+            ->where('category',$listing->category)
+            ->with(['client:id,name,public_id','featuredAsset'])
+            ->orderByDesc('created_at')->orderByDesc('id')->limit(8)->get();
         $jobSections=[
             ['id'=>'overview','label'=>'Overview'],
             ['id'=>'requirements','label'=>'How proposals work'],
@@ -66,10 +72,12 @@ class JobBoardController extends Controller
                 && $request->user()?->role === 'freelancer'
                 ? [['id'=>'apply','label'=>'Apply']] : []),
             ['id'=>'client','label'=>'Client'],
+            ...($relatedJobs->isNotEmpty() ? [['id'=>'related','label'=>'Related']] : []),
         ];
         return view('jobs.show',[
             'job'=>$listing,'applied'=>$applied,'isSaved'=>$isSaved,
             'screenshots'=>$screenshots,'jobSections'=>$jobSections,
+            'relatedJobs'=>$relatedJobs,
         ]);
     }
 

@@ -93,7 +93,7 @@ class ListingController extends Controller
                 fn($q)=>$q->where('category_id',$listing->category_id))
             ->with(['creator:id,name,public_id','creator.creatorProfile:user_id,is_public,headline',
                 'coverAsset:id,public_id,alt_text','category:id,name'])
-            ->latest('id')->limit(3)->get();
+            ->latest('id')->limit(8)->get();
         $savedRelatedIds=$request->user()
             ? SavedListing::query()->where('user_id',$request->user()->id)
                 ->whereIn('marketplace_listing_id',$relatedListings->pluck('id'))
