@@ -196,4 +196,89 @@ final class CreatorBadgeManagerV2Test extends TestCase
         $this->post(route('dashboard.badges.grant-everyone'),$this->bulk('GRANT EVERY USER'))
             ->assertForbidden();
     }
+
+    public function test_original_badge_catalog_is_first_and_user_table_is_second(): void
+    {
+        $owner=$this->owner();
+        $this->account('freelancer','Test Creator Account');
+        $response=$this->actingAs($owner)->get(route('dashboard.badges.index'));
+        $response->assertOk()->assertSee('Badge catalog')
+            ->assertSee('Grant badges to creators')
+            ->assertSee('Automatic eligibility conditions')
+            ->assertSee('Eligibility / manual review conditions')
+            ->assertSee('Save badge')->assertSee('Manage badges')
+            ->assertSee('10 accounts per page')->assertSee('Go To');
+        $html=$response->getContent();
+        $this->assertLessThan(
+            strpos($html,'Grant badges to creators'),
+            strpos($html,'id="badge-catalog"')
+        );
+        $this->assertSame(16,substr_count($html,'data-badge-card="'));
+        $this->assertSame(16,CreatorBadge::query()->count());
+        // Original 16 medals stay in the first section, not only on a separate Settings page.
+        $this->assertStringContainsString('images/badges/top-rated.svg',$html);
+        $this->assertStringContainsString('images/badges/vip-client-favorite.svg',$html);
+    }
+
+    public function test_auto_thresholds_are_configurable_without_changing_all_other_badges(): void
+    {
+        $owner=$this->owner();
+        $badge=CreatorBadge::query()->where('slug','rising-talent')->firstOrFail();
+        $this->assertSame([
+            'min_completed'=>1,'max_completed'=>5,'max_account_age_days'=>365,
+        ],$badge->auto_rules);
+        $this->actingAs($owner)->patch(route('dashboard.badges.update',$badge),[
+            'name'=>$badge->name,'description'=>$badge->description,
+            'eligibility_criteria'=>'One or more verifiable contracts, within approved early career limits.',
+            'grant_mode'=>'auto','enabled'=>1,
+            'auto_rules'=>['min_completed'=>2,'max_completed'=>6,'max_account_age_days'=>540],
+        ])->assertRedirect();
+        $badge->refresh();
+        $this->assertSame([
+            'min_completed'=>2,'max_completed'=>6,'max_account_age_days'=>540,
+        ],$badge->auto_rules);
+        $this->assertStringContainsString('verifiable contracts',$badge->eligibility_criteria);
+        $this->patch(route('dashboard.badges.update',$badge),[
+            'name'=>$badge->name,'description'=>$badge->description,
+            'grant_mode'=>'auto','enabled'=>1,
+            'auto_rules'=>['min_completed'=>9,'max_completed'=>5,'max_account_age_days'=>365],
+        ])->assertSessionHasErrors('auto_rules');
+        $this->assertSame(2,$badge->fresh()->auto_rules['min_completed']);
+    }
+
+    public function test_manual_badge_has_editable_criteria_but_cannot_claim_unsupported_auto_awards(): void
+    {
+        $owner=$this->owner();
+        $badge=CreatorBadge::query()->where('slug','identity-verified')->firstOrFail();
+        $this->actingAs($owner)->patch(route('dashboard.badges.update',$badge),[
+            'name'=>$badge->name,'description'=>$badge->description,
+            'eligibility_criteria'=>'Admin must check government ID through an approved secure review.',
+            'grant_mode'=>'manual','enabled'=>0,
+        ])->assertRedirect();
+        $this->assertFalse($badge->fresh()->enabled);
+        $this->assertSame('Admin must check government ID through an approved secure review.',
+            $badge->fresh()->eligibility_criteria);
+        $this->patch(route('dashboard.badges.update',$badge),[
+            'name'=>$badge->name,'description'=>$badge->description,
+            'grant_mode'=>'auto','enabled'=>1,
+        ])->assertSessionHasErrors('grant_mode');
+        $this->assertSame('manual',$badge->fresh()->grant_mode);
+    }
+
+    public function test_staff_can_read_the_restored_cards_but_not_edit_badge_conditions(): void
+    {
+        $staff=$this->account('staff');
+        $response=$this->actingAs($staff)->get(route('dashboard.badges.index'));
+        $response->assertOk()->assertSee('Badge catalog')
+            ->assertSee('Grant badges to creators')
+            ->assertDontSee('Eligibility / manual review conditions');
+        $this->assertSame(16,substr_count($response->getContent(),'data-badge-card="'));
+        $badge=CreatorBadge::query()->where('slug','repeat-clients')->firstOrFail();
+        $this->patch(route('dashboard.badges.update',$badge),[
+            'name'=>$badge->name,'description'=>$badge->description,
+            'grant_mode'=>'auto','enabled'=>1,
+            'auto_rules'=>['min_repeat_contracts'=>3],
+        ])->assertForbidden();
+    }
+
 }

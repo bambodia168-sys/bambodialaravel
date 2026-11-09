@@ -21,6 +21,152 @@
     </div>
   </header>
 
+  {{-- Section 1: Restored badge catalog. Existing user table remains Section 2. --}}
+  <section class="panel badge-catalog-restored" id="badge-catalog" aria-labelledby="badge-catalog-title">
+    <div class="panel-head badge-catalog-restored-head">
+      <div>
+        <h2 id="badge-catalog-title">Badge catalog <span class="count">{{ $badges->count() }} badges</span></h2>
+        <small>Review each original badge, update its description and conditions, or enable/disable it.</small>
+      </div>
+      @if($canEdit)
+        <button type="button" class="btn primary compact" data-badge-dialog-open="badge-create-dialog">
+          <x-icon name="plus" size="16"/> Add custom badge
+        </button>
+      @endif
+    </div>
+    <div class="creator-badge-admin-grid badge-catalog-restored-grid">
+      @foreach($badges as $badge)
+        @php
+          $autoSupported=in_array($badge->slug,\App\Http\Controllers\Dashboard\CreatorBadgeController::AUTO_SLUGS,true);
+          $rules=$badge->auto_rules??[];
+          $builtIn=in_array($badge->slug,[
+            'top-rated','rising-talent','expert-vetted','fast-responder',
+            'identity-verified','job-success-100','repeat-clients','top-rated-plus',
+            'on-time-delivery','pro-verified','super-seller-level-two','top-collaborator',
+            'skill-certified','high-earner','community-leader','vip-client-favorite'
+          ],true);
+        @endphp
+        <article class="creator-badge-admin-card badge-catalog-restored-card" data-badge-card="{{ $badge->slug }}">
+          <div class="badge-catalog-card-head">
+            <div class="creator-badge-admin-preview">
+              <x-creator-badges :badges="collect([$badge])" variant="showcase"/>
+            </div>
+            <span class="user-manager-status user-manager-status--{{ $badge->enabled?'active':'suspended' }}">
+              {{ $badge->enabled?'Enabled':'Disabled' }}
+            </span>
+          </div>
+          <div class="badge-catalog-card-meta">
+            <strong>{{ $badge->name }}</strong>
+            <small>{{ $badge->grants_count }} manual grants · {{ $badge->grant_mode==='auto'?'Automatic':'Manual' }}</small>
+          </div>
+
+          @if($canEdit)
+            <form method="post" action="{{ route('dashboard.badges.update',$badge) }}" class="badge-catalog-card-form">
+              @csrf @method('PATCH')
+              <label>Badge name
+                <input name="name" maxlength="90" required value="{{ $badge->name }}">
+              </label>
+              <label>Hover description
+                <textarea name="description" rows="3" maxlength="1000" required>{{ $badge->description }}</textarea>
+              </label>
+              <label>Eligibility / manual review conditions
+                <textarea name="eligibility_criteria" rows="2" maxlength="1000" placeholder="Evidence required before manually granting this badge">{{ $badge->eligibility_criteria??$badge->description }}</textarea>
+              </label>
+              <div class="creator-badge-admin-options">
+                <label>Grant mode
+                  <select name="grant_mode">
+                    <option value="manual" @selected($badge->grant_mode==='manual')>Manual — Admin / Staff</option>
+                    <option value="auto" @selected($badge->grant_mode==='auto') @disabled(!$autoSupported)>Auto — verified metrics</option>
+                  </select>
+                </label>
+                <label>Status
+                  <select name="enabled">
+                    <option value="1" @selected($badge->enabled)>Enabled</option>
+                    <option value="0" @selected(!$badge->enabled)>Disabled</option>
+                  </select>
+                </label>
+              </div>
+
+              @if($autoSupported)
+                <details class="badge-catalog-auto-conditions">
+                  <summary><x-icon name="sliders-horizontal" size="15"/> Automatic eligibility conditions</summary>
+                  <p>Only completed platform contracts and verified milestones count. Changes may update automatically earned badges.</p>
+                  <div class="badge-catalog-condition-grid">
+                    @if($badge->slug==='rising-talent')
+                      <label>Minimum completed contracts
+                        <input type="number" name="auto_rules[min_completed]" min="1" max="1000" required value="{{ $rules['min_completed']??1 }}">
+                      </label>
+                      <label>Maximum completed contracts
+                        <input type="number" name="auto_rules[max_completed]" min="1" max="1000" required value="{{ $rules['max_completed']??5 }}">
+                      </label>
+                      <label>Maximum account age (days)
+                        <input type="number" name="auto_rules[max_account_age_days]" min="30" max="1095" required value="{{ $rules['max_account_age_days']??365 }}">
+                      </label>
+                    @elseif($badge->slug==='repeat-clients')
+                      <label>Minimum completed contracts with the same client
+                        <input type="number" name="auto_rules[min_repeat_contracts]" min="2" max="1000" required value="{{ $rules['min_repeat_contracts']??2 }}">
+                      </label>
+                    @elseif($badge->slug==='on-time-delivery')
+                      <label>Minimum completed contracts
+                        <input type="number" name="auto_rules[min_completed]" min="1" max="1000" required value="{{ $rules['min_completed']??3 }}">
+                      </label>
+                      <label>Minimum accepted, on-time milestones
+                        <input type="number" name="auto_rules[min_milestones]" min="1" max="1000" required value="{{ $rules['min_milestones']??3 }}">
+                      </label>
+                      <p class="badge-catalog-fixed-rule">No late or unaccepted milestone is permitted. This condition cannot be bypassed.</p>
+                    @endif
+                  </div>
+                </details>
+              @else
+                <p class="badge-catalog-rule-note"><x-icon name="shield-check" size="14"/> This badge requires documented manual review; no automatic eligibility rule is configured.</p>
+              @endif
+              <details class="badge-catalog-extra-options">
+                <summary><x-icon name="palette" size="15"/> Icon, color and order</summary>
+                <div class="badge-catalog-condition-grid">
+                  <label>Icon
+                    <select name="icon">
+                      @foreach(\App\Http\Controllers\Dashboard\CreatorBadgeController::ICONS as $icon)
+                        <option value="{{ $icon }}" @selected($badge->icon===$icon)>{{ ucwords(str_replace('-',' ',$icon)) }}</option>
+                      @endforeach
+                    </select>
+                  </label>
+                  <label>Color
+                    <select name="tone">
+                      @foreach(\App\Http\Controllers\Dashboard\CreatorBadgeController::TONES as $tone)
+                        <option value="{{ $tone }}" @selected($badge->tone===$tone)>{{ ucfirst($tone) }}</option>
+                      @endforeach
+                    </select>
+                  </label>
+                  <label>Sort order
+                    <input type="number" name="sort_order" min="1" max="999" required value="{{ $badge->sort_order }}">
+                  </label>
+                </div>
+                @if($builtIn)
+                  <p>The original SVG medal artwork is preserved; icon and color affect the custom fallback only.</p>
+                @endif
+              </details>
+              <button type="submit" class="btn primary compact badge-catalog-save">Save badge</button>
+            </form>
+            @unless($builtIn)
+              <form method="post" action="{{ route('dashboard.badges.destroy',$badge) }}" class="badge-catalog-delete-form">
+                @csrf @method('DELETE')
+                <label>Type DELETE to remove this unused custom badge
+                  <input name="confirmation" pattern="DELETE" required placeholder="DELETE" autocomplete="off">
+                </label>
+                <button type="submit" class="btn subtle compact" @disabled($badge->grants_count>0)>Delete custom badge</button>
+                @if($badge->grants_count>0)<small>Revoke all existing grants before deletion.</small>@endif
+              </form>
+            @endunless
+          @else
+            <p class="badge-catalog-rule-note">{{ $badge->eligibility_criteria??$badge->description }}</p>
+            <p class="hint">Definition settings are restricted to Admin or Superadmin.</p>
+          @endif
+        </article>
+      @endforeach
+    </div>
+  </section>
+
+  {{-- Section 2: Only the Grant badges to creators section uses the new user table. --}}
   <section class="panel badge-manager-panel">
     <div class="panel-head badge-manager-panel-head">
       <div><h2>Grant badges to creators <span class="count">{{ $creators->total() }} users</span></h2>
@@ -99,6 +245,39 @@
       </nav>
     @endif
   </section>
+
+  @if($canEdit)
+  <dialog id="badge-create-dialog" class="config-dialog badge-manager-dialog" aria-labelledby="badge-create-title">
+    <div class="badge-manager-dialog-top">
+      <div><div class="eyebrow">Badge catalog</div><h2 id="badge-create-title">New custom badge</h2></div>
+      <button class="icon-button" type="button" data-badge-dialog-close aria-label="Close"><x-icon name="x" size="19"/></button>
+    </div>
+    <p>Custom badges display an approved SVG icon fallback until you supply an official artwork asset.</p>
+    <form method="post" action="{{ route('dashboard.badges.store') }}" class="badge-manager-global-form">
+      @csrf
+      <label>Badge slug<input name="slug" required maxlength="70" pattern="[a-z][a-z0-9-]*" placeholder="e.g. trusted-partner"></label>
+      <label>Badge name<input name="name" required maxlength="90" placeholder="Trusted Partner"></label>
+      <label>Hover description<textarea name="description" rows="3" required maxlength="1000"></textarea></label>
+      <div class="badge-manager-input-grid">
+        <label>Icon<select name="icon">
+          @foreach(\App\Http\Controllers\Dashboard\CreatorBadgeController::ICONS as $icon)
+            <option value="{{ $icon }}">{{ ucwords(str_replace('-',' ',$icon)) }}</option>
+          @endforeach
+        </select></label>
+        <label>Color<select name="tone">
+          @foreach(\App\Http\Controllers\Dashboard\CreatorBadgeController::TONES as $tone)
+            <option value="{{ $tone }}">{{ ucfirst($tone) }}</option>
+          @endforeach
+        </select></label>
+        <label>Sort order<input type="number" name="sort_order" min="1" max="999" value="50" required></label>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn subtle" type="button" data-badge-dialog-close>Cancel</button>
+        <button class="btn primary" type="submit">Create badge</button>
+      </div>
+    </form>
+  </dialog>
+  @endif
 
   @foreach($creators as $creator)
   @php

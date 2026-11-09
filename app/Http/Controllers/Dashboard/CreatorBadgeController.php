@@ -30,7 +30,7 @@ class CreatorBadgeController extends Controller
 
     public function index(Request $request): View
     {
-        $badges=CreatorBadge::query()->orderBy('sort_order')->orderBy('id')->get();
+        $badges=CreatorBadge::query()->withCount('grants')->orderBy('sort_order')->orderBy('id')->get();
         $search=mb_substr(trim((string)$request->query('search','')),0,120);
         $role=(string)$request->query('role','');
         $status=(string)$request->query('status','');
@@ -62,8 +62,9 @@ class CreatorBadgeController extends Controller
                 'actions.created_at','administrators.name as reviewer_name'])
             ->groupBy('user_id');
         $canGrant=UserManagementAccess::allows($request->user(),'badge_awards');
+        $canEdit=in_array($request->user()->role,['super_admin','admin'],true);
         return view('dashboard.creator-badges',compact('badges','creators','grants','awards',
-            'search','role','status','canGrant','recentActions'));
+            'search','role','status','canGrant','canEdit','recentActions'));
     }
 
     public function settings(Request $request): View
@@ -94,6 +95,7 @@ class CreatorBadgeController extends Controller
             'slug'=>['required','string','max:70','regex:/^[a-z][a-z0-9-]*$/D',Rule::unique('creator_badges','slug')],
             'name'=>['required','string','max:90'],
             'description'=>['required','string','max:1000'],
+            'eligibility_criteria'=>['sometimes','nullable','string','max:1000'],
             'icon'=>['required',Rule::in(self::ICONS)],
             'tone'=>['required',Rule::in(self::TONES)],
             'sort_order'=>['required','integer','between:1,999'],
@@ -109,12 +111,41 @@ class CreatorBadgeController extends Controller
         $data=$request->validate([
             'name'=>['required','string','max:90'],
             'description'=>['required','string','max:1000'],
+            'eligibility_criteria'=>['sometimes','nullable','string','max:1000'],
             'grant_mode'=>['required',Rule::in(['auto','manual'])],
             'enabled'=>['required','boolean'],
             'icon'=>['sometimes','required',Rule::in(self::ICONS)],
             'tone'=>['sometimes','required',Rule::in(self::TONES)],
             'sort_order'=>['sometimes','required','integer','between:1,999'],
+            'auto_rules'=>['sometimes','array'],
+            'auto_rules.min_completed'=>['sometimes','integer','between:1,1000'],
+            'auto_rules.max_completed'=>['sometimes','integer','between:1,1000'],
+            'auto_rules.max_account_age_days'=>['sometimes','integer','between:30,1095'],
+            'auto_rules.min_repeat_contracts'=>['sometimes','integer','between:2,1000'],
+            'auto_rules.min_milestones'=>['sometimes','integer','between:1,1000'],
         ]);
+        if (array_key_exists('auto_rules',$data)) {
+            $allowed = match($badge->slug) {
+                'rising-talent'=>['min_completed','max_completed','max_account_age_days'],
+                'repeat-clients'=>['min_repeat_contracts'],
+                'on-time-delivery'=>['min_completed','min_milestones'],
+                default=>[],
+            };
+            if (!$allowed || array_diff(array_keys($data['auto_rules']),$allowed)) {
+                return back()->withErrors(['auto_rules'=>'No supported automatic metric rule exists for this badge.']);
+            }
+            $defaults = match($badge->slug) {
+                'rising-talent'=>['min_completed'=>1,'max_completed'=>5,'max_account_age_days'=>365],
+                'repeat-clients'=>['min_repeat_contracts'=>2],
+                'on-time-delivery'=>['min_completed'=>3,'min_milestones'=>3],
+                default=>[],
+            };
+            $data['auto_rules'] = array_replace($defaults,$badge->auto_rules ?? [],$data['auto_rules']);
+            if($badge->slug==='rising-talent'
+                && $data['auto_rules']['min_completed']>$data['auto_rules']['max_completed']) {
+                return back()->withErrors(['auto_rules'=>'Minimum completed contracts cannot exceed the maximum.']);
+            }
+        }
         if($data['grant_mode']==='auto' && !in_array($badge->slug,self::AUTO_SLUGS,true)){
             return back()->withErrors(['grant_mode'=>'No verified automatic criteria exist for this badge. Keep it Manual.']);
         }

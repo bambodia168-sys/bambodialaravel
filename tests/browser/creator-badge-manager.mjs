@@ -24,6 +24,27 @@ try {
       const response=await page.goto(origin+'/dashboard/creator-badges',{waitUntil:'networkidle'});
       if(response?.status()!==200)throw Error(name+' '+theme+' badge table HTTP '+response?.status());
       await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
+      const restored=page.locator('#badge-catalog .badge-catalog-restored-card');
+      if(await restored.count()!==16)
+        throw Error(name+' '+theme+' original medal cards missing above user table');
+      const order=await page.evaluate(()=>{
+        const catalog=document.querySelector('#badge-catalog');
+        const table=document.querySelector('.badge-manager-table');
+        return !!(catalog && table && (catalog.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING));
+      });
+      if(!order)throw Error(name+' '+theme+' badge catalog must precede the user table');
+      const firstCard=restored.first();
+      if(!(await firstCard.locator('form[action*="/creator-badges/"]').count())
+        || !(await firstCard.getByText('Eligibility / manual review conditions').count())
+        || !(await firstCard.getByRole('button',{name:'Save badge'}).count())) {
+        throw Error(name+' '+theme+' restored badge editor missing');
+      }
+      const rising=page.locator('[data-badge-card="rising-talent"]');
+      if(!(await rising.getByText('Automatic eligibility conditions').count()) ||
+         !(await rising.locator('input[name="auto_rules[min_completed]"]').count()))
+        throw Error(name+' '+theme+' rising-talent rules not configurable');
+      checks+=5;
+
       const rows=page.locator('.badge-manager-table tbody tr');
       const count=await rows.count();
       if(count<1 || count>10)throw Error(name+' '+theme+' table must have 1-10 users: '+count);
