@@ -8,6 +8,11 @@
       <div class="creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($creator->name,0,1)) }}</div>
       <div>
         <h1>{{ $creator->name }}</h1>
+        @if($creator->account_review_status==='verified' && $creator->account_status==='active')
+          <span class="account-reviewed-public" title="This platform account was reviewed manually by an administrator. Email ownership, legal identity and professional credentials are separate checks.">
+            <x-icon name="shield-check" size="15"/> Account Reviewed
+          </span>
+        @endif
         <x-creator-badges :badges="\App\Support\CreatorBadgeAwards::earned($creator)"/>
         @if($profile)
           <h2>{{ $profile->headline }}</h2>

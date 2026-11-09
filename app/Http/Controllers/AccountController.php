@@ -10,6 +10,8 @@ use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
 use App\Models\SavedJob;
 use App\Models\ServiceInquiry;
+use App\Support\ManualAccountReview;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -67,7 +69,14 @@ class AccountController extends Controller
             'locale' => ['required', Rule::in(['en', 'zh', 'km', 'ko', 'ja', 'th', 'vi', 'de'])],
         ]);
 
-        $request->user()->update($data);
+        DB::transaction(function () use ($request, $data): void {
+            $member=\App\Models\User::query()->lockForUpdate()->findOrFail($request->user()->id);
+            if ($member->name !== $data['name']) {
+                ManualAccountReview::invalidateForChange($request,$member,'Account holder changed their public name; new review required.');
+            }
+            $member->fill($data);
+            $member->save();
+        });
 
         return redirect('/account?='.$request->user()->public_id)
             ->with('status', 'Your profile was updated.');

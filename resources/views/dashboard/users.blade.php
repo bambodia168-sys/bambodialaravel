@@ -36,7 +36,7 @@
     </div>
     <div class="table-scroll">
       <table class="data-table user-manager-table">
-        <thead><tr><th>Public ID</th><th>Name / Username</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr></thead>
+        <thead><tr><th>Public ID</th><th>Name / Username</th><th>Email</th><th>Role</th><th>Status</th><th>Review</th><th>Joined</th><th>Action</th></tr></thead>
         <tbody>
           @forelse($users as $member)
           <tr>
@@ -46,16 +46,20 @@
             <td>{{ $member->email }}</td>
             <td><span class="role-pill">{{ ucwords(str_replace('_',' ',$member->role)) }}</span></td>
             <td><span class="user-manager-status user-manager-status--{{ $member->account_status }}">{{ ucfirst($member->account_status) }}</span></td>
+            <td><span class="user-manager-status user-manager-status--{{ $member->account_review_status }}">{{ $member->account_review_status==='verified'?'Verified':($member->account_review_status==='revoked'?'Revoked':'Not reviewed') }}</span></td>
             <td>{{ $member->created_at?->format('d M Y') }}</td>
             <td>
               <x-row-action-menu :id="'user-'.$member->id" :label="$member->name">
                 <a href="{{ route('dashboard.users.show',$member) }}"><x-icon name="eye" size="16"/> View details</a>
                 <a href="{{ route('dashboard.users.edit',$member) }}"><x-icon name="pencil" size="16"/> Edit user</a>
+                @if(\App\Support\ManualAccountReview::canReview(auth()->user(),$member))
+                  <a href="{{ route('dashboard.account-verifications.show',$member) }}"><x-icon name="shield-check" size="16"/> Verify account</a>
+                @endif
               </x-row-action-menu>
             </td>
           </tr>
           @empty
-          <tr><td colspan="7" class="empty-cell">No accounts match these filters.</td></tr>
+          <tr><td colspan="8" class="empty-cell">No accounts match these filters.</td></tr>
           @endforelse
         </tbody>
       </table>

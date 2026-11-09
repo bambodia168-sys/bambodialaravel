@@ -3233,3 +3233,12 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
  .user-manager-filters input{grid-column:1/-1;width:100%;max-width:100%}
  .user-manager-filters select{max-width:100%}
 }
+
+/* Trust & Safety: manual account review, separate from email confirmation */
+.user-manager-status--verified{background:color-mix(in srgb,#129c75 10%,var(--surface));border-color:color-mix(in srgb,#129c75 32%,var(--line));color:color-mix(in srgb,#079367 88%,var(--text))}
+.user-manager-status--unreviewed{background:var(--surface-2);color:var(--muted)}
+.user-manager-status--revoked{background:color-mix(in srgb,#bc6351 11%,var(--surface));border-color:color-mix(in srgb,#bc6351 32%,var(--line));color:color-mix(in srgb,#bd5140 86%,var(--text))}
+.account-review-form-wrap{padding:12px}
+.account-review-form-wrap .user-manager-transfer-form{padding:12px;gap:15px}
+.account-review-form-wrap select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--text);font-size:13px}
+.account-reviewed-public{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,#0ba374 36%,var(--line));border-radius:999px;background:color-mix(in srgb,#0ba374 9%,var(--surface));color:color-mix(in srgb,#13966b 80%,var(--text));font-size:12px;font-weight:750;padding:6px 10px;margin:5px 0}

@@ -32,11 +32,17 @@
     if ($user->role === 'super_admin') {
       $groups[] = ['heading'=>'Access & Security','items'=>[
         ['route'=>'dashboard.users','label'=>'User Manager','icon'=>'users'],
+        ['route'=>'dashboard.account-verifications.index','label'=>'Account Verification','icon'=>'user-round-check'],
         ['route'=>'security.index','label'=>'Security Center','icon'=>'shield-check'],
         ['route'=>'dashboard.features','label'=>'Feature Manager','icon'=>'sliders-horizontal'],
         ['route'=>'dashboard.entitlements.index','label'=>'Download Entitlements','icon'=>'key-round'],
         ['route'=>'dashboard.compliance.index','label'=>'Compliance Register','icon'=>'clipboard-check'],
         ['route'=>'dashboard.privacy.index','label'=>'Privacy Requests','icon'=>'user-round-check'],
+      ]];
+    }
+    if ($user->role === 'admin') {
+      $groups[] = ['heading'=>'Trust & Safety','items'=>[
+        ['route'=>'dashboard.account-verifications.index','label'=>'Account Verification','icon'=>'user-round-check'],
       ]];
     }
     if (in_array($user->role,['super_admin','admin'],true)) {

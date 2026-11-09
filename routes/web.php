@@ -49,6 +49,7 @@ use App\Http\Controllers\Dashboard\CreatorReviewController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\ReviewQueueController;
 use App\Http\Controllers\Dashboard\UserManagerController;
+use App\Http\Controllers\Dashboard\AccountVerificationController;
 use App\Http\Controllers\Dashboard\UserOwnershipTransferController;
 use App\Http\Controllers\Dashboard\CreatorBadgeController;
 use App\Http\Controllers\Marketplace\ListingController;
@@ -277,6 +278,12 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/support-center/{ticket}/reply', [SupportCenterController::class, 'reply'])->whereNumber('ticket')->name('dashboard.support.reply')->middleware('capability:support_center');
         Route::patch('/support-center/{ticket}/status', [SupportCenterController::class, 'status'])->whereNumber('ticket')->name('dashboard.support.status')->middleware('capability:support_center');
         Route::middleware('role:super_admin,admin')->group(function (): void {
+            Route::get('/account-verifications', [AccountVerificationController::class,'index'])->name('dashboard.account-verifications.index');
+            Route::get('/account-verifications/{user}', [AccountVerificationController::class,'show'])->name('dashboard.account-verifications.show');
+            Route::post('/account-verifications/{user}/verify', [AccountVerificationController::class,'verify'])
+                ->name('dashboard.account-verifications.verify')->middleware('throttle:8,1');
+            Route::post('/account-verifications/{user}/revoke', [AccountVerificationController::class,'revoke'])
+                ->name('dashboard.account-verifications.revoke')->middleware('throttle:8,1');
             Route::patch('/creator-badges/{badge}', [CreatorBadgeController::class,'update'])->name('dashboard.badges.update')->middleware('throttle:20,1');
             Route::get('/file-vault', [ProductVaultReviewController::class, 'index'])->name('dashboard.vault.index');
             Route::patch('/file-vault/{version}', [ProductVaultReviewController::class, 'decide'])->name('dashboard.vault.decide');

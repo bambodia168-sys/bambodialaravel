@@ -20,11 +20,11 @@ class User extends Authenticatable
     // the same secure default as the database column without a reload.
     protected $attributes = ['account_status' => 'active'];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = ['password', 'remember_token', 'account_review_note', 'account_review_method', 'account_verified_by'];
 
     protected function casts(): array
     {
-        return ['email_verified_at' => 'datetime', 'password' => 'hashed'];
+        return ['email_verified_at' => 'datetime', 'account_verified_at' => 'datetime', 'password' => 'hashed'];
     }
 
     protected static function booted(): void

@@ -11,6 +11,15 @@
     <a class="btn primary" href="{{ route('dashboard.users.edit',$member) }}"><x-icon name="pencil" size="16"/> Edit account</a>
   </div></div>
 
+  @if(\App\Support\ManualAccountReview::canReview(auth()->user(),$member))
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Manual account verification</h2>
+        <a class="btn subtle compact" href="{{ route('dashboard.account-verifications.show',$member) }}">Review account</a>
+      </div>
+      <div class="user-manager-note"><x-icon name="shield-check" size="18"/> Administrators can approve or revoke account verification after a documented review. Email confirmation and professional credential badges remain separate checks.</div>
+    </section>
+  @endif
   <div class="user-manager-stats">
     @foreach($counts as $label=>$count)
     <div class="user-manager-stat"><strong>{{ number_format($count) }}</strong><span>{{ ucwords(str_replace('_',' ',$label)) }}</span></div>
@@ -23,7 +32,8 @@
         <div><dt>Full name</dt><dd>{{ $member->name }}</dd></div>
         <div><dt>Username</dt><dd>{{ $member->username??'Not set' }}</dd></div>
         <div><dt>Email</dt><dd>{{ $member->email }}</dd></div>
-        <div><dt>Verification</dt><dd>{{ $member->email_verified_at?'Verified':'Not verified' }}</dd></div>
+        <div><dt>Account review</dt><dd><span class="user-manager-status user-manager-status--{{ $member->account_review_status }}">{{ match($member->account_review_status){'verified'=>'Verified','revoked'=>'Revoked',default=>'Not reviewed'} }}</span></dd></div>
+        <div><dt>Email verification</dt><dd>{{ $member->email_verified_at?'Confirmed':'Not confirmed' }}</dd></div>
         <div><dt>Role</dt><dd>{{ ucwords(str_replace('_',' ',$member->role)) }}</dd></div>
         <div><dt>Joined</dt><dd>{{ $member->created_at?->format('d M Y') }}</dd></div>
         <div><dt>Date of birth</dt><dd>{{ $member->userProfile?->date_of_birth?->format('d M Y')??'Not set' }}</dd></div>

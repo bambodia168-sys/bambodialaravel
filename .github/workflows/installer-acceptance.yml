@@ -67,3 +67,4 @@ jobs:
           php artisan test --filter=CreatorBadgeSystemTest
           php artisan test --filter=CreatorBadgePublicDisplayTest
           php artisan test --filter=UserManagerCrudTest
+          php artisan test --filter=ManualAccountVerificationTest

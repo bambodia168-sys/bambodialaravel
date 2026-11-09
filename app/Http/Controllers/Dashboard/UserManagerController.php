@@ -9,6 +9,7 @@ use App\Models\MarketplaceListing;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Support\CreatorBadgeAwards;
+use App\Support\ManualAccountReview;
 use App\Support\UserManagementAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -112,6 +113,15 @@ class UserManagerController extends Controller
             $changedEmail=strcasecmp($locked->email,$data['email'])!==0;
             $changedRole=$locked->role!==$data['role'];
             $changedStatus=$locked->account_status!==$data['account_status'];
+            $previousProfile=$locked->userProfile;
+            $changedIdentity=$locked->name!==$data['name']
+                || strcasecmp($locked->email,$data['email'])!==0
+                || ($locked->username??null)!==($data['username']??null)
+                || ($previousProfile?->date_of_birth?->format('Y-m-d')??null)!==($data['date_of_birth']??null)
+                || ($previousProfile?->nationality??null)!==($data['nationality']??null);
+            if ($changedIdentity || ($changedStatus && $data['account_status']!=='active')) {
+                ManualAccountReview::invalidateForChange($request,$locked,'Account identity details or status changed; new review required.');
+            }
             $locked->fill([
                 'name'=>$data['name'],'email'=>$data['email'],
                 'username'=>$data['username']??null,
