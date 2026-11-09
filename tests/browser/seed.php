@@ -61,6 +61,20 @@ foreach (range(1,12) as $index) {
         'created_by'=>$creator->id,
     ]);
 }
+// Eight isolated, published project fixtures exercise the two-row related grid.
+// The newest uses a canonical YouTube ID, another uses a solid color.
+foreach(range(1,8) as $index) {
+    \App\Models\MarketplaceListing::query()->create([
+        'user_id'=>$creator->id, 'type'=>'project',
+        'title'=>sprintf('Browser QA Related Project %02d',$index),
+        'description'=>str_repeat('An original approved project designed to test related-card grids. ',3),
+        'status'=>'published', 'price'=>'160.00', 'currency'=>'USD',
+        'featured_kind'=>$index===8?'youtube':($index===7?'color':'none'),
+        'featured_youtube_id'=>$index===8?'dQw4w9WgXcQ':null,
+        'featured_color'=>$index===7?'#1e407a':null,
+    ]);
+}
+
 \App\Models\MarketplaceListing::query()->create([
     'user_id'=>$creator->id,'type'=>'service','category_id'=>$serviceCategory->id,
     'title'=>'Browser QA Published Service',
@@ -163,19 +177,5 @@ foreach(range(1,11) as $i) {
     'body'=>'Never display unpublished material on the homepage.',
     'status'=>'draft',
 ]);
-
-// Eight isolated, published project fixtures exercise the two-row related grid.
-// The newest uses a canonical YouTube ID, another uses a solid color.
-foreach(range(1,8) as $index) {
-    \App\Models\MarketplaceListing::query()->create([
-        'user_id'=>$creator->id, 'type'=>'project',
-        'title'=>sprintf('Browser QA Related Project %02d',$index),
-        'description'=>str_repeat('An original approved project designed to test related-card grids. ',3),
-        'status'=>'published', 'price'=>'160.00', 'currency'=>'USD',
-        'featured_kind'=>$index===8?'youtube':($index===7?'color':'none'),
-        'featured_youtube_id'=>$index===8?'dQw4w9WgXcQ':null,
-        'featured_color'=>$index===7?'#1e407a':null,
-    ]);
-}
 
 echo "Public browser fixtures, including test-only published Terms, seeded in an isolated test database.\n";

@@ -50,7 +50,7 @@ class FeaturedMediaAndRelatedExperienceTest extends TestCase
         return MediaAsset::query()->create([
             'user_id'=>$user->id,'original_name'=>'featured-original',
             'storage_path'=>'test/'.$mime.'/original',
-            'mime_type'=>$mime,'bytes'=>240,'alt_text'=>'Original featured media',
+            'mime_type'=>$mime,'bytes'=>240,'width'=>1,'height'=>1,'alt_text'=>'Original featured media',
             'rights_basis'=>'owned','rights_holder'=>$user->name,
             'review_status'=>'approved','reviewed_at'=>now(),
         ]);

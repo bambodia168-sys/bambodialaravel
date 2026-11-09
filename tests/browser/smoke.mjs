@@ -652,7 +652,10 @@ try {
       const filterForm=page.locator('.marketplace-filter-sidebar form.marketplace-filter-form');
       if(!(await filterForm.isVisible()))
         throw new Error(device.name+' '+kind+' premium search sidebar missing');
-      const result=page.locator('article.marketplace-card a.marketplace-card-art').first();
+      const result=kind==='project'
+        ? page.locator('article.marketplace-card').filter({hasText:'Browser QA Related Project 08'})
+            .locator('a.marketplace-card-art')
+        : page.locator('article.marketplace-card a.marketplace-card-art').first();
       if(!(await result.isVisible()))
         throw new Error(device.name+' '+kind+' original approved QA listing not found');
       const detailHref=await result.getAttribute('href');
