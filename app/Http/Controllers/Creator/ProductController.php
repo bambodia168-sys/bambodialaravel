@@ -122,6 +122,7 @@ class ProductController extends Controller
             'description_html' => ['nullable', 'string', 'max:60000'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'regular_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'preview_url' => ['nullable','string','max:500'],
             'software_version' => ['nullable', 'string', 'max:48', 'regex:/^v?[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z][0-9A-Za-z.-]{0,24})?$/'],
             'software_published_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today', 'required_with:software_updated_on'],
             'software_updated_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today', 'after_or_equal:software_published_on'],
@@ -149,6 +150,14 @@ class ProductController extends Controller
         }
         BuilderFeaturedMedia::check($data, (int)$request->user()->id);
         BuilderGallery::check($data, $request);
+        // Keep existing preview links when older product forms do not send this field.
+        if (array_key_exists('preview_url',$data)) {
+            $rawPreview=trim((string)($data['preview_url'] ?? ''));
+            $data['preview_url']=\App\Support\MarketplaceCardPresentation::safePreviewUrl($rawPreview);
+            if($rawPreview!=='' && $data['preview_url']===null) {
+                throw ValidationException::withMessages(['preview_url'=>'Use a valid public HTTPS preview link without credentials or a custom port.']);
+            }
+        }
         if (!empty($data['license_definition_id'])) {
             $regular = LicenseDefinition::query()->find($data['license_definition_id']);
             if (!$regular || !$regular->allowsTier('regular')) {

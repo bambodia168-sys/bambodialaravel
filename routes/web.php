@@ -18,6 +18,7 @@ use App\Http\Controllers\Dashboard\ContractOversightController;
 use App\Http\Controllers\Dashboard\SiteSettingsController;
 use App\Http\Controllers\Dashboard\CategoryManagerController;
 use App\Http\Controllers\Dashboard\MarketplaceManagerController;
+use App\Http\Controllers\Dashboard\MarketplaceCardFeaturesController;
 use App\Http\Controllers\AccountNotificationController;
 use App\Http\Controllers\Dashboard\NotificationAnalyticsController;
 use App\Http\Controllers\ServiceInquiryController;
@@ -290,6 +291,10 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/category-manager/{category}', [CategoryManagerController::class, 'update'])->name('dashboard.categories.update');
             Route::get('/{type}-manager', [MarketplaceManagerController::class, 'index'])
                 ->where('type','project|freelance|service')->name('dashboard.marketplace.index');
+            Route::patch('/card-features/listings/{listing}', [MarketplaceCardFeaturesController::class,'listing'])
+                ->name('dashboard.card-features.listing')->middleware('throttle:15,1');
+            Route::patch('/card-features/jobs/{job}', [MarketplaceCardFeaturesController::class,'job'])
+                ->name('dashboard.card-features.job')->middleware('throttle:15,1');
             Route::get('/contract-manager', [ContractOversightController::class,'index'])->name('dashboard.contracts.index');
             Route::get('/contract-disputes', [ContractOversightController::class,'disputes'])->name('dashboard.contracts.disputes');
             Route::get('/contract-disputes/{dispute}', [ContractOversightController::class,'inspect'])->name('dashboard.contracts.inspect');

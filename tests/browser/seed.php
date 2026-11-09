@@ -86,6 +86,7 @@ foreach(range(1,8) as $index) {
     'title'=>'Browser QA Published Freelance Job',
     'description'=>str_repeat('Realistic approved job for browser smoke checks. ',3),
     'category'=>'development','budget'=>'240.00','currency'=>'USD','status'=>'published',
+    'is_featured'=>true,
 ]);
 $admin=\App\Models\User::query()->create([
     'name'=>'Browser QA Admin','email'=>'browser.admin@example.test',
@@ -130,6 +131,8 @@ $cover=\App\Models\MediaAsset::query()->create([
     'license_definition_id'=>$license->id,'cover_media_id'=>$cover->id,
     'license_terms'=>'No real commercial rights or payments are transferred.',
     'status'=>'published','price'=>'45.00','currency'=>'USD',
+    'is_featured'=>true,
+    'preview_url'=>'https://example.com/original-browser-product-preview',
 ]);
 $terms=\App\Models\Policy::query()->create([
     'title'=>'Browser QA Terms of Service',

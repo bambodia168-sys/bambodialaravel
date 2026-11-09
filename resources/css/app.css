@@ -265,7 +265,6 @@ svg{flex-shrink:0}
 .marketplace-card h3 a{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;min-height:calc(2 * 1.37em);max-height:calc(2 * 1.37em);text-decoration:none}
 .marketplace-card h3 a:hover,.marketplace-creator-link:hover{color:var(--accent)}
 .marketplace-card p,.creator-directory-card p,.marketplace-job-card p{font-size:var(--font-body);line-height:1.7;color:var(--muted);margin:0;flex:1}
-.marketplace-card .marketplace-card-summary{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;font-size:13px;line-height:1.55;min-height:calc(2 * 1.55em);max-height:calc(2 * 1.55em);flex:0 0 auto}
 .marketplace-card-meta{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:7px;font-size:11px;margin-top:auto;padding-top:10px}
 .marketplace-card-meta span{color:var(--muted);min-width:0;overflow-wrap:anywhere}
 .marketplace-card-meta a{text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
@@ -328,7 +327,6 @@ svg{flex-shrink:0}
 .bambodia-job-meta{display:flex;align-items:center;flex-wrap:wrap;gap:5px 16px;color:var(--muted);font-size:12px;line-height:1.5}
 .bambodia-job-meta>span{display:inline-flex;align-items:center;gap:5px;min-width:0;overflow-wrap:anywhere}
 .bambodia-job-meta svg{flex:0 0 auto;opacity:.77}
-.bambodia-job-excerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;color:var(--muted);font-size:12px;line-height:1.5;margin:10px 0 0;overflow-wrap:anywhere}
 .bambodia-job-budget{display:flex;flex-direction:column;align-items:flex-end;gap:5px;text-align:right;min-width:0}
 .bambodia-job-budget strong{color:var(--text);font-size:19px;font-weight:800;letter-spacing:-.025em;line-height:1.2;white-space:nowrap}
 .bambodia-job-budget span{font-size:11px;line-height:1.4;color:var(--muted);white-space:nowrap}
@@ -1013,7 +1011,6 @@ svg{flex-shrink:0}
 .marketplace-results-pane .marketplace-card-art{aspect-ratio:16/10}
 .marketplace-results-pane .marketplace-card-body{padding:12px;gap:7px}
 .marketplace-results-pane .marketplace-card h3{font-size:15px}
-.marketplace-results-pane .marketplace-card .marketplace-card-summary{font-size:12px;line-height:1.55}
 .marketplace-results-pane .marketplace-card-meta{align-items:flex-start}
 .marketplace-results-pane .marketplace-card-actions{flex-wrap:wrap}
 .marketplace-results-pane .marketplace-card-actions .btn{padding:8px 10px}
@@ -3031,4 +3028,78 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 @media(prefers-reduced-motion:reduce){
  .listing-detail.premium-detail .premium-detail-youtube-play-icon{transition:none}
  .listing-detail.premium-detail .premium-detail-youtube-play:hover .premium-detail-youtube-play-icon{transform:none}
+}
+
+
+/* Compact marketplace cards: media, category, title, real creator, published price.
+ * No excerpt/summary is displayed on Product, Project, Service, Freelance or Job cards. */
+.marketplace-card>.marketplace-card-body{display:flex;flex-direction:column;gap:9px}
+.marketplace-card .marketplace-card-creator{
+  min-width:0;color:var(--muted);font-size:12px;line-height:1.55;
+  display:flex;align-items:center;gap:5px;
+  overflow-wrap:anywhere;
+}
+.marketplace-card .marketplace-card-creator a{
+  color:inherit;text-decoration:underline;
+  text-decoration-color:var(--line);text-underline-offset:3px;
+}
+.marketplace-card .marketplace-card-footer{
+  display:flex;align-items:end;justify-content:space-between;
+  flex-wrap:wrap;gap:9px 12px;margin-top:auto;
+  padding-top:11px;
+}
+.marketplace-card .marketplace-card-price{
+  color:var(--text);font-size:clamp(16px,1.55vw,19px);
+  line-height:1.25;font-weight:850;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+}
+.marketplace-card .marketplace-card-live-preview{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  min-height:34px;padding:7px 10px;
+  font-size:11px;line-height:1.35;font-weight:800;
+  color:#fff;background:#166d91;
+  border:1px solid #166d91;border-radius:9px;
+  text-decoration:none;white-space:nowrap;
+  transition:background .2s ease,transform .2s ease;
+}
+.marketplace-card .marketplace-card-live-preview:hover,
+.marketplace-card .marketplace-card-live-preview:focus-visible{
+  background:#0e5270;transform:translateY(-1px);
+}
+.marketplace-card .marketplace-card-live-preview svg{width:14px;height:14px}
+.marketplace-card .marketplace-card-featured{
+  position:absolute;right:12px;top:12px;z-index:1;
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 9px;min-height:29px;
+  border:1px solid rgba(255,255,255,.22);border-radius:20px;
+  background:#277b36;color:#fff;font-weight:800;font-size:10px;
+  letter-spacing:.025em;
+  box-shadow:0 5px 14px rgba(16,36,65,.18);
+}
+.marketplace-card .marketplace-card-featured svg{width:13px;height:13px}
+.marketplace-results-pane .marketplace-card-body{gap:8px}
+.marketplace-results-pane .marketplace-card .marketplace-card-price{font-size:16px}
+.marketplace-results-pane .marketplace-card .marketplace-card-live-preview{font-size:10px;padding:6px 9px}
+.bambodia-job-badge--featured{
+  display:inline-flex;align-items:center;gap:5px;
+  color:#fff;background:#287642;border:1px solid transparent;
+}
+.bambodia-job-badge--featured svg{width:13px;height:13px}
+.marketplace-card-feature-form{
+  display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+  padding:12px 0;margin:12px 0;border-top:1px solid var(--line)
+}
+.marketplace-card-feature-form label{
+  display:flex;align-items:center;gap:8px;
+  color:var(--text);font-size:13px;font-weight:700
+}
+.marketplace-card-feature-form input[type=checkbox]{accent-color:var(--accent);width:17px;height:17px}
+@media(max-width:520px){
+  .marketplace-card .marketplace-card-footer{align-items:start}
+  .marketplace-card .marketplace-card-price{font-size:17px}
+  .marketplace-card .marketplace-card-featured{top:10px;right:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .marketplace-card .marketplace-card-live-preview{transition:none}
+  .marketplace-card .marketplace-card-live-preview:hover{transform:none}
 }

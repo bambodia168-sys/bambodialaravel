@@ -1643,3 +1643,13 @@ document.addEventListener('click', event => {
     stage.replaceWith(frame);
     frame.focus({preventScroll:true});
 });
+
+
+/* Admin-only Featured state toggle. Keep the serialized value unambiguous
+ * without introducing inline scripts in any Blade template. */
+document.addEventListener('change', event => {
+    const checkbox=event.target.closest('.marketplace-card-feature-form input[type="checkbox"]');
+    if (!checkbox) return;
+    const hidden=checkbox.form?.querySelector('[name="is_featured"]');
+    if (hidden) hidden.value=checkbox.checked ? '1' : '0';
+});

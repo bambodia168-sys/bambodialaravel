@@ -15,7 +15,17 @@
 @if($job->status === 'pending')
 <form method="post" action="{{ route('dashboard.jobs.decide',$job) }}">@csrf @method('PATCH')
 <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Cancel</button><button class="btn subtle" type="submit" name="decision" value="rejected">Reject</button><button class="btn primary" type="submit" name="decision" value="published">Publish job</button></div></form>
-@else<div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Close</button></div>@endif
+@else
+  @if($job->status==='published')
+    <form method="post" action="{{ route('dashboard.card-features.job',$job) }}" class="marketplace-card-feature-form">
+      @csrf @method('PATCH')
+      <label><input type="checkbox" name="featured_checkbox" value="1" @checked($job->is_featured)> Featured on public cards</label>
+      <input type="hidden" name="is_featured" value="{{ $job->is_featured ? '1' : '0' }}">
+      <button class="btn subtle compact" type="submit">Save Featured status</button>
+    </form>
+  @endif
+  <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Close</button></div>
+@endif
 </dialog></td></tr>
 @empty<tr><td colspan="7" class="empty-cell">No job posts match this status.</td></tr>@endforelse
 </tbody></table></div><x-pagination :paginator="$jobs"/></section>

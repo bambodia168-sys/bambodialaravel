@@ -48,7 +48,15 @@
                     <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn subtle" type="submit" name="decision" value="rejected">Reject</button><button class="btn primary" type="submit" name="decision" value="published">Publish product</button></div>
                   </form>
                 @else
-                  @if($product->status === 'published')<a class="btn subtle" href="{{ $product->publicUrl() }}" target="_blank" rel="noopener noreferrer">View published product</a>@endif
+                  @if($product->status === 'published')
+                    <form method="post" action="{{ route('dashboard.card-features.listing',$product) }}" class="marketplace-card-feature-form">
+                      @csrf @method('PATCH')
+                      <label><input type="checkbox" name="featured_checkbox" value="1" @checked($product->is_featured)> Featured on public cards</label>
+                      <input type="hidden" name="is_featured" value="{{ $product->is_featured ? '1' : '0' }}">
+                      <button class="btn subtle compact" type="submit">Save Featured status</button>
+                    </form>
+                    <a class="btn subtle" href="{{ $product->publicUrl() }}" target="_blank" rel="noopener noreferrer">View published product</a>
+                  @endif
                   <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Close</button></div>
                 @endif
               </dialog>

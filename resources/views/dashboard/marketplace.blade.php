@@ -20,7 +20,17 @@
 @if($listing->status==='pending')
 <form method="post" action="{{ route('dashboard.reviews.update',$listing) }}">@csrf @method('PATCH')
 <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Cancel</button><button class="btn subtle" type="submit" name="decision" value="rejected">Reject</button><button class="btn primary" type="submit" name="decision" value="published">Publish</button></div></form>
-@else<div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Close</button>@if($listing->status==='published')<a class="btn primary" href="{{ $listing->publicUrl() }}">View</a>@endif</div>@endif
+@else
+  @if($listing->status==='published')
+    <form method="post" action="{{ route('dashboard.card-features.listing',$listing) }}" class="marketplace-card-feature-form">
+      @csrf @method('PATCH')
+      <label><input type="checkbox" name="featured_checkbox" value="1" @checked($listing->is_featured)> Featured on public cards</label>
+      <input type="hidden" name="is_featured" value="{{ $listing->is_featured ? '1' : '0' }}" data-featured-value>
+      <button class="btn subtle compact" type="submit">Save Featured status</button>
+    </form>
+  @endif
+  <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Close</button>@if($listing->status==='published')<a class="btn primary" href="{{ $listing->publicUrl() }}">View</a>@endif</div>
+@endif
 </dialog></td></tr>
 @empty<tr><td colspan="7" class="empty-cell">There are no {{ $type }} listings matching this filter.</td></tr>@endforelse
 </tbody></table></div><x-pagination :paginator="$listings"/></section>

@@ -20,6 +20,8 @@ class AuditEvent extends Model
         'creator.application.rejected',
         'user.role.changed',
         'feature.flag.changed',
+        'marketplace.listing.featured.updated',
+        'marketplace.job.featured.updated',
         'listing.review.published',
         'listing.review.rejected',
         'detail.comment.created',

@@ -161,29 +161,38 @@ try {
           const card=grid?.querySelector('.marketplace-card');
           const art=card?.querySelector('.marketplace-card-art');
           const title=card?.querySelector('h3 a');
-          const summary=card?.querySelector('.marketplace-card-summary');
-          if(!grid || !card || !art || !title || !summary)
+          const creator=card?.querySelector('.marketplace-card-creator');
+          const price=card?.querySelector('.marketplace-card-price');
+          if(!grid || !card || !art || !title || !creator || !price)
             return {missing:true};
-          const titleStyle=getComputedStyle(title), summaryStyle=getComputedStyle(summary);
+          const titleStyle=getComputedStyle(title);
           return {
             columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
             titleClamp:titleStyle.webkitLineClamp,
-            summaryClamp:summaryStyle.webkitLineClamp,
             fullTitleWidth:Math.abs(title.getBoundingClientRect().width
               - card.querySelector('h3').getBoundingClientRect().width)<2,
             sameDestination:art.href===title.href,
+            hasSummary:!!card.querySelector('.marketplace-card-summary'),
+            hasCreator:creator.textContent.trim().length>0,
+            priceSymbol:price.textContent.trim().startsWith('$'),
+            hasUnsupportedRatings:!!card.querySelector('[data-rating],.rating-stars'),
             viewDetails:!!card.querySelector('.marketplace-card-actions a'),
-            summaryHeight:summary.getBoundingClientRect().height,
-            summaryLineHeight:parseFloat(summaryStyle.lineHeight),
           };
         });
         const expectedColumns=device.viewport.width>=1200?4:device.viewport.width>550?2:1;
         if(cardMetrics.missing || cardMetrics.columns!==expectedColumns
-          || cardMetrics.titleClamp!=='2' || cardMetrics.summaryClamp!=='2'
-          || !cardMetrics.fullTitleWidth || !cardMetrics.sameDestination
-          || cardMetrics.viewDetails
-          || cardMetrics.summaryHeight>cardMetrics.summaryLineHeight*2+3)
-          throw new Error(device.name+' listing card layout regression '+JSON.stringify(cardMetrics));
+          || cardMetrics.titleClamp!=='2' || !cardMetrics.fullTitleWidth
+          || !cardMetrics.sameDestination || cardMetrics.hasSummary || !cardMetrics.hasCreator
+          || !cardMetrics.priceSymbol || cardMetrics.hasUnsupportedRatings || cardMetrics.viewDetails)
+          throw new Error(device.name+' compact listing card regression '+JSON.stringify(cardMetrics));
+        const featuredProduct=page.locator('.marketplace-home-feed .marketplace-card')
+          .filter({hasText:'Browser QA Published Product'});
+        if(!(await featuredProduct.locator('.marketplace-card-featured').isVisible()) ||
+           !(await featuredProduct.locator('.marketplace-card-live-preview').isVisible()))
+          throw new Error(device.name+' published product Featured/Live Preview missing');
+        const previewHref=await featuredProduct.locator('.marketplace-card-live-preview').getAttribute('href');
+        if(previewHref!=='https://example.com/original-browser-product-preview')
+          throw new Error(device.name+' product demo link must be creator-provided, not invented');
         // Opted-in public freelancers only; responsive cards and real portfolio links.
         const freelancerCards=page.locator('.marketplace-freelancer-grid .marketplace-freelancer-card');
         if(await freelancerCards.count()!==4)

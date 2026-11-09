@@ -87,7 +87,9 @@ class MarketplaceCardGridTest extends TestCase
         $this->assertStringContainsString(
             '<a href="'.$product->publicUrl().'" title="'.$product->title.'">', $html
         );
-        $this->assertSame(8,substr_count($html,'class="marketplace-card-summary"'));
+        $this->assertSame(0,substr_count($html,'class="marketplace-card-summary"'));
+        $this->assertSame(8,substr_count($html,'class="marketplace-card-price"'));
+        $this->assertStringContainsString('$23.00',$html);
     }
 
     public function test_browse_page_paginates_eight_items_and_keeps_image_and_title_links(): void
@@ -109,7 +111,8 @@ class MarketplaceCardGridTest extends TestCase
         $this->assertSame(8,substr_count($response->getContent(),'<article class="marketplace-card">'));
         $pageTwo=$this->get('/search?type=service&page=2')->assertOk()
             ->assertSee($service->title)
-            ->assertSee('class="marketplace-card-summary"',false)
+            ->assertDontSee('class="marketplace-card-summary"',false)
+            ->assertSee('class="marketplace-card-price"',false)
             ->assertSee('src="'.$asset->previewUrl().'"',false)
             ->assertSee('class="marketplace-card-art" href="'.$service->publicUrl().'"',false)
             ->assertSee('href="'.$service->publicUrl().'" title="'.$service->title.'"',false);

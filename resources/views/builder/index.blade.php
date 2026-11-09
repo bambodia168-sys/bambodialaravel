@@ -226,6 +226,15 @@
                 @endunless
               </div>
               @if($isProduct)
+                <div class="studio-field">
+                  <label for="studio-live-preview-url">Live Preview URL (optional)</label>
+                  <input id="studio-live-preview-url" name="preview_url" type="url"
+                    inputmode="url" autocomplete="url" maxlength="500" @readonly(!$canEdit)
+                    value="{{ old('preview_url',$record?->preview_url) }}"
+                    placeholder="https://example.com/demo">
+                  <small class="hint">Only public HTTPS links are accepted. A Live Preview button appears on the product card when you provide a link; this does not enable checkout.</small>
+                  @error('preview_url')<small class="builder-field-error">{{ $message }}</small>@enderror
+                </div>
                 <div class="studio-release-fields">
                   <div class="studio-field">
                     <label for="studio-software-version">Version</label>
