@@ -42,7 +42,7 @@ class UserManagerController extends Controller
             ->when($sort==='newest',fn($q)=>$q->orderByDesc('id'))
             ->when($sort==='oldest',fn($q)=>$q->orderBy('id'))
             ->when($sort==='name',fn($q)=>$q->orderBy('name')->orderBy('id'))
-            ->paginate(15)->withQueryString();
+            ->paginate(10)->withQueryString();
 
         return view('dashboard.users',compact('users','search','role','status','sort'));
     }
