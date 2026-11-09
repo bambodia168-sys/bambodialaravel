@@ -43,7 +43,8 @@ final class MarketplaceCardPresentation
     {
         $url=trim((string)$input);
         if($url==='') return null;
-        if(strlen($url)>500 || preg_match('/[\x00-\x20\x7f]/',$url)) return null;
+        if(strlen($url)>500 || str_contains($url,'\\')
+            || preg_match('/[\x00-\x20\x7f]/',$url)) return null;
         if(filter_var($url,FILTER_VALIDATE_URL)===false) return null;
         $parts=parse_url($url);
         if(!is_array($parts) || strtolower((string)($parts['scheme']??''))!=='https'
