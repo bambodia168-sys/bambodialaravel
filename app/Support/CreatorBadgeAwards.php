@@ -12,6 +12,13 @@ final class CreatorBadgeAwards
 {
     public const OWNER_EMAIL = 'tonsamith168@gmail.com';
 
+    /** The designated owner receives the enabled badge catalog, independently of activity. */
+    public static function isDesignatedOwner(User $creator): bool
+    {
+        return $creator->role === 'super_admin'
+            && strcasecmp((string) $creator->email, self::OWNER_EMAIL) === 0;
+    }
+
     /** Verified sources only: no speculative ratings, earnings or identity checks. */
     public static function earned(User $creator, ?Collection $catalog = null): Collection
     {
@@ -21,7 +28,7 @@ final class CreatorBadgeAwards
 
         $catalog ??= CreatorBadge::query()->where('enabled',true)->orderBy('sort_order')->get();
         $catalog = $catalog->where('enabled',true);
-        if (strcasecmp((string)$creator->email,self::OWNER_EMAIL) === 0 && $creator->role === 'super_admin') {
+        if (self::isDesignatedOwner($creator)) {
             return $catalog->values();
         }
 

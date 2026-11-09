@@ -65,3 +65,4 @@ jobs:
           composer install --prefer-dist --no-interaction --no-progress
           php artisan test --filter=ProductVaultFulfillmentTest
           php artisan test --filter=CreatorBadgeSystemTest
+          php artisan test --filter=CreatorBadgePublicDisplayTest

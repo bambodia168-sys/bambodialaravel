@@ -3,18 +3,24 @@
 @section('content')
 <div class="container inner-page creator-public-profile">
   <section class="creator-public-hero">
-    <span class="eyebrow">Bambodia verified marketplace listing owner · {{ $creator->public_id }}</span>
+    <span class="eyebrow">Creator achievements · {{ $creator->public_id }}</span>
     <div class="creator-public-heading">
       <div class="creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($creator->name,0,1)) }}</div>
       <div>
         <h1>{{ $creator->name }}</h1>
         <x-creator-badges :badges="\App\Support\CreatorBadgeAwards::earned($creator)"/>
-        <h2>{{ $profile->headline }}</h2>
+        @if($profile)
+          <h2>{{ $profile->headline }}</h2>
+        @endif
       </div>
     </div>
-    <p class="review-text">{{ $profile->biography }}</p>
+    @if($profile)
+      <p class="review-text">{{ $profile->biography }}</p>
+    @else
+      <p class="hint">This public badge profile displays awarded achievements and approved marketplace work only. Private biography and portfolio information are not published.</p>
+    @endif
     <div class="toolbar-actions">
-      @if($profile->website_url)
+      @if($profile?->website_url)
         <a class="btn subtle" href="{{ $profile->website_url }}" target="_blank" rel="noopener noreferrer"><x-icon name="globe" size="16"/> Portfolio website</a>
       @endif
       <a class="btn primary" href="{{ route('marketplace.search') }}">Explore all listings</a>

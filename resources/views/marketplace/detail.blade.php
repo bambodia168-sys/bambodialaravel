@@ -8,7 +8,10 @@
   $layoutSample = str_starts_with($listing->title, '[LAYOUT TEST] ');
   $canInquire = ! $layoutSample && in_array($kind,['project','service','freelance'],true);
   $ownerProfile = $listing->creator?->creatorProfile;
-  $publicCreator = $ownerProfile?->is_public === true;
+  $publicCreator = $ownerProfile?->is_public === true
+    || ($listing->creator && \App\Support\CreatorBadgeAwards::isDesignatedOwner($listing->creator));
+  $creatorBadges = $listing->creator
+    ? \App\Support\CreatorBadgeAwards::earned($listing->creator) : collect();
   $ownerName = $listing->creator?->name ?? 'Bambodia creator';
   $pageSections = [
     ['id'=>'overview','label'=>'Overview'],
@@ -144,7 +147,13 @@
           <div class="premium-creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($ownerName,0,1)) }}</div>
           <div>
             <strong>{{ $ownerName }}</strong>
-            <p>{{ $publicCreator && $ownerProfile?->headline ? $ownerProfile->headline : 'Publisher of this approved marketplace listing.' }}</p>
+            @if($creatorBadges->isNotEmpty())
+              <x-creator-badges :badges="$creatorBadges->take(6)" variant="compact"/>
+              @if($creatorBadges->count() > 6 && $publicCreator)
+                <p class="hint">View the creator profile for all {{ $creatorBadges->count() }} awarded badges.</p>
+              @endif
+            @endif
+            <p>{{ $ownerProfile?->is_public && $ownerProfile?->headline ? $ownerProfile->headline : 'Publisher of this approved marketplace listing.' }}</p>
             @if($publicCreator)
               <a class="btn subtle compact" href="{{ route('creators.show',$listing->creator->public_id) }}">View creator portfolio <x-icon name="chevron-right" size="15"/></a>
             @else
@@ -288,6 +297,9 @@
             <div class="premium-creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($ownerName,0,1)) }}</div>
             <div><strong>{{ $ownerName }}</strong><small>Bambodia creator</small></div>
           </div>
+          @if($creatorBadges->isNotEmpty())
+            <x-creator-badges :badges="$creatorBadges->take(3)" variant="compact"/>
+          @endif
           @if($publicCreator)
             <a class="btn subtle premium-full-action" href="{{ route('creators.show',$listing->creator->public_id) }}">View public profile</a>
           @else

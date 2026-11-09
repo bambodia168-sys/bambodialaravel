@@ -19,9 +19,11 @@
           <div class="creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($creator->name,0,1)) }}</div>
           <div class="eyebrow">Public ID {{ $creator->public_id }}</div>
           <h3><a href="{{ route('creators.show',$creator->public_id) }}">{{ $creator->name }}</a></h3>
-          <strong>{{ $creator->creatorProfile?->headline }}</strong>
+          <strong>{{ $creator->creatorProfile?->is_public ? $creator->creatorProfile->headline : 'Creator achievements' }}</strong>
           <x-creator-badges :badges="\App\Support\CreatorBadgeAwards::earned($creator)" variant="compact"/>
-          <p>{{ \Illuminate\Support\Str::limit($creator->creatorProfile?->biography,160) }}</p>
+          @if($creator->creatorProfile?->is_public)
+            <p>{{ \Illuminate\Support\Str::limit($creator->creatorProfile->biography,160) }}</p>
+          @endif
           <div class="creator-directory-foot">
             <span>{{ $creator->public_listings_count }} approved listings</span>
             <a href="{{ route('creators.show',$creator->public_id) }}" class="btn subtle compact">View portfolio</a>

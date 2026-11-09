@@ -8,6 +8,7 @@ use App\Models\CreatorProfile;
 use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
 use App\Models\User;
+use App\Support\CreatorBadgeAwards;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -53,8 +54,10 @@ class CreatorProfileController extends Controller
         $creators=User::query()
             ->select(['id','public_id','name','email','role','created_at'])
             ->whereIn('role',['freelancer','super_admin'])
-            ->whereHas('creatorProfile',function($q)use($search){
-                $q->where('is_public',true);
+            ->where(function($query): void {
+                $query->whereHas('creatorProfile',fn($p)=>$p->where('is_public',true))
+                    ->orWhere(fn($owner)=>$owner->where('role','super_admin')
+                        ->whereRaw('LOWER(email) = ?', [CreatorBadgeAwards::OWNER_EMAIL]));
             })
             ->when($search!=='',fn($q)=>$q->where(function($builder)use($search){
                 $builder->where('name','like','%'.$search.'%')
@@ -76,7 +79,11 @@ class CreatorProfileController extends Controller
         abort_unless(preg_match('/^[0-9]{8}$/D',$creator)===1,404);
         $user=User::query()->where('public_id',$creator)
             ->whereIn('role',['freelancer','super_admin'])
-            ->whereHas('creatorProfile',fn($query)=>$query->where('is_public',true))
+            ->where(function($query): void {
+                $query->whereHas('creatorProfile',fn($p)=>$p->where('is_public',true))
+                    ->orWhere(fn($owner)=>$owner->where('role','super_admin')
+                        ->whereRaw('LOWER(email) = ?', [CreatorBadgeAwards::OWNER_EMAIL]));
+            })
             ->with('creatorProfile')->firstOrFail();
 
         $listings=MarketplaceListing::query()->publiclyAvailable()
@@ -89,7 +96,8 @@ class CreatorProfileController extends Controller
                 ->pluck('marketplace_listing_id')->map(fn($id)=>(int)$id)->all()
             : [];
         return view('creators.show',[
-            'creator'=>$user,'profile'=>$user->creatorProfile,
+            // Never reveal an unpublished biography or portfolio, including for the owner.
+            'creator'=>$user,'profile'=>$user->creatorProfile?->is_public ? $user->creatorProfile : null,
             'listings'=>$listings,'savedIds'=>$savedIds,
         ]);
     }

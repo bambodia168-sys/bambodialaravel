@@ -38,8 +38,8 @@
   <section class="panel">
     <div class="panel-head"><h2>Public portfolio preview</h2><span class="count">{{ $publishedCount }} approved listings</span></div>
     <div class="onboarding-content">
-      @if($profile?->is_public)
-        <p>Your profile is discoverable and can be opened from your approved marketplace listings.</p>
+      @if($profile?->is_public || \App\Support\CreatorBadgeAwards::isDesignatedOwner(auth()->user()))
+        <p>{{ $profile?->is_public ? 'Your public portfolio is discoverable.' : 'Your badge-only public profile is available. Private biography and portfolio fields remain hidden.' }}</p>
         <a class="btn primary" href="{{ route('creators.show',auth()->user()->public_id) }}">View public creator page</a>
       @else
         <p class="hint">Your public creator page is not visible. Set visibility to Public when you are ready to publish this information.</p>
