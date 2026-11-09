@@ -22,10 +22,8 @@ final class CreatorBadgeAwards
     /** Verified sources only: no speculative ratings, earnings or identity checks. */
     public static function earned(User $creator, ?Collection $catalog = null): Collection
     {
-        if (! in_array($creator->role,['freelancer','super_admin'],true)) {
-            return collect();
-        }
-
+        // Every active user can receive explicit manually reviewed achievements.
+        // Automatic freelancer metrics are still restricted to creator accounts.
         $catalog ??= CreatorBadge::query()->where('enabled',true)->orderBy('sort_order')->get();
         $catalog = $catalog->where('enabled',true);
         if (self::isDesignatedOwner($creator)) {
@@ -34,9 +32,10 @@ final class CreatorBadgeAwards
 
         $manualIds = CreatorBadgeGrant::query()->where('user_id',$creator->id)
             ->where('source','manual')->pluck('creator_badge_id')->all();
-        $autoSlugs = self::automaticSlugs($creator);
+        $autoSlugs = in_array($creator->role,['freelancer','super_admin'],true)
+            ? self::automaticSlugs($creator) : [];
         return $catalog->filter(fn (CreatorBadge $badge) =>
-            ($badge->grant_mode === 'manual' && in_array($badge->id,$manualIds))
+            in_array($badge->id,$manualIds)
             || ($badge->grant_mode === 'auto' && in_array($badge->slug,$autoSlugs,true))
         )->values();
     }

@@ -3242,3 +3242,101 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .account-review-form-wrap .user-manager-transfer-form{padding:12px;gap:15px}
 .account-review-form-wrap select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--text);font-size:13px}
 .account-reviewed-public{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,#0ba374 36%,var(--line));border-radius:999px;background:color-mix(in srgb,#0ba374 9%,var(--surface));color:color-mix(in srgb,#13966b 80%,var(--text));font-size:12px;font-weight:750;padding:6px 10px;margin:5px 0}
+
+/* Creator Badge Manager v2 — compact audited user table / native accessible dialogs. */
+.badge-manager{padding-bottom:50px}
+.badge-manager-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.badge-manager-heading h1{margin:7px 0}
+.badge-manager-heading-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.badge-manager-settings{display:grid!important;place-items:center;border:1px solid var(--line);border-radius:12px;min-width:42px;height:42px;background:var(--surface);color:var(--text)}
+.badge-manager-panel{min-width:0}
+.badge-manager-panel-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.badge-manager-panel-head small{color:var(--muted);font-size:12px}
+.badge-manager-search{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge-manager-search input,.badge-manager-search select{height:39px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2);color:var(--text);font-size:12px;padding:8px 11px;min-width:0}
+.badge-manager-search input{width:240px;max-width:100%}
+.badge-manager-table{min-width:840px}
+.badge-manager-table th,.badge-manager-table td{vertical-align:middle}
+.badge-manager-user strong{display:block;font-weight:800;font-size:12px;color:var(--text)}
+.badge-manager-user small{display:block;font-size:11px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere;max-width:220px}
+.badge-manager-count{font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.badge-manager-art-cell{min-width:165px}
+.badge-manager-medal-stack{display:flex;align-items:center;gap:0;min-height:35px;white-space:nowrap}
+.badge-manager-mini-medal{display:inline-grid;place-items:center;width:33px;height:33px;flex:0 0 33px;margin-right:-5px;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--accent);box-shadow:0 2px 8px #0001}
+.badge-manager-mini-medal img{width:29px;height:29px;object-fit:contain}
+.badge-manager-more{font-size:11px;color:var(--muted);margin-left:11px;font-weight:800}
+.badge-manager-numeric-pages{display:flex;justify-content:center;gap:6px;padding:2px 12px 14px}
+.badge-manager-numeric-pages a{display:grid;place-items:center;min-width:34px;height:34px;padding:0 9px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font-size:12px;font-weight:750}
+.badge-manager-numeric-pages a[aria-current=page]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--text)}
+.badge-manager-dialog{width:min(760px,calc(100vw - 30px));max-height:calc(100dvh - 38px);overflow-y:auto;padding:23px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:18px;box-shadow:0 28px 80px #0005}
+.badge-manager-dialog::backdrop{background:rgba(4,12,28,.65);backdrop-filter:blur(4px)}
+.badge-manager-dialog-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.badge-manager-dialog-top h2{margin:4px 0 2px;font-size:20px}
+.badge-manager-dialog-top p{margin:3px 0 10px;font-size:12px;color:var(--muted)}
+.badge-manager-dialog-top button{flex:0 0 auto}
+.badge-manager-dialog-summary{padding:11px 12px;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:8px 0 14px;font-size:12px}
+.badge-manager-dialog-summary span{color:var(--muted)}
+.badge-manager-award-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.badge-manager-award-option{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);padding:7px;min-width:0}
+.badge-manager-award-icon{display:grid;place-items:center;width:45px;height:45px;flex:0 0 45px;color:var(--accent)}
+.badge-manager-award-icon img{width:43px;height:43px;object-fit:contain}
+.badge-manager-award-copy{display:grid;gap:3px;min-width:0;flex:1}
+.badge-manager-award-copy strong{font-size:12px;font-weight:780;overflow-wrap:anywhere;line-height:1.25}
+.badge-manager-award-copy small{font-size:11px;color:var(--muted)}
+.badge-manager-award-option .btn{font-size:11px;padding:7px 9px;min-height:0}
+.badge-manager-award-option>svg{color:#159a70;flex:0 0 auto}
+.badge-manager-grant-box,.badge-manager-global-form{display:grid;gap:12px;margin-top:16px}
+.badge-manager-grant-box{padding:15px;border:1px solid var(--line);border-radius:12px}
+.badge-manager-grant-box h3{margin:0;font-size:14px}
+.badge-manager-input-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.badge-manager-input-grid>label,.badge-manager-global-form>label,.badge-manager-grant-box label,.badge-manager-bulk-user label,.badge-manager-definition-form label,.badge-manager-delete-form label{display:grid;gap:6px;min-width:0;font-size:12px;font-weight:700;color:var(--text)}
+.badge-manager input:not([type=checkbox]),.badge-manager select,.badge-manager textarea{min-width:0;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--text);font-size:12px;font-weight:500}
+.badge-manager textarea{resize:vertical}
+.badge-manager input:focus-visible,.badge-manager select:focus-visible,.badge-manager textarea:focus-visible,.badge-manager button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.badge-manager label small{color:var(--muted);font-weight:500}
+.badge-manager-check{display:flex!important;align-items:flex-start;gap:9px;line-height:1.55;font-weight:600!important}
+.badge-manager-check input[type=checkbox]{width:17px;height:17px;flex:0 0 17px;margin:2px 0 0}
+.badge-manager-bulk-user{margin-top:16px;padding:12px 14px;border:1px solid var(--line);border-radius:11px}
+.badge-manager-bulk-user summary{cursor:pointer;font-size:12px;font-weight:800;display:flex;align-items:center;gap:6px}
+.badge-manager-bulk-user form{display:grid;gap:10px;padding-top:13px}
+.badge-manager-revoke-all{border-top:1px solid var(--line);margin-top:10px}
+.badge-manager-global-dialog{max-width:560px}
+.badge-manager-global-dialog p{font-size:13px;line-height:1.65;color:var(--muted);margin:12px 0}
+.badge-manager-global-dialog p strong{color:var(--text)}
+.badge-manager-settings-form{padding:18px}
+.badge-manager-settings-form .badge-manager-input-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.badge-manager-settings-actions{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-top:15px}
+.badge-manager-catalog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px}
+.badge-manager-definition-card{display:grid;align-content:start;gap:13px;min-width:0;padding:16px;border:1px solid var(--line);border-radius:15px;background:var(--surface)}
+.badge-manager-definition-head{display:flex;gap:13px;align-items:center}
+.badge-manager-definition-head>div:last-child{display:grid;gap:4px;min-width:0}
+.badge-manager-definition-head strong{font-size:15px}
+.badge-manager-definition-head small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.badge-manager-definition-head .user-manager-status{width:max-content}
+.badge-manager-definition-preview{width:64px;height:64px;flex:0 0 64px;display:grid;place-items:center}
+.badge-manager-definition-preview img{width:62px;height:62px;object-fit:contain}
+.badge-manager-custom-medal{display:grid;place-items:center;width:58px;height:58px;border:2px solid var(--accent);border-radius:50%;color:var(--accent);background:var(--surface-2)}
+.badge-manager-definition-form,.badge-manager-delete-form{display:grid;gap:10px}
+.badge-manager-definition-form textarea{min-height:78px}
+.badge-manager-definition-form .btn,.badge-manager-delete-form .btn{justify-self:start}
+.badge-manager-delete-form{border-top:1px solid var(--line);padding-top:12px}
+.badge-manager-definition-card .hint{font-size:11px;color:var(--muted)}
+.creator-badge-row--badge .creator-badge{padding:5px;border-radius:50%;gap:0}
+.creator-badge-row--badge .creator-badge-name{display:none}
+.creator-badge-row--size-small .creator-badge-artwork{width:28px;height:28px}
+.creator-badge-row--size-standard .creator-badge-artwork{width:36px;height:36px}
+.creator-badge-row--size-large .creator-badge-artwork{width:48px;height:48px}
+.creator-badge-row--size-small .creator-badge{font-size:10px}
+.creator-badge-row--size-large .creator-badge{font-size:13px}
+.creator-badge-fallback{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;background:color-mix(in srgb,var(--badge-accent) 15%,var(--surface));color:var(--badge-accent)}
+.creator-badge-row--size-small .creator-badge-fallback{width:28px;height:28px}
+.creator-badge-row--size-large .creator-badge-fallback{width:48px;height:48px}
+@media(max-width:950px){.badge-manager-catalog-grid{grid-template-columns:1fr}.badge-manager-search{width:100%}.badge-manager-settings-form .badge-manager-input-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.badge-manager{padding-inline:14px}.badge-manager-heading{align-items:flex-start}.badge-manager-search{display:grid;grid-template-columns:1fr 1fr}.badge-manager-search input{width:100%;grid-column:1/-1}.badge-manager-search select{width:100%}.badge-manager-award-grid,.badge-manager-input-grid,.badge-manager-settings-form .badge-manager-input-grid{grid-template-columns:1fr}.badge-manager-dialog{padding:14px}.badge-manager-catalog-grid{padding:10px}.badge-manager-settings-actions{align-items:flex-start}.badge-manager-global-dialog{width:calc(100vw - 18px)}}
+
+.badge-manager-history{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px}
+.badge-manager-history summary{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;font-weight:800}
+.badge-manager-history-list{display:grid;gap:9px;margin-top:12px}
+.badge-manager-history-list>div{display:grid;gap:2px;padding:10px;border-radius:9px;background:var(--surface-2)}
+.badge-manager-history-list strong{font-size:12px}
+.badge-manager-history-list span,.badge-manager-history-list small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}

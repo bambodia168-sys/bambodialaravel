@@ -1653,3 +1653,30 @@ document.addEventListener('change', event => {
     const hidden=checkbox.form?.querySelector('[name="is_featured"]');
     if (hidden) hidden.value=checkbox.checked ? '1' : '0';
 });
+
+
+/* Creator Badge Manager v2: accessible native modal dialog, no inline scripts. */
+document.addEventListener('click', event => {
+    const open = event.target.closest('[data-badge-dialog-open]');
+    if (open) {
+        const id=open.getAttribute('data-badge-dialog-open');
+        const dialog=id ? document.getElementById(id) : null;
+        if(dialog instanceof HTMLDialogElement) dialog.showModal();
+        return;
+    }
+    const close=event.target.closest('[data-badge-dialog-close]');
+    if(close) {
+        const dialog=close.closest('dialog');
+        if(dialog instanceof HTMLDialogElement) dialog.close();
+        return;
+    }
+    if(event.target instanceof HTMLDialogElement &&
+       event.target.matches('.badge-manager-dialog')) {
+        // Clicking the dark backdrop, but not dialog contents, dismisses the panel.
+        const rectangle=event.target.getBoundingClientRect();
+        if(event.clientX<rectangle.left || event.clientX>rectangle.right ||
+           event.clientY<rectangle.top || event.clientY>rectangle.bottom) {
+            event.target.close();
+        }
+    }
+});

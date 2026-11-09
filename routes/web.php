@@ -272,6 +272,12 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/support-center', [SupportCenterController::class, 'index'])->name('dashboard.support')->middleware('capability:support_center');
         Route::get('/creator-badges', [CreatorBadgeController::class,'index'])->name('dashboard.badges.index');
+        Route::post('/creator-badges/grant-everyone', [CreatorBadgeController::class,'grantEveryUser'])
+            ->name('dashboard.badges.grant-everyone')->middleware(['capability:badge_awards','throttle:3,1']);
+        Route::post('/creator-badges/creators/{creator}/grant-all', [CreatorBadgeController::class,'grantAll'])
+            ->name('dashboard.badges.grant-all')->middleware(['capability:badge_awards','throttle:6,1']);
+        Route::delete('/creator-badges/creators/{creator}/revoke-all', [CreatorBadgeController::class,'revokeAll'])
+            ->name('dashboard.badges.revoke-all')->middleware(['capability:badge_awards','throttle:6,1']);
         Route::post('/creator-badges/creators/{creator}/grant', [CreatorBadgeController::class,'grant'])->name('dashboard.badges.grant')->middleware(['capability:badge_awards','throttle:15,1']);
         Route::delete('/creator-badges/creators/{creator}/badges/{badge}', [CreatorBadgeController::class,'revoke'])->name('dashboard.badges.revoke')->middleware(['capability:badge_awards','throttle:15,1']);
         Route::get('/support-center/{ticket}', [SupportCenterController::class, 'show'])->whereNumber('ticket')->name('dashboard.support.show')->middleware('capability:support_center');
@@ -284,7 +290,16 @@ Route::middleware('auth')->group(function (): void {
                 ->name('dashboard.account-verifications.verify')->middleware('throttle:8,1');
             Route::post('/account-verifications/{user}/revoke', [AccountVerificationController::class,'revoke'])
                 ->name('dashboard.account-verifications.revoke')->middleware('throttle:8,1');
-            Route::patch('/creator-badges/{badge}', [CreatorBadgeController::class,'update'])->name('dashboard.badges.update')->middleware('throttle:20,1');
+            Route::get('/creator-badges/settings', [CreatorBadgeController::class,'settings'])
+                ->name('dashboard.badges.settings');
+            Route::patch('/creator-badges/settings', [CreatorBadgeController::class,'displaySettings'])
+                ->name('dashboard.badges.display.update')->middleware('throttle:20,1');
+            Route::post('/creator-badges/definitions', [CreatorBadgeController::class,'store'])
+                ->name('dashboard.badges.store')->middleware('throttle:10,1');
+            Route::patch('/creator-badges/{badge}', [CreatorBadgeController::class,'update'])
+                ->name('dashboard.badges.update')->middleware('throttle:20,1');
+            Route::delete('/creator-badges/{badge}', [CreatorBadgeController::class,'destroy'])
+                ->name('dashboard.badges.destroy')->middleware('throttle:10,1');
             Route::get('/file-vault', [ProductVaultReviewController::class, 'index'])->name('dashboard.vault.index');
             Route::patch('/file-vault/{version}', [ProductVaultReviewController::class, 'decide'])->name('dashboard.vault.decide');
             Route::post('/file-vault/{version}/scan', [ProductVaultReviewController::class,'scan'])
