@@ -94,6 +94,7 @@ jobs:
           bash -n support/restore-badge-catalog-upgrade.sh
           bash -n support/creator-badge-gallery-upgrade.sh
           bash -n support/public-badge-display-upgrade.sh
+          bash -n support/creator-sidebar-badges-upgrade.sh
           php -l examples/license-validation.php
           php -l support/frontend-layout-samples.php
           bash -n support/builder-studio-db-backup.sh
