@@ -30,6 +30,12 @@ grep -Eq '^[[:space:]]*root[[:space:]]+/www/wwwroot/bambodia-staging-qa/public[[
 [[ "$(git -C "$SOURCE" remote get-url origin)" == "https://github.com/$REPO.git" ]] || fail 'Unexpected Git remote'
 [[ -z "$(git -C "$SOURCE" status --porcelain)" ]] || fail 'Uncommitted Git source changes found'
 [[ -f "$DB_HELPER" ]] || fail 'Private database backup helper missing'
+# Validate stdin-based PHP before production changes. aaPanel PHP does not accept 'php -'.
+php_stdin="$( "$PHP" <<'PHP'
+<?php echo 'PHP_STDIN_OK';
+PHP
+)"
+[[ "$php_stdin" == 'PHP_STDIN_OK' ]] || fail 'aaPanel PHP stdin execution unavailable'
 
 echo "========== BAMBODIA PUBLIC BADGE DISPLAY FIX ($MODE) =========="
 echo '1. Verify feature source and all six CI workflows'
@@ -88,6 +94,21 @@ cleanup(){
   exit "$result"
 }
 trap cleanup EXIT
+
+echo '2b. Inspect previous attempt migration state (read-only)'
+(cd "$APP" && runuser -u www -- "$PHP" <<'PHP'
+<?php
+require 'vendor/autoload.php';
+$app=require 'bootstrap/app.php';
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$applied=\Illuminate\Support\Facades\DB::table('migrations')
+ ->where('migration','2026_11_09_004200_default_compact_badge_display')
+ ->exists();
+$appearance=\App\Support\CreatorBadgeDisplay::settings();
+echo 'MIGRATION_STATE='.($applied?'ALREADY_APPLIED':'PENDING')."\n";
+echo 'CURRENT_DISPLAY_MODE='.$appearance->display_mode."\n";
+PHP
+) || fail 'Could not inspect previously applied migration'
 
 echo '3. Download and inspect fixed CI installer'
 gh run download "$RUN" -R "$REPO" -n "$ARTIFACT" -D "$TMP"
@@ -175,18 +196,29 @@ done
 echo '8. Verify the live Samith Ton project page renders every medal twice'
 PUBLIC_DETAIL='https://bambodia.com/project?=800849627-layout-test-small-business-crm-demonstration'
 curl -fsSL --max-time 35 "$PUBLIC_DETAIL" -o "$TMP/public-detail.html"
-"$PHP" - "$TMP/public-detail.html" <<'PHP'
+PUBLIC_BADGE_HTML="$TMP/public-detail.html" "$PHP" <<'PHP'
 <?php
-$html=file_get_contents($argv[1]);
+$path=getenv('PUBLIC_BADGE_HTML');
+if(!$path || !is_file($path))exit(10);
+$html=file_get_contents($path);
 if(!str_contains($html,'Samith Ton'))exit(11);
-preg_match_all('/class="creator-badge creator-badge--/', $html, $badges);
-preg_match_all('/class="creator-badge-tooltip" role="tooltip"/', $html, $tips);
-if(count($badges[0]) < 32 || count($tips[0]) < 32) {
- fwrite(STDERR,"Public medal/tooltip mismatch: ".count($badges[0])." medals, ".count($tips[0])." tooltips.\n");
+$sellerAt=strpos($html,'id="seller"');
+$sidebarAt=strpos($html,'class="premium-side-card premium-side-creator"');
+if($sellerAt===false || $sidebarAt===false || $sellerAt>=$sidebarAt) {
+ fwrite(STDERR,"Cannot locate both creator sections in public detail.\n");
  exit(12);
 }
-if(substr_count($html,'creator-badge-row--badge')<2)exit(13);
-echo "PUBLIC_DETAIL=PASS: 16 badges in each creator area, hover names/descriptions retained.\n";
+$seller=substr($html,$sellerAt,$sidebarAt-$sellerAt);
+$sidebar=substr($html,$sidebarAt);
+foreach (['About the creator'=>$seller,'Published by'=>$sidebar] as $section=>$fragment) {
+ $count=substr_count($fragment,'class="creator-badge creator-badge--');
+ $tips=substr_count($fragment,'class="creator-badge-tooltip" role="tooltip"');
+ if($count!==16 || $tips!==16 || !str_contains($fragment,'creator-badge-row--badge')) {
+  fwrite(STDERR,"$section: medals=$count; tooltips=$tips; expected 16 each and artwork-only mode.\n");
+  exit(13);
+ }
+}
+echo "PUBLIC_DETAIL=PASS: 16 artwork-only medals and accessible hover descriptions in each creator panel.\n";
 PHP
 guest_code="$(curl -sS --max-time 25 -o /dev/null -w '%{http_code}' 'https://bambodia.com/dashboard/creator-badges')"
 [[ "$guest_code" == 302 || "$guest_code" == 303 ]] || fail "Unexpected protected creator badge route HTTP $guest_code"
