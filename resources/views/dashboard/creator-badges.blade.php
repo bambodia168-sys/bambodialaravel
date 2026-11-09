@@ -11,7 +11,7 @@
     <div class="badge-manager-heading-actions">
       @if(in_array(auth()->user()->role,['super_admin','admin'],true))
         <a class="icon-button badge-manager-settings" href="{{ route('dashboard.badges.settings') }}"
-           title="Badge catalog settings" aria-label="Open badge settings"><x-icon name="settings" size="20"/></a>
+           title="Badge catalog settings" aria-label="Open Badge catalog settings"><x-icon name="settings" size="20"/></a>
       @endif
       @if($canGrant && auth()->user()->role==='super_admin')
         <button type="button" class="btn subtle" data-badge-dialog-open="badge-global-grant">
