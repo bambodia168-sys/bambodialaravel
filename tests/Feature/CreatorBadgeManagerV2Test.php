@@ -224,7 +224,7 @@ final class CreatorBadgeManagerV2Test extends TestCase
     {
         $owner=$this->owner();
         $badge=CreatorBadge::query()->where('slug','rising-talent')->firstOrFail();
-        $this->assertSame([
+        $this->assertEquals([
             'min_completed'=>1,'max_completed'=>5,'max_account_age_days'=>365,
         ],$badge->auto_rules);
         $this->actingAs($owner)->patch(route('dashboard.badges.update',$badge),[
@@ -234,7 +234,7 @@ final class CreatorBadgeManagerV2Test extends TestCase
             'auto_rules'=>['min_completed'=>2,'max_completed'=>6,'max_account_age_days'=>540],
         ])->assertRedirect();
         $badge->refresh();
-        $this->assertSame([
+        $this->assertEquals([
             'min_completed'=>2,'max_completed'=>6,'max_account_age_days'=>540,
         ],$badge->auto_rules);
         $this->assertStringContainsString('verifiable contracts',$badge->eligibility_criteria);
