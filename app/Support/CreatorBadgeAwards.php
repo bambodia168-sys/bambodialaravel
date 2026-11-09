@@ -45,7 +45,7 @@ final class CreatorBadgeAwards
             $slugs[] = 'rising-talent';
         }
         if (DB::table('freelance_contracts')->where('freelancer_id',$creator->id)
-            ->where('status','completed')->groupBy('client_id')
+            ->where('status','completed')->select('client_id')->groupBy('client_id')
             ->havingRaw('COUNT(*) >= 2')->exists()) {
             $slugs[] = 'repeat-clients';
         }

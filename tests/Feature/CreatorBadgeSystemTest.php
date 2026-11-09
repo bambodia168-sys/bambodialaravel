@@ -24,6 +24,15 @@ class CreatorBadgeSystemTest extends TestCase
     }
 
 
+
+    public function test_repeat_clients_query_is_mysql_strict_mode_compatible(): void
+    {
+        // This reaches the aggregate/EXISTS query even without completed contracts.
+        // MySQL ONLY_FULL_GROUP_BY disallows SELECT * grouped solely by client_id.
+        $creator=$this->account('freelancer');
+        $this->assertIsArray(CreatorBadgeAwards::automaticSlugs($creator));
+    }
+
     public function test_authenticated_admin_can_render_actual_badge_manager_page(): void
     {
         $this->account('freelancer');
