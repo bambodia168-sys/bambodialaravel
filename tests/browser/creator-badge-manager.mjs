@@ -34,16 +34,46 @@ try {
       });
       if(!order)throw Error(name+' '+theme+' badge catalog must precede the user table');
       const firstCard=restored.first();
-      if(!(await firstCard.locator('form[action*="/creator-badges/"]').count())
-        || !(await firstCard.getByText('Eligibility / manual review conditions').count())
-        || !(await firstCard.getByRole('button',{name:'Save badge'}).count())) {
-        throw Error(name+' '+theme+' restored badge editor missing');
-      }
-      const rising=page.locator('[data-badge-card="rising-talent"]');
-      if(!(await rising.getByText('Automatic eligibility conditions').count()) ||
-         !(await rising.locator('input[name="auto_rules[min_completed]"]').count()))
-        throw Error(name+' '+theme+' rising-talent rules not configurable');
-      checks+=5;
+      const cardColumns=await restored.first().evaluate(el=>getComputedStyle(el.parentElement).gridTemplateColumns.trim().split(/\s+/).length);
+      const expectedColumns=name==='desktop'?4:1;
+      if(cardColumns!==expectedColumns)
+        throw Error(name+' '+theme+' catalog expected '+expectedColumns+' cards per row, got '+cardColumns);
+      const centeredName=firstCard.locator('.badge-catalog-gallery-name');
+      const artwork=firstCard.locator('.badge-catalog-gallery-art img');
+      if(!(await centeredName.isVisible()) || !(await artwork.isVisible()))
+        throw Error(name+' '+theme+' central medal/title unavailable');
+      const artBox=await artwork.boundingBox();
+      const cardBox=await firstCard.boundingBox();
+      if(!artBox || !cardBox || artBox.width<110 ||
+         Math.abs((artBox.x+artBox.width/2)-(cardBox.x+cardBox.width/2))>9)
+        throw Error(name+' '+theme+' medal is too small or not centered');
+      const editorTrigger=firstCard.locator('.badge-catalog-action-trigger');
+      if(!(await editorTrigger.isVisible()) || (await editorTrigger.getAttribute('aria-haspopup'))!=='dialog')
+        throw Error(name+' '+theme+' vertical three-dot badge action missing');
+      if(await firstCard.locator('form').count())
+        throw Error(name+' '+theme+' inline settings forms remain in the catalog card');
+      await page.screenshot({path:out+'/badge-gallery-'+name+'-'+theme+'.png',fullPage:true});
+      const editorId=await editorTrigger.getAttribute('aria-controls');
+      await editorTrigger.click();
+      const editor=page.locator('#'+editorId);
+      if(!(await editor.isVisible()) ||
+         !(await editor.getByText('Eligibility / manual review conditions').isVisible()) ||
+         !(await editor.getByRole('button',{name:'Save badge'}).isVisible()) ||
+         !(await editor.getByText('Duplicate as custom badge').count()))
+        throw Error(name+' '+theme+' management modal missing CRUD functions');
+      if(!(await editor.getByText('Original Bambodia badge').count()))
+        throw Error(name+' '+theme+' built-in badge deletion protection missing');
+      await page.screenshot({path:out+'/badge-editor-'+name+'-'+theme+'.png',fullPage:true});
+      await page.keyboard.press('Escape');
+      if(await editor.isVisible())throw Error(name+' '+theme+' Escape does not close editor');
+      const rising=page.locator('[data-badge-card="rising-talent"] .badge-catalog-action-trigger');
+      await rising.click();
+      const autoEditor=page.locator('#'+await rising.getAttribute('aria-controls'));
+      if(!(await autoEditor.getByText('Automatic eligibility conditions').count()) ||
+         !(await autoEditor.locator('input[name="auto_rules[min_completed]"]').count()))
+        throw Error(name+' '+theme+' Rising Talent automatic criteria not available in popup');
+      await page.keyboard.press('Escape');
+      checks+=11;
 
       const rows=page.locator('.badge-manager-table tbody tr');
       const count=await rows.count();

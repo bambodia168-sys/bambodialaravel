@@ -281,4 +281,72 @@ final class CreatorBadgeManagerV2Test extends TestCase
         ])->assertForbidden();
     }
 
+
+    public function test_gallery_cards_have_separate_three_dot_dialogs_and_no_inline_editing_forms(): void
+    {
+        $owner=$this->owner();
+        $creator=$this->account('freelancer','Creator Table Regression');
+        $response=$this->actingAs($owner)->get(route('dashboard.badges.index'));
+        $response->assertOk()->assertSee('Grant badges to creators')
+            ->assertSee('Manage badges')->assertSee('10 accounts per page')
+            ->assertSee('Go To')->assertSee('Badge preview')
+            ->assertSee('Duplicate as custom badge');
+        $markup=$response->getContent();
+        $catalogStart=strpos($markup,'id="badge-catalog"');
+        $tableAt=strpos($markup,'class="data-table badge-manager-table"');
+        $this->assertNotFalse($catalogStart);
+        $this->assertNotFalse($tableAt);
+        $this->assertLessThan($tableAt,$catalogStart);
+        $this->assertSame(16,substr_count($markup,'data-badge-card="'));
+        $this->assertSame(16,substr_count($markup,'class="badge-catalog-action-trigger"'));
+        $this->assertSame(16,substr_count($markup,'class="config-dialog badge-manager-dialog badge-catalog-editor-dialog"'));
+        $this->assertStringContainsString('badge-catalog-gallery-grid',$markup);
+        $this->assertStringContainsString('badge-catalog-gallery-art',$markup);
+        $this->assertStringContainsString('badge-catalog-gallery-name',$markup);
+        // No action form is rendered inside a gallery card, only inside dialogs.
+        $firstCard=substr($markup,strpos($markup,'data-badge-card="'),
+            strpos($markup,'</article>',strpos($markup,'data-badge-card="'))-strpos($markup,'data-badge-card="'));
+        $this->assertStringNotContainsString('<form',$firstCard);
+        $this->assertStringContainsString('data-badge-dialog-open="badge-editor-',$firstCard);
+        $this->assertStringContainsString('Creator Table Regression',$markup);
+    }
+
+    public function test_badge_duplication_creates_manual_only_custom_record_without_copying_grants(): void
+    {
+        $owner=$this->owner();
+        $recipient=$this->account('freelancer');
+        $original=CreatorBadge::query()->where('slug','rising-talent')->firstOrFail();
+        $this->actingAs($owner)->post(route('dashboard.badges.grant',$recipient),[
+            'badge_id'=>$original->id,'evidence_note'=>'Independent portfolio assessment reference for test award',
+        ])->assertRedirect();
+        $this->post(route('dashboard.badges.store'),[
+            'slug'=>'rising-talent-custom',
+            'name'=>'Copy of Rising Talent',
+            'description'=>$original->description,
+            'eligibility_criteria'=>$original->eligibility_criteria??$original->description,
+            'icon'=>$original->icon,'tone'=>$original->tone,
+            'sort_order'=>min(999,$original->sort_order+1),
+        ])->assertRedirect();
+        $copy=CreatorBadge::query()->where('slug','rising-talent-custom')->firstOrFail();
+        $this->assertSame('manual',$copy->grant_mode);
+        $this->assertTrue($copy->enabled);
+        $this->assertSame(0,CreatorBadgeGrant::query()->where('creator_badge_id',$copy->id)->count());
+        $this->assertSame(1,CreatorBadgeGrant::query()->where('creator_badge_id',$original->id)->count());
+        $this->delete(route('dashboard.badges.destroy',$original),['confirmation'=>'DELETE'])
+            ->assertSessionHasErrors('badge');
+        $this->delete(route('dashboard.badges.destroy',$copy),['confirmation'=>'DELETE'])
+            ->assertRedirect();
+    }
+
+    public function test_staff_can_see_medal_gallery_but_cannot_open_definition_edit_dialogs(): void
+    {
+        $staff=$this->account('staff');
+        $response=$this->actingAs($staff)->get(route('dashboard.badges.index'));
+        $response->assertOk()->assertSee('Badge catalog')
+            ->assertSee('Grant badges to creators');
+        $this->assertSame(16,substr_count($response->getContent(),'data-badge-card="'));
+        $this->assertStringNotContainsString('badge-catalog-action-trigger',$response->getContent());
+        $this->assertStringNotContainsString('badge-catalog-editor-dialog',$response->getContent());
+    }
+
 }

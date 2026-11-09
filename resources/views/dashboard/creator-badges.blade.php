@@ -21,12 +21,12 @@
     </div>
   </header>
 
-  {{-- Section 1: Restored badge catalog. Existing user table remains Section 2. --}}
-  <section class="panel badge-catalog-restored" id="badge-catalog" aria-labelledby="badge-catalog-title">
+  {{-- Section 1: Gallery-only badge catalog. Configuration opens in a centered dialog. --}}
+  <section class="panel badge-catalog-restored badge-catalog-gallery" id="badge-catalog" aria-labelledby="badge-catalog-title">
     <div class="panel-head badge-catalog-restored-head">
       <div>
         <h2 id="badge-catalog-title">Badge catalog <span class="count">{{ $badges->count() }} badges</span></h2>
-        <small>Review each original badge, update its description and conditions, or enable/disable it.</small>
+        <small>Explore your premium medals and open the three-dot menu to manage each badge.</small>
       </div>
       @if($canEdit)
         <button type="button" class="btn primary compact" data-badge-dialog-open="badge-create-dialog">
@@ -34,33 +34,98 @@
         </button>
       @endif
     </div>
-    <div class="creator-badge-admin-grid badge-catalog-restored-grid">
+    <div class="creator-badge-admin-grid badge-catalog-restored-grid badge-catalog-gallery-grid">
       @foreach($badges as $badge)
-        @php
-          $autoSupported=in_array($badge->slug,\App\Http\Controllers\Dashboard\CreatorBadgeController::AUTO_SLUGS,true);
-          $rules=$badge->auto_rules??[];
-          $builtIn=in_array($badge->slug,[
-            'top-rated','rising-talent','expert-vetted','fast-responder',
-            'identity-verified','job-success-100','repeat-clients','top-rated-plus',
-            'on-time-delivery','pro-verified','super-seller-level-two','top-collaborator',
-            'skill-certified','high-earner','community-leader','vip-client-favorite'
-          ],true);
-        @endphp
-        <article class="creator-badge-admin-card badge-catalog-restored-card" data-badge-card="{{ $badge->slug }}">
-          <div class="badge-catalog-card-head">
-            <div class="creator-badge-admin-preview">
-              <x-creator-badges :badges="collect([$badge])" variant="showcase"/>
-            </div>
+        <article class="creator-badge-admin-card badge-catalog-restored-card badge-catalog-gallery-card" data-badge-card="{{ $badge->slug }}">
+          <div class="badge-catalog-gallery-card-head">
             <span class="user-manager-status user-manager-status--{{ $badge->enabled?'active':'suspended' }}">
               {{ $badge->enabled?'Enabled':'Disabled' }}
             </span>
+            @if($canEdit)
+              <button type="button" class="badge-catalog-action-trigger"
+                data-badge-dialog-open="badge-editor-{{ $badge->id }}"
+                aria-haspopup="dialog"
+                aria-controls="badge-editor-{{ $badge->id }}"
+                aria-label="Manage {{ $badge->name }} badge"
+                title="Manage {{ $badge->name }}">
+                <x-icon name="ellipsis-vertical" size="20"/>
+              </button>
+            @else
+              <span class="badge-catalog-readonly-label" title="Badge details"><x-icon name="shield-check" size="16"/></span>
+            @endif
           </div>
-          <div class="badge-catalog-card-meta">
-            <strong>{{ $badge->name }}</strong>
-            <small>{{ $badge->grants_count }} manual grants · {{ $badge->grant_mode==='auto'?'Automatic':'Manual' }}</small>
+          <div class="badge-catalog-gallery-center">
+            <div class="badge-catalog-gallery-art" aria-hidden="true">
+              @if(is_file(public_path('images/badges/'.$badge->slug.'.svg')))
+                <img src="{{ asset('images/badges/'.$badge->slug.'.svg') }}" alt="" width="126" height="126" loading="lazy" decoding="async" draggable="false">
+              @else
+                <span class="badge-catalog-gallery-fallback badge-catalog-gallery-fallback--{{ $badge->tone }}">
+                  <x-icon :name="$badge->icon" size="54"/>
+                </span>
+              @endif
+            </div>
+            <h3 class="badge-catalog-gallery-name">{{ $badge->name }}</h3>
+            <p class="badge-catalog-gallery-description">{{ $badge->description }}</p>
           </div>
+          <div class="badge-catalog-gallery-footer">
+            <span><x-icon name="award" size="14"/> {{ $badge->grants_count }} {{ $badge->grants_count===1?'grant':'grants' }}</span>
+            <span><x-icon :name="$badge->grant_mode==='auto'?'zap':'shield-check'" size="14"/> {{ $badge->grant_mode==='auto'?'Automatic':'Manual' }}</span>
+          </div>
+        </article>
+      @endforeach
+    </div>
+  </section>
 
-          @if($canEdit)
+  {{-- Authorized configuration dialogs are outside the gallery grid. --}}
+  @if($canEdit)
+    @foreach($badges as $badge)
+      @php
+        $autoSupported=in_array($badge->slug,\App\Http\Controllers\Dashboard\CreatorBadgeController::AUTO_SLUGS,true);
+        $rules=$badge->auto_rules??[];
+        $builtIn=in_array($badge->slug,[
+          'top-rated','rising-talent','expert-vetted','fast-responder',
+          'identity-verified','job-success-100','repeat-clients','top-rated-plus',
+          'on-time-delivery','pro-verified','super-seller-level-two','top-collaborator',
+          'skill-certified','high-earner','community-leader','vip-client-favorite'
+        ],true);
+      @endphp
+      <dialog class="config-dialog badge-manager-dialog badge-catalog-editor-dialog"
+        id="badge-editor-{{ $badge->id }}"
+        aria-labelledby="badge-editor-title-{{ $badge->id }}"
+        aria-describedby="badge-editor-description-{{ $badge->id }}">
+        <div class="badge-manager-dialog-top badge-catalog-editor-top">
+          <div>
+            <div class="eyebrow">Creator badges / Manage badge</div>
+            <h2 id="badge-editor-title-{{ $badge->id }}">{{ $badge->name }}</h2>
+            <p id="badge-editor-description-{{ $badge->id }}">Preview, edit settings, manage eligibility, or duplicate this badge.</p>
+          </div>
+          <button type="button" class="icon-button" data-badge-dialog-close aria-label="Close {{ $badge->name }} editor">
+            <x-icon name="x" size="19"/>
+          </button>
+        </div>
+        <div class="badge-catalog-editor-summary">
+          <div class="badge-catalog-editor-medal" aria-hidden="true">
+            @if(is_file(public_path('images/badges/'.$badge->slug.'.svg')))
+              <img src="{{ asset('images/badges/'.$badge->slug.'.svg') }}" alt="" width="92" height="92" loading="lazy">
+            @else
+              <span class="badge-catalog-gallery-fallback badge-catalog-gallery-fallback--{{ $badge->tone }}">
+                <x-icon :name="$badge->icon" size="44"/>
+              </span>
+            @endif
+          </div>
+          <div class="badge-catalog-editor-preview-text">
+            <strong>Badge preview</strong>
+            <p>{{ $badge->description }}</p>
+            <div class="badge-catalog-editor-facts">
+              <span class="user-manager-status user-manager-status--{{ $badge->enabled?'active':'suspended' }}">{{ $badge->enabled?'Enabled':'Disabled' }}</span>
+              <span>{{ $badge->grant_mode==='auto'?'Automatic':'Manual' }} granting</span>
+              <span>{{ $badge->grants_count }} manual grants</span>
+            </div>
+          </div>
+        </div>
+        <section class="badge-catalog-editor-section" aria-label="Edit badge">
+          <h3><x-icon name="pencil" size="17"/> Edit badge &amp; conditions</h3>
+          <p class="hint">Save changes here. Built-in metallic medal artwork remains protected.</p>
             <form method="post" action="{{ route('dashboard.badges.update',$badge) }}" class="badge-catalog-card-form">
               @csrf @method('PATCH')
               <label>Badge name
@@ -157,14 +222,30 @@
                 @if($badge->grants_count>0)<small>Revoke all existing grants before deletion.</small>@endif
               </form>
             @endunless
-          @else
-            <p class="badge-catalog-rule-note">{{ $badge->eligibility_criteria??$badge->description }}</p>
-            <p class="hint">Definition settings are restricted to Admin or Superadmin.</p>
+          @if($builtIn)
+            <div class="badge-catalog-protected"><x-icon name="shield-check" size="16"/> Original Bambodia badge. You can disable it, but it cannot be deleted.</div>
           @endif
-        </article>
-      @endforeach
-    </div>
-  </section>
+        </section>
+        <details class="badge-catalog-duplicate-section">
+          <summary><x-icon name="copy" size="16"/> Duplicate as custom badge</summary>
+          <p>Creates a separate manual badge without copying grants. Choose a unique slug; automatic verification is never copied.</p>
+          <form method="post" action="{{ route('dashboard.badges.store') }}" class="badge-catalog-duplicate-form">
+            @csrf
+            <input type="hidden" name="name" value="{{ \Illuminate\Support\Str::limit('Copy of '.$badge->name,90,'') }}">
+            <input type="hidden" name="description" value="{{ $badge->description }}">
+            <input type="hidden" name="eligibility_criteria" value="{{ $badge->eligibility_criteria??$badge->description }}">
+            <input type="hidden" name="icon" value="{{ $badge->icon }}">
+            <input type="hidden" name="tone" value="{{ $badge->tone }}">
+            <input type="hidden" name="sort_order" value="{{ min(999,$badge->sort_order+1) }}">
+            <label>New badge slug
+              <input name="slug" required maxlength="70" pattern="[a-z][a-z0-9-]*" placeholder="{{ $badge->slug }}-custom" autocomplete="off">
+            </label>
+            <button type="submit" class="btn subtle compact"><x-icon name="copy" size="15"/> Duplicate badge</button>
+          </form>
+        </details>
+      </dialog>
+    @endforeach
+  @endif
 
   {{-- Section 2: Only the Grant badges to creators section uses the new user table. --}}
   <section class="panel badge-manager-panel">

@@ -3383,3 +3383,222 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   .badge-catalog-restored-card{padding:14px}
   .badge-catalog-card-form .creator-badge-admin-options{grid-template-columns:1fr 1fr}
 }
+
+
+/* Premium catalog gallery: only Section 1. All existing user-table styles are retained. */
+.badge-catalog-gallery-grid {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+  padding:18px;
+}
+.badge-catalog-gallery-card {
+  min-width:0;
+  min-height:325px;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  padding:15px 15px 16px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--surface);
+  color:var(--text);
+  box-shadow:0 3px 10px rgba(15,35,65,.04),0 14px 25px rgba(15,35,65,.025);
+  transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.badge-catalog-gallery-card:hover {
+  transform:translateY(-2px);
+  border-color:color-mix(in srgb,var(--accent) 28%,var(--line));
+  box-shadow:0 12px 27px rgba(15,35,65,.09);
+}
+.badge-catalog-gallery-card-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:9px;
+  min-height:33px;
+}
+.badge-catalog-gallery-card-head .user-manager-status {font-size:10px;white-space:nowrap}
+.badge-catalog-action-trigger {
+  display:inline-grid;
+  place-items:center;
+  width:36px;
+  height:36px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  color:var(--text);
+  background:var(--surface-2);
+  cursor:pointer;
+  flex:0 0 36px;
+  padding:0;
+}
+.badge-catalog-action-trigger:hover,.badge-catalog-action-trigger:focus-visible {
+  background:color-mix(in srgb,var(--accent) 10%,var(--surface));
+  border-color:var(--accent);
+}
+.badge-catalog-action-trigger:focus-visible {outline:2px solid var(--accent);outline-offset:3px}
+.badge-catalog-readonly-label {color:var(--muted)}
+.badge-catalog-gallery-center {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:8px 2px 15px;
+  min-width:0;
+}
+.badge-catalog-gallery-art {
+  height:155px;
+  min-height:155px;
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:0 auto 2px;
+  background:radial-gradient(circle at 50% 51%,color-mix(in srgb,var(--accent) 7%,transparent) 0%,transparent 66%);
+}
+.badge-catalog-gallery-art img {
+  width:134px;
+  height:134px;
+  max-width:92%;
+  display:block;
+  object-fit:contain;
+  filter:drop-shadow(0 9px 9px rgba(15,30,50,.2));
+  transition:transform .18s ease;
+}
+.badge-catalog-gallery-card:hover .badge-catalog-gallery-art img {transform:scale(1.06)}
+.badge-catalog-gallery-fallback {
+  display:inline-grid;
+  place-items:center;
+  width:119px;
+  height:119px;
+  border:3px double var(--accent);
+  border-radius:50%;
+  color:var(--accent);
+  background:radial-gradient(circle at 38% 28%,color-mix(in srgb,var(--accent) 25%,var(--surface)),var(--surface-2) 76%);
+  box-shadow:inset 0 0 0 5px var(--surface),0 10px 20px rgba(5,20,40,.11);
+}
+.badge-catalog-gallery-fallback--gold,.badge-catalog-gallery-fallback--amber {color:#c78b18;border-color:#c78b18}
+.badge-catalog-gallery-fallback--green {color:#158868;border-color:#158868}
+.badge-catalog-gallery-fallback--purple {color:#8c55b2;border-color:#8c55b2}
+.badge-catalog-gallery-fallback--pink {color:#c45687;border-color:#c45687}
+.badge-catalog-gallery-name {
+  margin:2px 0 8px;
+  min-height:43px;
+  width:100%;
+  max-width:100%;
+  color:var(--text);
+  font-size:15px;
+  font-weight:800;
+  line-height:1.4;
+  letter-spacing:-.015em;
+  overflow-wrap:break-word;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.badge-catalog-gallery-description {
+  font-size:11px;
+  line-height:1.5;
+  max-width:240px;
+  margin:0;
+  color:var(--muted);
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.badge-catalog-gallery-footer {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:8px;
+  border-top:1px solid var(--line);
+  padding-top:13px;
+  margin-top:auto;
+  width:100%;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:650;
+}
+.badge-catalog-gallery-footer>span {display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.badge-catalog-editor-dialog {
+  width:min(780px,calc(100vw - 28px));
+  max-height:min(850px,calc(100dvh - 32px));
+  padding:24px;
+  margin:auto;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.badge-catalog-editor-dialog .badge-manager-dialog-top {padding-bottom:14px;border-bottom:1px solid var(--line)}
+.badge-catalog-editor-summary {
+  display:grid;
+  grid-template-columns:112px minmax(0,1fr);
+  align-items:center;
+  gap:18px;
+  padding:16px;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:14px;
+  margin:15px 0 17px;
+}
+.badge-catalog-editor-medal {display:grid;place-items:center;min-height:102px}
+.badge-catalog-editor-medal img {width:98px;height:98px;object-fit:contain;filter:drop-shadow(0 6px 7px rgba(15,30,55,.15))}
+.badge-catalog-editor-medal .badge-catalog-gallery-fallback {width:88px;height:88px}
+.badge-catalog-editor-preview-text {min-width:0}
+.badge-catalog-editor-preview-text>strong {font-size:14px;color:var(--text)}
+.badge-catalog-editor-preview-text p {font-size:12px;line-height:1.55;color:var(--muted);margin:6px 0 10px}
+.badge-catalog-editor-facts {display:flex;flex-wrap:wrap;align-items:center;gap:9px;color:var(--muted);font-size:11px}
+.badge-catalog-editor-section {
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--surface);
+  padding:17px;
+}
+.badge-catalog-editor-section>h3 {display:flex;align-items:center;gap:8px;font-size:15px;margin:0}
+.badge-catalog-editor-section>.hint {font-size:11px;margin:6px 0 16px}
+.badge-catalog-editor-section .badge-catalog-card-form {gap:13px}
+.badge-catalog-editor-section .badge-catalog-card-form .creator-badge-admin-options {grid-template-columns:repeat(2,minmax(0,1fr))}
+.badge-catalog-editor-section .badge-catalog-save {margin-top:5px}
+.badge-catalog-protected {
+  display:flex;align-items:center;gap:8px;
+  padding:10px 12px;
+  border-radius:10px;
+  color:var(--muted);
+  background:var(--surface-2);
+  font-size:11px;
+  margin-top:14px;
+}
+.badge-catalog-duplicate-section {
+  border:1px solid var(--line);
+  padding:14px 16px;
+  border-radius:12px;
+  margin-top:14px;
+  background:var(--surface);
+}
+.badge-catalog-duplicate-section summary {display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:800}
+.badge-catalog-duplicate-section p {color:var(--muted);font-size:11px;line-height:1.55;margin:12px 0}
+.badge-catalog-duplicate-form {display:grid;gap:12px;max-width:500px}
+.badge-catalog-duplicate-form label {display:grid;gap:6px;font-size:12px;font-weight:700}
+.badge-catalog-duplicate-form input {min-width:0;width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text)}
+.badge-catalog-duplicate-form button {justify-self:start}
+@media (max-width:1180px){
+  .badge-catalog-gallery-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:620px){
+  .badge-catalog-gallery-grid {grid-template-columns:1fr;padding:12px}
+  .badge-catalog-gallery-card {min-height:310px}
+  .badge-catalog-editor-dialog {padding:14px;width:calc(100vw - 18px)}
+  .badge-catalog-editor-summary {grid-template-columns:72px minmax(0,1fr);gap:10px;padding:10px}
+  .badge-catalog-editor-medal {min-height:78px}
+  .badge-catalog-editor-medal img {width:68px;height:68px}
+  .badge-catalog-editor-medal .badge-catalog-gallery-fallback {width:68px;height:68px}
+  .badge-catalog-editor-section {padding:12px}
+  .badge-catalog-editor-section .badge-catalog-card-form .creator-badge-admin-options {grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  .badge-catalog-gallery-card,.badge-catalog-gallery-art img {transition:none}
+  .badge-catalog-gallery-card:hover,.badge-catalog-gallery-card:hover .badge-catalog-gallery-art img {transform:none}
+}
