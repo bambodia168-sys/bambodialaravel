@@ -128,7 +128,7 @@ class FrontendAccountWorkflowsTest extends TestCase
         }
     }
 
-    public function test_creator_profile_is_private_until_explicitly_published(): void
+    public function test_creator_biography_remains_private_until_explicitly_published(): void
     {
         $creator=$this->user('freelancer');
         $customer=$this->user();
@@ -147,7 +147,13 @@ class FrontendAccountWorkflowsTest extends TestCase
         $this->actingAs($creator)->get('/studio/profile')->assertOk()
             ->assertSee('Creator Profile');
         $this->patch('/studio/profile',$profileFields)->assertRedirect();
-        $this->get('/creators/'.$creator->public_id)->assertNotFound();
+        // An approved public listing permits a limited badge/work profile, but
+        // never publishes the private opt-in biography or its external website.
+        $this->get('/creators/'.$creator->public_id)->assertOk()
+            ->assertSee($published->title)
+            ->assertDontSee('Professional Laravel Engineering')
+            ->assertDontSee('example.test/portfolio')
+            ->assertDontSee($creator->email);
         $this->get('/creators')->assertOk()->assertDontSee('Professional Laravel Engineering');
 
         $this->patch('/studio/profile',[...$profileFields,'is_public'=>'1'])->assertRedirect();
@@ -162,7 +168,10 @@ class FrontendAccountWorkflowsTest extends TestCase
         $this->assertDatabaseHas('audit_events',['event'=>'creator.profile.updated','actor_id'=>$creator->id]);
 
         $this->patch('/studio/profile',[...$profileFields,'is_public'=>'0'])->assertRedirect();
-        $this->get('/creators/'.$creator->public_id)->assertNotFound();
+        $this->get('/creators/'.$creator->public_id)->assertOk()
+            ->assertSee($published->title)
+            ->assertDontSee('Professional Laravel Engineering')
+            ->assertDontSee($creator->email);
         $this->get('/creators')->assertDontSee('Professional Laravel Engineering');
     }
 
