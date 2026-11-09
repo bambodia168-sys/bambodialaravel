@@ -16,6 +16,10 @@ class User extends Authenticatable
 
     protected $fillable = ['name', 'username', 'email', 'password', 'role', 'locale', 'account_status'];
 
+    // Eloquent instances created by tests, registration and admins must have
+    // the same secure default as the database column without a reload.
+    protected $attributes = ['account_status' => 'active'];
+
     protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
