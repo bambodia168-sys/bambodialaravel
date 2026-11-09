@@ -3154,3 +3154,82 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
  .creator-badge-tooltip{position:fixed;left:16px;right:16px;top:auto;bottom:16px;width:auto;max-width:none;transform:none;z-index:9999;pointer-events:none}
 }
 @media(prefers-reduced-motion:reduce){.creator-badge{transition:none}.creator-badge:hover,.creator-badge:focus-visible{transform:none}}
+
+/* User Manager v2 — dedicated premium CRUD, private profiles and ownership transfer. */
+.user-manager-v2{padding-top:4px;padding-bottom:44px}
+.user-manager-v2 .page-intro{margin-bottom:23px}
+.user-manager-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.user-manager-header h1{margin:7px 0}
+.user-manager-header>div:first-child{max-width:750px}
+.user-manager-heading-actions{display:flex;flex-wrap:wrap;gap:10px}
+.user-manager-toolbar{align-items:center;flex-wrap:wrap;gap:15px}
+.user-manager-filters{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center}
+.user-manager-filters input,.user-manager-filters select{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--text);font-size:12px;height:39px;padding:6px 9px;min-width:0}
+.user-manager-filters input{width:240px;max-width:100%}
+.user-manager-filters select{max-width:140px}
+.user-manager-table{min-width:850px}
+.user-manager-primary-link{font-weight:800;color:var(--text)}
+.user-manager-primary-link:hover{color:var(--accent)}
+.user-manager-small{display:block;color:var(--muted);font-size:11px;font-weight:500;margin-top:3px}
+.user-manager-status{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;font-size:11px;font-weight:800;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.user-manager-status--active{background:color-mix(in srgb,#15976d 10%,var(--surface));color:color-mix(in srgb,#15976d 85%,var(--text));border-color:color-mix(in srgb,#15976d 30%,var(--line))}
+.user-manager-status--suspended{background:color-mix(in srgb,#c77e24 10%,var(--surface));color:color-mix(in srgb,#bd7d28 83%,var(--text));border-color:color-mix(in srgb,#c77e24 30%,var(--line))}
+.user-manager-status--archived{background:var(--surface-2);color:var(--muted)}
+.user-manager-form{display:grid;gap:18px}
+.user-manager-form .panel{margin:0}
+.user-manager-field-grid{padding:20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+.user-manager-field-grid>label,.user-manager-archive-form>label,.user-manager-transfer-form>label{display:grid;gap:7px;font-size:12px;font-weight:750;color:var(--text);min-width:0}
+.user-manager-field-grid input,.user-manager-field-grid select,.user-manager-field-grid textarea,
+.user-manager-archive-form input,.user-manager-transfer-form input,.user-manager-transfer-form textarea,
+.user-manager-permission select{width:100%;min-width:0;border:1px solid var(--line);background:var(--surface-2);color:var(--text);padding:10px 12px;border-radius:10px;font-size:13px;font-weight:500;outline-offset:2px}
+.user-manager-field-grid textarea,.user-manager-transfer-form textarea{resize:vertical;min-height:90px}
+.user-manager-field-grid input:focus,.user-manager-field-grid textarea:focus,.user-manager-field-grid select:focus,
+.user-manager-archive-form input:focus,.user-manager-transfer-form input:focus,.user-manager-transfer-form textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 52%,transparent)}
+.user-manager-field-grid small,.user-manager-transfer-form small{font-size:11px;font-weight:500;color:var(--muted)}
+.user-manager-field-grid .user-manager-full{grid-column:1/-1}
+.user-manager-private{font-size:11px;color:var(--muted);font-weight:700}
+.user-manager-permissions{margin:0 20px 20px;padding:15px 17px;border:1px solid var(--line);border-radius:13px;background:var(--surface-2)}
+.user-manager-permissions h3{font-size:14px;margin:0 0 7px}
+.user-manager-permission{padding:10px 0;display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--line)}
+.user-manager-permission:first-child{border-top:0}
+.user-manager-permission strong{font-size:12px}
+.user-manager-permission small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+.user-manager-permission select{width:auto;max-width:200px;background:var(--surface);flex-shrink:0}
+.user-manager-form-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:3px}
+.user-manager-two-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.user-manager-two-cols>.panel{margin:0;min-width:0}
+.user-manager-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:0 0 20px}
+.user-manager-stat{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:15px 12px;display:grid;gap:2px;min-width:0}
+.user-manager-stat strong{font-size:22px;font-weight:850;color:var(--text);font-variant-numeric:tabular-nums}
+.user-manager-stat span{font-size:11px;color:var(--muted)}
+.user-manager-definition{margin:0;padding:10px 18px}
+.user-manager-definition>div{display:grid;grid-template-columns:35% 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.user-manager-definition dt{font-size:12px;font-weight:700;color:var(--muted)}
+.user-manager-definition dd{margin:0;font-size:13px;overflow-wrap:anywhere}
+.user-manager-internal-bio{padding:15px 18px;color:var(--text)}
+.user-manager-internal-bio p{white-space:pre-wrap;color:var(--muted)}
+.user-manager-permission-list{padding:10px 18px}
+.user-manager-note{display:flex;align-items:flex-start;gap:10px;margin:12px 18px 18px;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2);font-size:12px;color:var(--muted)}
+.user-manager-danger-zone{border-color:color-mix(in srgb,#cc6b57 32%,var(--line))}
+.user-manager-danger-content{padding:20px}
+.user-manager-archive-form{display:grid;grid-template-columns:1fr 190px auto;align-items:end;gap:12px}
+.user-manager-transfer-form{display:grid;gap:16px;padding:20px}
+.user-manager-inline-check{display:flex!important;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6}
+.user-manager-inline-check input{width:17px!important;height:17px;margin-top:2px;flex:0 0 17px}
+.user-manager-table td{vertical-align:middle}
+@media(max-width:1050px){
+ .user-manager-filters{justify-content:flex-start}
+ .user-manager-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .user-manager-archive-form{grid-template-columns:1fr}
+}
+@media(max-width:740px){
+ .user-manager-v2{padding-inline:16px}
+ .user-manager-header{align-items:flex-start;flex-direction:column}
+ .user-manager-field-grid,.user-manager-two-cols{grid-template-columns:1fr}
+ .user-manager-permission{flex-wrap:wrap}
+ .user-manager-permission select{width:100%;max-width:none}
+ .user-manager-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .user-manager-filters{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .user-manager-filters input{grid-column:1/-1;width:100%;max-width:100%}
+ .user-manager-filters select{max-width:100%}
+}

@@ -171,6 +171,7 @@
             @continue(isset($item['roles']) && !in_array($user->role,$item['roles'],true))
             @php
               $match = ($currentName === $item['route']
+                || ($item['route'] === 'dashboard.users' && str_starts_with($currentName, 'dashboard.users.'))
                 || ($item['route'] === 'dashboard.knowledge.index' && str_starts_with($currentName, 'dashboard.knowledge.')))
                 && (!isset($item['params']) || (request()->route('type') === ($item['params']['type'] ?? null)));
             @endphp

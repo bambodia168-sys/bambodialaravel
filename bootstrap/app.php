@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\EnsureActiveAccount;
+use App\Http\Middleware\EnsureCapability;
 use App\Http\Middleware\AuthenticateApiToken;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
@@ -16,8 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias(['role' => EnsureRole::class, 'api.token' => AuthenticateApiToken::class]);
-        $middleware->web(append: [SetLocale::class]);
+        $middleware->alias([
+            'role' => EnsureRole::class,
+            'api.token' => AuthenticateApiToken::class,
+            'capability' => EnsureCapability::class,
+        ]);
+        $middleware->web(append: [SetLocale::class, EnsureActiveAccount::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

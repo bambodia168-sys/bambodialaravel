@@ -14,7 +14,7 @@ class User extends Authenticatable
 
     public const ROLES = ['super_admin', 'admin', 'staff', 'customer', 'freelancer', 'subscriber'];
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'locale'];
+    protected $fillable = ['name', 'username', 'email', 'password', 'role', 'locale', 'account_status'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -38,6 +38,11 @@ class User extends Authenticatable
             }
             throw new \RuntimeException('Could not allocate a unique public user ID.');
         });
+    }
+
+    public function userProfile(): HasOne
+    {
+        return $this->hasOne(UserProfile::class);
     }
 
     public function creatorProfile(): HasOne

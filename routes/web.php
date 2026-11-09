@@ -49,6 +49,7 @@ use App\Http\Controllers\Dashboard\CreatorReviewController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\ReviewQueueController;
 use App\Http\Controllers\Dashboard\UserManagerController;
+use App\Http\Controllers\Dashboard\UserOwnershipTransferController;
 use App\Http\Controllers\Dashboard\CreatorBadgeController;
 use App\Http\Controllers\Marketplace\ListingController;
 use App\Http\Controllers\PolicyCenterController;
@@ -268,13 +269,13 @@ Route::middleware('auth')->group(function (): void {
 
     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-        Route::get('/support-center', [SupportCenterController::class, 'index'])->name('dashboard.support');
+        Route::get('/support-center', [SupportCenterController::class, 'index'])->name('dashboard.support')->middleware('capability:support_center');
         Route::get('/creator-badges', [CreatorBadgeController::class,'index'])->name('dashboard.badges.index');
-        Route::post('/creator-badges/creators/{creator}/grant', [CreatorBadgeController::class,'grant'])->name('dashboard.badges.grant')->middleware('throttle:15,1');
-        Route::delete('/creator-badges/creators/{creator}/badges/{badge}', [CreatorBadgeController::class,'revoke'])->name('dashboard.badges.revoke')->middleware('throttle:15,1');
-        Route::get('/support-center/{ticket}', [SupportCenterController::class, 'show'])->whereNumber('ticket')->name('dashboard.support.show');
-        Route::post('/support-center/{ticket}/reply', [SupportCenterController::class, 'reply'])->whereNumber('ticket')->name('dashboard.support.reply');
-        Route::patch('/support-center/{ticket}/status', [SupportCenterController::class, 'status'])->whereNumber('ticket')->name('dashboard.support.status');
+        Route::post('/creator-badges/creators/{creator}/grant', [CreatorBadgeController::class,'grant'])->name('dashboard.badges.grant')->middleware(['capability:badge_awards','throttle:15,1']);
+        Route::delete('/creator-badges/creators/{creator}/badges/{badge}', [CreatorBadgeController::class,'revoke'])->name('dashboard.badges.revoke')->middleware(['capability:badge_awards','throttle:15,1']);
+        Route::get('/support-center/{ticket}', [SupportCenterController::class, 'show'])->whereNumber('ticket')->name('dashboard.support.show')->middleware('capability:support_center');
+        Route::post('/support-center/{ticket}/reply', [SupportCenterController::class, 'reply'])->whereNumber('ticket')->name('dashboard.support.reply')->middleware('capability:support_center');
+        Route::patch('/support-center/{ticket}/status', [SupportCenterController::class, 'status'])->whereNumber('ticket')->name('dashboard.support.status')->middleware('capability:support_center');
         Route::middleware('role:super_admin,admin')->group(function (): void {
             Route::patch('/creator-badges/{badge}', [CreatorBadgeController::class,'update'])->name('dashboard.badges.update')->middleware('throttle:20,1');
             Route::get('/file-vault', [ProductVaultReviewController::class, 'index'])->name('dashboard.vault.index');
@@ -305,9 +306,9 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/contract-disputes/{dispute}', [ContractOversightController::class,'inspect'])->name('dashboard.contracts.inspect');
             Route::patch('/contract-disputes/{dispute}', [ContractOversightController::class,'decide'])->name('dashboard.contracts.decide');
             Route::get('/job-manager', [JobManagerController::class, 'index'])->name('dashboard.jobs.index');
-            Route::patch('/job-manager/{job}', [JobManagerController::class, 'decide'])->name('dashboard.jobs.decide');
+            Route::patch('/job-manager/{job}', [JobManagerController::class, 'decide'])->name('dashboard.jobs.decide')->middleware('capability:marketplace_review');
             Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');
-            Route::patch('/product-manager/{product}', [ProductManagerController::class, 'decide'])->name('dashboard.products.decide');
+            Route::patch('/product-manager/{product}', [ProductManagerController::class, 'decide'])->name('dashboard.products.decide')->middleware('capability:marketplace_review');
             Route::get('/license-manager', [LicenseManagerController::class, 'index'])->name('dashboard.licenses.index');
             Route::post('/license-manager', [LicenseManagerController::class, 'store'])->name('dashboard.licenses.store');
             Route::patch('/license-manager/{license}', [LicenseManagerController::class, 'update'])->name('dashboard.licenses.update');
@@ -357,8 +358,8 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/policy-center/{policy}', [PolicyManagerController::class, 'update'])->name('dashboard.policies.update');
             Route::get('/creator-applications', [CreatorReviewController::class, 'index'])->name('dashboard.creator-applications');
             Route::patch('/creator-applications/{application}', [CreatorReviewController::class, 'decide'])->name('dashboard.creator-applications.decide');
-            Route::get('/review-queue', [ReviewQueueController::class, 'index'])->name('dashboard.reviews');
-            Route::patch('/review-queue/{listing}', [ReviewQueueController::class, 'decide'])->name('dashboard.reviews.update');
+            Route::get('/review-queue', [ReviewQueueController::class, 'index'])->name('dashboard.reviews')->middleware('capability:marketplace_review');
+            Route::patch('/review-queue/{listing}', [ReviewQueueController::class, 'decide'])->name('dashboard.reviews.update')->middleware('capability:marketplace_review');
         });
         Route::middleware('role:super_admin')->group(function (): void {
             Route::get('/privacy-requests', [PrivacyRequestManagerController::class,'index'])->name('dashboard.privacy.index');
@@ -374,8 +375,16 @@ Route::middleware('auth')->group(function (): void {
                 ->name('dashboard.entitlements.revoke');
             Route::get('/feature-manager', [FeatureManagerController::class, 'index'])->name('dashboard.features');
             Route::patch('/feature-manager/{feature}', [FeatureManagerController::class, 'update'])->name('dashboard.features.update');
-            Route::get('/user-manager', [UserManagerController::class, 'index'])->name('dashboard.users');
-            Route::patch('/user-manager/{user}', [UserManagerController::class, 'update'])->name('dashboard.users.update');
+            Route::get('/user-manager', [UserManagerController::class,'index'])->name('dashboard.users');
+            Route::get('/user-manager/create', [UserManagerController::class,'create'])->name('dashboard.users.create');
+            Route::post('/user-manager', [UserManagerController::class,'store'])->name('dashboard.users.store')->middleware('throttle:10,1');
+            Route::get('/user-manager/{user}', [UserManagerController::class,'show'])->name('dashboard.users.show');
+            Route::get('/user-manager/{user}/edit', [UserManagerController::class,'edit'])->name('dashboard.users.edit');
+            Route::patch('/user-manager/{user}', [UserManagerController::class,'update'])->name('dashboard.users.update')->middleware('throttle:20,1');
+            Route::delete('/user-manager/{user}', [UserManagerController::class,'archive'])->name('dashboard.users.archive')->middleware('throttle:5,1');
+            Route::post('/user-manager/{user}/restore', [UserManagerController::class,'restore'])->name('dashboard.users.restore')->middleware('throttle:5,1');
+            Route::get('/user-manager/{user}/transfer', [UserOwnershipTransferController::class,'create'])->name('dashboard.users.transfer');
+            Route::post('/user-manager/{user}/transfer', [UserOwnershipTransferController::class,'store'])->name('dashboard.users.transfer.store')->middleware('throttle:10,1');
         });
     });
 });

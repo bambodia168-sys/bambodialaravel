@@ -18,6 +18,10 @@ class AuthenticateApiToken
             return new JsonResponse(['message' => 'Unauthenticated. Provide a valid, unexpired bearer token.'], 401);
         }
 
+        if ($token->owner?->account_status !== 'active') {
+            return new JsonResponse(['message'=>'Account is not active.'],403);
+        }
+
         if (! $token->allows($scope)) {
             return new JsonResponse(['message' => 'This token does not have the required scope.'], 403);
         }
