@@ -90,6 +90,7 @@ jobs:
           bash -n support/detail-offer-card-upgrade.sh
           bash -n support/detail-media-related-upgrade.sh
           bash -n support/compact-marketplace-cards-upgrade.sh
+          bash -n support/creator-badge-manager-v2-upgrade.sh
           php -l examples/license-validation.php
           php -l support/frontend-layout-samples.php
           bash -n support/builder-studio-db-backup.sh
