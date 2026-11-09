@@ -32,6 +32,10 @@
     </div>
   </section>
   <section class="panel">
+    <div class="panel-head"><h2>My achievement badges</h2></div>
+    <div class="onboarding-content"><x-creator-badges :badges="\App\Support\CreatorBadgeAwards::earned(auth()->user())"/><p class="hint">Badges are awarded automatically from verified platform activity, or manually after administrator review.</p></div>
+  </section>
+  <section class="panel">
     <div class="panel-head"><h2>Public portfolio preview</h2><span class="count">{{ $publishedCount }} approved listings</span></div>
     <div class="onboarding-content">
       @if($profile?->is_public)

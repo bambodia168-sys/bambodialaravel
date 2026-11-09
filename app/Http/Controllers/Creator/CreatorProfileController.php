@@ -51,7 +51,7 @@ class CreatorProfileController extends Controller
     {
         $search=mb_substr(trim((string)$request->query('q','')),0,120);
         $creators=User::query()
-            ->select(['id','public_id','name','role'])
+            ->select(['id','public_id','name','email','role','created_at'])
             ->whereIn('role',['freelancer','super_admin'])
             ->whereHas('creatorProfile',function($q)use($search){
                 $q->where('is_public',true);

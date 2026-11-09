@@ -3103,3 +3103,23 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   .marketplace-card .marketplace-card-live-preview{transition:none}
   .marketplace-card .marketplace-card-live-preview:hover{transform:none}
 }
+
+/* Creator achievements: compact, theme-aware, keyboard accessible */
+.creator-badge-row{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0;align-items:center}
+.creator-badge{--badge-accent:#5685d8;position:relative;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid color-mix(in srgb,var(--badge-accent) 32%,transparent);border-radius:999px;background:color-mix(in srgb,var(--badge-accent) 11%,transparent);color:inherit;font-size:12px;font-weight:700;line-height:1.25;cursor:help;max-width:100%;outline-offset:3px}
+.creator-badge-icon{color:var(--badge-accent);display:inline-flex}
+.creator-badge--gold{--badge-accent:#ca981c}.creator-badge--purple{--badge-accent:#9273d9}.creator-badge--amber{--badge-accent:#d38929}.creator-badge--green{--badge-accent:#2da278}.creator-badge--pink{--badge-accent:#d16ba5}
+.creator-badge-tooltip{display:none;position:absolute;z-index:90;left:0;bottom:calc(100% + 9px);width:min(280px,85vw);white-space:normal;padding:12px 14px;border-radius:10px;background:var(--surface, #1c2637);color:var(--text, #fff);border:1px solid var(--border, #6d7580);box-shadow:0 12px 28px #0003;font-size:12px;font-weight:400;line-height:1.5}
+.creator-badge-tooltip strong{display:block;margin-bottom:4px;font-weight:750}
+.creator-badge-tooltip span{display:block}
+.creator-badge:hover .creator-badge-tooltip,.creator-badge:focus-visible .creator-badge-tooltip{display:block}
+.creator-badge-admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px;padding:16px}
+.creator-badge-admin-card,.creator-badge-person{display:grid;gap:11px;padding:16px;border:1px solid var(--border, #ddd);border-radius:14px;min-width:0}
+.creator-badge-admin-card label,.creator-badge-grant-form label{display:grid;gap:6px;font-size:12px;font-weight:650}
+.creator-badge-admin-card input,.creator-badge-admin-card textarea,.creator-badge-admin-card select,.creator-badge-grant-form input,.creator-badge-grant-form select{width:100%;min-width:0}
+.creator-badge-admin-options{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.creator-badge-admin-people{display:grid;gap:14px;padding:16px}
+.creator-badge-person{gap:9px}
+.creator-badge-grant-form{display:grid;grid-template-columns:minmax(130px,1fr) minmax(180px,2fr) auto;gap:8px;align-items:end}
+.creator-badge-revoke{display:inline-flex;align-items:center;gap:10px;justify-content:flex-start}
+@media(max-width:650px){.creator-badge-grant-form{grid-template-columns:1fr}.creator-badge-admin-options{grid-template-columns:1fr}.creator-badge-tooltip{left:auto;right:0}}

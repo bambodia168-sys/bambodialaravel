@@ -49,6 +49,7 @@ use App\Http\Controllers\Dashboard\CreatorReviewController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\ReviewQueueController;
 use App\Http\Controllers\Dashboard\UserManagerController;
+use App\Http\Controllers\Dashboard\CreatorBadgeController;
 use App\Http\Controllers\Marketplace\ListingController;
 use App\Http\Controllers\PolicyCenterController;
 use App\Http\Controllers\ContentController;
@@ -268,10 +269,14 @@ Route::middleware('auth')->group(function (): void {
     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/support-center', [SupportCenterController::class, 'index'])->name('dashboard.support');
+        Route::get('/creator-badges', [CreatorBadgeController::class,'index'])->name('dashboard.badges.index');
+        Route::post('/creator-badges/creators/{creator}/grant', [CreatorBadgeController::class,'grant'])->name('dashboard.badges.grant')->middleware('throttle:15,1');
+        Route::delete('/creator-badges/creators/{creator}/badges/{badge}', [CreatorBadgeController::class,'revoke'])->name('dashboard.badges.revoke')->middleware('throttle:15,1');
         Route::get('/support-center/{ticket}', [SupportCenterController::class, 'show'])->whereNumber('ticket')->name('dashboard.support.show');
         Route::post('/support-center/{ticket}/reply', [SupportCenterController::class, 'reply'])->whereNumber('ticket')->name('dashboard.support.reply');
         Route::patch('/support-center/{ticket}/status', [SupportCenterController::class, 'status'])->whereNumber('ticket')->name('dashboard.support.status');
         Route::middleware('role:super_admin,admin')->group(function (): void {
+            Route::patch('/creator-badges/{badge}', [CreatorBadgeController::class,'update'])->name('dashboard.badges.update')->middleware('throttle:20,1');
             Route::get('/file-vault', [ProductVaultReviewController::class, 'index'])->name('dashboard.vault.index');
             Route::patch('/file-vault/{version}', [ProductVaultReviewController::class, 'decide'])->name('dashboard.vault.decide');
             Route::post('/file-vault/{version}/scan', [ProductVaultReviewController::class,'scan'])

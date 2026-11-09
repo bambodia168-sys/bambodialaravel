@@ -27,6 +27,7 @@
   if ($workspace === 'admin') {
     $groups[] = ['heading'=>'Overview','items'=>[
       ['route'=>'dashboard','label'=>'Dashboard overview','icon'=>'layout-dashboard'],
+      ['route'=>'dashboard.badges.index','label'=>'Creator Badges','icon'=>'award'],
     ]];
     if ($user->role === 'super_admin') {
       $groups[] = ['heading'=>'Access & Security','items'=>[

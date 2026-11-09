@@ -1,6 +1,20 @@
 @props(['name' => 'circle', 'size' => 20])
 @php
 $paths = [
+    'award' => '<circle cx="12" cy="8" r="6"/><path d="m8 13-2 9 6-3 6 3-2-9"/>',
+    'trending-up' => '<path d="m3 17 7-7 4 4 7-8M15 6h6v6"/>',
+    'shield-check' => '<path d="m12 2 9 4v6c0 5-3.5 8-9 10-5.5-2-9-5-9-10V6zM8 12l3 3 5-6"/>',
+    'zap' => '<path d="m13 2-10 12h8l-1 8 11-12h-8z"/>',
+    'badge-check' => '<path d="m12 2 3 2 4-1 1 4 3 3-2 4 1 4-4 1-3 3-4-2-4 1-1-4-3-3 2-4-1-4 4-1zM8 12l3 3 5-6"/>',
+    'target' => '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    'crown' => '<path d="m2 7 5 5 5-8 5 8 5-5-2 13H4zM5 20h14"/>',
+    'clock-check' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2m-7 2 2 2 4-4"/>',
+    'medal' => '<circle cx="12" cy="15" r="6"/><path d="m8 10-3-8h5l2 6m4 2 3-8h-5l-2 6"/>',
+    'handshake' => '<path d="m2 8 6-4 5 2 4-2 5 4-5 7-4 3-3-1-2-2-3-2zM8 11l4-3 4 3M8 15l2 2m3-1 2 1"/>',
+    'graduation-cap' => '<path d="m2 9 10-5 10 5-10 5zM6 11v6c4 3 8 3 12 0v-6M22 9v8"/>',
+    'gem' => '<path d="m6 3 12 0 5 7-11 12L1 10zM1 10h22M6 3l6 19 6-19"/>',
+    'heart-handshake' => '<path d="M12 21 3 12a5 5 0 0 1 7-7l2 2 2-2a5 5 0 0 1 7 7zM8 13l3-2 4 3"/>',
+    'heart' => '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/>',
     'layout-dashboard' => '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="4" rx="1"/><rect x="14" y="11" width="7" height="10" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
     'panel-left-open' => '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18m6-13-4 4 4 4"/>',
     'panel-left-close' => '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18m4-5 4-4 4 4"/>',

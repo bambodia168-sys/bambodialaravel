@@ -8,6 +8,7 @@
       <div class="creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($creator->name,0,1)) }}</div>
       <div>
         <h1>{{ $creator->name }}</h1>
+        <x-creator-badges :badges="\App\Support\CreatorBadgeAwards::earned($creator)"/>
         <h2>{{ $profile->headline }}</h2>
       </div>
     </div>
@@ -18,7 +19,7 @@
       @endif
       <a class="btn primary" href="{{ route('marketplace.search') }}">Explore all listings</a>
     </div>
-    <p class="hint">Public portfolio information is supplied by this creator. Bambodia has not independently verified professional credentials or external websites.</p>
+    <p class="hint">Creator-submitted biographical information and external links are not independently verified. Badges represent either platform activity or an explicitly awarded platform review.</p>
   </section>
   <section class="marketplace-section">
     <div class="marketplace-section-heading">
