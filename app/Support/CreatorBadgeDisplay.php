@@ -12,7 +12,7 @@ final class CreatorBadgeDisplay
     public static function settings(): object
     {
         return DB::table('creator_badge_settings')->where('id',1)->first() ?? (object)[
-            'display_mode'=>'badge_name',
+            'display_mode'=>'badge',
             'badge_size'=>'standard',
             'tooltips_enabled'=>true,
         ];

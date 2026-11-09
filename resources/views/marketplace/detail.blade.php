@@ -148,10 +148,7 @@
           <div>
             <strong>{{ $ownerName }}</strong>
             @if($creatorBadges->isNotEmpty())
-              <x-creator-badges :badges="$creatorBadges->take(6)" variant="compact"/>
-              @if($creatorBadges->count() > 6 && $publicCreator)
-                <p class="hint">View the creator profile for all {{ $creatorBadges->count() }} awarded badges.</p>
-              @endif
+              <x-creator-badges :badges="$creatorBadges" variant="compact"/>
             @endif
             <p>{{ $ownerProfile?->is_public && $ownerProfile?->headline ? $ownerProfile->headline : 'Publisher of this approved marketplace listing.' }}</p>
             @if($publicCreator)
@@ -298,7 +295,7 @@
             <div><strong>{{ $ownerName }}</strong><small>Bambodia creator</small></div>
           </div>
           @if($creatorBadges->isNotEmpty())
-            <x-creator-badges :badges="$creatorBadges->take(3)" variant="compact"/>
+            <x-creator-badges :badges="$creatorBadges" variant="compact" mode="badge"/>
           @endif
           @if($publicCreator)
             <a class="btn subtle premium-full-action" href="{{ route('creators.show',$listing->creator->public_id) }}">View public profile</a>

@@ -29,9 +29,22 @@
         <small>Explore your premium medals and open the three-dot menu to manage each badge.</small>
       </div>
       @if($canEdit)
-        <button type="button" class="btn primary compact" data-badge-dialog-open="badge-create-dialog">
-          <x-icon name="plus" size="16"/> Add custom badge
-        </button>
+        <div class="badge-public-display-actions">
+          <form method="post" action="{{ route('dashboard.badges.display.update') }}" class="badge-public-display-form">
+            @csrf @method('PATCH')
+            <input type="hidden" name="badge_size" value="{{ $display->badge_size }}">
+            <input type="hidden" name="tooltips_enabled" value="1">
+            <label for="badge-public-display-mode">Public profile badges</label>
+            <select id="badge-public-display-mode" name="display_mode" aria-label="Public profile badge display" required>
+              <option value="badge" @selected($display->display_mode==='badge')>Badge Only</option>
+              <option value="badge_name" @selected($display->display_mode==='badge_name')>Badge with name</option>
+            </select>
+            <button type="submit" class="btn subtle compact">Save display</button>
+          </form>
+          <button type="button" class="btn primary compact" data-badge-dialog-open="badge-create-dialog">
+            <x-icon name="plus" size="16"/> Add custom badge
+          </button>
+        </div>
       @endif
     </div>
     <div class="creator-badge-admin-grid badge-catalog-restored-grid badge-catalog-gallery-grid">

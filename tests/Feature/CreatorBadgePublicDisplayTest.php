@@ -126,4 +126,66 @@ class CreatorBadgePublicDisplayTest extends TestCase
         $this->get(route('creators.index'))
             ->assertOk()->assertDontSee('PRIVATE TITLE NOT FOR PUBLICATION');
     }
+    public function test_all_sixteen_awarded_badges_render_in_both_listing_sections_without_truncation(): void
+    {
+        $creator=$this->creator('Samith QA', 'freelancer');
+        $badges=CreatorBadge::query()->where('enabled',true)->orderBy('sort_order')->get();
+        $this->assertCount(16,$badges);
+        foreach($badges as $badge) {
+            CreatorBadgeGrant::query()->create([
+                'user_id'=>$creator->id,
+                'creator_badge_id'=>$badge->id,
+                'source'=>'manual',
+                'evidence_note'=>'Dedicated test fixture only; no actual credential verification.',
+            ]);
+        }
+        $listing=$this->publicProject($creator,'Full medal publication QA project');
+        $response=$this->get($listing->publicUrl())->assertOk();
+        $html=$response->getContent();
+        $this->assertSame('badge',
+            \App\Support\CreatorBadgeDisplay::settings()->display_mode);
+        $sellerStart=strpos($html,'id="seller"');
+        $sidebarStart=strpos($html,'premium-side-card premium-side-creator');
+        $this->assertNotFalse($sellerStart);
+        $this->assertNotFalse($sidebarStart);
+        $seller=substr($html,$sellerStart, $sidebarStart-$sellerStart);
+        $sidebar=substr($html,$sidebarStart);
+
+        $this->assertSame(16,substr_count($seller,'class="creator-badge creator-badge--'));
+        $this->assertSame(16,substr_count($sidebar,'class="creator-badge creator-badge--'));
+        $this->assertStringContainsString('creator-badge-row--badge',$seller);
+        $this->assertStringContainsString('creator-badge-row--badge',$sidebar);
+        $this->assertStringNotContainsString('class="creator-badge-name"',$seller);
+        $this->assertStringNotContainsString('class="creator-badge-name"',$sidebar);
+        $this->assertSame(32,substr_count($html,'class="creator-badge-tooltip" role="tooltip"'));
+        $this->assertSame(2,substr_count($html,'images/badges/vip-client-favorite.svg'));
+        $this->assertStringContainsString('aria-label="VIP Client Favorite:', $html);
+        $this->assertStringNotContainsString('View the creator profile for all', $html);
+    }
+
+    public function test_sidebar_remains_artwork_only_when_admin_enables_badge_with_name(): void
+    {
+        $creator=$this->creator('Display-mode QA');
+        $badge=CreatorBadge::query()->where('slug','expert-vetted')->firstOrFail();
+        CreatorBadgeGrant::query()->create([
+            'user_id'=>$creator->id,'creator_badge_id'=>$badge->id,
+            'source'=>'manual','evidence_note'=>'Independent test-only assessment.',
+        ]);
+        $admin=$this->creator('System Admin','admin');
+        $this->actingAs($admin)->patch(route('dashboard.badges.display.update'),[
+            'display_mode'=>'badge_name','badge_size'=>'standard','tooltips_enabled'=>1,
+        ])->assertRedirect();
+        $listing=$this->publicProject($creator,'Display-mode QA listing');
+        $html=$this->get($listing->publicUrl())->assertOk()->getContent();
+        $start=strpos($html,'id="seller"');
+        $side=strpos($html,'premium-side-card premium-side-creator');
+        $main=substr($html,$start,$side-$start);
+        $sidebar=substr($html,$side);
+        $this->assertStringContainsString('class="creator-badge-name"',$main);
+        $this->assertStringNotContainsString('class="creator-badge-name"',$sidebar);
+        $this->assertStringContainsString('creator-badge-row--badge',$sidebar);
+        $this->assertStringContainsString('aria-label="Expert Vetted:', $sidebar);
+        $this->assertStringContainsString('class="creator-badge-tooltip" role="tooltip"',$sidebar);
+    }
+
 }

@@ -24,6 +24,13 @@ try {
       const response=await page.goto(origin+'/dashboard/creator-badges',{waitUntil:'networkidle'});
       if(response?.status()!==200)throw Error(name+' '+theme+' badge table HTTP '+response?.status());
       await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
+      const displaySelect=page.locator('#badge-public-display-mode');
+      if(!(await displaySelect.isVisible()) ||
+         await displaySelect.locator('option').count()!==2)
+        throw Error(name+' '+theme+' public profile display options unavailable');
+      if(!(await page.getByRole('button',{name:'Save display'}).isVisible()))
+        throw Error(name+' '+theme+' save display button unavailable');
+      checks+=2;
       const restored=page.locator('#badge-catalog .badge-catalog-restored-card');
       if(await restored.count()!==16)
         throw Error(name+' '+theme+' original medal cards missing above user table');

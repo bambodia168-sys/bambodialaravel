@@ -349,4 +349,27 @@ final class CreatorBadgeManagerV2Test extends TestCase
         $this->assertStringNotContainsString('badge-catalog-editor-dialog',$response->getContent());
     }
 
+    public function test_public_profile_display_options_are_visible_on_main_badge_catalog_page(): void
+    {
+        $owner=$this->owner();
+        $response=$this->actingAs($owner)->get(route('dashboard.badges.index'))->assertOk()
+            ->assertSee('Public profile badges')
+            ->assertSee('Badge Only')
+            ->assertSee('Badge with name')
+            ->assertSee('Save display');
+        $this->assertSame('badge',\App\Support\CreatorBadgeDisplay::settings()->display_mode);
+        $response->assertSee('Grant badges to creators')
+            ->assertSee('Manage badges');
+        $this->patch(route('dashboard.badges.display.update'),[
+            'display_mode'=>'badge_name','badge_size'=>'standard','tooltips_enabled'=>1,
+        ])->assertRedirect();
+        $this->assertDatabaseHas('creator_badge_settings',[
+            'id'=>1,'display_mode'=>'badge_name','tooltips_enabled'=>1,
+        ]);
+        $this->patch(route('dashboard.badges.display.update'),[
+            'display_mode'=>'badge','badge_size'=>'standard','tooltips_enabled'=>1,
+        ])->assertRedirect();
+        $this->assertSame('badge',\App\Support\CreatorBadgeDisplay::settings()->display_mode);
+    }
+
 }

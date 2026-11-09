@@ -3602,3 +3602,24 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   .badge-catalog-gallery-card,.badge-catalog-gallery-art img {transition:none}
   .badge-catalog-gallery-card:hover,.badge-catalog-gallery-card:hover .badge-catalog-gallery-art img {transform:none}
 }
+
+
+/* Public badge display: compact artwork-only profile chips and exposed admin mode setting. */
+.badge-public-display-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.badge-public-display-form{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge-public-display-form label{font-size:12px;font-weight:750;color:var(--text);white-space:nowrap}
+.badge-public-display-form select{min-width:155px;width:auto;height:38px;padding:8px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--text);font-size:12px}
+.badge-public-display-form button{white-space:nowrap}
+.creator-badge-row--badge.creator-badge-row--compact{gap:7px;align-items:center;justify-content:flex-start}
+.creator-badge-row--badge.creator-badge-row--compact .creator-badge{
+  width:46px;min-width:46px;height:46px;min-height:46px;
+  flex:0 0 46px;display:inline-flex;align-items:center;justify-content:center;
+  padding:3px;border-radius:50%;overflow:visible;
+}
+.creator-badge-row--badge.creator-badge-row--compact .creator-badge-artwork{width:40px;height:40px}
+.creator-badge-row--badge.creator-badge-row--compact .creator-badge-fallback{width:38px;height:38px}
+.premium-side-creator{overflow:visible;position:relative}
+.premium-side-creator .creator-badge-row{overflow:visible}
+.premium-side-creator .creator-badge-tooltip{max-width:min(270px,calc(100vw - 40px))}
+.premium-side-creator .creator-badge:hover,.premium-side-creator .creator-badge:focus-visible{z-index:60}
+@media(max-width:760px){.badge-public-display-actions{justify-content:flex-start;width:100%}.badge-public-display-form{width:100%}}

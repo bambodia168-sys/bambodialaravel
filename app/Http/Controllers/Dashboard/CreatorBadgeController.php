@@ -63,8 +63,9 @@ class CreatorBadgeController extends Controller
             ->groupBy('user_id');
         $canGrant=UserManagementAccess::allows($request->user(),'badge_awards');
         $canEdit=in_array($request->user()->role,['super_admin','admin'],true);
+        $display=CreatorBadgeDisplay::settings();
         return view('dashboard.creator-badges',compact('badges','creators','grants','awards',
-            'search','role','status','canGrant','canEdit','recentActions'));
+            'search','role','status','canGrant','canEdit','recentActions','display'));
     }
 
     public function settings(Request $request): View
