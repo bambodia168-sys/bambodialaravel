@@ -57,6 +57,8 @@ try {
             inside: !!rect && rect.left >= 10 && rect.right <= innerWidth - 10 &&
               rect.top >= 10 && rect.bottom <= innerHeight - 10,
             text: overlay?.textContent || '',
+            rect: rect && {left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},
+            viewport: {width:innerWidth,height:innerHeight},
             accessibleName: badge?.getAttribute('aria-label'),
           };
         });

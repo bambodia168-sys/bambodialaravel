@@ -44,8 +44,8 @@
     }
 
     // First measure at a neutral position; these measurements include badge text wrapping.
-    overlay.style.left = leftEdge + 'px';
-    overlay.style.top = topEdge + 'px';
+    overlay.style.setProperty('left', leftEdge + 'px', 'important');
+    overlay.style.setProperty('top', topEdge + 'px', 'important');
     const popup = overlay.getBoundingClientRect();
     const gap = 9;
     const margin = 12;
@@ -63,8 +63,8 @@
     else if (below + popup.height <= bottomEdge - margin) top = below;
     else top = Math.max(minY, Math.min(above, maxY));
 
-    overlay.style.left = left + 'px';
-    overlay.style.top = top + 'px';
+    overlay.style.setProperty('left', left + 'px', 'important');
+    overlay.style.setProperty('top', top + 'px', 'important');
   }
 
   function schedulePosition() {

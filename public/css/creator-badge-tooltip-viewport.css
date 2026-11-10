@@ -7,7 +7,7 @@ html.badge-tooltip-viewport-ready .creator-badge-row--tips .creator-badge > .cre
   display: block !important;
   position: fixed !important;
   z-index: 2147483000 !important;
-  inset: auto !important;
+  /* Avoid the `inset` shorthand: it would override JS-computed left/top. */
   right: auto !important;
   bottom: auto !important;
   box-sizing: border-box;
