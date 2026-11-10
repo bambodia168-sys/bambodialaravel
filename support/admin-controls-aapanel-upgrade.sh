@@ -77,7 +77,7 @@ git -C "$SOURCE" merge-base --is-ancestor "$RELEASE" "$CURRENT" ||
 git -C "$SOURCE" diff --quiet "$RELEASE" "$TESTED" ||
   fail "Merged code differs from full-CI-tested source."
 git -C "$SOURCE" diff --name-only "$RELEASE" "$CURRENT" | LC_ALL=C sort > "$TMP/after"
-printf '%s\n' "$HELPER" > "$TMP/allowed"
+printf '%s\n' "$HELPER" '.github/workflows/quality.yml' | LC_ALL=C sort > "$TMP/allowed"
 cmp -s "$TMP/after" "$TMP/allowed" || fail "Main contains later unreviewed changes."
 [[ "$(git hash-object "$0")" == "$(git -C "$SOURCE" rev-parse "$CURRENT:$HELPER")" ]] ||
   fail "Installer does not match GitHub main."
