@@ -33,7 +33,7 @@ final class SiteSeoController extends Controller
         ], true) || in_array($first, SetLocale::SUPPORTED, true), 422, 'SEO overrides must target public, unprefixed routes.');
 
         $duplicate = SiteSeoPage::query()->where('path', $path)->where('locale', $data['locale'])
-            ->when($page, fn ($q) => $q->whereKeyNot($page->id))->exists();
+            ->when($page, fn ($q) => $q->where('id', '!=', $page->id))->exists();
         abort_if($duplicate, 422, 'This path already has an SEO entry in the selected language.');
 
         if ($data['canonical_url'] ?? false) {

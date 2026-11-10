@@ -19,6 +19,10 @@ use App\Http\Controllers\ContractMilestoneController;
 use App\Http\Controllers\ContractCommunicationController;
 use App\Http\Controllers\Dashboard\ContractOversightController;
 use App\Http\Controllers\Dashboard\SiteSettingsController;
+use App\Http\Controllers\Dashboard\SiteBrandingController;
+use App\Http\Controllers\Dashboard\SiteSeoController;
+use App\Http\Controllers\Dashboard\SiteSocialController;
+use App\Http\Controllers\SiteManifestController;
 use App\Http\Controllers\Dashboard\CategoryManagerController;
 use App\Http\Controllers\Dashboard\MarketplaceManagerController;
 use App\Http\Controllers\Dashboard\MarketplaceCardFeaturesController;
@@ -75,6 +79,7 @@ Route::get('/creators', [CreatorProfileController::class,'directory'])->name('cr
 Route::get('/creators/{creator}', [CreatorProfileController::class,'show'])
     ->where('creator','[0-9]{8}')->name('creators.show');
 Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
+Route::get('/site.webmanifest', SiteManifestController::class)->name('site.manifest');
 Route::get('/blog', [ContentController::class, 'blog'])->name('blog');
 Route::post('/blog/{content}/comments', [PostCommentController::class, 'store'])
     ->where('content', '[0-9]{9}_[a-z0-9-]+')
@@ -327,6 +332,19 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/appearance', [SiteSettingsController::class, 'updateAppearance'])->name('dashboard.appearance.update');
             Route::get('/system-settings', [SiteSettingsController::class, 'system'])->name('dashboard.system-settings');
             Route::patch('/system-settings', [SiteSettingsController::class, 'updateSystem'])->name('dashboard.system-settings.update');
+            Route::get('/site-identity', [SiteSettingsController::class, 'identity'])->name('dashboard.site-identity');
+            Route::patch('/site-identity', [SiteSettingsController::class, 'updateIdentity'])->name('dashboard.site-identity.update')->middleware('throttle:30,1');
+            Route::post('/site-identity/assets', [SiteBrandingController::class, 'upload'])->name('dashboard.site-identity.assets.store')->middleware('throttle:10,1');
+            Route::delete('/site-identity/assets/{slot}', [SiteBrandingController::class, 'destroy'])->name('dashboard.site-identity.assets.destroy')->middleware('throttle:10,1');
+            Route::get('/seo-settings', [SiteSettingsController::class, 'seo'])->name('dashboard.seo-settings');
+            Route::patch('/seo-settings', [SiteSettingsController::class, 'updateSeo'])->name('dashboard.seo-settings.update')->middleware('throttle:20,1');
+            Route::post('/seo-settings/pages', [SiteSeoController::class, 'store'])->name('dashboard.seo.pages.store')->middleware('throttle:10,1');
+            Route::patch('/seo-settings/pages/{page}', [SiteSeoController::class, 'update'])->name('dashboard.seo.pages.update')->middleware('throttle:20,1');
+            Route::delete('/seo-settings/pages/{page}', [SiteSeoController::class, 'destroy'])->name('dashboard.seo.pages.destroy')->middleware('throttle:10,1');
+            Route::get('/footer-social', [SiteSocialController::class, 'index'])->name('dashboard.social.index');
+            Route::post('/footer-social', [SiteSocialController::class, 'store'])->name('dashboard.social.store')->middleware('throttle:10,1');
+            Route::patch('/footer-social/{link}', [SiteSocialController::class, 'update'])->name('dashboard.social.update')->middleware('throttle:20,1');
+            Route::delete('/footer-social/{link}', [SiteSocialController::class, 'destroy'])->name('dashboard.social.destroy')->middleware('throttle:10,1');
             Route::get('/category-manager', [CategoryManagerController::class, 'index'])->name('dashboard.categories.index');
             Route::post('/category-manager', [CategoryManagerController::class, 'store'])->name('dashboard.categories.store');
             Route::patch('/category-manager/{category}', [CategoryManagerController::class, 'update'])->name('dashboard.categories.update');
