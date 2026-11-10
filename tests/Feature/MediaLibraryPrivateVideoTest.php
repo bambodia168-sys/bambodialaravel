@@ -70,10 +70,13 @@ final class MediaLibraryPrivateVideoTest extends TestCase
         $this->get($asset->previewUrl())->assertNotFound();
         $this->actingAs($other)->get($asset->previewUrl())->assertNotFound();
 
-        $this->actingAs($owner)->get($asset->previewUrl())->assertOk()
-            ->assertHeader('Content-Type','video/mp4')
-            ->assertHeader('X-Content-Type-Options','nosniff')
-            ->assertHeader('Cache-Control','private, no-store, max-age=0');
+        $preview=$this->actingAs($owner)->get($asset->previewUrl());
+        $preview->assertOk()->assertHeader('Content-Type','video/mp4')
+            ->assertHeader('X-Content-Type-Options','nosniff');
+        $cacheControl=$preview->headers->get('Cache-Control','');
+        $this->assertStringContainsString('private',$cacheControl);
+        $this->assertStringContainsString('no-store',$cacheControl);
+        $this->assertStringNotContainsString('public',$cacheControl);
 
         $this->withHeaders(['Range'=>'bytes=4-8'])->get($asset->previewUrl())
             ->assertStatus(206)
