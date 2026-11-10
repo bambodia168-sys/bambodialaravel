@@ -19,7 +19,7 @@ BACKUPS="/root/Bambodia-Profile-ButtonLabels-Backups"
 
 fail(){ echo "BLOCKED: $*" >&2; exit 1; }
 [[ "$(id -u)" == "0" ]] || fail "Run as root on aaPanel."
-for c in git gh php python3 cmp curl tar runuser install mktemp sha256sum; do
+for c in git gh python3 cmp curl tar runuser install mktemp sha256sum; do
   command -v "$c" >/dev/null || fail "Missing command: $c"
 done
 [[ -d "$SOURCE/.git" && -f "$APP/artisan" && -f "$APP/vendor/autoload.php" && -x "$PHP" ]] ||
