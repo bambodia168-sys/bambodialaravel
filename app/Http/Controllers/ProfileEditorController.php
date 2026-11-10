@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditEvent;
 use App\Models\CreatorProfile;
 use App\Models\CreatorProfileItem;
+use App\Models\CreatorProfileSection;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Support\CreatorBadgeAwards;
@@ -33,6 +34,9 @@ final class ProfileEditorController extends Controller
     private function render(User $owner, string $workspace, bool $admin): View
     {
         $owner->load(['userProfile', 'creatorProfile']);
+        CreatorProfileSection::ensureDefaults($owner);
+        $sections = CreatorProfileSection::query()->where('user_id', $owner->id)
+            ->orderBy('sort_order')->orderBy('id')->get();
         $items = CreatorProfileItem::query()->where('user_id', $owner->id)
             ->orderBy('sort_order')->orderBy('id')->get()->groupBy('kind');
 
@@ -41,6 +45,7 @@ final class ProfileEditorController extends Controller
             'personal' => $owner->userProfile,
             'creatorProfile' => $owner->creatorProfile,
             'items' => $items,
+            'sections' => $sections,
             'workspace' => $workspace,
             'adminProfile' => $admin,
             'awards' => $owner->isCreator() ? CreatorBadgeAwards::earned($owner) : collect(),

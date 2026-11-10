@@ -9,6 +9,7 @@ use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
 use App\Models\User;
 use App\Models\CreatorProfileItem;
+use App\Models\CreatorProfileSection;
 use App\Http\Controllers\ProfileEditorController;
 use App\Support\CreatorBadgeAwards;
 use Illuminate\Http\RedirectResponse;
@@ -81,13 +82,17 @@ class CreatorProfileController extends Controller
         $publishedProfile = $user->creatorProfile?->is_public ? $user->creatorProfile : null;
         $items = $publishedProfile ? CreatorProfileItem::query()->where('user_id', $user->id)
             ->where('is_visible', true)->orderBy('sort_order')->orderBy('id')->get()->groupBy('kind') : collect();
+        $sections = $publishedProfile
+            ? CreatorProfileSection::query()->where('user_id', $user->id)
+                ->where('is_visible', true)->orderBy('sort_order')->orderBy('id')->get()
+            : collect();
         $contactListing = MarketplaceListing::query()->publiclyAvailable()
             ->where('user_id', $user->id)->whereIn('type', ['service','freelance','project'])
             ->where('title','not like','[LAYOUT TEST] %')->latest()->first();
         return view('creators.show',[
             // Never reveal an unpublished biography or portfolio, including for the owner.
             'creator'=>$user,'profile'=>$publishedProfile,
-            'items'=>$items,'contactListing'=>$contactListing,
+            'items'=>$items,'sections'=>$sections,'contactListing'=>$contactListing,
             'listings'=>$listings,'savedIds'=>$savedIds,
         ]);
     }

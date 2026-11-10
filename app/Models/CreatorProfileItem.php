@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 final class CreatorProfileItem extends Model
 {
-    public const KINDS = ['expertise', 'language', 'link'];
+    public const KINDS = ['expertise', 'language', 'link', 'custom'];
 
-    protected $fillable = ['user_id', 'kind', 'label', 'detail', 'url', 'sort_order', 'is_visible'];
+    protected $fillable = ['user_id', 'kind', 'label', 'detail', 'url', 'sort_order', 'is_visible', 'profile_section_id'];
 
     protected function casts(): array
     {

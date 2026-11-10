@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditEvent;
 use App\Models\CreatorProfileItem;
+use App\Models\CreatorProfileSection;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 final class CreatorProfileItemController extends Controller
 {
-    private const LIMITS = ['expertise' => 20, 'language' => 10, 'link' => 10];
+    private const LIMITS = ['expertise' => 20, 'language' => 10, 'link' => 10, 'custom' => 20];
 
     private function owner(Request $request, ?User $user): User
     {
@@ -48,15 +49,27 @@ final class CreatorProfileItemController extends Controller
         $owner = $this->owner($request, $user);
         $kind = $request->validate(['kind' => ['required', Rule::in(CreatorProfileItem::KINDS)]])['kind'];
         $data = $this->validateFields($request, $kind);
-        abort_if(CreatorProfileItem::query()->where('user_id', $owner->id)->where('kind', $kind)->count()
-            >= self::LIMITS[$kind], 422, 'This profile section has reached its maximum number of entries.');
+        $section = null;
+        if ($kind === 'custom') {
+            $section = CreatorProfileSection::query()->where('user_id', $owner->id)
+                ->where('section_key', 'custom')->findOrFail($request->validate([
+                    'profile_section_id' => ['required','integer'],
+                ])['profile_section_id']);
+        }
+        $query = CreatorProfileItem::query()->where('user_id', $owner->id)->where('kind', $kind);
+        if ($section) {
+            $query->where('profile_section_id', $section->id);
+        }
+        abort_if($query->count() >= self::LIMITS[$kind], 422, 'This profile section has reached its maximum number of entries.');
+        $nextOrder = min(999, (int) ($query->max('sort_order') ?? 0) + 10);
         CreatorProfileItem::query()->create([
             'user_id' => $owner->id,
             'kind' => $kind,
+            'profile_section_id' => $section?->id,
             'label' => $data['label'],
             'detail' => $data['detail'] ?? null,
             'url' => $kind === 'link' ? $data['url'] : null,
-            'sort_order' => (int) ($data['sort_order'] ?? 0),
+            'sort_order' => (int) ($data['sort_order'] ?? $nextOrder),
             'is_visible' => (bool) $data['is_visible'],
         ]);
         AuditEvent::record('profile.item.created', $request->user(), $request);

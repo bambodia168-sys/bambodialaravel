@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\ProfileEditorController;
+use App\Http\Controllers\CreatorProfileSectionController;
 use App\Http\Controllers\CreatorProfileItemController;
 use App\Http\Controllers\BuilderController;
 use App\Http\Controllers\SavedJobController;
@@ -238,6 +239,11 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/account/profile/items', [CreatorProfileItemController::class, 'storeSelf'])->name('account.profile.items.store')->middleware('throttle:20,1');
     Route::patch('/account/profile/items/{item}', [CreatorProfileItemController::class, 'updateSelf'])->name('account.profile.items.update')->middleware('throttle:20,1');
     Route::delete('/account/profile/items/{item}', [CreatorProfileItemController::class, 'destroySelf'])->name('account.profile.items.destroy')->middleware('throttle:20,1');
+    Route::post('/account/profile/sections', [CreatorProfileSectionController::class, 'storeSelf'])->name('account.profile.sections.store')->middleware('throttle:10,1');
+    Route::patch('/account/profile/sections/order', [CreatorProfileSectionController::class, 'orderSelf'])->name('account.profile.sections.order')->middleware('throttle:30,1');
+    Route::patch('/account/profile/items/order', [CreatorProfileSectionController::class, 'orderItemsSelf'])->name('account.profile.items.order')->middleware('throttle:30,1');
+    Route::patch('/account/profile/sections/{section}', [CreatorProfileSectionController::class, 'updateSelf'])->name('account.profile.sections.update')->middleware('throttle:20,1');
+    Route::delete('/account/profile/sections/{section}', [CreatorProfileSectionController::class, 'destroySelf'])->name('account.profile.sections.destroy')->middleware('throttle:10,1');
     Route::get('/studio', [AccountController::class, 'studio'])->name('studio');
     Route::get('/creator', function (\Illuminate\Http\Request $request) {
         $user = $request->user();
@@ -414,6 +420,11 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/user-manager/{user}/profile/items', [CreatorProfileItemController::class,'storeAdmin'])->name('dashboard.users.profile.items.store')->middleware('throttle:20,1');
             Route::patch('/user-manager/{user}/profile/items/{item}', [CreatorProfileItemController::class,'updateAdmin'])->name('dashboard.users.profile.items.update')->middleware('throttle:20,1');
             Route::delete('/user-manager/{user}/profile/items/{item}', [CreatorProfileItemController::class,'destroyAdmin'])->name('dashboard.users.profile.items.destroy')->middleware('throttle:20,1');
+            Route::post('/user-manager/{user}/profile/sections', [CreatorProfileSectionController::class,'storeAdmin'])->name('dashboard.users.profile.sections.store')->middleware('throttle:10,1');
+            Route::patch('/user-manager/{user}/profile/sections/order', [CreatorProfileSectionController::class,'orderAdmin'])->name('dashboard.users.profile.sections.order')->middleware('throttle:30,1');
+            Route::patch('/user-manager/{user}/profile/items/order', [CreatorProfileSectionController::class,'orderItemsAdmin'])->name('dashboard.users.profile.items.order')->middleware('throttle:30,1');
+            Route::patch('/user-manager/{user}/profile/sections/{section}', [CreatorProfileSectionController::class,'updateAdmin'])->name('dashboard.users.profile.sections.update')->middleware('throttle:20,1');
+            Route::delete('/user-manager/{user}/profile/sections/{section}', [CreatorProfileSectionController::class,'destroyAdmin'])->name('dashboard.users.profile.sections.destroy')->middleware('throttle:10,1');
             Route::patch('/user-manager/{user}', [UserManagerController::class,'update'])->name('dashboard.users.update')->middleware('throttle:20,1');
             Route::delete('/user-manager/{user}', [UserManagerController::class,'archive'])->name('dashboard.users.archive')->middleware('throttle:5,1');
             Route::post('/user-manager/{user}/restore', [UserManagerController::class,'restore'])->name('dashboard.users.restore')->middleware('throttle:5,1');
