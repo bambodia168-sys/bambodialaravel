@@ -33,7 +33,7 @@ Then call tools/list. A browser GET may return HTTP 405; MCP uses JSON-RPC POST.
 The endpoint supports initialize, ping, notifications/*, tools/list,
 tools/call, resources/list, and prompts/list.
 
-## Six small tools
+## Nine compact tools
 
 | Tool | Permission | Current capability |
 |---|---|---|
@@ -43,9 +43,11 @@ tools/call, resources/list, and prompts/list.
 | bambodia_create_draft | Write | Draft product/project/service/freelance/job/post/page/policy |
 | bambodia_update_draft | Write | Edit allowlisted fields only while status is draft |
 | bambodia_delete_draft | Write | Delete draft with exact-title confirmation |
+| bambodia_analytics | Read | Aggregated content, media-review and audit counts |
+| bambodia_update_own_profile | Write | Edit administrator's own creator headline, biography, website and visibility |
+| bambodia_manage_site | Write | Create/update/delete SEO metadata and social links; live-change confirmation required |
 
-Read-only entity categories are profile, media, SEO, social links and audit
-events. Product/project/service/freelance share the existing MarketplaceListing
+Media and audit events remain read-only. Profile writes are limited to the token owner's creator profile. SEO and social settings have controlled CRUD, with explicit live-change confirmation and exact-title deletion. Product/project/service/freelance share the existing MarketplaceListing
 model and are filtered by type; posts/pages share ContentEntry.
 
 Draft writes use existing Eloquent models, identifier allocation, field validation,
@@ -64,9 +66,7 @@ connector.** Next phases must reuse each existing business workflow:
 1. Configure browser OAuth 2.1 using a maintained provider, short-lived tokens,
    PKCE, authorized scopes, consent display and revocation. Do not create
    a custom OAuth engine or collect administrator passwords in chat.
-2. Provide owner-scoped profile edits, media uploads through existing MIME,
-   ownership, rights and review checks, and SEO/social CRUD through dashboard
-   controllers and validators.
+2. Expand owner-scoped profile editing beyond basic creator details, add media uploads through existing MIME/ownership/rights/review checks, and consolidate SEO/social validation with the dashboard's existing rules to prevent divergence.
 3. Implement scheduling only after publishing queues, timezone behavior,
    cancel/edit semantics and worker acceptance are independently tested.
 4. Expose audit/security reports read-only. Never expose shell, SQL execution,
@@ -78,7 +78,7 @@ connector.** Next phases must reuse each existing business workflow:
 
 ## QA and release criteria
 
-- php artisan test --filter=BambodiaMcpTest
+- php artisan test --filter=BambodiaMcpTest (includes SEO/social/profile/analytics coverage)
 - php artisan test --filter=DeveloperApiTest
 - Run all existing isolated-host acceptance workflows.
 - Attempt unauthenticated, expired, revoked, wrong-scope and demoted-token calls.
