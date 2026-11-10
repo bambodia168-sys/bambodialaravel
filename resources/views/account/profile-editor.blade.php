@@ -90,7 +90,7 @@
       </div>
       <div class="profile-v3-form-footer">
         <small>Changing your public name can reset manual account review. Your email, credentials and private account records are never published.</small>
-        <button class="btn primary" type="submit"><x-icon name="save" size="17"/> Save profile</button>
+        <button class="btn primary" type="submit" aria-label="Save profile"><x-icon name="save" size="17"/> Save</button>
       </div>
     </form>
   </section>
@@ -110,7 +110,7 @@
           <button type="button" class="profile-v4-drag-handle" data-profile-sort-handle aria-label="Drag to reorder {{ $section->title }}. Use arrow keys to move."><x-icon name="grip-horizontal" size="19"/></button>
           <div class="profile-v4-section-title"><h2>{{ $section->title }} @if(!$section->is_visible)<small>(Hidden)</small>@endif</h2>@if($section->description)<p>{{ $section->description }}</p>@endif</div>
           <div class="profile-v4-section-actions">
-            <button type="button" class="btn primary compact" data-profile-dialog-open="profile-add-{{ $section->id }}"><x-icon name="plus" size="16"/> Add {{ $kind==='custom' ? 'entry' : $kind }}</button>
+            <button type="button" class="btn primary compact" data-profile-dialog-open="profile-add-{{ $section->id }}" aria-label="Add {{ $kind==='custom' ? 'entry' : $kind }} to {{ $section->title }}"><x-icon name="plus" size="16"/> Add</button>
             <button type="button" class="profile-v4-menu-trigger" data-profile-menu-trigger title="More actions" aria-label="Actions for {{ $section->title }}" aria-haspopup="menu" aria-expanded="false"><x-icon name="more-vertical" size="18"/></button>
             <div class="profile-v4-action-menu" data-profile-menu role="menu" hidden>
               <button role="menuitem" type="button" data-profile-dialog-open="profile-edit-section-{{ $section->id }}"><x-icon name="pencil" size="15"/> Edit section</button>
@@ -177,7 +177,7 @@
               @else<label>Details (optional) <input name="detail" maxlength="160" placeholder="Optional description"></label>@endif
             @endif
             <input type="hidden" name="is_visible" value="1">
-            <button type="submit" class="btn primary"><x-icon name="plus" size="16"/> Add entry</button>
+            <button type="submit" class="btn primary" aria-label="Add entry to {{ $section->title }}"><x-icon name="plus" size="16"/> Add</button>
           </form>
         </dialog>
         <dialog class="profile-v3-dialog" id="profile-edit-section-{{ $section->id }}" aria-label="Edit section {{ $section->title }}">

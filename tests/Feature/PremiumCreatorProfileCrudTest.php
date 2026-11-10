@@ -64,7 +64,7 @@ class PremiumCreatorProfileCrudTest extends TestCase
     {
         $creator = $this->member();
         $this->actingAs($creator)->get(route('studio.profile.edit'))
-            ->assertOk()->assertSee('Creator Profile')->assertSee('Add expertise');
+            ->assertOk()->assertSee('Creator Profile')->assertSee('aria-label="Add expertise to', false);
         $this->actingAs($creator)->patch(route('studio.profile.update'), [
             'headline' => 'Full stack Laravel engineer',
             'biography' => str_repeat('I create accessible modern web applications with documented handovers. ', 2),
@@ -250,9 +250,11 @@ class PremiumCreatorProfileCrudTest extends TestCase
         $response = $this->actingAs($creator)->get(route('studio.profile.edit'))->assertOk()
             ->assertSee('data-profile-sort-handle', false)
             ->assertSee('data-profile-menu-trigger', false)
-            ->assertSee('Add expertise')
-            ->assertSee('Add language')
-            ->assertSee('Add link')
+            ->assertSee('aria-label="Save profile"', false)
+            ->assertSee('aria-label="Add expertise to', false)
+            ->assertSee('aria-label="Add language to', false)
+            ->assertSee('aria-label="Add link to', false)
+            ->assertSee('aria-label="Add entry to', false)
             ->assertSee('Add section');
 
         $html = $response->getContent();
@@ -263,6 +265,12 @@ class PremiumCreatorProfileCrudTest extends TestCase
         $this->assertStringContainsString('cx="12" cy="19" r="1"', $html);
         $this->assertStringNotContainsString('<x-icon name="grip-vertical"', $html);
         $this->assertStringContainsString('title="More actions"', $html);
+        $this->assertStringContainsString('size="17"', file_get_contents(base_path('resources/views/account/profile-editor.blade.php')));
+        $this->assertStringNotContainsString('> Add expertise</button>', $html);
+        $this->assertStringNotContainsString('> Add language</button>', $html);
+        $this->assertStringNotContainsString('> Add link</button>', $html);
+        $this->assertStringNotContainsString('> Add entry</button>', $html);
+        $this->assertStringNotContainsString('> Save profile</button>', $html);
     }
 
 }
