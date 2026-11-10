@@ -109,6 +109,7 @@ jobs:
           bash -n support/builder-studio-db-backup.sh
           bash -n support/admin-controls-aapanel-upgrade.sh
           bash -n support/media-video-r2-aapanel-upgrade.sh
+          bash -n support/media-video-controls-aapanel-upgrade.sh
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
