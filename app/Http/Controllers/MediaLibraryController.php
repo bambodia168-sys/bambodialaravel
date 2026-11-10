@@ -7,6 +7,7 @@ use App\Models\ContentEntry;
 use App\Models\MediaAsset;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceJob;
+use App\Support\Media\PrivateVideoStreamer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,8 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class MediaLibraryController extends Controller
 {
@@ -191,7 +191,7 @@ class MediaLibraryController extends Controller
         return back()->with('status', 'Media review recorded.');
     }
 
-    public function preview(Request $request, string $publicId): BinaryFileResponse|StreamedResponse
+    public function preview(Request $request, string $publicId): Response
     {
         abort_unless(preg_match('/^\d{9}$/D', $publicId) === 1, 404);
         $asset = MediaAsset::query()->where('public_id', $publicId)->firstOrFail();
@@ -236,7 +236,16 @@ class MediaLibraryController extends Controller
             'Cross-Origin-Resource-Policy' => 'same-origin',
         ];
         if ($storageDisk === 'local') {
-            return response()->file($disk->path($asset->storage_path), $headers);
+            $response = response()->file($disk->path($asset->storage_path), $headers);
+            // BinaryFileResponse can set "public" caching while preparing file
+            // responses. Force private/no-store *after* constructing it, so
+            // unpublished owner previews are never cached by shared proxies.
+            $response->setPrivate();
+            $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
+            return $response;
+        }
+        if (in_array($asset->mime_type, ['video/mp4', 'video/webm'], true)) {
+            return PrivateVideoStreamer::serve($request, $asset, $disk, $headers);
         }
         // Stream R2 objects through this access-controlled endpoint; never expose
         // permanent public R2 URLs or unrestricted object keys.
