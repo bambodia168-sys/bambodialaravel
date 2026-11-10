@@ -26,7 +26,7 @@ final class SiteSeoPage extends Model
             array_shift($segments);
             $path = '/'.implode('/', $segments);
         }
-        return $path === '//' ? '/' : rtrim($path, '/') ?: '/';
+        return $path === '//' ? '/' : (rtrim($path, '/') ?: '/');
     }
 
     public static function forRequest(Request $request): ?self
