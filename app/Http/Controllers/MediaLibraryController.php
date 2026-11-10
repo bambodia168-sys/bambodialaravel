@@ -7,6 +7,7 @@ use App\Models\ContentEntry;
 use App\Models\MediaAsset;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceJob;
+use App\Support\Media\PrivateVideoStreamer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -237,6 +238,9 @@ class MediaLibraryController extends Controller
         ];
         if ($storageDisk === 'local') {
             return response()->file($disk->path($asset->storage_path), $headers);
+        }
+        if (in_array($asset->mime_type, ['video/mp4', 'video/webm'], true)) {
+            return PrivateVideoStreamer::serve($request, $asset, $disk, $headers);
         }
         // Stream R2 objects through this access-controlled endpoint; never expose
         // permanent public R2 URLs or unrestricted object keys.
