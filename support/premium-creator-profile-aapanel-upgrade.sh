@@ -91,8 +91,15 @@ trap cleanup EXIT
 echo "========== PREMIUM CREATOR PROFILE $MODE =========="
 echo "1. Verify immutable feature and passing CI."
 git -C "$SOURCE" fetch origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
-[[ "$(git -C "$SOURCE" rev-parse "refs/remotes/origin/$BRANCH")" == "$FEATURE" ]] ||
-  fail "Feature branch moved from pinned SHA."
+CURRENT="$(git -C "$SOURCE" rev-parse "refs/remotes/origin/$BRANCH")"
+git -C "$SOURCE" merge-base --is-ancestor "$FEATURE" "$CURRENT" ||
+  fail "Feature branch no longer descends from the verified release."
+git -C "$SOURCE" diff --name-only "$FEATURE" "$CURRENT" | LC_ALL=C sort > "$TMP/post-release"
+printf '%s\n' '.github/workflows/quality.yml' 'support/premium-creator-profile-aapanel-upgrade.sh' | LC_ALL=C sort > "$TMP/allowed-post-release"
+cmp -s "$TMP/post-release" "$TMP/allowed-post-release" ||
+  fail "Unexpected code changed after the verified release."
+[[ "$(git hash-object "$0")" == "$(git -C "$SOURCE" rev-parse "$CURRENT:support/premium-creator-profile-aapanel-upgrade.sh")" ]] ||
+  fail "Local installer differs from the committed verified helper."
 git -C "$SOURCE" cat-file -e "$BASE^{commit}" || fail "Base commit unavailable."
 git -C "$SOURCE" merge-base --is-ancestor "$BASE" "$FEATURE" || fail "Unexpected commit ancestry."
 for workflow in quality.yml installer-acceptance.yml browser-emulation.yml operational-acceptance.yml isolated-authenticated-journeys.yml; do
