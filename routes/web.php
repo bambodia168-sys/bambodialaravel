@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\ProfileEditorController;
+use App\Http\Controllers\CreatorProfileItemController;
 use App\Http\Controllers\BuilderController;
 use App\Http\Controllers\SavedJobController;
 use App\Http\Controllers\SavedListingController;
@@ -231,6 +233,11 @@ Route::middleware('auth')->group(function (): void {
         ->name('account.downloads.file')->middleware('throttle:10,1');
     Route::get('/account', [AccountController::class, 'index'])->name('account');
     Route::patch('/account', [AccountController::class, 'update'])->name('account.update');
+    Route::get('/account/profile', [ProfileEditorController::class, 'editSelf'])->name('account.profile.edit');
+    Route::patch('/account/profile', [ProfileEditorController::class, 'updateSelf'])->name('account.profile.update')->middleware('throttle:10,1');
+    Route::post('/account/profile/items', [CreatorProfileItemController::class, 'storeSelf'])->name('account.profile.items.store')->middleware('throttle:20,1');
+    Route::patch('/account/profile/items/{item}', [CreatorProfileItemController::class, 'updateSelf'])->name('account.profile.items.update')->middleware('throttle:20,1');
+    Route::delete('/account/profile/items/{item}', [CreatorProfileItemController::class, 'destroySelf'])->name('account.profile.items.destroy')->middleware('throttle:20,1');
     Route::get('/studio', [AccountController::class, 'studio'])->name('studio');
     Route::get('/creator', function (\Illuminate\Http\Request $request) {
         $user = $request->user();
@@ -402,6 +409,11 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/user-manager', [UserManagerController::class,'store'])->name('dashboard.users.store')->middleware('throttle:10,1');
             Route::get('/user-manager/{user}', [UserManagerController::class,'show'])->name('dashboard.users.show');
             Route::get('/user-manager/{user}/edit', [UserManagerController::class,'edit'])->name('dashboard.users.edit');
+            Route::get('/user-manager/{user}/profile', [ProfileEditorController::class,'editAdmin'])->name('dashboard.users.profile.edit');
+            Route::patch('/user-manager/{user}/profile', [ProfileEditorController::class,'updateAdmin'])->name('dashboard.users.profile.update')->middleware('throttle:10,1');
+            Route::post('/user-manager/{user}/profile/items', [CreatorProfileItemController::class,'storeAdmin'])->name('dashboard.users.profile.items.store')->middleware('throttle:20,1');
+            Route::patch('/user-manager/{user}/profile/items/{item}', [CreatorProfileItemController::class,'updateAdmin'])->name('dashboard.users.profile.items.update')->middleware('throttle:20,1');
+            Route::delete('/user-manager/{user}/profile/items/{item}', [CreatorProfileItemController::class,'destroyAdmin'])->name('dashboard.users.profile.items.destroy')->middleware('throttle:20,1');
             Route::patch('/user-manager/{user}', [UserManagerController::class,'update'])->name('dashboard.users.update')->middleware('throttle:20,1');
             Route::delete('/user-manager/{user}', [UserManagerController::class,'archive'])->name('dashboard.users.archive')->middleware('throttle:5,1');
             Route::post('/user-manager/{user}/restore', [UserManagerController::class,'restore'])->name('dashboard.users.restore')->middleware('throttle:5,1');

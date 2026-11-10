@@ -8,6 +8,8 @@ use App\Models\CreatorProfile;
 use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
 use App\Models\User;
+use App\Models\CreatorProfileItem;
+use App\Http\Controllers\ProfileEditorController;
 use App\Support\CreatorBadgeAwards;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,35 +19,12 @@ class CreatorProfileController extends Controller
 {
     public function edit(Request $request): View
     {
-        abort_unless($request->user()->isCreator(),403);
-        $profile=CreatorProfile::query()->where('user_id',$request->user()->id)->first();
-        $publishedCount=MarketplaceListing::query()->publiclyAvailable()
-            ->where('user_id',$request->user()->id)->count();
-        return view('account.creator-profile',compact('profile','publishedCount'));
+        return app(ProfileEditorController::class)->editSelf($request);
     }
 
     public function update(Request $request): RedirectResponse
     {
-        abort_unless($request->user()->isCreator(),403);
-        $data=$request->validate([
-            'headline'=>['required','string','min:8','max:160'],
-            'biography'=>['required','string','min:80','max:5000'],
-            'website_url'=>['nullable','url','starts_with:https://','max:400'],
-            'is_public'=>['required','boolean'],
-        ]);
-
-        CreatorProfile::query()->updateOrCreate(
-            ['user_id'=>$request->user()->id],
-            [
-                'headline'=>$data['headline'],
-                'biography'=>$data['biography'],
-                'website_url'=>$data['website_url']??null,
-                'is_public'=>(bool)$data['is_public'],
-            ]
-        );
-        AuditEvent::record('creator.profile.updated',$request->user(),$request);
-
-        return back()->with('status',$data['is_public']?'Public creator profile updated.':'Your creator profile is saved privately.');
+        return app(ProfileEditorController::class)->updateSelf($request);
     }
 
     public function directory(Request $request): View
@@ -88,7 +67,7 @@ class CreatorProfileController extends Controller
                     ->orWhere(fn($owner)=>$owner->where('role','super_admin')
                         ->whereRaw('LOWER(email) = ?', [CreatorBadgeAwards::OWNER_EMAIL]));
             })
-            ->with('creatorProfile')->firstOrFail();
+            ->with(['creatorProfile', 'userProfile'])->firstOrFail();
 
         $listings=MarketplaceListing::query()->publiclyAvailable()
             ->where('user_id',$user->id)
@@ -99,9 +78,16 @@ class CreatorProfileController extends Controller
                 ->whereIn('marketplace_listing_id',$listings->pluck('id'))
                 ->pluck('marketplace_listing_id')->map(fn($id)=>(int)$id)->all()
             : [];
+        $publishedProfile = $user->creatorProfile?->is_public ? $user->creatorProfile : null;
+        $items = $publishedProfile ? CreatorProfileItem::query()->where('user_id', $user->id)
+            ->where('is_visible', true)->orderBy('sort_order')->orderBy('id')->get()->groupBy('kind') : collect();
+        $contactListing = MarketplaceListing::query()->publiclyAvailable()
+            ->where('user_id', $user->id)->whereIn('type', ['service','freelance','project'])
+            ->where('title','not like','[LAYOUT TEST] %')->latest()->first();
         return view('creators.show',[
             // Never reveal an unpublished biography or portfolio, including for the owner.
-            'creator'=>$user,'profile'=>$user->creatorProfile?->is_public ? $user->creatorProfile : null,
+            'creator'=>$user,'profile'=>$publishedProfile,
+            'items'=>$items,'contactListing'=>$contactListing,
             'listings'=>$listings,'savedIds'=>$savedIds,
         ]);
     }
