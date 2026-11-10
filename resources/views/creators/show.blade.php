@@ -7,6 +7,9 @@
   $expertise=$items->get('expertise',collect());
   $languages=$items->get('language',collect());
   $links=$items->get('link',collect());
+  $renderSections = $sections->isNotEmpty() ? $sections
+    : collect(\App\Models\CreatorProfileSection::DEFAULTS)
+        ->map(fn($labels,$key) => (object)['section_key'=>$key,'title'=>$labels[0],'id'=>null])->values();
 @endphp
 <div class="container inner-page creator-public-profile profile-v3">
   <div class="profile-v3-grid">
@@ -21,8 +24,8 @@
       <div class="profile-v3-name-viewport" data-profile-name-viewport title="{{ $creator->name }}">
         <h1 data-profile-scroll-name>{{ $creator->name }}</h1>
       </div>
-      <button type="button" class="profile-v3-copy-id" data-profile-copy="{{ $creator->public_id }}" aria-label="Copy user ID {{ $creator->public_id }}">
-        <span>User ID</span><strong>{{ $creator->public_id }}</strong><small>Click to copy</small>
+      <button type="button" class="profile-v3-copy-id" data-profile-copy="{{ route('creators.show',$creator->public_id) }}" data-profile-user-id="{{ $creator->public_id }}" aria-label="Copy full creator profile URL for user {{ $creator->public_id }}" title="Copy profile URL">
+        <span>User ID</span><strong>{{ $creator->public_id }}</strong><x-icon name="copy" size="15"/>
       </button>
       <div class="profile-v3-side-facts">
         @if($creator->account_review_status==='verified' && $creator->account_status==='active')
@@ -79,37 +82,51 @@
           <div><x-icon name="clock-check" size="23"/><strong>{{ $creator->created_at->format('Y') }}</strong><span>Member since</span></div>
         </div>
       </section>
-      @if($profile && $expertise->isNotEmpty())
-        <section class="profile-v3-panel">
-          <div class="profile-v3-section-head"><h2><x-icon name="briefcase" size="19"/> Expertise &amp; Services</h2></div>
-          <div class="profile-v3-tags">
-            @foreach($expertise as $entry)
-              <span class="profile-v3-tag"><x-icon name="check" size="15"/><span>{{ $entry->label }}</span>@if($entry->detail)<small>{{ $entry->detail }}</small>@endif</span>
-            @endforeach
-          </div>
-        </section>
-      @endif
-      @if($profile && ($languages->isNotEmpty() || $links->isNotEmpty()))
-        <div class="profile-v3-pair">
-          @if($languages->isNotEmpty())
-            <section class="profile-v3-panel"><div class="profile-v3-section-head"><h2><x-icon name="globe" size="19"/> Languages</h2></div>
-              <div class="profile-v3-simple-list">
-                @foreach($languages as $entry)
-                  <div><strong>{{ $entry->label }}</strong>@if($entry->detail)<span>{{ $entry->detail }}</span>@endif</div>
-                @endforeach
+      @if($profile)
+        @foreach($renderSections as $section)
+          @php
+            $kind=$section->section_key;
+            $entries=$kind==='custom'
+              ? $items->get('custom',collect())->where('profile_section_id',$section->id)
+              : $items->get($kind,collect())->whereNull('profile_section_id');
+          @endphp
+          @if($entries->isNotEmpty())
+            <section class="profile-v3-panel">
+              <div class="profile-v3-section-head">
+                <h2>
+                  @if($kind==='expertise')<x-icon name="briefcase" size="19"/>
+                  @elseif($kind==='language')<x-icon name="globe" size="19"/>
+                  @elseif($kind==='link')<x-icon name="link" size="19"/>
+                  @else<x-icon name="layers" size="19"/>@endif
+                  {{ $section->title }}
+                </h2>
               </div>
+              @if($kind==='expertise')
+                <div class="profile-v3-tags">
+                  @foreach($entries as $entry)
+                    <span class="profile-v3-tag"><x-icon name="check" size="15"/><span>{{ $entry->label }}</span>@if($entry->detail)<small>{{ $entry->detail }}</small>@endif</span>
+                  @endforeach
+                </div>
+              @elseif($kind==='language')
+                <div class="profile-v3-simple-list">
+                  @foreach($entries as $entry)<div><strong>{{ $entry->label }}</strong>@if($entry->detail)<span>{{ $entry->detail }}</span>@endif</div>@endforeach
+                </div>
+              @elseif($kind==='link')
+                <div class="profile-v3-link-list">
+                  @foreach($entries as $entry)
+                    <a href="{{ $entry->url }}" target="_blank" rel="noopener noreferrer nofollow"><x-icon name="external-link" size="16"/><span>{{ $entry->label }}</span></a>
+                  @endforeach
+                </div>
+              @else
+                <div class="profile-v3-simple-list">
+                  @foreach($entries as $entry)
+                    <div><strong>{{ $entry->label }}</strong>@if($entry->detail)<span>{{ $entry->detail }}</span>@endif</div>
+                  @endforeach
+                </div>
+              @endif
             </section>
           @endif
-          @if($links->isNotEmpty())
-            <section class="profile-v3-panel"><div class="profile-v3-section-head"><h2><x-icon name="link" size="19"/> Contact &amp; Links</h2></div>
-              <div class="profile-v3-link-list">
-                @foreach($links as $entry)
-                  <a href="{{ $entry->url }}" target="_blank" rel="noopener noreferrer nofollow"><x-icon name="external-link" size="16"/><span>{{ $entry->label }}</span></a>
-                @endforeach
-              </div>
-            </section>
-          @endif
-        </div>
+        @endforeach
       @endif
       <p class="profile-v3-disclosure">Creator-submitted information and external links are not independently verified. Badges represent platform activity or explicit administrator awards.</p>
     </main>

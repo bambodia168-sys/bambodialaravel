@@ -45,13 +45,14 @@ class PremiumCreatorProfileCrudTest extends TestCase
             'currency' => 'USD',
         ]);
         $html = $this->get(route('creators.show', $creator->public_id))->assertOk()
-            ->assertSee('Click to copy')
+            ->assertDontSee('Click to copy')
             ->assertSee('Profile Highlights')
             ->assertSee('Published work')
             ->getContent();
 
         $this->assertStringContainsString('class="profile-v3-sidebar"', $html);
-        $this->assertStringContainsString('data-profile-copy="'.$creator->public_id.'"', $html);
+        $this->assertStringContainsString('data-profile-copy="'.route('creators.show', $creator->public_id).'"', $html);
+        $this->assertStringContainsString('data-profile-user-id="'.$creator->public_id.'"', $html);
         $this->assertSame(16, substr_count($html, 'class="creator-badge creator-badge--'));
         $this->assertLessThan(strpos($html, 'class="btn primary profile-v3-contact"'), strpos($html, 'class="profile-v3-awards"'));
         $this->assertStringContainsString('class="marketplace-card-grid"', $html);

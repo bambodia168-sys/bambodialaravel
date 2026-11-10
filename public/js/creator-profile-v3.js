@@ -78,9 +78,10 @@
 
   function initAvatar() {
     const zone = $('[data-avatar-dropzone]');
+    if (!zone) return;
     const input = $('[data-avatar-file]', zone);
     const preview = $('[data-avatar-preview]', zone);
-    if (!zone || !input || !preview) return;
+    if (!input || !preview) return;
     const status = $('[data-avatar-status]');
     const removal = $('[data-avatar-remove]');
     const original = preview.innerHTML;
