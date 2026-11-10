@@ -1,6 +1,6 @@
 @props(['compact' => false])
 @php
-$names = ['en'=>'English','zh'=>'中文','km'=>'ខ្មែរ','ko'=>'한국어','ja'=>'日本語','th'=>'ไทย','vi'=>'Tiếng Việt','de'=>'Deutsch'];
+$names = \App\Models\SiteLanguage::query()->where('is_enabled',true)->pluck('name','code')->all();
 $current = app()->getLocale();
 @endphp
 <details {{ $attributes->class(['language-menu', 'auth-language-menu' => $compact]) }}>

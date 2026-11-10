@@ -8,6 +8,7 @@
   <meta name="robots" content="noindex,nofollow">
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
+  @include('layouts.partials.site-typography')
   {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
   <link rel="stylesheet" href="{{ asset('css/creator-badge-tooltip-viewport.css') }}?v=1">
   <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>
@@ -20,7 +21,7 @@
   $workspace = trim($__env->yieldContent('workspace', 'account'));
   $workspace = in_array($workspace, ['admin','account','creator','developer'], true) ? $workspace : 'account';
   $user = auth()->user();
-  $currentName = preg_replace('/^localized\.(?:en|zh|km|ko|ja|th|vi|de)\./', '', request()->route()?->getName() ?? '');
+  $currentName = preg_replace('/^localized\.(?:en|zh|km|ko|ja|th|vi|de|fr|hi|id|ms|es)\./', '', request()->route()?->getName() ?? '');
   $workspaceTitles = ['admin'=>'Administration','account'=>'My Account','creator'=>'Creator Studio','developer'=>'Developer Workspace'];
   $workspaceDescription = [
     'admin'=>'Platform operations and management',
@@ -58,6 +59,8 @@
         ['route'=>'dashboard.site-identity','label'=>'Site Identity','icon'=>'image'],
         ['route'=>'dashboard.seo-settings','label'=>'SEO Settings','icon'=>'search'],
         ['route'=>'dashboard.social.index','label'=>'Footer Social Links','icon'=>'globe'],
+        ['route'=>'dashboard.languages.index','label'=>'Language Manager','icon'=>'globe'],
+        ['route'=>'dashboard.typography.index','label'=>'Typography','icon'=>'palette'],
         ['route'=>'dashboard.system-settings','label'=>'System Settings','icon'=>'settings'],
         ['route'=>'dashboard.pages','label'=>'Page Manager','icon'=>'file-text'],
         ['route'=>'dashboard.posts','label'=>'Post Manager','icon'=>'newspaper'],

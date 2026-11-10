@@ -75,7 +75,7 @@ class SiteSetting extends Model
         'site.default_locale' => [
             'group'=>'system','label'=>'Default guest language',
             'description'=>'Language used for guests who have not selected a preferred language.',
-            'type'=>'select','default'=>'en','options'=>['en','zh','km','ko','ja','th','vi','de'],
+            'type'=>'select','default'=>'en','options'=>['en','zh','km','ko','ja','th','vi','de','fr','hi','id','ms','es'],
         ],
         'site.support_email' => [
             'group'=>'system','label'=>'Public support email',

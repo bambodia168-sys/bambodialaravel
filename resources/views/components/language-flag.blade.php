@@ -1,6 +1,6 @@
 @props(['code' => 'en'])
 @php
-$labels = ['en'=>'United Kingdom','zh'=>'China','km'=>'Cambodia','ko'=>'South Korea','ja'=>'Japan','th'=>'Thailand','vi'=>'Vietnam','de'=>'Germany'];
+$labels = ['en'=>'United Kingdom','zh'=>'China','km'=>'Cambodia','ko'=>'South Korea','ja'=>'Japan','th'=>'Thailand','vi'=>'Vietnam','de'=>'Germany','fr'=>'France','hi'=>'India','id'=>'Indonesia','ms'=>'Malaysia','es'=>'Spain'];
 @endphp
 <svg {{ $attributes->class(['locale-flag']) }} viewBox="0 0 24 16" width="24" height="16" role="img" aria-label="{{ $labels[$code] ?? $code }} flag" xmlns="http://www.w3.org/2000/svg">
   @switch($code)
@@ -37,6 +37,23 @@ $labels = ['en'=>'United Kingdom','zh'=>'China','km'=>'Cambodia','ko'=>'South Ko
       @break
     @case('de')
       <rect width="24" height="16" fill="#000"/><rect y="5.333" width="24" height="5.334" fill="#DD0000"/><rect y="10.667" width="24" height="5.333" fill="#FFCE00"/>
+      @break
+    @case('fr')
+      <rect width="24" height="16" fill="#fff"/><rect width="8" height="16" fill="#002395"/><rect x="16" width="8" height="16" fill="#ED2939"/>
+      @break
+    @case('hi')
+      <rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#FF9933"/><rect y="10.67" width="24" height="5.33" fill="#128807"/><circle cx="12" cy="8" r="2.1" fill="none" stroke="#000080" stroke-width=".9"/>
+      @break
+    @case('id')
+      <rect width="24" height="16" fill="#fff"/><rect width="24" height="8" fill="#ED1C24"/>
+      @break
+    @case('ms')
+      <rect width="24" height="16" fill="#fff"/>
+      @for($i=0;$i<7;$i++)<rect y="{{ $i*2.3 }}" width="24" height="1.15" fill="#CC0001"/>@endfor
+      <rect width="12" height="9" fill="#010066"/><path d="M6.5 2.2a3 3 0 1 0 0 4.6A2.3 2.3 0 1 1 6.5 2.2" fill="#FFCC00"/>
+      @break
+    @case('es')
+      <rect width="24" height="16" fill="#AA151B"/><rect y="4" width="24" height="8" fill="#F1BF00"/>
       @break
   @endswitch
 </svg>

@@ -7,6 +7,7 @@ use App\Models\AuditEvent;
 use App\Models\SiteSetting;
 use App\Models\SiteBrandAsset;
 use App\Models\SiteSeoPage;
+use App\Models\SiteLanguage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -62,6 +63,10 @@ class SiteSettingsController extends Controller
         };
         $values=$request->validate(['value'=>$rule]);
         $value=(string)($values['value']??'');
+        if ($key === 'site.default_locale') {
+            abort_unless(in_array($value,SiteLanguage::activeCodes(),true),422,
+                'Enable this language in Language Manager first.');
+        }
         SiteSetting::query()->updateOrCreate(['key'=>$key],['value'=>$value,'updated_by'=>$request->user()->id]);
         AuditEvent::record('site.setting.changed',$request->user(),$request);
         return back()->with('status',$definition['label'].' updated.');
