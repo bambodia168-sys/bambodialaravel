@@ -164,6 +164,16 @@ final class BambodiaMcpTest extends TestCase
         $this->assertDatabaseHas('creator_profiles', ['user_id'=>$admin->id,'is_public'=>false]);
         $this->assertDatabaseMissing('creator_profiles', ['user_id'=>$other->id]);
 
+        // A second update must preserve the existing headline, URL and privacy setting.
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name' => 'bambodia_update_own_profile',
+            'arguments' => ['fields' => [
+                'biography' => str_repeat('Updated background and continued experience in platform leadership. ', 2),
+            ]],
+        ]))->assertOk()->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.headline', 'Bambodia Platform Director')
+            ->assertJsonPath('result.structuredContent.is_public', false);
+
         $this->postJson('/mcp', $this->rpc('tools/call', [
             'name' => 'bambodia_update_own_profile',
             'arguments' => ['fields' => ['user_id' => $other->id, 'is_public' => true]],
