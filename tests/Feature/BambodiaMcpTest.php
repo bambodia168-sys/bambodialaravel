@@ -45,9 +45,7 @@ final class BambodiaMcpTest extends TestCase
             \Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
             $stack
         );
-        $this->assertTrue(collect($stack)->contains(
-            fn ($middleware) => str_contains((string) $middleware, 'AuthenticateApiToken')
-        ));
+        $this->assertContains('api.token:mcp.read', $route->gatherMiddleware());
         $this->postJson('/mcp', $this->rpc('initialize'))->assertUnauthorized();
     }
 
