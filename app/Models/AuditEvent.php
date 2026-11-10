@@ -181,6 +181,9 @@ class AuditEvent extends Model
         'developer.token.revoked',
         'developer.api.account.read',
         'developer.api.listings.read',
+        'mcp.draft.created',
+        'mcp.draft.updated',
+        'mcp.draft.deleted',
     ];
 
     protected $fillable = ['actor_id', 'event', 'ip_fingerprint', 'created_at'];
