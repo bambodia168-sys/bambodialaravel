@@ -27,6 +27,30 @@ final class BambodiaMcpTest extends TestCase
         return ['jsonrpc' => '2.0', 'id' => $id, 'method' => $method, 'params' => $params];
     }
 
+    public function test_mcp_route_removes_laravel_thirteen_request_forgery_middleware_only(): void
+    {
+        $route = \Illuminate\Support\Facades\Route::getRoutes()
+            ->match(\Illuminate\Http\Request::create('/mcp', 'POST'));
+
+        $this->assertSame('mcp', $route->getName());
+        $this->assertContains(
+            \Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
+            $route->excludedMiddleware()
+        );
+
+        // Testing mode normally skips CSRF globally, so explicitly inspect
+        // the effective production middleware stack to prevent a false pass.
+        $stack = app('router')->gatherRouteMiddleware($route);
+        $this->assertNotContains(
+            \Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
+            $stack
+        );
+        $this->assertTrue(collect($stack)->contains(
+            fn ($middleware) => str_contains((string) $middleware, 'AuthenticateApiToken')
+        ));
+        $this->postJson('/mcp', $this->rpc('initialize'))->assertUnauthorized();
+    }
+
     public function test_mcp_rejects_unauthenticated_requests_and_old_scopes(): void
     {
         $this->postJson('/mcp', $this->rpc('initialize'))->assertUnauthorized();
