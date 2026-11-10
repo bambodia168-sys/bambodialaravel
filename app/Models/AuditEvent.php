@@ -184,6 +184,8 @@ class AuditEvent extends Model
         'mcp.draft.created',
         'mcp.draft.updated',
         'mcp.draft.deleted',
+        'mcp.media.attached',
+        'mcp.media.detached',
     ];
 
     protected $fillable = ['actor_id', 'event', 'ip_fingerprint', 'created_at'];
