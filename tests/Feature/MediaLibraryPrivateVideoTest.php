@@ -82,7 +82,7 @@ final class MediaLibraryPrivateVideoTest extends TestCase
             ->assertStatus(206)
             ->assertHeader('Content-Range','bytes 4-8/32');
         $this->withHeaders(['Range'=>'bytes=0-0'])->head($asset->previewUrl())
-            ->assertStatus(206);
+            ->assertOk();
 
         $this->actingAs($admin)->get($asset->previewUrl())->assertOk();
     }
@@ -163,7 +163,7 @@ final class MediaLibraryPrivateVideoTest extends TestCase
         $this->assertSame('bytes */32',$response->headers->get('Content-Range'));
     }
 
-    public function test_r2_head_does_not_read_video_contents(): void
+    public function test_r2_head_returns_metadata_and_ignores_get_only_range(): void
     {
         $asset=$this->makeVideo($this->member(),'r2');
         $disk=Mockery::mock();
@@ -175,8 +175,8 @@ final class MediaLibraryPrivateVideoTest extends TestCase
         $response=PrivateVideoStreamer::serve($request,$asset,$disk,[
             'Content-Type'=>'video/mp4',
         ]);
-        $this->assertSame(206,$response->getStatusCode());
-        $this->assertSame('8',$response->headers->get('Content-Length'));
-        $this->assertSame('bytes 0-7/32',$response->headers->get('Content-Range'));
+        $this->assertSame(200,$response->getStatusCode());
+        $this->assertSame('32',$response->headers->get('Content-Length'));
+        $this->assertNull($response->headers->get('Content-Range'));
     }
 }

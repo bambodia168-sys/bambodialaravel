@@ -59,7 +59,8 @@ final class PrivateVideoStreamer
         $size = (int) $disk->size($asset->storage_path);
         abort_unless($size > 0, 404);
 
-        $hasRange = $request->headers->has('Range') && ! $request->headers->has('If-Range');
+        $hasRange = $request->isMethod('GET') && $request->headers->has('Range')
+            && ! $request->headers->has('If-Range');
         $range = self::parseRange($hasRange ? $request->header('Range') : null, $size);
         if ($range === null) {
             return response('', 416, $headers + [
