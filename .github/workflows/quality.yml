@@ -97,6 +97,7 @@ jobs:
           bash -n support/creator-sidebar-badges-upgrade.sh
           bash -n support/premium-creator-profile-aapanel-upgrade.sh
           bash -n support/premium-creator-profile-v4-aapanel-upgrade.sh
+          bash -n support/premium-creator-profile-icons-upgrade.sh
           node --check public/js/creator-profile-v3.js
           php -l examples/license-validation.php
           php -l support/frontend-layout-samples.php
