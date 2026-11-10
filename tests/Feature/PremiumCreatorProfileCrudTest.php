@@ -53,7 +53,7 @@ class PremiumCreatorProfileCrudTest extends TestCase
         $this->assertStringContainsString('class="profile-v3-sidebar"', $html);
         $this->assertStringContainsString('data-profile-copy="'.$creator->public_id.'"', $html);
         $this->assertSame(16, substr_count($html, 'class="creator-badge creator-badge--'));
-        $this->assertLessThan(strpos($html, 'profile-v3-contact-disabled'), strpos($html, 'profile-v3-awards'));
+        $this->assertLessThan(strpos($html, 'class="btn primary profile-v3-contact"'), strpos($html, 'class="profile-v3-awards"'));
         $this->assertStringContainsString('class="marketplace-card-grid"', $html);
         $this->assertStringContainsString('Profile layout testing work', $html);
     }

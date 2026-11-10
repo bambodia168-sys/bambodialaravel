@@ -37,7 +37,7 @@
         @endif
       </div>
       <section class="profile-v3-awards" aria-label="Awarded creator badges">
-        <div class="profile-v3-section-head"><h2>Creator Badges</h2><span>{{ $awards->count() }}</span></div>
+        <div class="profile-v3-section-head"><h2>Creator achievements</h2><span>{{ $awards->count() }}</span></div>
         @if($awards->isNotEmpty())
           <x-creator-badges :badges="$awards"/>
         @else
