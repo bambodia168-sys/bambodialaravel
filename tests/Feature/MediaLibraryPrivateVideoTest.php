@@ -84,7 +84,9 @@ final class MediaLibraryPrivateVideoTest extends TestCase
         $this->withHeaders(['Range'=>'bytes=0-0'])->head($asset->previewUrl())
             ->assertOk();
 
-        $this->actingAs($admin)->get($asset->previewUrl())->assertOk();
+        // Laravel's withHeaders persists the preceding Range header across
+        // calls in the same test; admins must also receive a valid 206 segment.
+        $this->actingAs($admin)->get($asset->previewUrl())->assertStatus(206);
     }
 
     public function test_media_table_displays_a_playable_thumbnail_and_clean_player_in_original_dialog(): void
