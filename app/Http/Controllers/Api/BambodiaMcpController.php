@@ -79,7 +79,7 @@ final class BambodiaMcpController extends Controller
         }
         $service = new BambodiaTools($request);
         $owner = $request->attributes->get('bambodia_api_owner');
-        $writeNames = ['bambodia_create_draft','bambodia_update_draft','bambodia_delete_draft','bambodia_update_own_profile','bambodia_manage_site'];
+        $writeNames = ['bambodia_create_draft','bambodia_update_draft','bambodia_delete_draft','bambodia_update_own_profile','bambodia_manage_site','bambodia_draft_media'];
         if (in_array($name, $writeNames, true) && ! $token->allows('mcp.write')) {
             return [
                 'isError' => true,
@@ -97,6 +97,7 @@ final class BambodiaMcpController extends Controller
             'bambodia_analytics' => app(\App\Support\Mcp\AdministrationTools::class, ['request' => $request])->analytics($args),
             'bambodia_update_own_profile' => app(\App\Support\Mcp\AdministrationTools::class, ['request' => $request])->updateOwnProfile($args, $owner),
             'bambodia_manage_site' => app(\App\Support\Mcp\AdministrationTools::class, ['request' => $request])->manageSite($args, $owner),
+            'bambodia_draft_media' => app(\App\Support\Mcp\DraftMediaTools::class, ['request' => $request])->change($args, $owner),
             default => throw ValidationException::withMessages(['name' => 'Unknown tool.']),
         };
 
@@ -143,6 +144,17 @@ final class BambodiaMcpController extends Controller
 
         $draft = ['type' => 'string', 'enum' => ['product','project','service','freelance','job','post','page','policy']];
         return [...$base,
+            [
+                'name' => 'bambodia_draft_media',
+                'description' => 'Attach or detach existing approved media owned by the signed-in admin to their own unpublished product, listing, job or post/page draft. No uploading, rights bypass or publication.',
+                'inputSchema' => ['type'=>'object','properties'=>[
+                    'entity'=>['type'=>'string','enum'=>['product','project','service','freelance','job','post','page']],
+                    'id'=>$id,
+                    'action'=>['type'=>'string','enum'=>['attach','detach']],
+                    'purpose'=>['type'=>'string','enum'=>['cover','featured','gallery']],
+                    'media_id'=>$id,
+                ],'required'=>['entity','id','action','purpose','media_id']],
+            ],
             [
                 'name' => 'bambodia_update_own_profile',
                 'description' => 'Update only the signed-in administrator creator biography/headline/website/visibility. No other user or account settings can change.',
