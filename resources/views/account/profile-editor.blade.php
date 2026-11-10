@@ -1,6 +1,6 @@
 @extends('layouts.workspace')
 @section('workspace',$workspace)
-@section('title','Edit Profile')
+@section('title',$workspace === 'creator' ? 'Creator Profile' : 'Edit Profile')
 @section('content')
 @php
   $profileAction = $adminProfile ? route('dashboard.users.profile.update',$member) : ($workspace === 'creator' ? route('studio.profile.update') : route('account.profile.update'));
@@ -15,7 +15,7 @@
 <div class="container inner-page profile-v3 profile-v3-editor">
   <div class="page-intro profile-v3-edit-heading">
     <div><div class="eyebrow">{{ $adminProfile ? 'User Manager / Public presence' : 'My workspace / Profile settings' }}</div>
-      <h1>Edit Profile</h1><p>Customize your account profile. Only explicitly published creator information can appear publicly.</p></div>
+      <h1>{{ $workspace === 'creator' ? 'Creator Profile' : 'Edit Profile' }}</h1><p>Customize your account profile. Only explicitly published creator information can appear publicly.</p></div>
     <div class="profile-v3-actions">
       @if($adminProfile)<a class="btn subtle" href="{{ route('dashboard.users.show',$member) }}">Back to user</a>@else<a class="btn subtle" href="{{ route('account') }}">My account</a>@endif
       @if($member->isCreator() && ($creatorProfile?->is_public || $member->publishedListings()->exists()))
@@ -75,7 +75,7 @@
     <section class="panel profile-v3-edit-panel">
       <div class="panel-head profile-v3-editor-head">
         <div><h2>{{ $heading }}</h2><p>{{ $sectionSubtitles[$kind] }}</p></div>
-        <button type="button" class="btn primary compact" data-profile-dialog-open="profile-add-{{ $kind }}"><x-icon name="plus" size="16"/> Add {{ $kind }}</button>
+        <button type="button" class="btn primary compact" data-profile-dialog-open="profile-add-{{ $kind }}"><x-icon name="sparkles" size="16"/> Add {{ $kind }}</button>
       </div>
       <div class="profile-v3-item-grid">
         @forelse($items->get($kind,collect()) as $item)
@@ -89,7 +89,7 @@
               <button type="button" class="btn subtle compact" data-profile-dialog-open="profile-item-{{ $item->id }}"><x-icon name="pencil" size="14"/> Edit</button>
               <form method="post" action="{{ $adminProfile ? route('dashboard.users.profile.items.destroy',[$member,$item]) : route('account.profile.items.destroy',$item) }}" onsubmit="return confirm('Delete this profile item?')">
                 @csrf @method('DELETE')
-                <button class="btn subtle compact" type="submit"><x-icon name="trash-2" size="14"/> Delete</button>
+                <button class="btn subtle compact" type="submit"><x-icon name="x" size="14"/> Delete</button>
               </form>
             </div>
           </div>

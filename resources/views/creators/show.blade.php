@@ -29,9 +29,9 @@
           <div><x-icon name="shield-check" size="17"/><span title="Account manually reviewed; identity and professional credentials require separate verification.">Account Reviewed</span></div>
         @endif
         @if($personal?->public_location)
-          <div><x-icon name="map-pin" size="17"/><span>{{ $personal->public_location }}</span></div>
+          <div><x-icon name="globe" size="17"/><span>{{ $personal->public_location }}</span></div>
         @endif
-        <div><x-icon name="calendar" size="17"/><span>Joined {{ $creator->created_at->format('M Y') }}</span></div>
+        <div><x-icon name="clock" size="17"/><span>Joined {{ $creator->created_at->format('M Y') }}</span></div>
         @if($personal?->availability)
           <div><x-icon name="circle-dot" size="17"/><span>{{ ucfirst($personal->availability) }} for projects</span></div>
         @endif
@@ -45,10 +45,10 @@
         @endif
       </section>
       @if($contactListing)
-        <a class="btn primary profile-v3-contact" href="{{ $contactListing->publicUrl() }}"><x-icon name="message-square" size="17"/> Contact via listing</a>
+        <a class="btn primary profile-v3-contact" href="{{ $contactListing->publicUrl() }}"><x-icon name="message" size="17"/> Contact via listing</a>
         <p class="profile-v3-note">Open the listing to send a private inquiry.</p>
       @else
-        <div class="profile-v3-contact-disabled" aria-disabled="true"><x-icon name="message-square" size="17"/> Contact unavailable</div>
+        <div class="profile-v3-contact-disabled" aria-disabled="true"><x-icon name="message" size="17"/> Contact unavailable</div>
         <p class="profile-v3-note">Contact is available through eligible published service listings.</p>
       @endif
       @auth
@@ -59,7 +59,7 @@
     </aside>
     <main class="profile-v3-main" id="profile-content">
       <section class="profile-v3-panel profile-v3-intro">
-        <div class="profile-v3-eyebrow"><x-icon name="user-round" size="15"/> Creator portfolio</div>
+        <div class="profile-v3-eyebrow"><x-icon name="user" size="15"/> Creator portfolio</div>
         @if($profile)
           <h2>{{ $profile->headline }}</h2>
           <p class="profile-v3-biography">{{ $profile->biography }}</p>
@@ -72,11 +72,11 @@
         @endif
       </section>
       <section class="profile-v3-panel" aria-label="Profile highlights">
-        <div class="profile-v3-section-head"><h2><x-icon name="chart-no-axes-column" size="19"/> Profile Highlights</h2></div>
+        <div class="profile-v3-section-head"><h2><x-icon name="activity" size="19"/> Profile Highlights</h2></div>
         <div class="profile-v3-metrics">
           <div><x-icon name="layers" size="23"/><strong>{{ number_format($listings->total()) }}</strong><span>Published work</span></div>
           <div><x-icon name="award" size="23"/><strong>{{ $awards->count() }}</strong><span>Earned awards</span></div>
-          <div><x-icon name="calendar-check" size="23"/><strong>{{ $creator->created_at->format('Y') }}</strong><span>Member since</span></div>
+          <div><x-icon name="clock-check" size="23"/><strong>{{ $creator->created_at->format('Y') }}</strong><span>Member since</span></div>
         </div>
       </section>
       @if($profile && $expertise->isNotEmpty())
@@ -92,7 +92,7 @@
       @if($profile && ($languages->isNotEmpty() || $links->isNotEmpty()))
         <div class="profile-v3-pair">
           @if($languages->isNotEmpty())
-            <section class="profile-v3-panel"><div class="profile-v3-section-head"><h2><x-icon name="languages" size="19"/> Languages</h2></div>
+            <section class="profile-v3-panel"><div class="profile-v3-section-head"><h2><x-icon name="globe" size="19"/> Languages</h2></div>
               <div class="profile-v3-simple-list">
                 @foreach($languages as $entry)
                   <div><strong>{{ $entry->label }}</strong>@if($entry->detail)<span>{{ $entry->detail }}</span>@endif</div>

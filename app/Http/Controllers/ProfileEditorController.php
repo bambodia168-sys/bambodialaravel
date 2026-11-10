@@ -49,6 +49,11 @@ final class ProfileEditorController extends Controller
 
     public function updateSelf(Request $request): RedirectResponse
     {
+        // Preserve older /studio/profile clients that send biography fields without a name.
+        if ($request->routeIs('studio.profile.update', 'localized.*.studio.profile.update')
+            && ! $request->exists('name')) {
+            $request->merge(['name' => $request->user()->name]);
+        }
         return $this->save($request, $request->user());
     }
 
