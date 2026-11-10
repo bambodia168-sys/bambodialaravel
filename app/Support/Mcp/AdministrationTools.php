@@ -71,7 +71,7 @@ final class AdministrationTools
         $input = Validator::make($args, ['fields' => ['required', 'array', 'min:1']])->validate()['fields'];
         $allowed = ['headline','biography','website_url','is_public'];
         $this->rejectUnknown($input, $allowed);
-        $profile = DB::transaction(function () use ($input, $actor): CreatorProfile {
+        $profile = DB::transaction(function () use ($input, $actor, $allowed): CreatorProfile {
             $existing = CreatorProfile::query()->where('user_id', $actor->id)->lockForUpdate()->first();
             $payload = array_merge($existing?->only($allowed) ?? [], $input);
             $data = Validator::make($payload, [
