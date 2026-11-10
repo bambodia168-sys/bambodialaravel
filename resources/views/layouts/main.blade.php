@@ -10,6 +10,9 @@
   <meta name="description" content="{{ trim($__env->yieldContent('meta_description', 'Discover licensed digital products, independent creators, and freelance services on Bambodia.')) }}">
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
+  {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
+  <link rel="stylesheet" href="{{ asset('css/creator-badge-tooltip-viewport.css') }}?v=1">
+  <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>
   @if(request()->routeIs('creators.show','account.profile.edit','studio.profile.edit','dashboard.users.profile.edit','localized.*.creators.show','localized.*.account.profile.edit','localized.*.studio.profile.edit','localized.*.dashboard.users.profile.edit'))
     <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=2">
     <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=2"></script>
