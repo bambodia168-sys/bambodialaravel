@@ -51,7 +51,7 @@ final class MediaLibraryPrivateVideoTest extends TestCase
         $this->assertSame([8192-500,8191],PrivateVideoStreamer::parseRange('bytes=-500',8192));
         $this->assertSame([2048,8191],PrivateVideoStreamer::parseRange('bytes=2048-',8192));
         $this->assertSame([0,8191],PrivateVideoStreamer::parseRange(null,8192));
-        $this->assertSame([0,1024*1024*4-1],
+        $this->assertSame([0,1024*1024-1],
             PrivateVideoStreamer::parseRange('bytes=0-',12*1024*1024));
         foreach (['bytes=9-2','bytes=8192-','bytes=','bytes=0-1,10-11','items=0-2','bytes=-0'] as $invalid) {
             $this->assertNull(PrivateVideoStreamer::parseRange($invalid,8192));
@@ -136,7 +136,7 @@ final class MediaLibraryPrivateVideoTest extends TestCase
         $this->assertSame('bytes 4-11/32',$response->headers->get('Content-Range'));
         $this->assertSame('bytes',$response->headers->get('Accept-Ranges'));
         $this->assertSame('8',$response->headers->get('Content-Length'));
-        $this->assertStringNotContainsString('cloudflarestorage',implode('|',$response->headers->all()));
+        $this->assertStringNotContainsString('cloudflarestorage',(string) json_encode($response->headers->all()));
 
         ob_start();
         $response->sendContent();

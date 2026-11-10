@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class PrivateVideoStreamer
 {
-    private const CHUNK_SIZE = 4 * 1024 * 1024;
+    private const CHUNK_SIZE = 1024 * 1024;
 
     /**
      * A single HTTP Range, capped to a short segment to support private,
