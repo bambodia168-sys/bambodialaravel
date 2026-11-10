@@ -74,7 +74,11 @@ final class SecurityAlertMonitor
                         }
                     });
 
-                AuditEvent::record('security.alert.triggered');
+                AuditEvent::record(
+                    'security.alert.triggered',
+                    null,
+                    \Illuminate\Http\Request::create('/artisan/security/alerts-scan', 'POST')
+                );
                 $created++;
             }, 3);
         }

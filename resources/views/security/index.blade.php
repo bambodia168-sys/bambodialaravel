@@ -6,8 +6,12 @@
   <div class="metric"><span><x-icon name="activity"/> Events in past 24 hours</span><strong>{{ number_format($eventsToday) }}</strong></div>
   <div class="metric"><span><x-icon name="shield"/> Failed logins in past 24 hours</span><strong>{{ number_format($failedLoginsToday) }}</strong></div>
   <div class="metric"><span><x-icon name="key"/> Unexpired active tokens</span><strong>{{ number_format($activeTokens) }}</strong></div>
+  <div class="metric"><span><x-icon name="alert-triangle"/> Alerts awaiting review</span>
+    <strong>{{ number_format($openAlerts) }}</strong><small>{{ number_format($alertsToday) }} generated in the past 24 hours</small>
+  </div>
 </div>
-<section class="panel">
+@include('security.alert-center')
+<section class="panel" style="margin-top:20px">
   <div class="panel-head"><div><h2>Access audit <span class="count">{{ $events->total() }}</span></h2><p>IP addresses are not stored in raw form; fingerprints rotate daily.</p></div>
     <form method="get" class="table-search"><x-icon name="filter" size="16"/>
       <select name="event" class="table-select" aria-label="Filter security event">

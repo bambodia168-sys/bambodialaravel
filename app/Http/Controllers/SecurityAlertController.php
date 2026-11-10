@@ -4,11 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditEvent;
 use App\Models\SecurityAlert;
+use App\Support\Security\SecurityAlertMonitor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 final class SecurityAlertController extends Controller
 {
+    public function scan(Request $request, SecurityAlertMonitor $monitor): RedirectResponse
+    {
+        $count = $monitor->scan();
+        return back()->with('status', $count.' real security alerts generated from stored audit events.');
+    }
+
     public function acknowledge(Request $request, SecurityAlert $alert): RedirectResponse
     {
         if ($alert->acknowledged_at === null) {

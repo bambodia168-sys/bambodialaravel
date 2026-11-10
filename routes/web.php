@@ -166,6 +166,8 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/developer/tokens', [DeveloperController::class, 'store'])->name('developer.store')->middleware('throttle:5,1');
         Route::delete('/developer/tokens/{token}', [DeveloperController::class, 'revoke'])->name('developer.revoke')->middleware('throttle:10,1');
         Route::get('/security-dashboard', [SecurityDashboardController::class, 'index'])->name('security.index');
+        Route::post('/security-dashboard/scan', [SecurityAlertController::class, 'scan'])
+            ->name('security.alerts.scan')->middleware('throttle:2,1');
         Route::post('/security-dashboard/rules', [SecurityAlertRuleController::class, 'store'])
             ->name('security.rules.store')->middleware('throttle:10,1');
         Route::patch('/security-dashboard/rules/{rule}', [SecurityAlertRuleController::class, 'update'])
