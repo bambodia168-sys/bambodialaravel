@@ -3,7 +3,7 @@
   $seoPage=\App\Models\SiteSeoPage::forRequest(request());
   $requestedTitle=trim($__env->yieldContent('title',''));
   $pageTitle=$seoPage?->title
-    ?: ($requestedTitle!=='' ? $requestedTitle.' · '.$siteName : \App\Models\SiteSetting::setting('seo.default_title'));
+    ?: ($requestedTitle!=='' && $requestedTitle!==$siteName ? $requestedTitle.' · '.$siteName : \App\Models\SiteSetting::setting('seo.default_title'));
   $requestedDescription=trim($__env->yieldContent('meta_description',''));
   $pageDescription=$seoPage?->description
     ?: ($requestedDescription!=='' ? $requestedDescription : \App\Models\SiteSetting::setting('seo.default_description'));

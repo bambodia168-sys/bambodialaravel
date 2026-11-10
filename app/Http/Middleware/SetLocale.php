@@ -31,6 +31,9 @@ class SetLocale
         // DB overrides are loaded only for the current request. Untranslated
         // entries explicitly use English, even when a legacy language file exists.
         app('translator')->setLoaded([]);
+        // Load native file translations before DB overlays, otherwise adding one
+        // custom term could hide all remaining built-in Khmer/Chinese/etc terms.
+        app('translator')->get('ui', [], $language, false);
         $english = require lang_path('en/ui.php');
         foreach (SiteTranslationEntry::query()->where('language_code',$language)->get() as $entry) {
             $translated = $entry->is_translated && trim((string)$entry->translation_value)!==''
