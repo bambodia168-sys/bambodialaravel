@@ -24,6 +24,7 @@ use App\Http\Controllers\Dashboard\SiteSeoController;
 use App\Http\Controllers\Dashboard\SiteSocialController;
 use App\Http\Controllers\Dashboard\SiteLanguageController;
 use App\Http\Controllers\Dashboard\SiteTypographyController;
+use App\Http\Controllers\Dashboard\CloudStorageController;
 use App\Http\Controllers\SiteManifestController;
 use App\Http\Controllers\Dashboard\CategoryManagerController;
 use App\Http\Controllers\Dashboard\MarketplaceManagerController;
@@ -388,6 +389,12 @@ Route::middleware('auth')->group(function (): void {
                 ->name('dashboard.licenses.issued.rotate')->middleware('throttle:5,1');
             Route::post('/license-manager/support-renewals/{renewal}/review', [ProductSupportController::class,'review'])
                 ->name('dashboard.licenses.support.review')->middleware('throttle:6,1');
+            Route::middleware('role:super_admin')->group(function (): void {
+                Route::get('/cloud-storage', [CloudStorageController::class, 'index'])->name('dashboard.cloud-storage.index');
+                Route::post('/cloud-storage/verify', [CloudStorageController::class, 'save'])->name('dashboard.cloud-storage.verify')->middleware('throttle:4,1');
+                Route::patch('/cloud-storage/mode', [CloudStorageController::class, 'mode'])->name('dashboard.cloud-storage.mode')->middleware('throttle:6,1');
+                Route::delete('/cloud-storage', [CloudStorageController::class, 'destroy'])->name('dashboard.cloud-storage.destroy')->middleware('throttle:3,1');
+            });
             Route::get('/media-library', [MediaLibraryController::class, 'index'])->name('dashboard.media.index');
             Route::post('/media-library', [MediaLibraryController::class, 'store'])->name('dashboard.media.store')->middleware('throttle:10,1');
             Route::patch('/media-library/{asset}', [MediaLibraryController::class, 'update'])->name('dashboard.media.update');

@@ -57,6 +57,7 @@ final class CloudStorageController extends Controller
         $probe='bambodia-connection-probe/'.Str::uuid().'.txt';
         $payload=bin2hex(random_bytes(24));
         $wrote=false;
+        $deleted=false;
         try {
             $disk=Storage::build($temporary->diskConfig());
             if (! $disk->put($probe,$payload)) {
@@ -73,8 +74,13 @@ final class CloudStorageController extends Controller
             ]);
         } finally {
             if ($wrote && isset($disk)) {
-                try { $disk->delete($probe); } catch (\Throwable) {}
+                try { $deleted=(bool)$disk->delete($probe); } catch (\Throwable) {}
             }
+        }
+        if (! $deleted) {
+            return back()->withErrors([
+                'connection'=>'R2 probe cleanup failed. Verify bucket delete permissions before saving.',
+            ]);
         }
 
         CloudStorageConnection::query()->updateOrCreate(['id'=>1],[
