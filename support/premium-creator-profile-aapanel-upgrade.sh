@@ -189,10 +189,49 @@ done
   runuser -u www -- "$PHP" artisan route:clear &&
   runuser -u www -- "$PHP" artisan view:clear &&
   runuser -u www -- "$PHP" artisan view:cache)
-(cd "$APP" && runuser -u www -- "$PHP" artisan route:list --name=profile --except-vendor) > "$TMP/routes.txt"
-grep -q 'account.profile.edit' "$TMP/routes.txt" || fail "Account profile route missing."
-grep -q 'dashboard.users.profile.edit' "$TMP/routes.txt" || fail "Admin profile route missing."
-grep -q 'studio.profile.edit' "$TMP/routes.txt" || fail "Creator profile route missing."
+# RouteListCommand prints a terminal-formatted table; its columns may truncate
+# long route names at the default CLI width. Check Laravel's route collection
+# instead of grepping human-facing output (which caused the Nov 10 rollback).
+(cd "$APP" && runuser -u www -- "$PHP" <<'PHP'
+<?php
+require 'vendor/autoload.php';
+$app = require 'bootstrap/app.php';
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+$expected = [
+    'account.profile.edit' => ['GET', 'account/profile', ['auth']],
+    'account.profile.update' => ['PATCH', 'account/profile', ['auth']],
+    'account.profile.items.store' => ['POST', 'account/profile/items', ['auth']],
+    'studio.profile.edit' => ['GET', 'studio/profile', ['auth', 'role:freelancer,super_admin']],
+    'studio.profile.update' => ['PATCH', 'studio/profile', ['auth', 'role:freelancer,super_admin']],
+    'dashboard.users.profile.edit' => ['GET', 'dashboard/user-manager/{user}/profile', ['auth', 'role:super_admin']],
+    'dashboard.users.profile.update' => ['PATCH', 'dashboard/user-manager/{user}/profile', ['auth', 'role:super_admin']],
+    'dashboard.users.profile.items.store' => ['POST', 'dashboard/user-manager/{user}/profile/items', ['auth', 'role:super_admin']],
+];
+
+$routes = \Illuminate\Support\Facades\Route::getRoutes();
+foreach ($expected as $name => [$method, $uri, $requiredMiddleware]) {
+    $route = $routes->getByName($name);
+    if (! $route) {
+        fwrite(STDERR, "MISSING_REGISTERED_ROUTE=$name\n");
+        exit(13);
+    }
+    if (! in_array($method, $route->methods(), true) || $route->uri() !== $uri) {
+        fwrite(STDERR, "UNEXPECTED_ROUTE_SIGNATURE=$name\n");
+        exit(14);
+    }
+    $middlewares = $route->gatherMiddleware();
+    foreach ($requiredMiddleware as $middleware) {
+        if (! in_array($middleware, $middlewares, true)) {
+            fwrite(STDERR, "MISSING_ROUTE_MIDDLEWARE=$name:$middleware\n");
+            exit(15);
+        }
+    }
+    echo "REGISTERED_ROUTE=$name ($method $uri)\n";
+}
+echo "PROFILE_ROUTING_AND_GUARDS=PASS\n";
+PHP
+) || fail "Laravel route registry and authorization verification failed."
 if [[ ! -e "$APP/public/storage" ]]; then
   (cd "$APP" && runuser -u www -- "$PHP" artisan storage:link) ||
     fail "Public avatar storage link cannot be created."
