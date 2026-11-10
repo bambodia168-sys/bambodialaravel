@@ -9,6 +9,7 @@ use App\Models\SiteLanguage;
 use App\Models\SiteSetting;
 use App\Models\SiteTranslationEntry;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -32,9 +33,13 @@ final class SiteLanguageController extends Controller
         $targetFile=lang_path($selected.'/ui.php');
         $existing=is_file($targetFile) ? require $targetFile : [];
         $available=array_diff_key(SiteLanguage::CATALOG,$languages->keyBy('code')->all());
-
+        $page=max(1,(int)$request->query('page',1));
+        $termPages=new LengthAwarePaginator(
+            collect($source)->sortKeys()->forPage($page,10), count($source), 10, $page,
+            ['path'=>$request->url(),'query'=>$request->query()]
+        );
         return view('dashboard.site-languages', compact(
-            'languages','selected','source','entries','existing','available'
+            'languages','selected','source','entries','existing','available','termPages'
         ));
     }
 
