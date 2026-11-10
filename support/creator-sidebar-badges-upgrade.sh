@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bambodia single-sidebar public creator badges, limited profile link, original badge-only display.
+# Bambodia scoped sidebar-badge recovery. Preserve customized Badge Manager/admin code.
 set -Eeuo pipefail
 umask 077
 APP='/www/wwwroot/bambodia-staging-qa'
@@ -13,7 +13,7 @@ RUN='42671314958'
 ARTIFACT='Bambodia-Installer-v0.0.1'
 BACKUPS='/root/Bambodia-CreatorSidebar-Backups'
 DB_HELPER="$SOURCE/support/builder-studio-db-backup.sh"
-FILES='app/Http/Controllers/Dashboard/CreatorBadgeController.php app/Http/Controllers/Creator/CreatorProfileController.php app/Support/CreatorBadgeDisplay.php resources/views/dashboard/creator-badges.blade.php resources/views/components/creator-badges.blade.php resources/views/marketplace/detail.blade.php resources/css/app.css'
+FILES='app/Http/Controllers/Creator/CreatorProfileController.php resources/views/components/creator-badges.blade.php resources/views/marketplace/detail.blade.php resources/css/app.css'
 NEW_FILES='database/migrations/2026_11_09_004200_default_compact_badge_display.php'
 MODE="$1"
 fail(){ echo "BLOCKED: $*" >&2; exit 1; }
@@ -70,16 +70,38 @@ done
 [[ "$(gh run view "$RUN" -R "$REPO" --json headSha --jq '.headSha')" == "$FEATURE" ]] || fail 'Artifact commit mismatch'
 [[ "$(gh run view "$RUN" -R "$REPO" --json conclusion --jq '.conclusion')" == success ]] || fail 'Artifact workflow did not pass'
 
-echo '2. Verify exact installed badge baseline and refuse customizations'
+echo '2. Verify ONLY scoped sidebar files; leave Admin Badge Manager and customized PHP untouched'
 for file in $FILES; do
   [[ -f "$APP/$file" && ! -L "$APP/$file" ]] || fail "Unsafe installed file: $file"
-  cmp -s "$APP/$file" <(git -C "$SOURCE" show "$BASE:$file") || fail "Existing customization found: $file"
-  cmp -s "$SOURCE/$file" <(git -C "$SOURCE" show "$FEATURE:$file") || fail "Source differs from verified release: $file"
+  cmp -s "$SOURCE/$file" <(git -C "$SOURCE" show "$FEATURE:$file") ||
+    fail "Source differs from verified sidebar release: $file"
+  if cmp -s "$APP/$file" "$SOURCE/$file"; then
+    echo "Already at target: $file"
+  elif cmp -s "$APP/$file" <(git -C "$SOURCE" show "$BASE:$file"); then
+    echo "Recognized original baseline: $file"
+  elif cmp -s "$APP/$file" <(git -C "$SOURCE" show 'f69857a0671e9bfd45495ece659c9fe67ddb8159':"$file"); then
+    echo "Recognized earlier public-badge release: $file"
+  else
+    installed_sha="$(git hash-object "$APP/$file")"
+    echo "INSTALLED_BLOB=$installed_sha" >&2
+    fail "Unrecognized customization in required sidebar file: $file"
+  fi
 done
+NEW_FILES_CREATED=''
 for file in $NEW_FILES; do
-  [[ ! -e "$APP/$file" && ! -L "$APP/$file" ]] || fail "New feature already installed/customized: $file"
-  cmp -s "$SOURCE/$file" <(git -C "$SOURCE" show "$FEATURE:$file") || fail "Source differs from verified feature: $file"
+  [[ ! -L "$APP/$file" ]] || fail "Unsafe migration symlink: $file"
+  cmp -s "$SOURCE/$file" <(git -C "$SOURCE" show "$FEATURE:$file") ||
+    fail "Source migration differs from verified feature: $file"
+  if [[ ! -e "$APP/$file" ]]; then
+    NEW_FILES_CREATED="$NEW_FILES_CREATED $file"
+    echo "Migration file will be installed: $file"
+  elif [[ -f "$APP/$file" ]] && cmp -s "$APP/$file" "$SOURCE/$file"; then
+    echo "Migration file already installed: $file"
+  else
+    fail "Existing migration file was customized: $file"
+  fi
 done
+echo 'Admin Badge Manager controller, catalog view and settings service are preserved verbatim.'
 
 TMP="$(mktemp -d /root/bambodia-sidebar-badges.XXXXXXXX)"
 BACKUP=''
@@ -98,7 +120,7 @@ cleanup(){
     if [[ -s "$BACKUP" ]]; then
       tar -xzf "$BACKUP" -C "$APP" || echo 'ALERT: File rollback requires inspection' >&2
     fi
-    for file in $NEW_FILES; do
+    for file in $NEW_FILES_CREATED; do
       [[ ! -L "$APP/$file" ]] && rm -f -- "$APP/$file"
     done
     (cd "$APP" && runuser -u www -- "$PHP" artisan route:clear && runuser -u www -- "$PHP" artisan view:clear && runuser -u www -- "$PHP" artisan view:cache) || true
@@ -166,7 +188,7 @@ LOCK_SHA="$(sha256sum "$APP/storage/app/installed.lock" | cut -d' ' -f1)"
 echo "Files: $BACKUP"
 echo "Database: $DB_BACKUP"
 
-echo '5. Deploy one publisher sidebar, full badge catalog, public profile link and compiled assets'
+echo '5. Deploy ONLY verified sidebar/profile files, retain customized Badge Manager and compiled assets'
 (cd "$APP" && runuser -u www -- "$PHP" artisan down --retry=30)
 MAINT=1
 APPLIED=1
@@ -188,13 +210,11 @@ $app=require 'bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 $settings=\App\Support\CreatorBadgeDisplay::settings();
 if($settings->display_mode !== 'badge' || !$settings->tooltips_enabled)exit(2);
-if(!\Illuminate\Support\Facades\Route::has('dashboard.badges.index') ||
- !\Illuminate\Support\Facades\Route::has('dashboard.badges.display.update'))exit(3);
+if(!\Illuminate\Support\Facades\Route::has('dashboard.badges.index'))exit(3);
 $detail=file_get_contents(resource_path('views/marketplace/detail.blade.php'));
 if(str_contains($detail,'$creatorBadges->take(') || !str_contains($detail,'mode="badge"') || str_contains($detail,'id="seller"') || !str_contains($detail,'id="publisher"'))exit(4);
-$admin=file_get_contents(resource_path('views/dashboard/creator-badges.blade.php'));
-if(!str_contains($admin,'Badge Only') || !str_contains($admin,'Badge with name'))exit(5);
-if(!str_contains($admin,'badge-catalog-gallery-grid') || !str_contains($admin,'data-table badge-manager-table'))exit(6);
+// The Admin catalog is intentionally not rewritten in this sidebar-only recovery.
+if(!is_file(resource_path('views/dashboard/creator-badges.blade.php')))exit(5);
 $creator=\App\Models\User::query()->where('public_id','34302348')->first();
 if(!$creator || $creator->role!=='freelancer')exit(7);
 if(\App\Support\CreatorBadgeAwards::earned($creator)->count()!==16)exit(8);
@@ -259,7 +279,7 @@ APPLIED=0
 echo '========== SINGLE CREATOR SIDEBAR & BADGES DEPLOYED =========='
 echo "FEATURE_COMMIT=$FEATURE"
 echo 'PAGINATION=10 per page, Previous/Next, numbered pages and Go To'
-echo 'DISPLAY=Badge Only or Badge with name selectable on main badge catalog'
+echo 'DISPLAY=artwork-only sidebar; existing Badge Manager settings and customization untouched'
 echo 'PUBLIC_PROFILE=one sidebar displays all sixteen medals, hover descriptions and a working public creator page'
 echo "ROLLBACK_FILES=$BACKUP"
 echo "MYSQL_BACKUP=$DB_BACKUP"
