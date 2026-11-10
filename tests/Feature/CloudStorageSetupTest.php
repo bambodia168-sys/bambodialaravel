@@ -135,6 +135,8 @@ final class CloudStorageSetupTest extends TestCase
             'storage_disk'=>'r2',
             'mime_type'=>'image/png',
             'bytes'=>90,
+            'width'=>1,
+            'height'=>1,
             'alt_text'=>'A small generated test image',
             'rights_basis'=>'owned',
             'rights_holder'=>'Original owner',
