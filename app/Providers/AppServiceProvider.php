@@ -19,11 +19,16 @@ class AppServiceProvider extends ServiceProvider
         // The installer and migration commands start before this table exists.
         // Keep legacy .env settings active unless the admin explicitly chooses
         // a new Media Library upload mode in the verified Cloud Storage wizard.
-        if (! Schema::hasTable('cloud_storage_connections')) {
+        try {
+            if (! Schema::hasTable('cloud_storage_connections')) {
+                return;
+            }
+            $connection = CloudStorageConnection::query()->find(1);
+        } catch (\Illuminate\Database\QueryException|\PDOException) {
+            // Composer discovery, first install and offline artisan commands
+            // must still work before the database connection exists.
             return;
         }
-
-        $connection = CloudStorageConnection::query()->find(1);
         if (! $connection) {
             return;
         }
