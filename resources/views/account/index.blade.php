@@ -30,6 +30,7 @@
   <section class="panel profile-panel-main">
     <div class="panel-head"><h2>Profile details</h2><span class="role-pill">{{ ucwords(str_replace('_',' ',$user->role)) }}</span></div>
     <dl class="detail-list"><div><dt>Public user ID</dt><dd class="mono">{{ $user->public_id }}</dd></div><div><dt>Name</dt><dd>{{ $user->name }}</dd></div><div><dt>Email</dt><dd>{{ $user->email }}</dd></div><div><dt>Language</dt><dd>{{ strtoupper($user->locale) }}</dd></div></dl>
+    <div class="toolbar-actions"><a class="btn primary" href="{{ route('account.profile.edit') }}"><x-icon name="user-round" size="16"/> Customize profile &amp; sections</a></div>
     <form method="post" action="{{ route('account.update') }}" class="settings-form">
       @csrf @method('PATCH')
       <h3>Edit profile</h3>

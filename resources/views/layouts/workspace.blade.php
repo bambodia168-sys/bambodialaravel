@@ -9,6 +9,10 @@
   <title>{{ trim($__env->yieldContent('title','Workspace')) }} · Bambodia</title>
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
+  @if(request()->routeIs('creators.show','account.profile.edit','studio.profile.edit','dashboard.users.profile.edit','localized.*.creators.show','localized.*.account.profile.edit','localized.*.studio.profile.edit','localized.*.dashboard.users.profile.edit'))
+    <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=1">
+    <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=1"></script>
+  @endif
 </head>
 @php
   $workspace = trim($__env->yieldContent('workspace', 'account'));
@@ -28,6 +32,7 @@
     $groups[] = ['heading'=>'Overview','items'=>[
       ['route'=>'dashboard','label'=>'Dashboard overview','icon'=>'layout-dashboard'],
       ['route'=>'dashboard.badges.index','label'=>'Creator Badges','icon'=>'award'],
+      ['route'=>'account.profile.edit','label'=>'My Profile','icon'=>'user-round'],
     ]];
     if ($user->role === 'super_admin') {
       $groups[] = ['heading'=>'Access & Security','items'=>[
@@ -116,6 +121,7 @@
     $groups = [
       ['heading'=>'Your Account','items'=>[
         ['route'=>'account','label'=>'Account Overview','icon'=>'layout-dashboard'],
+        ['route'=>'account.profile.edit','label'=>'Edit Profile','icon'=>'user-round'],
         ['route'=>'account.notifications','label'=>'Notifications','icon'=>'bell'],
         ['route'=>'account.downloads','label'=>'My Downloads','icon'=>'download'],
         ['route'=>'account.media.index','label'=>'My Media Library','icon'=>'image'],

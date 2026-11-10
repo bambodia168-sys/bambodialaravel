@@ -10,6 +10,10 @@
   <meta name="description" content="{{ trim($__env->yieldContent('meta_description', 'Discover licensed digital products, independent creators, and freelance services on Bambodia.')) }}">
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
+  @if(request()->routeIs('creators.show','account.profile.edit','studio.profile.edit','dashboard.users.profile.edit','localized.*.creators.show','localized.*.account.profile.edit','localized.*.studio.profile.edit','localized.*.dashboard.users.profile.edit'))
+    <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=1">
+    <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=1"></script>
+  @endif
 </head>
 <body class="site-body">
 <x-flash-feedback :validation-errors="$errors->all()" />
