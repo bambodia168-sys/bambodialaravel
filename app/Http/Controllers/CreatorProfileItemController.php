@@ -95,7 +95,7 @@ final class CreatorProfileItemController extends Controller
             'label' => $data['label'],
             'detail' => $data['detail'] ?? null,
             'url' => $item->kind === 'link' ? $data['url'] : null,
-            'sort_order' => (int) ($data['sort_order'] ?? 0),
+            'sort_order' => (int) ($data['sort_order'] ?? $item->sort_order),
             'is_visible' => (bool) $data['is_visible'],
         ]);
         AuditEvent::record('profile.item.updated', $request->user(), $request);
