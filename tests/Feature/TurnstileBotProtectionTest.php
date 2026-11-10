@@ -35,13 +35,13 @@ final class TurnstileBotProtectionTest extends TestCase
         ]);
     }
 
-    private function fakeSiteVerify(string $action='admin_test', string $hostname='localhost', bool $success=true): void
+    private function fakeSiteVerify(string $action='admin_test', ?string $hostname=null, bool $success=true): void
     {
         Http::fake([
             'https://challenges.cloudflare.com/turnstile/v0/siteverify' =>
                 Http::response([
                     'success'=>$success,
-                    'hostname'=>$hostname,
+                    'hostname'=>$hostname ?? parse_url((string)config('app.url'),PHP_URL_HOST),
                     'action'=>$action,
                 ],200),
         ]);
@@ -139,7 +139,7 @@ final class TurnstileBotProtectionTest extends TestCase
         $cfg=$this->verifiedConfig();
         $cfg->update(['is_enabled'=>true]);
 
-        foreach ([['register','localhost'],['login','other-domain.example'],['login','localhost']] as $i=>$scenario) {
+        foreach ([['register',null],['login','other-domain.example'],['login',null]] as $i=>$scenario) {
             $this->fakeSiteVerify($scenario[0],$scenario[1],$i!==2);
             $this->post(route('login.store'),[
                 'email'=>$user->email,'password'=>'PassphraseForProtectedLogin123!',
@@ -185,6 +185,14 @@ final class TurnstileBotProtectionTest extends TestCase
 
         $this->delete(route('dashboard.turnstile.destroy'))->assertRedirect();
         $this->assertDatabaseCount('turnstile_bot_protections',0);
+    }
+
+    public function test_local_emergency_command_can_disable_bot_challenges_safely(): void
+    {
+        $config=$this->verifiedConfig();
+        $config->update(['is_enabled'=>true]);
+        $this->artisan('security:turnstile-disable')->assertSuccessful();
+        $this->assertFalse($config->fresh()->is_enabled);
     }
 
     public function test_staff_admin_and_customer_have_no_access_to_turnstile_credentials(): void

@@ -19,3 +19,22 @@ Artisan::command('audit:prune {--days=90}', function (): int {
 })->purpose('Delete audit records older than the configured retention period');
 
 Schedule::command('audit:prune --days=90')->dailyAt('03:15')->withoutOverlapping();
+
+
+// Local shell/aaPanel recovery for a broken third-party bot verification provider.
+// Not exposed through web routes and deliberately never prints private keys.
+Artisan::command('security:turnstile-disable', function (): int {
+    $settings = \App\Models\TurnstileBotProtection::current();
+    if (! $settings || ! $settings->is_enabled) {
+        $this->info('Turnstile is already disabled.');
+        return 0;
+    }
+    $settings->update(['is_enabled' => false]);
+    \App\Models\AuditEvent::record(
+        'security.turnstile.status.changed',
+        null,
+        \Illuminate\Http\Request::create('/artisan/security/turnstile-disable','POST')
+    );
+    $this->info('Turnstile disabled. Existing login rate limits remain active.');
+    return 0;
+})->purpose('Emergency recovery: disable Cloudflare Turnstile via authenticated server shell');
