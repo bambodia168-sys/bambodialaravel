@@ -8,7 +8,7 @@ MODE="$*"
 [[ "$MODE" == "--check" || "$MODE" == "--apply" ]] || { echo "Usage: bash $0 --check|--apply" >&2; exit 2; }
 REPO="bambodia168-sys/bambodialaravel"
 BASE="4c2894c7c9e612ec8a89ab1009855be1269c03e7"
-FEATURE="7d2ada616af210a8843882d0046a1f7303641367"
+FEATURE="d5b962cd636fc52a65058cf1b33843577adab276"
 BRANCH="feature/premium-creator-profile-editor-20261110"
 SOURCE="/root/bambodia-release-audit"
 APP="/www/wwwroot/bambodia-staging-qa"
@@ -100,7 +100,7 @@ for workflow in quality.yml installer-acceptance.yml browser-emulation.yml opera
 done
 
 echo "2. Verify tooltip-only deployment scope, baseline, badges and Published work."
-printf '%s\n' $OLD_FILES $NEW_FILES .github/workflows/quality.yml .github/workflows/browser-emulation.yml tests/browser/badge-tooltip-viewport.mjs | LC_ALL=C sort > "$TMP/expected"
+printf '%s\n' $OLD_FILES $NEW_FILES .github/workflows/quality.yml .github/workflows/browser-emulation.yml tests/browser/badge-tooltip-viewport.mjs support/creator-badge-tooltip-viewport-upgrade.sh | LC_ALL=C sort > "$TMP/expected"
 git -C "$SOURCE" diff --name-only "$BASE" "$FEATURE" | LC_ALL=C sort > "$TMP/actual"
 cmp -s "$TMP/expected" "$TMP/actual" || fail "Release contains unexpected files."
 python3 - "$SOURCE" "$BASE" "$FEATURE" <<'PY'

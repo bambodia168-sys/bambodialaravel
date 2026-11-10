@@ -101,6 +101,7 @@ jobs:
           bash -n support/creator-badge-tooltip-viewport-upgrade.sh
           node --check public/js/creator-profile-v3.js
           node --check public/js/creator-badge-tooltip-viewport.js
+          if grep -Eq '^[[:space:]]*inset:[[:space:]]*auto[[:space:]]*!important' public/css/creator-badge-tooltip-viewport.css; then echo 'Unsafe viewport tooltip inset override'; exit 1; fi
           node --check tests/browser/badge-tooltip-viewport.mjs
           php -l examples/license-validation.php
           php -l support/frontend-layout-samples.php
