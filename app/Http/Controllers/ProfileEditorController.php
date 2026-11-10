@@ -120,7 +120,7 @@ final class ProfileEditorController extends Controller
                         ]
                     );
                 }
-                AuditEvent::record('profile.public.updated', $request->user(), $request);
+                AuditEvent::record($locked->isCreator() ? 'creator.profile.updated' : 'profile.public.updated', $request->user(), $request);
             });
         } catch (\Throwable $error) {
             if ($newAvatar) Storage::disk('public')->delete($newAvatar);
