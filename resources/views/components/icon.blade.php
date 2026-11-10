@@ -1,6 +1,12 @@
 @props(['name' => 'circle', 'size' => 20])
 @php
 $paths = [
+    // Shared profile editor icons (explicit paths prevent the circle fallback).
+    'plus' => '<path d="M12 5v14M5 12h14"/>',
+    'more-vertical' => '<circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/>',
+    'trash-2' => '<path d="M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6M10 10v7m4-7v7"/>',
+    'map-pin' => '<path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/>',
+    'upload-cloud' => '<path d="M5 17a4 4 0 0 1-.3-8 7 7 0 0 1 13.5-1.4A4.5 4.5 0 0 1 19 17M12 21V11m0 0-4 4m4-4 4 4"/>',
     'award' => '<circle cx="12" cy="8" r="6"/><path d="m8 13-2 9 6-3 6 3-2-9"/>',
     'trending-up' => '<path d="m3 17 7-7 4 4 7-8M15 6h6v6"/>',
     'shield-check' => '<path d="m12 2 9 4v6c0 5-3.5 8-9 10-5.5-2-9-5-9-10V6zM8 12l3 3 5-6"/>',

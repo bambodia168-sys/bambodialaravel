@@ -107,11 +107,11 @@
       @endphp
       <section class="panel profile-v3-edit-panel profile-v4-section @if(!$section->is_visible) profile-v4-hidden-section @endif" data-profile-section-id="{{ $section->id }}" draggable="true">
         <div class="panel-head profile-v3-editor-head profile-v4-section-header">
-          <button type="button" class="profile-v4-drag-handle" data-profile-sort-handle aria-label="Drag to reorder {{ $section->title }}. Use arrow keys to move."><x-icon name="grip-vertical" size="19"/></button>
+          <button type="button" class="profile-v4-drag-handle" data-profile-sort-handle aria-label="Drag to reorder {{ $section->title }}. Use arrow keys to move."><x-icon name="grip-horizontal" size="19"/></button>
           <div class="profile-v4-section-title"><h2>{{ $section->title }} @if(!$section->is_visible)<small>(Hidden)</small>@endif</h2>@if($section->description)<p>{{ $section->description }}</p>@endif</div>
           <div class="profile-v4-section-actions">
             <button type="button" class="btn primary compact" data-profile-dialog-open="profile-add-{{ $section->id }}"><x-icon name="plus" size="16"/> Add {{ $kind==='custom' ? 'entry' : $kind }}</button>
-            <button type="button" class="profile-v4-menu-trigger" data-profile-menu-trigger aria-label="Actions for {{ $section->title }}" aria-haspopup="menu" aria-expanded="false"><x-icon name="more-vertical" size="18"/></button>
+            <button type="button" class="profile-v4-menu-trigger" data-profile-menu-trigger title="More actions" aria-label="Actions for {{ $section->title }}" aria-haspopup="menu" aria-expanded="false"><x-icon name="more-vertical" size="18"/></button>
             <div class="profile-v4-action-menu" data-profile-menu role="menu" hidden>
               <button role="menuitem" type="button" data-profile-dialog-open="profile-edit-section-{{ $section->id }}"><x-icon name="pencil" size="15"/> Edit section</button>
               <button role="menuitem" type="button" data-profile-delete="{{ $sectionDestroyRoute($section) }}" data-profile-delete-label="{{ $section->title }}" data-profile-delete-kind="{{ $kind==='custom' ? 'custom section and all its entries' : 'section visibility' }}"><x-icon name="trash-2" size="15"/> {{ $kind==='custom' ? 'Delete section' : 'Hide section' }}</button>
@@ -121,13 +121,13 @@
         <div class="profile-v3-item-grid profile-v4-item-grid" data-profile-sortable="items" data-profile-section="{{ $section->id }}" data-profile-order-url="{{ $orderItemRoute }}">
           @forelse($entries as $item)
             <div class="profile-v3-edit-item profile-v4-edit-item" data-profile-item-id="{{ $item->id }}" draggable="true">
-              <button type="button" class="profile-v4-drag-handle" data-profile-sort-handle aria-label="Drag to reorder {{ $item->label }}. Use arrow keys to move."><x-icon name="grip-vertical" size="17"/></button>
+              <button type="button" class="profile-v4-drag-handle" data-profile-sort-handle aria-label="Drag to reorder {{ $item->label }}. Use arrow keys to move."><x-icon name="grip-horizontal" size="17"/></button>
               <div class="profile-v4-item-summary"><strong>{{ $item->label }}</strong>
                 @if($item->detail)<small>{{ $item->detail }}</small>@endif
                 @if($item->url)<small class="profile-v4-truncate">{{ $item->url }}</small>@endif
               </div>
               @if(!$item->is_visible)<span class="profile-v4-hidden-marker">Hidden</span>@endif
-              <button type="button" class="profile-v4-menu-trigger" data-profile-menu-trigger aria-label="Actions for {{ $item->label }}" aria-haspopup="menu" aria-expanded="false"><x-icon name="more-vertical" size="18"/></button>
+              <button type="button" class="profile-v4-menu-trigger" data-profile-menu-trigger title="More actions" aria-label="Actions for {{ $item->label }}" aria-haspopup="menu" aria-expanded="false"><x-icon name="more-vertical" size="18"/></button>
               <div class="profile-v4-action-menu" data-profile-menu role="menu" hidden>
                 <button role="menuitem" type="button" data-profile-dialog-open="profile-item-{{ $item->id }}"><x-icon name="pencil" size="15"/> Edit</button>
                 <button role="menuitem" type="button" data-profile-delete="{{ $itemDestroyRoute($item) }}" data-profile-delete-label="{{ $item->label }}" data-profile-delete-kind="entry"><x-icon name="trash-2" size="15"/> Delete</button>

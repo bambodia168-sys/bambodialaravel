@@ -244,4 +244,25 @@ class PremiumCreatorProfileCrudTest extends TestCase
         $this->assertSame('Creator expertise',$section->fresh()->title);
     }
 
+    public function test_shared_profile_editor_renders_distinct_drag_and_vertical_actions_and_add_icons(): void
+    {
+        $creator = $this->member();
+        $response = $this->actingAs($creator)->get(route('studio.profile.edit'))->assertOk()
+            ->assertSee('data-profile-sort-handle', false)
+            ->assertSee('data-profile-menu-trigger', false)
+            ->assertSee('Add expertise')
+            ->assertSee('Add language')
+            ->assertSee('Add link')
+            ->assertSee('Add section');
+
+        $html = $response->getContent();
+        // Six-dot drag handle cannot be confused with three vertical menu dots.
+        $this->assertStringContainsString('M12 5v14M5 12h14', $html);
+        $this->assertStringContainsString('cx="6" cy="10" r="1"', $html);
+        $this->assertStringContainsString('cx="12" cy="5" r="1"', $html);
+        $this->assertStringContainsString('cx="12" cy="19" r="1"', $html);
+        $this->assertStringNotContainsString('<x-icon name="grip-vertical"', $html);
+        $this->assertStringContainsString('title="More actions"', $html);
+    }
+
 }

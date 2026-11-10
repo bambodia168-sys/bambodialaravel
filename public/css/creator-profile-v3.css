@@ -165,3 +165,49 @@
 @media(max-width:790px){.profile-v4-editor .profile-v3-edit-grid{grid-template-columns:1fr}.profile-v4-editor .profile-v3-edit-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.profile-v4-editor .profile-v3-edit-fields,.profile-v4-location{grid-template-columns:1fr}.profile-v4-location-tools{grid-column:1}.profile-v4-sections-bar{flex-direction:column;align-items:stretch}.profile-v4-section-header{flex-wrap:wrap}.profile-v4-section-title{flex:1 1 calc(100% - 68px)}.profile-v4-section-actions{margin-left:auto}.profile-v4-section-actions .btn{font-size:11px}.profile-v4-item-grid{grid-template-columns:1fr}.profile-v4-avatar-dropzone{max-width:210px}}
 @media(prefers-reduced-motion:reduce){.profile-v4-avatar-overlay{transition:none}}
+
+/* V4.1 — show vertical three-dot actions only on active rows. Drag handle stays distinct. */
+.profile-v4-editor .profile-v4-menu-trigger {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.profile-v4-editor .profile-v4-section-header:hover > .profile-v4-section-actions .profile-v4-menu-trigger,
+.profile-v4-editor .profile-v4-section-header:focus-within > .profile-v4-section-actions .profile-v4-menu-trigger,
+.profile-v4-editor .profile-v4-edit-item:hover > .profile-v4-menu-trigger,
+.profile-v4-editor .profile-v4-edit-item:focus-within > .profile-v4-menu-trigger,
+.profile-v4-editor .profile-v4-menu-trigger[aria-expanded="true"] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.profile-v4-editor .profile-v4-drag-handle {
+  cursor: grab;
+}
+.profile-v4-editor .profile-v4-drag-handle svg,
+.profile-v4-editor .profile-v4-menu-trigger svg,
+.profile-v4-editor .profile-v4-section-actions .btn svg,
+.profile-v4-editor .profile-v4-sections-bar .btn svg {
+  display: block;
+  flex: 0 0 auto;
+  stroke: currentColor;
+}
+.profile-v4-editor .profile-v4-section-actions .btn,
+.profile-v4-editor .profile-v4-sections-bar .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+@media (hover: none), (pointer: coarse) {
+  /* Touch surfaces have no reliable hover: keep action buttons discoverable. */
+  .profile-v4-editor .profile-v4-menu-trigger {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profile-v4-editor .profile-v4-menu-trigger { transition: none; }
+}
