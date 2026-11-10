@@ -521,3 +521,11 @@ foreach (\App\Http\Middleware\SetLocale::SUPPORTED as $languageCode) {
         }
     }
 }
+
+
+// Stateless, admin-token-authenticated MCP endpoint. A browser session is never sufficient
+// for access. Only this bearer-token route is exempt from the web CSRF middleware.
+Route::post('/mcp', [\App\Http\Controllers\Api\BambodiaMcpController::class, 'handle'])
+    ->middleware(['api.token:mcp.read', 'throttle:30,1'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
+    ->name('mcp');
