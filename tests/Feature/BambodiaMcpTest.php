@@ -252,4 +252,70 @@ final class BambodiaMcpTest extends TestCase
             ],
         ]))->assertJsonPath('result.isError', true);
     }
+
+    public function test_approved_owned_media_can_be_attached_only_to_own_draft(): void
+    {
+        $actor = $this->admin();
+        $another = $this->admin();
+        [$token, $secret] = ApiToken::issue($actor, 'Media links', ['mcp.read','mcp.write'], 7);
+        $this->withToken($secret);
+
+        $draft = MarketplaceListing::query()->create([
+            'user_id'=>$actor->id,
+            'type'=>'service','title'=>'Private service draft',
+            'description'=>str_repeat('Private service details. ', 3),
+            'status'=>'draft',
+        ]);
+        $live = MarketplaceListing::query()->create([
+            'user_id'=>$actor->id,
+            'type'=>'service','title'=>'Published service page',
+            'description'=>str_repeat('Public service details. ', 3),
+            'status'=>'published',
+        ]);
+        $ownedAsset = \App\Models\MediaAsset::query()->create([
+            'user_id'=>$actor->id,'original_name'=>'approved.png',
+            'storage_path'=>'marketplace/previews/test/approved.png',
+            'mime_type'=>'image/png','bytes'=>1234,'width'=>300,'height'=>300,
+            'alt_text'=>'Approved test asset','rights_basis'=>'owned',
+            'rights_holder'=>'QA','review_status'=>'approved',
+        ]);
+        $foreignAsset = \App\Models\MediaAsset::query()->create([
+            'user_id'=>$another->id,'original_name'=>'foreign.png',
+            'storage_path'=>'marketplace/previews/test/foreign.png',
+            'mime_type'=>'image/png','bytes'=>1234,'width'=>300,'height'=>300,
+            'alt_text'=>'Foreign test asset','rights_basis'=>'owned',
+            'rights_holder'=>'QA','review_status'=>'approved',
+        ]);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_draft_media','arguments'=>[
+                'entity'=>'service','id'=>$draft->id,'action'=>'attach',
+                'purpose'=>'cover','media_id'=>$foreignAsset->id,
+            ],
+        ]))->assertJsonPath('result.isError', true);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_draft_media','arguments'=>[
+                'entity'=>'service','id'=>$live->id,'action'=>'attach',
+                'purpose'=>'cover','media_id'=>$ownedAsset->id,
+            ],
+        ]))->assertJsonPath('result.isError', true);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_draft_media','arguments'=>[
+                'entity'=>'service','id'=>$draft->id,'action'=>'attach',
+                'purpose'=>'cover','media_id'=>$ownedAsset->id,
+            ],
+        ]))->assertJsonPath('result.structuredContent.cover_media_id', $ownedAsset->id);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_draft_media','arguments'=>[
+                'entity'=>'service','id'=>$draft->id,'action'=>'detach',
+                'purpose'=>'cover','media_id'=>$ownedAsset->id,
+            ],
+        ]))->assertJsonPath('result.structuredContent.cover_media_id', null);
+        $this->assertDatabaseHas('marketplace_listings', ['id'=>$draft->id,'cover_media_id'=>null]);
+        $this->assertDatabaseHas('audit_events', ['event'=>'mcp.media.attached']);
+        $this->assertDatabaseHas('audit_events', ['event'=>'mcp.media.detached']);
+    }
 }
