@@ -4,7 +4,7 @@
 @endif
 @section('title','Media Library')
 @section('content')
-<link rel="stylesheet" href="{{ asset('css/media-library-video.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/media-library-video.css') }}?v=2">
 <script defer src="{{ asset('js/media-library-video.js') }}?v=1"></script>
 <div class="{{ $studio ? 'container inner-page' : '' }}">
   <div class="page-intro"><div class="eyebrow">Rights-aware media management</div><h1>Media Library</h1>
