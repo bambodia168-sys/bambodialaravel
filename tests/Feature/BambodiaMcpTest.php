@@ -130,4 +130,126 @@ final class BambodiaMcpTest extends TestCase
         $admin->update(['role'=>'customer']);
         $this->withToken($anotherSecret)->postJson('/mcp', $this->rpc('tools/list'))->assertUnauthorized();
     }
+
+    public function test_analytics_is_read_only_and_available_to_read_only_token(): void
+    {
+        [$token, $secret] = ApiToken::issue($this->admin(), 'Read analytics', ['mcp.read'], 7);
+        $this->withToken($secret);
+        $tools = $this->postJson('/mcp', $this->rpc('tools/list'))->json('result.tools');
+        $this->assertContains('bambodia_analytics', collect($tools)->pluck('name')->all());
+        $this->assertNotContains('bambodia_manage_site', collect($tools)->pluck('name')->all());
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name' => 'bambodia_analytics', 'arguments' => ['days' => 7],
+        ]))->assertOk()->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.period_days', 7);
+    }
+
+    public function test_own_profile_update_is_scoped_to_token_owner(): void
+    {
+        $admin = $this->admin();
+        $other = $this->admin();
+        [$token, $secret] = ApiToken::issue($admin, 'Profile update', ['mcp.read','mcp.write'], 7);
+        $this->withToken($secret);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name' => 'bambodia_update_own_profile',
+            'arguments' => ['fields' => [
+                'headline' => 'Bambodia Platform Director',
+                'biography' => str_repeat('Managing the Bambodia platform with a focus on trust, safety and quality. ', 2),
+                'website_url' => 'https://bambodia.com',
+                'is_public' => false,
+            ]],
+        ]))->assertOk()->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.user_id', $admin->id);
+        $this->assertDatabaseHas('creator_profiles', ['user_id'=>$admin->id,'is_public'=>false]);
+        $this->assertDatabaseMissing('creator_profiles', ['user_id'=>$other->id]);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name' => 'bambodia_update_own_profile',
+            'arguments' => ['fields' => ['user_id' => $other->id, 'is_public' => true]],
+        ]))->assertJsonPath('result.isError', true);
+        $this->assertDatabaseMissing('creator_profiles', ['user_id'=>$other->id]);
+    }
+
+    public function test_mcp_seo_crud_requires_explicit_active_change_confirmation(): void
+    {
+        [$token, $secret] = ApiToken::issue($this->admin(), 'SEO update', ['mcp.read','mcp.write'], 7);
+        $this->withToken($secret);
+        $created = $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_manage_site','arguments'=>[
+                'entity'=>'seo','action'=>'create','fields'=>[
+                    'path'=>'/example-landing',
+                    'locale'=>'en','title'=>'Example landing page',
+                    'description'=>'A public landing page for examples and guidance.',
+                    'is_active'=>false,'is_indexable'=>false,
+                ],
+            ],
+        ]))->assertOk()->assertJsonPath('result.isError', false);
+        $id = $created->json('result.structuredContent.id');
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_manage_site','arguments'=>[
+                'entity'=>'seo','action'=>'update','id'=>$id,
+                'fields'=>['is_active'=>true],
+            ],
+        ]))->assertJsonPath('result.isError', true);
+        $this->assertDatabaseHas('site_seo_pages', ['id'=>$id,'is_active'=>false]);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_manage_site','arguments'=>[
+                'entity'=>'seo','action'=>'update','id'=>$id,
+                'fields'=>['is_active'=>true],'confirm_live_change'=>true,
+            ],
+        ]))->assertJsonPath('result.structuredContent.is_active', true);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_manage_site','arguments'=>[
+                'entity'=>'seo','action'=>'delete','id'=>$id,
+                'confirm_title'=>'Example landing page',
+            ],
+        ]))->assertJsonPath('result.isError', true);
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_manage_site','arguments'=>[
+                'entity'=>'seo','action'=>'delete','id'=>$id,
+                'confirm_title'=>'Example landing page','confirm_live_change'=>true,
+            ],
+        ]))->assertJsonPath('result.structuredContent.deleted', true);
+        $this->assertDatabaseMissing('site_seo_pages', ['id'=>$id]);
+    }
+
+    public function test_mcp_social_crud_and_restricted_resource_validation(): void
+    {
+        [$token, $secret] = ApiToken::issue($this->admin(), 'Social update', ['mcp.read','mcp.write'], 7);
+        $this->withToken($secret);
+        $created = $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_manage_site','arguments'=>[
+                'entity'=>'social','action'=>'create','fields'=>[
+                    'platform'=>'linkedin','label'=>'Bambodia LinkedIn',
+                    'url'=>'https://linkedin.com/company/bambodia',
+                    'sort_order'=>90,'is_active'=>false,
+                ],
+            ],
+        ]))->assertJsonPath('result.structuredContent.platform', 'linkedin');
+        $id = $created->json('result.structuredContent.id');
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_manage_site','arguments'=>[
+                'entity'=>'social','action'=>'update','id'=>$id,'fields'=>['label'=>'Official Bambodia LinkedIn'],
+            ],
+        ]))->assertJsonPath('result.structuredContent.label', 'Official Bambodia LinkedIn');
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_manage_site','arguments'=>[
+                'entity'=>'social','action'=>'delete','id'=>$id,'confirm_title'=>'Official Bambodia LinkedIn',
+            ],
+        ]))->assertJsonPath('result.structuredContent.deleted', true);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name'=>'bambodia_manage_site','arguments'=>[
+                'entity'=>'seo','action'=>'create','fields'=>[
+                    'path'=>'/dashboard/secrets','locale'=>'en','title'=>'Private dashboards',
+                    'description'=>'Private metadata must never be published.',
+                    'is_active'=>false,'is_indexable'=>false,
+                ],
+            ],
+        ]))->assertJsonPath('result.isError', true);
+    }
 }
