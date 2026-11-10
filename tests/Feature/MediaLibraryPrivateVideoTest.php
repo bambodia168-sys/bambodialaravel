@@ -100,7 +100,7 @@ final class MediaLibraryPrivateVideoTest extends TestCase
             ->assertSee('data-media-player',false)
             ->assertSee('data-player-seek',false)
             ->assertSee('data-player-fullscreen',false)
-            ->assertSee('media-library-video.css?v=1',false)
+            ->assertSee('media-library-video.css?v=2',false)
             ->assertSee('media-library-video.js?v=1',false)
             ->assertSee('Accessible video description')
             ->assertSee($asset->previewUrl(),false)
@@ -109,6 +109,26 @@ final class MediaLibraryPrivateVideoTest extends TestCase
         $customer=$this->member('customer');
         $this->actingAs($customer)->get(route('account.media.index'))
             ->assertOk()->assertDontSee('private-video.mp4');
+    }
+
+    public function test_player_control_styles_override_full_width_dialog_fields(): void
+    {
+        // Regression for .config-dialog select/input width:100%. This is
+        // intentionally scoped to the Media Library video player.
+        $css=file_get_contents(public_path('css/media-library-video.css'));
+        $this->assertStringContainsString(
+            '.media-editor-dialog .media-player-shell .media-player-controls select.media-player-speed',
+            $css
+        );
+        $this->assertStringContainsString('flex:0 0 66px;width:66px;min-width:66px;max-width:66px', $css);
+        $this->assertStringContainsString(
+            '.media-editor-dialog .media-player-shell .media-player-controls input.media-player-seek',
+            $css
+        );
+        $this->assertStringContainsString('flex:1 1 0;min-width:35px;width:0', $css);
+        $this->assertStringContainsString('button.media-player-tool[hidden]{display:none}', $css);
+        $this->assertStringContainsString('grid-template-rows:30px 30px', $css);
+        $this->assertStringNotContainsString('.config-dialog select{', $css);
     }
 
     public function test_r2_get_is_authorized_byte_range_stream_without_publishing_cloud_url(): void
