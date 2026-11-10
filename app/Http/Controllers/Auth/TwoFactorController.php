@@ -67,7 +67,7 @@ final class TwoFactorController extends Controller
                 'user_id'=>$user->id,
                 'secret'=>$secret,
                 'recovery_hashes'=>array_map(fn($code)=>hash('sha256',$code),$recovery),
-                'last_counter'=>$counter,
+                'last_counter'=>null, // Enrollment verifies possession but must not consume the first login code.
                 'enabled_at'=>now(),
             ]);
             AuditEvent::record('auth.two_factor.enabled',$user,$request);
