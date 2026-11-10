@@ -33,7 +33,7 @@ Then call tools/list. A browser GET may return HTTP 405; MCP uses JSON-RPC POST.
 The endpoint supports initialize, ping, notifications/*, tools/list,
 tools/call, resources/list, and prompts/list.
 
-## Nine compact tools
+## Ten compact tools
 
 | Tool | Permission | Current capability |
 |---|---|---|
@@ -46,12 +46,14 @@ tools/call, resources/list, and prompts/list.
 | bambodia_analytics | Read | Aggregated content, media-review and audit counts |
 | bambodia_update_own_profile | Write | Edit administrator's own creator headline, biography, website and visibility |
 | bambodia_manage_site | Write | Create/update/delete SEO metadata and social links; live-change confirmation required |
+| bambodia_draft_media | Write | Attach/detach approved, owner-controlled Media Library assets to unpublished drafts |
 
 Media and audit events remain read-only. Profile writes are limited to the token owner's creator profile. SEO and social settings have controlled CRUD, with explicit live-change confirmation and exact-title deletion. Product/project/service/freelance share the existing MarketplaceListing
 model and are filtered by type; posts/pages share ContentEntry.
 
 Draft writes use existing Eloquent models, identifier allocation, field validation,
-HTML sanitization, transactions and audit events. No operation in this stage
+HTML sanitization, transactions and audit events. The media tool links only existing
+approved assets owned by the token owner; it does not upload or review files. No operation in this stage
 can directly approve a listing/job, publish a post, publish a legal policy,
 mutate license/entitlement/payment records, upload a file, change security
 settings or deploy code.
