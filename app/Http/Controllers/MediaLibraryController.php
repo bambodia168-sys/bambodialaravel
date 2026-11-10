@@ -16,8 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class MediaLibraryController extends Controller
 {
@@ -192,7 +191,7 @@ class MediaLibraryController extends Controller
         return back()->with('status', 'Media review recorded.');
     }
 
-    public function preview(Request $request, string $publicId): BinaryFileResponse|StreamedResponse
+    public function preview(Request $request, string $publicId): Response
     {
         abort_unless(preg_match('/^\d{9}$/D', $publicId) === 1, 404);
         $asset = MediaAsset::query()->where('public_id', $publicId)->firstOrFail();
