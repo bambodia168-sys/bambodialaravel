@@ -237,7 +237,13 @@ class MediaLibraryController extends Controller
             'Cross-Origin-Resource-Policy' => 'same-origin',
         ];
         if ($storageDisk === 'local') {
-            return response()->file($disk->path($asset->storage_path), $headers);
+            $response = response()->file($disk->path($asset->storage_path), $headers);
+            // BinaryFileResponse can set "public" caching while preparing file
+            // responses. Force private/no-store *after* constructing it, so
+            // unpublished owner previews are never cached by shared proxies.
+            $response->setPrivate();
+            $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
+            return $response;
         }
         if (in_array($asset->mime_type, ['video/mp4', 'video/webm'], true)) {
             return PrivateVideoStreamer::serve($request, $asset, $disk, $headers);
