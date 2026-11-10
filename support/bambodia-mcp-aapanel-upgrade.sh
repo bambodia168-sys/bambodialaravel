@@ -96,7 +96,7 @@ git -C "$SOURCE" merge-base --is-ancestor "$RELEASE" "$HEAD" ||
   fail "This upgrade script differs from its GitHub object."
 
 git -C "$SOURCE" diff --name-only "$RELEASE" "$HEAD" | LC_ALL=C sort > "$TMP/post-release"
-printf '%s\n' "$HELPER" '.github/workflows/quality.yml' | LC_ALL=C sort > "$TMP/allowed-after"
+printf '%s\n' "$HELPER" | LC_ALL=C sort > "$TMP/allowed-after"
 cmp -s "$TMP/post-release" "$TMP/allowed-after" ||
   fail "Unexpected source changes after the tested MCP code release."
 
