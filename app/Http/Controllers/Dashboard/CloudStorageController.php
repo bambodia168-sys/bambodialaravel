@@ -44,6 +44,18 @@ final class CloudStorageController extends Controller
         ]);
         $existing=CloudStorageConnection::query()->find(1);
         $endpoint=$this->checkEndpoint($values['endpoint']);
+        // Never repoint a disk containing stored media to another bucket.
+        // Otherwise its database references would become orphaned without
+        // any failure during the connection probe.
+        if (MediaAsset::query()->where('storage_disk','r2')->exists()) {
+            abort_unless(
+                $existing
+                && $existing->endpoint===$endpoint
+                && $existing->bucket===$values['bucket'],
+                409,
+                'Existing R2 media depends on the current bucket. Migrate the files separately before changing the storage location.'
+            );
+        }
         $key=(string)($values['access_key_id']??'');
         $secret=(string)($values['secret_access_key']??'');
         if ($key==='') $key=$existing?->access_key_id??'';

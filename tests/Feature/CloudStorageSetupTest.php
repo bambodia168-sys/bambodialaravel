@@ -121,6 +121,36 @@ final class CloudStorageSetupTest extends TestCase
         $this->get(route('dashboard.cloud-storage.index'))->assertDontSee($this->valid()['secret_access_key']);
     }
 
+    public function test_existing_r2_assets_block_bucket_replacement_or_first_time_override(): void
+    {
+        $this->actingAs($this->member());
+        // The foreign key and object-path lifecycle are deliberately outside
+        // this test: only the persisted disk reference matters to the guard.
+        $this->verified();
+        $owner=$this->member('customer');
+        $asset=MediaAsset::query()->create([
+            'user_id'=>$owner->id,
+            'original_name'=>'image.png',
+            'storage_path'=>'marketplace/previews/1/example.png',
+            'storage_disk'=>'r2',
+            'mime_type'=>'image/png',
+            'bytes'=>90,
+            'alt_text'=>'A small generated test image',
+            'rights_basis'=>'owned',
+            'rights_holder'=>'Original owner',
+            'review_status'=>'pending',
+        ]);
+        $this->post(route('dashboard.cloud-storage.verify'),array_merge($this->valid(),[
+            'bucket'=>'new-bambodia-bucket',
+        ]))->assertStatus(409);
+        $this->assertDatabaseHas('media_assets',['id'=>$asset->id,'storage_disk'=>'r2']);
+        $this->assertSame('bambodia-media',CloudStorageConnection::query()->findOrFail(1)->bucket);
+
+        CloudStorageConnection::query()->delete();
+        $this->post(route('dashboard.cloud-storage.verify'),$this->valid())->assertStatus(409);
+        $this->assertDatabaseCount('cloud_storage_connections',0);
+    }
+
     public function test_only_super_admin_can_change_cloud_storage_and_credentials(): void
     {
         foreach (['customer','staff','admin'] as $role) {
