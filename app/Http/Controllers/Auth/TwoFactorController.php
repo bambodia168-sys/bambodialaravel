@@ -115,6 +115,7 @@ final class TwoFactorController extends Controller
             return redirect()->route('login')->withErrors(['code'=>'Sign-in session expired. Try again.']);
         }
         $user=User::query()->findOrFail($id);
+        abort_unless($user->account_status==='active',403,'This account is not active.');
 
         $accepted=DB::transaction(function () use ($request,$user,$values): bool {
             $credential=UserTwoFactor::query()->whereKey($user->id)->lockForUpdate()->first();
@@ -125,7 +126,7 @@ final class TwoFactorController extends Controller
             throw ValidationException::withMessages(['code'=>'Invalid or previously used verification code.']);
         }
 
-        $remember=$request->session()->boolean('twofactor.pending_remember');
+        $remember=(bool)$request->session()->get('twofactor.pending_remember',false);
         $request->session()->forget([
             'twofactor.pending_id','twofactor.pending_at','twofactor.pending_remember',
         ]);

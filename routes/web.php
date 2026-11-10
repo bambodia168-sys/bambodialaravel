@@ -54,6 +54,7 @@ use App\Http\Controllers\Dashboard\ProductManagerController;
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\SecurityDashboardController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Creator\ListingController as CreatorListingController;
 use App\Http\Controllers\Creator\CreatorApplicationController;
 use App\Http\Controllers\Dashboard\CreatorReviewController;
@@ -135,6 +136,9 @@ Route::middleware('auth')->prefix('detail')->group(function (): void {
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthController::class, 'login'])->name('login');
     Route::post('/login', [AuthController::class, 'authenticate'])->name('login.store')->middleware('throttle:8,1');
+    Route::get('/two-factor-challenge', [TwoFactorController::class,'challenge'])->name('login.two-factor');
+    Route::post('/two-factor-challenge', [TwoFactorController::class,'verifyChallenge'])
+        ->name('login.two-factor.verify')->middleware('throttle:5,1');
     Route::get('/register', [AuthController::class, 'register'])->name('register');
     Route::post('/register', [AuthController::class, 'store'])->name('register.store')->middleware('throttle:5,1');
     Route::get('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.request');
@@ -243,6 +247,13 @@ Route::middleware('auth')->group(function (): void {
         ->name('account.downloads.file')->middleware('throttle:10,1');
     Route::get('/account', [AccountController::class, 'index'])->name('account');
     Route::patch('/account', [AccountController::class, 'update'])->name('account.update');
+    Route::get('/account/security', [TwoFactorController::class,'settings'])->name('account.security');
+    Route::post('/account/security/two-factor/begin', [TwoFactorController::class,'begin'])
+        ->name('account.security.begin')->middleware('throttle:5,1');
+    Route::post('/account/security/two-factor/enable', [TwoFactorController::class,'enable'])
+        ->name('account.security.enable')->middleware('throttle:5,1');
+    Route::post('/account/security/two-factor/disable', [TwoFactorController::class,'disable'])
+        ->name('account.security.disable')->middleware('throttle:5,1');
     Route::get('/account/profile', [ProfileEditorController::class, 'editSelf'])->name('account.profile.edit');
     Route::patch('/account/profile', [ProfileEditorController::class, 'updateSelf'])->name('account.profile.update')->middleware('throttle:10,1');
     Route::post('/account/profile/items', [CreatorProfileItemController::class, 'storeSelf'])->name('account.profile.items.store')->middleware('throttle:20,1');
