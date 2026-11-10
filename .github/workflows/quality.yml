@@ -108,6 +108,7 @@ jobs:
           php -l support/frontend-layout-samples.php
           bash -n support/builder-studio-db-backup.sh
           bash -n support/admin-controls-aapanel-upgrade.sh
+          bash -n support/media-video-r2-aapanel-upgrade.sh
           bash -n support/bambodia-mcp-aapanel-upgrade.sh
       - name: Check PHP syntax
         run: |
