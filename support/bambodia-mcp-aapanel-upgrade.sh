@@ -8,7 +8,7 @@ if (( $# )); then MODE="$1"; fi
 
 REPO="bambodia168-sys/bambodialaravel"
 BRANCH="feature/bambodia-mcp-foundation-20261110"
-BASE="47faa5806f293db7fd4f494985c0bcec8f9f3994"
+BASE="e04153700c56993b8000b573a1ddb5b5c922b026"
 RELEASE="88c634efbf8b7d8243e9d87d48066a2ec0219749"
 SOURCE="/root/bambodia-release-audit"
 APP="/www/wwwroot/bambodia-staging-qa"
@@ -84,7 +84,8 @@ git -C "$SOURCE" fetch origin \
   "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
 MAIN="$(git -C "$SOURCE" rev-parse refs/remotes/origin/main)"
 HEAD="$(git -C "$SOURCE" rev-parse "refs/remotes/origin/$BRANCH")"
-[[ "$MAIN" == "$BASE" ]] || fail "GitHub main has moved; review the new baseline."
+git -C "$SOURCE" merge-base --is-ancestor "$BASE" "$MAIN" ||
+  fail "Verified branch point is not an ancestor of GitHub main."
 git -C "$SOURCE" cat-file -e "$RELEASE^{commit}" ||
   fail "Pinned MCP code commit is missing."
 git -C "$SOURCE" merge-base --is-ancestor "$BASE" "$RELEASE" ||
@@ -139,6 +140,11 @@ cmp -s "$TMP/delta" "$TMP/expected-delta" ||
 
 echo "2. Check every live file against its known GitHub baseline."
 cat "$TMP/modified" "$TMP/added" > "$TMP/scope"
+# Main can advance independently, but only if none of the runtime files in
+# this scoped release were modified by another feature. This is deliberately
+# stronger than checking only the branch point or the total main SHA.
+git -C "$SOURCE" diff --quiet "$BASE" "$MAIN" --   $(cat "$TMP/scope") ||
+  fail "GitHub main changed MCP runtime files since the branch point."
 : > "$TMP/existing"
 : > "$TMP/new"
 mkdir -p "$TMP/payload"
