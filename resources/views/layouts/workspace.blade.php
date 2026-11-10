@@ -3,10 +3,9 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon" sizes="any">
-  <link rel="icon" href="{{ asset('favicon.png') }}" type="image/png" sizes="64x64">
-  <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}" sizes="152x152">
-  <title>{{ trim($__env->yieldContent('title','Workspace')) }} · Bambodia</title>
+  @include('layouts.partials.site-brand-head')
+  <title>{{ trim($__env->yieldContent('title','Workspace')) }} · {{ \App\Models\SiteSetting::setting('identity.name') }}</title>
+  <meta name="robots" content="noindex,nofollow">
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
   {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
@@ -56,6 +55,9 @@
     if (in_array($user->role,['super_admin','admin'],true)) {
       $groups[] = ['heading'=>'Appearance & Content','items'=>[
         ['route'=>'dashboard.appearance','label'=>'Appearance','icon'=>'palette'],
+        ['route'=>'dashboard.site-identity','label'=>'Site Identity','icon'=>'image'],
+        ['route'=>'dashboard.seo-settings','label'=>'SEO Settings','icon'=>'search'],
+        ['route'=>'dashboard.social.index','label'=>'Footer Social Links','icon'=>'globe'],
         ['route'=>'dashboard.system-settings','label'=>'System Settings','icon'=>'settings'],
         ['route'=>'dashboard.pages','label'=>'Page Manager','icon'=>'file-text'],
         ['route'=>'dashboard.posts','label'=>'Post Manager','icon'=>'newspaper'],
@@ -171,8 +173,8 @@
     <div class="workspace-sidebar-head">
       <a class="workspace-brand" href="{{ $workspaceRoot }}" title="{{ $workspaceTitles[$workspace] }}">
         <span class="workspace-brand-name brand-logo-pair workspace-brand-pair">
-          <img class="brand-logo-light" src="{{ asset('images/bambodia-logo.webp') }}" alt="Bambodia" width="550" height="144" decoding="async">
-          <img class="brand-logo-dark" src="{{ asset('images/bambodia-logo-dark.svg') }}" alt="Bambodia" width="550" height="144" decoding="async">
+          <img class="brand-logo-light" src="{{ \App\Models\SiteBrandAsset::urlFor('logo_light') }}" alt="{{ \App\Models\SiteSetting::setting('identity.name') }}" width="550" height="144" decoding="async">
+          <img class="brand-logo-dark" src="{{ \App\Models\SiteBrandAsset::urlFor('logo_dark') }}" alt="{{ \App\Models\SiteSetting::setting('identity.name') }}" width="550" height="144" decoding="async">
         </span>
         <span class="brand-mark workspace-brand-mini" aria-hidden="true">B</span>
       </a>
