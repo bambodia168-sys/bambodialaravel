@@ -15,6 +15,7 @@
       <input id="terms_accepted" type="checkbox" name="terms_accepted" value="1" @checked(old('terms_accepted')) required>
       <span>I have read and <strong>accept the <a href="{{ $termsPublication->policy->publicUrl() }}" target="_blank" rel="noopener noreferrer">Terms of Service</a></strong> (published revision {{ $termsPublication->revision }}).</span>
     </label>
+    <x-turnstile-widget action="register"/>
     <button class="btn primary" type="submit">{{ __('ui.create_account') }}</button>
   @else
     <label class="auth-terms" for="terms_accepted">

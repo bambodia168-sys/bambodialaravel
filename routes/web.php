@@ -25,6 +25,7 @@ use App\Http\Controllers\Dashboard\SiteSocialController;
 use App\Http\Controllers\Dashboard\SiteLanguageController;
 use App\Http\Controllers\Dashboard\SiteTypographyController;
 use App\Http\Controllers\Dashboard\CloudStorageController;
+use App\Http\Controllers\Dashboard\TurnstileProtectionController;
 use App\Http\Controllers\SiteManifestController;
 use App\Http\Controllers\Dashboard\CategoryManagerController;
 use App\Http\Controllers\Dashboard\MarketplaceManagerController;
@@ -331,6 +332,13 @@ Route::middleware('auth')->group(function (): void {
                 ->name('dashboard.vault.inspect')->middleware('throttle:10,1');
             Route::get('/notification-analytics', [NotificationAnalyticsController::class, 'index'])->name('dashboard.notifications.index');
             Route::get('/service-inquiries', [ServiceManagerController::class, 'index'])->name('dashboard.inquiries.index');
+            Route::middleware('role:super_admin')->group(function (): void {
+                Route::get('/bot-protection', [TurnstileProtectionController::class,'index'])->name('dashboard.turnstile.index');
+                Route::post('/bot-protection/configure', [TurnstileProtectionController::class,'configure'])->name('dashboard.turnstile.configure')->middleware('throttle:5,1');
+                Route::post('/bot-protection/test', [TurnstileProtectionController::class,'verify'])->name('dashboard.turnstile.verify')->middleware('throttle:8,1');
+                Route::patch('/bot-protection/status', [TurnstileProtectionController::class,'status'])->name('dashboard.turnstile.status')->middleware('throttle:8,1');
+                Route::delete('/bot-protection', [TurnstileProtectionController::class,'destroy'])->name('dashboard.turnstile.destroy')->middleware('throttle:5,1');
+            });
             Route::get('/appearance', [SiteSettingsController::class, 'appearance'])->name('dashboard.appearance');
             Route::patch('/appearance', [SiteSettingsController::class, 'updateAppearance'])->name('dashboard.appearance.update');
             Route::get('/system-settings', [SiteSettingsController::class, 'system'])->name('dashboard.system-settings');

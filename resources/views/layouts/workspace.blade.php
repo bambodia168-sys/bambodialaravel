@@ -46,6 +46,7 @@
         ['route'=>'dashboard.entitlements.index','label'=>'Download Entitlements','icon'=>'key-round'],
         ['route'=>'dashboard.compliance.index','label'=>'Compliance Register','icon'=>'clipboard-check'],
         ['route'=>'dashboard.privacy.index','label'=>'Privacy Requests','icon'=>'user-round-check'],
+        ['route'=>'dashboard.turnstile.index','label'=>'Bot Protection','icon'=>'shield-check'],
       ]];
     }
     if ($user->role === 'admin') {
