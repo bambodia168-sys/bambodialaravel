@@ -79,7 +79,7 @@ final class BambodiaMcpController extends Controller
         }
         $service = new BambodiaTools($request);
         $owner = $request->attributes->get('bambodia_api_owner');
-        $writeNames = ['bambodia_create_draft','bambodia_update_draft','bambodia_delete_draft'];
+        $writeNames = ['bambodia_create_draft','bambodia_update_draft','bambodia_delete_draft','bambodia_update_own_profile','bambodia_manage_site'];
         if (in_array($name, $writeNames, true) && ! $token->allows('mcp.write')) {
             return [
                 'isError' => true,
@@ -94,6 +94,9 @@ final class BambodiaMcpController extends Controller
             'bambodia_create_draft' => $service->createDraft($args, $owner),
             'bambodia_update_draft' => $service->updateDraft($args, $owner),
             'bambodia_delete_draft' => $service->deleteDraft($args, $owner),
+            'bambodia_analytics' => app(\App\Support\Mcp\AdministrationTools::class, ['request' => $request])->analytics($args),
+            'bambodia_update_own_profile' => app(\App\Support\Mcp\AdministrationTools::class, ['request' => $request])->updateOwnProfile($args, $owner),
+            'bambodia_manage_site' => app(\App\Support\Mcp\AdministrationTools::class, ['request' => $request])->manageSite($args, $owner),
             default => throw ValidationException::withMessages(['name' => 'Unknown tool.']),
         };
 
@@ -127,12 +130,43 @@ final class BambodiaMcpController extends Controller
                 'inputSchema' => ['type' => 'object', 'properties' => ['entity' => $entity, 'id' => $id], 'required' => ['entity','id']],
             ],
         ];
+        $base[] = [
+            'name' => 'bambodia_analytics',
+            'description' => 'Read-only aggregate counts of marketplace status, media review and recent audit events. Never exposes user identities or secret values.',
+            'inputSchema' => ['type' => 'object', 'properties' => [
+                'days' => ['type'=>'integer','minimum'=>1,'maximum'=>90],
+            ]],
+        ];
         if (! $canWrite) {
             return $base;
         }
 
         $draft = ['type' => 'string', 'enum' => ['product','project','service','freelance','job','post','page','policy']];
         return [...$base,
+            [
+                'name' => 'bambodia_update_own_profile',
+                'description' => 'Update only the signed-in administrator creator biography/headline/website/visibility. No other user or account settings can change.',
+                'inputSchema' => ['type'=>'object','properties'=>[
+                    'fields' => ['type'=>'object','properties'=>[
+                        'headline'=>['type'=>'string'],
+                        'biography'=>['type'=>'string'],
+                        'website_url'=>['type'=>['string','null']],
+                        'is_public'=>['type'=>'boolean'],
+                    ]],
+                ],'required'=>['fields']],
+            ],
+            [
+                'name' => 'bambodia_manage_site',
+                'description' => 'Create/update/delete website SEO metadata and public social links. Updating active records requires confirm_live_change=true; deleting requires an exact title/label.',
+                'inputSchema' => ['type'=>'object','properties'=>[
+                    'entity'=>['type'=>'string','enum'=>['seo','social']],
+                    'action'=>['type'=>'string','enum'=>['create','update','delete']],
+                    'id'=>$id,
+                    'fields'=>['type'=>'object'],
+                    'confirm_title'=>['type'=>'string'],
+                    'confirm_live_change'=>['type'=>'boolean'],
+                ],'required'=>['entity','action']],
+            ],
             [
                 'name' => 'bambodia_create_draft',
                 'description' => 'Create an unpublished draft. Never submits for approval or publishes.',
