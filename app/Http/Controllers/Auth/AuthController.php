@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserTwoFactor;
 use App\Models\AuditEvent;
 use App\Models\FeatureFlag;
 use App\Support\Security\TurnstileVerifier;
@@ -42,6 +43,19 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['email' => __('auth.failed')]);
         }
 
+        if (UserTwoFactor::query()->whereKey($request->user()->id)->exists()) {
+            $pendingId=$request->user()->id;
+            $remember=$request->boolean('remember');
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            $request->session()->put([
+                'twofactor.pending_id'=>$pendingId,
+                'twofactor.pending_at'=>now()->timestamp,
+                'twofactor.pending_remember'=>$remember,
+            ]);
+            return redirect()->route('login.two-factor');
+        }
         $request->session()->regenerate();
         AuditEvent::record('auth.login.success', $request->user(), $request);
 

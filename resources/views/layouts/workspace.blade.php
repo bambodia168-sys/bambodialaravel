@@ -36,6 +36,7 @@
       ['route'=>'dashboard','label'=>'Dashboard overview','icon'=>'layout-dashboard'],
       ['route'=>'dashboard.badges.index','label'=>'Creator Badges','icon'=>'award'],
       ['route'=>'account.profile.edit','label'=>'My Profile','icon'=>'user-round'],
+      ['route'=>'account.security','label'=>'Account Security','icon'=>'shield-check'],
     ]];
     if ($user->role === 'super_admin') {
       $groups[] = ['heading'=>'Access & Security','items'=>[
