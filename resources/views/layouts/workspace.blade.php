@@ -3,18 +3,25 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon" sizes="any">
-  <link rel="icon" href="{{ asset('favicon.png') }}" type="image/png" sizes="64x64">
-  <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}" sizes="152x152">
-  <title>{{ trim($__env->yieldContent('title','Workspace')) }} · Bambodia</title>
+  @include('layouts.partials.site-brand-head')
+  <title>{{ trim($__env->yieldContent('title','Workspace')) }} · {{ \App\Models\SiteSetting::setting('identity.name') }}</title>
+  <meta name="robots" content="noindex,nofollow">
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
+  @include('layouts.partials.site-typography')
+  {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
+  <link rel="stylesheet" href="{{ asset('css/creator-badge-tooltip-viewport.css') }}?v=1">
+  <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>
+  @if(request()->routeIs('creators.show','account.profile.edit','studio.profile.edit','dashboard.users.profile.edit','localized.*.creators.show','localized.*.account.profile.edit','localized.*.studio.profile.edit','localized.*.dashboard.users.profile.edit'))
+    <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=3">
+    <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=2"></script>
+  @endif
 </head>
 @php
   $workspace = trim($__env->yieldContent('workspace', 'account'));
   $workspace = in_array($workspace, ['admin','account','creator','developer'], true) ? $workspace : 'account';
   $user = auth()->user();
-  $currentName = preg_replace('/^localized\.(?:en|zh|km|ko|ja|th|vi|de)\./', '', request()->route()?->getName() ?? '');
+  $currentName = preg_replace('/^localized\.(?:en|zh|km|ko|ja|th|vi|de|fr|hi|id|ms|es)\./', '', request()->route()?->getName() ?? '');
   $workspaceTitles = ['admin'=>'Administration','account'=>'My Account','creator'=>'Creator Studio','developer'=>'Developer Workspace'];
   $workspaceDescription = [
     'admin'=>'Platform operations and management',
@@ -28,6 +35,7 @@
     $groups[] = ['heading'=>'Overview','items'=>[
       ['route'=>'dashboard','label'=>'Dashboard overview','icon'=>'layout-dashboard'],
       ['route'=>'dashboard.badges.index','label'=>'Creator Badges','icon'=>'award'],
+      ['route'=>'account.profile.edit','label'=>'My Profile','icon'=>'user-round'],
     ]];
     if ($user->role === 'super_admin') {
       $groups[] = ['heading'=>'Access & Security','items'=>[
@@ -38,6 +46,7 @@
         ['route'=>'dashboard.entitlements.index','label'=>'Download Entitlements','icon'=>'key-round'],
         ['route'=>'dashboard.compliance.index','label'=>'Compliance Register','icon'=>'clipboard-check'],
         ['route'=>'dashboard.privacy.index','label'=>'Privacy Requests','icon'=>'user-round-check'],
+        ['route'=>'dashboard.turnstile.index','label'=>'Bot Protection','icon'=>'shield-check'],
       ]];
     }
     if ($user->role === 'admin') {
@@ -48,6 +57,11 @@
     if (in_array($user->role,['super_admin','admin'],true)) {
       $groups[] = ['heading'=>'Appearance & Content','items'=>[
         ['route'=>'dashboard.appearance','label'=>'Appearance','icon'=>'palette'],
+        ['route'=>'dashboard.site-identity','label'=>'Site Identity','icon'=>'image'],
+        ['route'=>'dashboard.seo-settings','label'=>'SEO Settings','icon'=>'search'],
+        ['route'=>'dashboard.social.index','label'=>'Footer Social Links','icon'=>'globe'],
+        ['route'=>'dashboard.languages.index','label'=>'Language Manager','icon'=>'globe'],
+        ['route'=>'dashboard.typography.index','label'=>'Typography','icon'=>'palette'],
         ['route'=>'dashboard.system-settings','label'=>'System Settings','icon'=>'settings'],
         ['route'=>'dashboard.pages','label'=>'Page Manager','icon'=>'file-text'],
         ['route'=>'dashboard.posts','label'=>'Post Manager','icon'=>'newspaper'],
@@ -67,6 +81,7 @@
       ]];
       $groups[] = ['heading'=>'Assets & Communication','items'=>[
         ['route'=>'dashboard.media.index','label'=>'Media Library','icon'=>'image'],
+        ['route'=>'dashboard.cloud-storage.index','label'=>'Cloud Storage','icon'=>'archive','roles'=>['super_admin']],
         ['route'=>'dashboard.vault.index','label'=>'Digital File Vault','icon'=>'archive'],
         ['route'=>'dashboard.licenses.index','label'=>'License Manager','icon'=>'scroll-text'],
         ['route'=>'dashboard.creator-applications','label'=>'Creator Applications','icon'=>'user-round-check'],
@@ -116,6 +131,7 @@
     $groups = [
       ['heading'=>'Your Account','items'=>[
         ['route'=>'account','label'=>'Account Overview','icon'=>'layout-dashboard'],
+        ['route'=>'account.profile.edit','label'=>'Edit Profile','icon'=>'user-round'],
         ['route'=>'account.notifications','label'=>'Notifications','icon'=>'bell'],
         ['route'=>'account.downloads','label'=>'My Downloads','icon'=>'download'],
         ['route'=>'account.media.index','label'=>'My Media Library','icon'=>'image'],
@@ -162,8 +178,8 @@
     <div class="workspace-sidebar-head">
       <a class="workspace-brand" href="{{ $workspaceRoot }}" title="{{ $workspaceTitles[$workspace] }}">
         <span class="workspace-brand-name brand-logo-pair workspace-brand-pair">
-          <img class="brand-logo-light" src="{{ asset('images/bambodia-logo.webp') }}" alt="Bambodia" width="550" height="144" decoding="async">
-          <img class="brand-logo-dark" src="{{ asset('images/bambodia-logo-dark.svg') }}" alt="Bambodia" width="550" height="144" decoding="async">
+          <img class="brand-logo-light" src="{{ \App\Models\SiteBrandAsset::urlFor('logo_light') }}" alt="{{ \App\Models\SiteSetting::setting('identity.name') }}" width="550" height="144" decoding="async">
+          <img class="brand-logo-dark" src="{{ \App\Models\SiteBrandAsset::urlFor('logo_dark') }}" alt="{{ \App\Models\SiteSetting::setting('identity.name') }}" width="550" height="144" decoding="async">
         </span>
         <span class="brand-mark workspace-brand-mini" aria-hidden="true">B</span>
       </a>

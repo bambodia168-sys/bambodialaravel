@@ -69,6 +69,7 @@ jobs:
           node tests/browser/support-knowledge-layout.mjs
           node tests/browser/row-action-menus.mjs
           node tests/browser/creator-badge-manager.mjs
+          node tests/browser/badge-tooltip-viewport.mjs
           node tests/browser/post-builder.mjs
       - name: Keep screenshots for acceptance review
         if: always()

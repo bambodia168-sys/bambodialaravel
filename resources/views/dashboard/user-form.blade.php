@@ -10,7 +10,7 @@
     <div class="eyebrow">User Manager / {{ $isCreate?'New account':'Edit account' }}</div>
     <h1>{{ $isCreate?'Create new user':'Edit '.$member->name }}</h1>
     <p>Account details and internal profile fields are protected. Changes to access are recorded in the audit log.</p>
-  </div><a href="{{ $isCreate?route('dashboard.users'):route('dashboard.users.show',$member) }}" class="btn subtle"><x-icon name="arrow-left" size="16"/> Back</a></div>
+  </div><div class="toolbar-actions">@unless($isCreate)<a href="{{ route('dashboard.users.profile.edit',$member) }}" class="btn primary"><x-icon name="user-round" size="16"/> Edit public profile</a>@endunless<a href="{{ $isCreate?route('dashboard.users'):route('dashboard.users.show',$member) }}" class="btn subtle"><x-icon name="arrow-left" size="16"/> Back</a></div></div>
 
   <form method="post" action="{{ $action }}" class="user-manager-form">
     @csrf

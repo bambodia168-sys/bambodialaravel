@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon" sizes="any">
-  <link rel="icon" href="{{ asset('favicon.png') }}" type="image/png" sizes="64x64">
-  <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}" sizes="152x152">
-  <title>@yield('title') · Bambodia</title>
+  @include('layouts.partials.site-brand-head')
+  <title>@yield('title') · {{ \App\Models\SiteSetting::setting('identity.name') }}</title>
+  <meta name="robots" content="noindex,nofollow">
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
+  @include('layouts.partials.site-typography')
 </head>
 <body class="auth-body">
 <x-flash-feedback :validation-errors="$errors->all()" />

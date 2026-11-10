@@ -3,13 +3,18 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon" sizes="any">
-  <link rel="icon" href="{{ asset('favicon.png') }}" type="image/png" sizes="64x64">
-  <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}" sizes="152x152">
-  <title>{{ trim($__env->yieldContent('title','Bambodia')) }} · Licensed Digital Marketplace</title>
-  <meta name="description" content="{{ trim($__env->yieldContent('meta_description', 'Discover licensed digital products, independent creators, and freelance services on Bambodia.')) }}">
+  @include('layouts.partials.site-brand-head')
+  @include('layouts.partials.site-seo-head')
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
+  @include('layouts.partials.site-typography')
+  {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
+  <link rel="stylesheet" href="{{ asset('css/creator-badge-tooltip-viewport.css') }}?v=1">
+  <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>
+  @if(request()->routeIs('creators.show','account.profile.edit','studio.profile.edit','dashboard.users.profile.edit','localized.*.creators.show','localized.*.account.profile.edit','localized.*.studio.profile.edit','localized.*.dashboard.users.profile.edit'))
+    <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=2">
+    <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=2"></script>
+  @endif
 </head>
 <body class="site-body">
 <x-flash-feedback :validation-errors="$errors->all()" />
@@ -17,8 +22,8 @@
   <div class="site-nav container">
     <a class="brand" href="{{ route('home') }}" aria-label="Bambodia home">
       <span class="brand-logo-pair">
-        <img class="brand-logo-light" src="{{ asset('images/bambodia-logo.webp') }}" alt="Bambodia" width="550" height="144" decoding="async">
-        <img class="brand-logo-dark" src="{{ asset('images/bambodia-logo-dark.svg') }}" alt="Bambodia" width="550" height="144" decoding="async">
+        <img class="brand-logo-light" src="{{ \App\Models\SiteBrandAsset::urlFor('logo_light') }}" alt="{{ \App\Models\SiteSetting::setting('identity.name') }}" width="550" height="144" decoding="async">
+        <img class="brand-logo-dark" src="{{ \App\Models\SiteBrandAsset::urlFor('logo_dark') }}" alt="{{ \App\Models\SiteSetting::setting('identity.name') }}" width="550" height="144" decoding="async">
       </span>
     </a>
     @if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))
@@ -152,8 +157,8 @@
     <div>
       <a class="brand footer-brand" href="{{ route('home') }}" aria-label="Bambodia home">
         <span class="brand-logo-pair">
-          <img class="brand-logo-light" src="{{ asset('images/bambodia-logo.webp') }}" alt="Bambodia" width="550" height="144" loading="lazy" decoding="async">
-          <img class="brand-logo-dark" src="{{ asset('images/bambodia-logo-dark.svg') }}" alt="Bambodia" width="550" height="144" loading="lazy" decoding="async">
+          <img class="brand-logo-light" src="{{ \App\Models\SiteBrandAsset::urlFor('logo_light') }}" alt="{{ \App\Models\SiteSetting::setting('identity.name') }}" width="550" height="144" loading="lazy" decoding="async">
+          <img class="brand-logo-dark" src="{{ \App\Models\SiteBrandAsset::urlFor('logo_dark') }}" alt="{{ \App\Models\SiteSetting::setting('identity.name') }}" width="550" height="144" loading="lazy" decoding="async">
         </span>
       </a>
       @if($aboutPage)<a href="{{ $aboutPage->publicUrl() }}">About</a>@endif
@@ -178,11 +183,15 @@
       @if($footerPolicies->has('terms'))<a href="{{ $footerPolicies->get('terms')->publicUrl() }}">Terms of Service</a>@endif
     </div>
   </div>
-  <div class="container footer-bottom"><span class="footer-copyright">© {{ date('Y') }} Bambodia · All Rights Reserved.</span>
+  <div class="container footer-bottom"><span class="footer-copyright">© {{ date('Y') }} {{ \App\Models\SiteSetting::setting('identity.name') }} · All Rights Reserved.</span>
     <div class="footer-actions">
       <div class="footer-social" aria-label="Social media">
-        <a href="https://tonsamith.com" target="_blank" rel="noopener noreferrer" aria-label="Author website"><x-icon name="globe" size="18"/></a>
-        <a href="https://github.com/bambodia168-sys/bambodialaravel" target="_blank" rel="noopener noreferrer" aria-label="Bambodia GitHub repository"><x-icon name="github" size="18"/></a>
+        @foreach(\App\Models\SiteSocialLink::query()->where('is_active',true)->orderBy('sort_order')->orderBy('id')->get() as $social)
+          <a href="{{ $social->url }}" target="_blank" rel="noopener noreferrer nofollow"
+            aria-label="{{ $social->label }}" title="{{ $social->label }}">
+            <x-icon :name="$social->iconName()" size="18"/>
+          </a>
+        @endforeach
       </div>
     </div>
   </div>

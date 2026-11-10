@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\ProfileEditorController;
+use App\Http\Controllers\CreatorProfileSectionController;
+use App\Http\Controllers\CreatorProfileItemController;
 use App\Http\Controllers\BuilderController;
 use App\Http\Controllers\SavedJobController;
 use App\Http\Controllers\SavedListingController;
@@ -16,6 +19,14 @@ use App\Http\Controllers\ContractMilestoneController;
 use App\Http\Controllers\ContractCommunicationController;
 use App\Http\Controllers\Dashboard\ContractOversightController;
 use App\Http\Controllers\Dashboard\SiteSettingsController;
+use App\Http\Controllers\Dashboard\SiteBrandingController;
+use App\Http\Controllers\Dashboard\SiteSeoController;
+use App\Http\Controllers\Dashboard\SiteSocialController;
+use App\Http\Controllers\Dashboard\SiteLanguageController;
+use App\Http\Controllers\Dashboard\SiteTypographyController;
+use App\Http\Controllers\Dashboard\CloudStorageController;
+use App\Http\Controllers\Dashboard\TurnstileProtectionController;
+use App\Http\Controllers\SiteManifestController;
 use App\Http\Controllers\Dashboard\CategoryManagerController;
 use App\Http\Controllers\Dashboard\MarketplaceManagerController;
 use App\Http\Controllers\Dashboard\MarketplaceCardFeaturesController;
@@ -72,6 +83,7 @@ Route::get('/creators', [CreatorProfileController::class,'directory'])->name('cr
 Route::get('/creators/{creator}', [CreatorProfileController::class,'show'])
     ->where('creator','[0-9]{8}')->name('creators.show');
 Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
+Route::get('/site.webmanifest', SiteManifestController::class)->name('site.manifest');
 Route::get('/blog', [ContentController::class, 'blog'])->name('blog');
 Route::post('/blog/{content}/comments', [PostCommentController::class, 'store'])
     ->where('content', '[0-9]{9}_[a-z0-9-]+')
@@ -231,6 +243,16 @@ Route::middleware('auth')->group(function (): void {
         ->name('account.downloads.file')->middleware('throttle:10,1');
     Route::get('/account', [AccountController::class, 'index'])->name('account');
     Route::patch('/account', [AccountController::class, 'update'])->name('account.update');
+    Route::get('/account/profile', [ProfileEditorController::class, 'editSelf'])->name('account.profile.edit');
+    Route::patch('/account/profile', [ProfileEditorController::class, 'updateSelf'])->name('account.profile.update')->middleware('throttle:10,1');
+    Route::post('/account/profile/items', [CreatorProfileItemController::class, 'storeSelf'])->name('account.profile.items.store')->middleware('throttle:20,1');
+    Route::patch('/account/profile/items/order', [CreatorProfileSectionController::class, 'orderItemsSelf'])->name('account.profile.items.order')->middleware('throttle:30,1');
+    Route::patch('/account/profile/items/{item}', [CreatorProfileItemController::class, 'updateSelf'])->name('account.profile.items.update')->middleware('throttle:20,1');
+    Route::delete('/account/profile/items/{item}', [CreatorProfileItemController::class, 'destroySelf'])->name('account.profile.items.destroy')->middleware('throttle:20,1');
+    Route::post('/account/profile/sections', [CreatorProfileSectionController::class, 'storeSelf'])->name('account.profile.sections.store')->middleware('throttle:10,1');
+    Route::patch('/account/profile/sections/order', [CreatorProfileSectionController::class, 'orderSelf'])->name('account.profile.sections.order')->middleware('throttle:30,1');
+    Route::patch('/account/profile/sections/{section}', [CreatorProfileSectionController::class, 'updateSelf'])->name('account.profile.sections.update')->middleware('throttle:20,1');
+    Route::delete('/account/profile/sections/{section}', [CreatorProfileSectionController::class, 'destroySelf'])->name('account.profile.sections.destroy')->middleware('throttle:10,1');
     Route::get('/studio', [AccountController::class, 'studio'])->name('studio');
     Route::get('/creator', function (\Illuminate\Http\Request $request) {
         $user = $request->user();
@@ -310,10 +332,39 @@ Route::middleware('auth')->group(function (): void {
                 ->name('dashboard.vault.inspect')->middleware('throttle:10,1');
             Route::get('/notification-analytics', [NotificationAnalyticsController::class, 'index'])->name('dashboard.notifications.index');
             Route::get('/service-inquiries', [ServiceManagerController::class, 'index'])->name('dashboard.inquiries.index');
+            Route::middleware('role:super_admin')->group(function (): void {
+                Route::get('/bot-protection', [TurnstileProtectionController::class,'index'])->name('dashboard.turnstile.index');
+                Route::post('/bot-protection/configure', [TurnstileProtectionController::class,'configure'])->name('dashboard.turnstile.configure')->middleware('throttle:5,1');
+                Route::post('/bot-protection/test', [TurnstileProtectionController::class,'verify'])->name('dashboard.turnstile.verify')->middleware('throttle:8,1');
+                Route::patch('/bot-protection/status', [TurnstileProtectionController::class,'status'])->name('dashboard.turnstile.status')->middleware('throttle:8,1');
+                Route::delete('/bot-protection', [TurnstileProtectionController::class,'destroy'])->name('dashboard.turnstile.destroy')->middleware('throttle:5,1');
+            });
             Route::get('/appearance', [SiteSettingsController::class, 'appearance'])->name('dashboard.appearance');
             Route::patch('/appearance', [SiteSettingsController::class, 'updateAppearance'])->name('dashboard.appearance.update');
             Route::get('/system-settings', [SiteSettingsController::class, 'system'])->name('dashboard.system-settings');
             Route::patch('/system-settings', [SiteSettingsController::class, 'updateSystem'])->name('dashboard.system-settings.update');
+            Route::get('/site-identity', [SiteSettingsController::class, 'identity'])->name('dashboard.site-identity');
+            Route::patch('/site-identity', [SiteSettingsController::class, 'updateIdentity'])->name('dashboard.site-identity.update')->middleware('throttle:30,1');
+            Route::post('/site-identity/assets', [SiteBrandingController::class, 'upload'])->name('dashboard.site-identity.assets.store')->middleware('throttle:10,1');
+            Route::delete('/site-identity/assets/{slot}', [SiteBrandingController::class, 'destroy'])->name('dashboard.site-identity.assets.destroy')->middleware('throttle:10,1');
+            Route::get('/seo-settings', [SiteSettingsController::class, 'seo'])->name('dashboard.seo-settings');
+            Route::patch('/seo-settings', [SiteSettingsController::class, 'updateSeo'])->name('dashboard.seo-settings.update')->middleware('throttle:20,1');
+            Route::post('/seo-settings/pages', [SiteSeoController::class, 'store'])->name('dashboard.seo.pages.store')->middleware('throttle:10,1');
+            Route::patch('/seo-settings/pages/{page}', [SiteSeoController::class, 'update'])->name('dashboard.seo.pages.update')->middleware('throttle:20,1');
+            Route::delete('/seo-settings/pages/{page}', [SiteSeoController::class, 'destroy'])->name('dashboard.seo.pages.destroy')->middleware('throttle:10,1');
+            Route::get('/footer-social', [SiteSocialController::class, 'index'])->name('dashboard.social.index');
+            Route::post('/footer-social', [SiteSocialController::class, 'store'])->name('dashboard.social.store')->middleware('throttle:10,1');
+            Route::patch('/footer-social/{link}', [SiteSocialController::class, 'update'])->name('dashboard.social.update')->middleware('throttle:20,1');
+            Route::delete('/footer-social/{link}', [SiteSocialController::class, 'destroy'])->name('dashboard.social.destroy')->middleware('throttle:10,1');
+            Route::get('/language-manager', [SiteLanguageController::class, 'index'])->name('dashboard.languages.index');
+            Route::post('/language-manager', [SiteLanguageController::class, 'store'])->name('dashboard.languages.store')->middleware('throttle:10,1');
+            Route::patch('/language-manager/{language}', [SiteLanguageController::class, 'update'])->name('dashboard.languages.update')->middleware('throttle:20,1');
+            Route::delete('/language-manager/{language}', [SiteLanguageController::class, 'destroy'])->name('dashboard.languages.destroy')->middleware('throttle:5,1');
+            Route::patch('/language-manager/{language}/terms', [SiteLanguageController::class, 'translate'])->name('dashboard.languages.translate')->middleware('throttle:30,1');
+            Route::get('/typography', [SiteTypographyController::class, 'index'])->name('dashboard.typography.index');
+            Route::post('/typography', [SiteTypographyController::class, 'store'])->name('dashboard.typography.store')->middleware('throttle:10,1');
+            Route::patch('/typography/{rule}', [SiteTypographyController::class, 'update'])->name('dashboard.typography.update')->middleware('throttle:20,1');
+            Route::delete('/typography/{rule}', [SiteTypographyController::class, 'destroy'])->name('dashboard.typography.destroy')->middleware('throttle:10,1');
             Route::get('/category-manager', [CategoryManagerController::class, 'index'])->name('dashboard.categories.index');
             Route::post('/category-manager', [CategoryManagerController::class, 'store'])->name('dashboard.categories.store');
             Route::patch('/category-manager/{category}', [CategoryManagerController::class, 'update'])->name('dashboard.categories.update');
@@ -346,6 +397,12 @@ Route::middleware('auth')->group(function (): void {
                 ->name('dashboard.licenses.issued.rotate')->middleware('throttle:5,1');
             Route::post('/license-manager/support-renewals/{renewal}/review', [ProductSupportController::class,'review'])
                 ->name('dashboard.licenses.support.review')->middleware('throttle:6,1');
+            Route::middleware('role:super_admin')->group(function (): void {
+                Route::get('/cloud-storage', [CloudStorageController::class, 'index'])->name('dashboard.cloud-storage.index');
+                Route::post('/cloud-storage/verify', [CloudStorageController::class, 'save'])->name('dashboard.cloud-storage.verify')->middleware('throttle:4,1');
+                Route::patch('/cloud-storage/mode', [CloudStorageController::class, 'mode'])->name('dashboard.cloud-storage.mode')->middleware('throttle:6,1');
+                Route::delete('/cloud-storage', [CloudStorageController::class, 'destroy'])->name('dashboard.cloud-storage.destroy')->middleware('throttle:3,1');
+            });
             Route::get('/media-library', [MediaLibraryController::class, 'index'])->name('dashboard.media.index');
             Route::post('/media-library', [MediaLibraryController::class, 'store'])->name('dashboard.media.store')->middleware('throttle:10,1');
             Route::patch('/media-library/{asset}', [MediaLibraryController::class, 'update'])->name('dashboard.media.update');
@@ -402,6 +459,16 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/user-manager', [UserManagerController::class,'store'])->name('dashboard.users.store')->middleware('throttle:10,1');
             Route::get('/user-manager/{user}', [UserManagerController::class,'show'])->name('dashboard.users.show');
             Route::get('/user-manager/{user}/edit', [UserManagerController::class,'edit'])->name('dashboard.users.edit');
+            Route::get('/user-manager/{user}/profile', [ProfileEditorController::class,'editAdmin'])->name('dashboard.users.profile.edit');
+            Route::patch('/user-manager/{user}/profile', [ProfileEditorController::class,'updateAdmin'])->name('dashboard.users.profile.update')->middleware('throttle:10,1');
+            Route::post('/user-manager/{user}/profile/items', [CreatorProfileItemController::class,'storeAdmin'])->name('dashboard.users.profile.items.store')->middleware('throttle:20,1');
+            Route::patch('/user-manager/{user}/profile/items/order', [CreatorProfileSectionController::class,'orderItemsAdmin'])->name('dashboard.users.profile.items.order')->middleware('throttle:30,1');
+            Route::patch('/user-manager/{user}/profile/items/{item}', [CreatorProfileItemController::class,'updateAdmin'])->name('dashboard.users.profile.items.update')->middleware('throttle:20,1');
+            Route::delete('/user-manager/{user}/profile/items/{item}', [CreatorProfileItemController::class,'destroyAdmin'])->name('dashboard.users.profile.items.destroy')->middleware('throttle:20,1');
+            Route::post('/user-manager/{user}/profile/sections', [CreatorProfileSectionController::class,'storeAdmin'])->name('dashboard.users.profile.sections.store')->middleware('throttle:10,1');
+            Route::patch('/user-manager/{user}/profile/sections/order', [CreatorProfileSectionController::class,'orderAdmin'])->name('dashboard.users.profile.sections.order')->middleware('throttle:30,1');
+            Route::patch('/user-manager/{user}/profile/sections/{section}', [CreatorProfileSectionController::class,'updateAdmin'])->name('dashboard.users.profile.sections.update')->middleware('throttle:20,1');
+            Route::delete('/user-manager/{user}/profile/sections/{section}', [CreatorProfileSectionController::class,'destroyAdmin'])->name('dashboard.users.profile.sections.destroy')->middleware('throttle:10,1');
             Route::patch('/user-manager/{user}', [UserManagerController::class,'update'])->name('dashboard.users.update')->middleware('throttle:20,1');
             Route::delete('/user-manager/{user}', [UserManagerController::class,'archive'])->name('dashboard.users.archive')->middleware('throttle:5,1');
             Route::post('/user-manager/{user}/restore', [UserManagerController::class,'restore'])->name('dashboard.users.restore')->middleware('throttle:5,1');

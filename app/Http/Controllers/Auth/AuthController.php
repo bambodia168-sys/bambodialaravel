@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\AuditEvent;
 use App\Models\FeatureFlag;
+use App\Support\Security\TurnstileVerifier;
 use App\Models\PolicyAcknowledgement;
 use App\Models\PolicyPublication;
 use Illuminate\Auth\Events\PasswordReset;
@@ -35,6 +36,7 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        TurnstileVerifier::enforce($request,'login');
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             AuditEvent::record('auth.login.failed', null, $request);
             throw ValidationException::withMessages(['email' => __('auth.failed')]);
@@ -68,6 +70,8 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:254', 'unique:users,email'],
             'password' => ['required', 'confirmed', PasswordRule::min(12)],
         ]);
+
+        TurnstileVerifier::enforce($request,'register');
 
         // The exact immutable publication accepted during registration is stored
         // in the existing policy receipt ledger, not just a mutable boolean.
@@ -114,6 +118,7 @@ class AuthController extends Controller
     public function sendResetLink(Request $request): RedirectResponse
     {
         $request->validate(['email' => ['required', 'email']]);
+        TurnstileVerifier::enforce($request,'reset');
         $status = Password::sendResetLink($request->only('email'));
 
         return back()->with('status', $status === Password::RESET_LINK_SENT

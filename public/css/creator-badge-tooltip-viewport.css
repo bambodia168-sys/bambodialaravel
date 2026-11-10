@@ -1,0 +1,27 @@
+/* Creator badge tooltip viewport adapter. No badge artwork/layout changes.
+   Original in-badge tooltip remains the no-JS fallback. */
+html.badge-tooltip-viewport-ready .creator-badge-row--tips .creator-badge > .creator-badge-tooltip {
+  display: none !important;
+}
+.creator-badge-tooltip.creator-badge-tooltip--viewport {
+  display: block !important;
+  position: fixed !important;
+  z-index: 2147483000 !important;
+  /* Avoid the `inset` shorthand: it would override JS-computed left/top. */
+  right: auto !important;
+  bottom: auto !important;
+  box-sizing: border-box;
+  width: min(280px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: calc(100dvh - 24px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  pointer-events: none !important;
+  transform: none !important;
+  margin: 0 !important;
+  white-space: normal;
+}
+@media (prefers-reduced-motion: reduce) {
+  .creator-badge-tooltip.creator-badge-tooltip--viewport { transition: none !important; }
+}

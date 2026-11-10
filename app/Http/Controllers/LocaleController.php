@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Middleware\SetLocale;
+use App\Models\SiteLanguage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -11,7 +12,7 @@ class LocaleController extends Controller
 {
     public function update(Request $request): RedirectResponse
     {
-        $data = $request->validate(['locale' => ['required', Rule::in(SetLocale::SUPPORTED)]]);
+        $data = $request->validate(['locale' => ['required', Rule::in(SiteLanguage::activeCodes())]]);
         $language = $data['locale'];
         $request->session()->put('locale', $language);
         if ($request->user()) {
@@ -34,7 +35,7 @@ class LocaleController extends Controller
         );
         if ($sameOrigin && !isset($url['user'], $url['pass'])) {
             $path = (string) ($url['path'] ?? '/');
-            $path = preg_replace('~^/(en|zh|km|ko|ja|th|vi|de)(?=/|$)~', '', $path) ?: '/';
+            $path = preg_replace('~^/('.implode('|',SetLocale::SUPPORTED).')(?=/|$)~', '', $path) ?: '/';
             if (!str_starts_with($path, '/')) {
                 $path = '/'.$path;
             }

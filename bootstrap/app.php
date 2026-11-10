@@ -26,6 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [SetLocale::class, EnsureActiveAccount::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Credentials are never echoed into validation redirects or flash data.
+        $exceptions->dontFlash(['access_key_id','secret_access_key','secret_key','cf-turnstile-response']);
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
