@@ -6,6 +6,7 @@ use App\Models\CreatorBadge;
 use App\Models\CreatorBadgeGrant;
 use App\Models\CreatorProfile;
 use App\Models\CreatorProfileItem;
+use App\Models\CreatorProfileSection;
 use App\Models\MarketplaceListing;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -154,4 +155,93 @@ class PremiumCreatorProfileCrudTest extends TestCase
         $this->assertSame('New Account Name', $member->fresh()->name);
         $this->assertSame('Battambang, Cambodia', $member->fresh()->userProfile->public_location);
     }
+
+    public function test_editor_has_immediate_avatar_dropzone_country_picker_and_dropdown_languages(): void
+    {
+        $creator = $this->member();
+        $this->actingAs($creator)->get(route('studio.profile.edit'))->assertOk()
+            ->assertSee('data-avatar-dropzone', false)
+            ->assertSee('data-location-country', false)
+            ->assertSee('data-location-detect', false)
+            ->assertSee('data-profile-sortable="sections"', false)
+            ->assertSee('name="label" required', false)
+            ->assertSee('Select language')
+            ->assertSee('Select proficiency')
+            ->assertSee('Add section');
+        $this->assertSame(3, CreatorProfileSection::query()->where('user_id', $creator->id)->count());
+    }
+
+    public function test_custom_sections_can_be_created_reordered_published_edited_and_deleted(): void
+    {
+        $creator = $this->member();
+        CreatorProfile::query()->create([
+            'user_id' => $creator->id,
+            'headline' => 'Full stack and platform developer',
+            'biography' => str_repeat('Production web application engineer. ', 4),
+            'is_public' => true,
+        ]);
+
+        $this->actingAs($creator)->get(route('studio.profile.edit'))->assertOk();
+        $this->post(route('account.profile.sections.store'), [
+            'title' => 'Certifications', 'description' => 'My certifications and recognition',
+        ])->assertRedirect();
+        $custom = CreatorProfileSection::query()->where('user_id',$creator->id)
+            ->where('section_key','custom')->firstOrFail();
+
+        $this->post(route('account.profile.items.store'), [
+            'kind' => 'custom', 'profile_section_id' => $custom->id,
+            'label' => 'Laravel specialist', 'detail' => 'PHP framework',
+            'is_visible' => '1',
+        ])->assertRedirect();
+        $item = CreatorProfileItem::query()->where('profile_section_id',$custom->id)->firstOrFail();
+
+        $sections = CreatorProfileSection::query()->where('user_id',$creator->id)->orderBy('sort_order')->get();
+        $order = $sections->pluck('id')->reverse()->all();
+        $this->patchJson(route('account.profile.sections.order'),['ids'=>$order])->assertOk()
+            ->assertJsonPath('ok',true);
+        $this->assertSame((int)$order[0],(int)CreatorProfileSection::query()
+            ->where('user_id',$creator->id)->orderBy('sort_order')->firstOrFail()->id);
+
+        $this->patchJson(route('account.profile.items.order'),[
+            'section_id'=>$custom->id,'ids'=>[$item->id],
+        ])->assertOk();
+        $this->get(route('creators.show',$creator->public_id))->assertOk()
+            ->assertSee('Certifications')->assertSee('Laravel specialist');
+
+        $this->patch(route('account.profile.sections.update',$custom), [
+            'title'=>'Credentials','description'=>'Professional credentials','is_visible'=>'0',
+        ])->assertRedirect();
+        $this->get(route('creators.show',$creator->public_id))
+            ->assertOk()->assertDontSee('Credentials')->assertDontSee('Laravel specialist');
+
+        $this->delete(route('account.profile.sections.destroy',$custom))->assertRedirect();
+        $this->assertDatabaseMissing('creator_profile_sections',['id'=>$custom->id]);
+        $this->assertDatabaseMissing('creator_profile_items',['id'=>$item->id]);
+    }
+
+    public function test_section_ordering_and_admin_mutations_reject_foreign_resources(): void
+    {
+        $owner = $this->member();
+        $other = $this->member('customer');
+        $admin = $this->member('super_admin');
+
+        $this->actingAs($owner)->get(route('studio.profile.edit'))->assertOk();
+        $section = CreatorProfileSection::query()->where('user_id',$owner->id)->firstOrFail();
+        $this->actingAs($other)->patch(route('account.profile.sections.update',$section),[
+            'title'=>'Attack','is_visible'=>'0',
+        ])->assertNotFound();
+        $this->patchJson(route('account.profile.sections.order'),[
+            'ids'=>[$section->id],
+        ])->assertUnprocessable();
+
+        $this->actingAs($admin)->patch(route('dashboard.users.profile.sections.update',[$owner,$section]),[
+            'title'=>'Admin-approved expertise','is_visible'=>'1',
+        ])->assertRedirect();
+        $this->assertSame('Admin-approved expertise',$section->fresh()->title);
+        $this->actingAs($owner)->patch(route('account.profile.sections.update',$section),[
+            'title'=>'Creator expertise','is_visible'=>'1',
+        ])->assertRedirect();
+        $this->assertSame('Creator expertise',$section->fresh()->title);
+    }
+
 }
