@@ -38,3 +38,14 @@ Artisan::command('security:turnstile-disable', function (): int {
     $this->info('Turnstile disabled. Existing login rate limits remain active.');
     return 0;
 })->purpose('Emergency recovery: disable Cloudflare Turnstile via authenticated server shell');
+
+
+// Real event thresholds and in-app notification delivery. No external traffic,
+// no raw IP logs, and no malware/intrusion-detection claims.
+Artisan::command('security:alerts-scan', function (): int {
+    $count = app(\App\Support\Security\SecurityAlertMonitor::class)->scan();
+    $this->info($count.' security alerts created from recorded audit events.');
+    return 0;
+})->purpose('Evaluate configured security audit alert rules and notify super-admins');
+
+Schedule::command('security:alerts-scan')->everyMinute()->withoutOverlapping();

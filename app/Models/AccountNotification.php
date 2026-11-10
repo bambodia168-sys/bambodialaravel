@@ -39,6 +39,7 @@ class AccountNotification extends Model
         'contract.dispute.resolved',
         'privacy.request.responded',
         'policy.updated',
+        'security.alert.detected',
     ];
 
     protected $fillable = ['user_id','event','title','message','target_path','read_at'];

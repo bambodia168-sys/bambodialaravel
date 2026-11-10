@@ -53,6 +53,8 @@ use App\Http\Controllers\Dashboard\LicenseManagerController;
 use App\Http\Controllers\Dashboard\ProductManagerController;
 use App\Http\Controllers\DeveloperController;
 use App\Http\Controllers\SecurityDashboardController;
+use App\Http\Controllers\SecurityAlertController;
+use App\Http\Controllers\SecurityAlertRuleController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Creator\ListingController as CreatorListingController;
@@ -164,6 +166,14 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/developer/tokens', [DeveloperController::class, 'store'])->name('developer.store')->middleware('throttle:5,1');
         Route::delete('/developer/tokens/{token}', [DeveloperController::class, 'revoke'])->name('developer.revoke')->middleware('throttle:10,1');
         Route::get('/security-dashboard', [SecurityDashboardController::class, 'index'])->name('security.index');
+        Route::post('/security-dashboard/rules', [SecurityAlertRuleController::class, 'store'])
+            ->name('security.rules.store')->middleware('throttle:10,1');
+        Route::patch('/security-dashboard/rules/{rule}', [SecurityAlertRuleController::class, 'update'])
+            ->name('security.rules.update')->middleware('throttle:20,1');
+        Route::delete('/security-dashboard/rules/{rule}', [SecurityAlertRuleController::class, 'destroy'])
+            ->name('security.rules.destroy')->middleware('throttle:10,1');
+        Route::patch('/security-dashboard/alerts/{alert}/acknowledge', [SecurityAlertController::class, 'acknowledge'])
+            ->name('security.alerts.acknowledge')->middleware('throttle:30,1');
     });
     Route::get('/support-center/tickets', [SupportController::class, 'index'])->name('support.tickets');
     Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1');
