@@ -27,6 +27,13 @@ $paths = [
     'palette' => '<circle cx="12" cy="12" r="9"/><circle cx="7.5" cy="10" r="1"/><circle cx="11" cy="6.8" r="1"/><circle cx="16" cy="8" r="1"/><path d="M14 20h-1a2.6 2.6 0 0 1 0-5.2h1.4c1.7 0 2 2.1 1.6 3.1"/>',
     'sliders-horizontal' => '<path d="M4 6h5m5 0h6M4 12h10m4 0h2M4 18h3m4 0h9"/><circle cx="11.5" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="9" cy="18" r="2"/>',
     'pencil' => '<path d="m15 5 4 4M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20z"/>',
+    // Distinct controls for the private Media Library video player.
+    'play' => '<path d="m8 5 11 7-11 7z"/>',
+    'pause' => '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+    'volume-2' => '<path d="M11 5 6 9H3v6h3l5 4zM15.5 8a5 5 0 0 1 0 8M18.3 5a9 9 0 0 1 0 14"/>',
+    'volume-x' => '<path d="M11 5 6 9H3v6h3l5 4zM16 9l5 6M21 9l-5 6"/>',
+    'picture-in-picture' => '<rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="12" width="8" height="6" rx="1"/>',
+    'maximize' => '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',
     'play-circle' => '<circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4z"/>',
     'pause-circle' => '<circle cx="12" cy="12" r="9"/><path d="M10 8v8M14 8v8"/>',
     'refresh-cw' => '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 9a7 7 0 0 1 12-2l2 5M4 12l2 5a7 7 0 0 0 12-2"/>',
