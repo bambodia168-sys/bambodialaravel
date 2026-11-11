@@ -81,8 +81,7 @@ git -C "$SOURCE" cat-file -e "$MCP^{commit}" || fail "Pinned deployed MCP founda
 MCP_CONTROLLER="app/Http/Controllers/Api/BambodiaMcpController.php"
 [[ -f "$APP/$MCP_CONTROLLER" && ! -L "$APP/$MCP_CONTROLLER" ]] ||
   fail "Known production MCP controller not found."
-[[ "$(git hash-object "$APP/$MCP_CONTROLLER")" ==
-   "$(git -C "$SOURCE" rev-parse "$MCP:$MCP_CONTROLLER")" ]] ||
+[[ "$(git hash-object "$APP/$MCP_CONTROLLER")" == "$(git -C "$SOURCE" rev-parse "$MCP:$MCP_CONTROLLER")" ]] ||
   fail "Production MCP controller has unrecognized modifications."
 [[ "$(git -C "$SOURCE" rev-parse "$MCP:app/Models/AuditEvent.php")" == "$MCP_AUDIT_SHA" ]] ||
   fail "Unexpected source MCP audit events."
