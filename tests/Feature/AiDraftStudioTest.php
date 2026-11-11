@@ -192,7 +192,7 @@ final class AiDraftStudioTest extends TestCase
             && $request['text']['format']['type'] === 'json_schema'
             && $request['model'] === 'gpt-4.1-mini'
             && str_contains($request['instructions'], 'feature bullets')
-            && str_contains($request['input'], 'newlines') === false
+            && str_contains($request['input'], 'Use real newline characters')
         );
 
         $other = $this->member('freelancer');
