@@ -284,6 +284,42 @@ final class BambodiaMcpOAuthTest extends TestCase
         $this->assertDatabaseHas('content_entries', ['id' => $post->id, 'status' => 'draft']);
     }
 
+    public function test_demotion_between_oauth_consent_page_and_approval_is_denied(): void
+    {
+        $actor = $this->user();
+        $callback = 'https://chatgpt.com/connector/oauth/qa-callback';
+        $client = $this->postJson('/oauth/register', [
+            'client_name' => 'Consent Role Change QA',
+            'redirect_uris' => [$callback],
+        ])->assertCreated()->json('client_id');
+        $state = \Illuminate\Support\Str::random(32);
+        $verifier = \Illuminate\Support\Str::random(64);
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+
+        $this->actingAs($actor, 'web')
+            ->get('/oauth/authorize?'.http_build_query([
+                'client_id' => $client,
+                'redirect_uri' => $callback,
+                'response_type' => 'code',
+                'scope' => 'mcp:use',
+                'state' => $state,
+                'code_challenge' => $challenge,
+                'code_challenge_method' => 'S256',
+                'resource' => url('/mcp'),
+            ]))->assertOk();
+
+        $authToken = session('authToken');
+        $actor->forceFill(['role' => 'customer'])->save();
+
+        $this->post(route('passport.authorizations.approve'), [
+            'client_id' => $client,
+            'state' => $state,
+            'auth_token' => $authToken,
+        ])->assertForbidden();
+        $this->assertDatabaseCount('oauth_auth_codes', 0);
+        $this->assertDatabaseCount('oauth_access_tokens', 0);
+    }
+
     public function test_real_pkce_authorization_code_exchange_and_bearer_tool_discovery(): void
     {
         $actor = $this->user();

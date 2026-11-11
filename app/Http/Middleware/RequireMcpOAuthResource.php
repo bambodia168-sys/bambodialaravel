@@ -20,7 +20,21 @@ final class RequireMcpOAuthResource
     public function handle(Request $request, Closure $next): Response
     {
         $authorization = $request->isMethod('GET') && $request->is('oauth/authorize');
+        $approval = $request->isMethod('POST') && $request->is('oauth/authorize');
         $exchange = $request->isMethod('POST') && $request->is('oauth/token');
+
+        if ($approval) {
+            // Consent is not permission to keep authorizing after demotion or
+            // suspension between page render and the final POST.
+            $owner = $request->user('web');
+            if (! $owner instanceof \App\Models\User || $owner->role !== 'super_admin'
+                || $owner->account_status !== 'active') {
+                return response()->json(['message' => 'Administrator authorization is no longer allowed.'], 403)
+                    ->header('Cache-Control', 'no-store');
+            }
+
+            return $next($request);
+        }
 
         if (! $authorization && ! $exchange) {
             return $next($request);
