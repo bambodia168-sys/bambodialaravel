@@ -116,6 +116,52 @@ final class BambodiaMcpOAuthTest extends TestCase
         $this->assertFalse(\App\Support\Mcp\McpResource::matches(url('/mcp').'?evil=1'));
     }
 
+    public function test_pkce_s256_does_not_exchange_code_with_wrong_verifier(): void
+    {
+        $actor = $this->user();
+        $redirect = 'https://chatgpt.com/connector/oauth/qa-callback';
+        $client = $this->postJson('/oauth/register', [
+            'client_name' => 'Bambodia Negative PKCE QA',
+            'redirect_uris' => [$redirect],
+        ])->assertCreated()->json('client_id');
+
+        $verifier = \Illuminate\Support\Str::random(64);
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+        $state = \Illuminate\Support\Str::random(36);
+
+        $this->actingAs($actor, 'web')
+            ->get('/oauth/authorize?'.http_build_query([
+                'client_id' => $client,
+                'redirect_uri' => $redirect,
+                'response_type' => 'code',
+                'scope' => 'mcp:use',
+                'state' => $state,
+                'code_challenge' => $challenge,
+                'code_challenge_method' => 'S256',
+                'resource' => url('/mcp'),
+            ]))->assertOk();
+        $authToken = session('authToken');
+
+        $approval = $this->post(route('passport.authorizations.approve'), [
+            'client_id' => $client,
+            'state' => $state,
+            'auth_token' => $authToken,
+        ])->assertRedirect();
+        parse_str(parse_url($approval->headers->get('Location'), PHP_URL_QUERY) ?: '', $callback);
+        $this->assertSame($state, $callback['state'] ?? null);
+
+        $this->post('/oauth/token', [
+            'grant_type' => 'authorization_code',
+            'client_id' => $client,
+            'code' => $callback['code'],
+            'redirect_uri' => $redirect,
+            'code_verifier' => \Illuminate\Support\Str::random(64),
+            'resource' => url('/mcp'),
+        ])->assertStatus(400);
+
+        $this->assertDatabaseCount('oauth_access_tokens', 0);
+    }
+
     public function test_validly_signed_oauth_token_without_mcp_audience_is_rejected(): void
     {
         $user = $this->user();
