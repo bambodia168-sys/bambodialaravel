@@ -6,7 +6,7 @@
 <section class="panel"><div class="panel-head"><h2>{{ ucfirst($type) }} listings <span class="count">{{ $listings->total() }}</span></h2>
 <form method="get" class="table-search"><input name="q" value="{{ $search }}" placeholder="Search title or public ID" aria-label="Search listings">
 <select name="status" class="table-select" aria-label="Status">
-@foreach(['all'=>'All','pending'=>'Pending','published'=>'Published','rejected'=>'Rejected','draft'=>'Draft'] as $key=>$value)<option value="{{ $key }}" @selected($status===$key)>{{ $value }}</option>@endforeach
+@foreach(['all'=>'All','pending'=>'Pending','published'=>'Published','rejected'=>'Rejected','draft'=>'Draft','withdrawn'=>'Withdrawn'] as $key=>$value)<option value="{{ $key }}" @selected($status===$key)>{{ $value }}</option>@endforeach
 </select><button class="btn subtle" type="submit">Filter</button></form></div>
 <div class="table-scroll"><table class="data-table"><thead><tr><th>Public ID</th><th>Title</th><th>Creator</th><th>Category</th><th>Price</th><th>Status</th><th>Action</th></tr></thead><tbody>
 @forelse($listings as $listing)<tr>
