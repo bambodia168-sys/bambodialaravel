@@ -9,7 +9,7 @@ if [[ $# -gt 0 ]]; then MODE="$1"; fi
 
 REPO="bambodia168-sys/bambodialaravel"
 BASE="3085cbf08c72ca4cb012079025b7d725749cf420"
-CODE="2246f8a95e76d46de37d1fb01661ab4e7be271d9"
+CODE="9e6a1277dc3428f656e1e4f9ed50d6571831c328"
 SOURCE="/root/bambodia-release-audit"
 APP="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
