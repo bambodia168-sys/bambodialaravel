@@ -75,6 +75,10 @@ final class AiDraftStudioTest extends TestCase
 
     public function test_provider_requires_super_admin_and_never_displays_the_secret(): void
     {
+        // This test exercises multiple denied roles against the same endpoints.
+        // Rate limiting is independently covered in request tests; disabling only
+        // the throttle middleware here keeps the permission assertions meaningful.
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         $this->get('/dashboard/ai-draft-studio')->assertRedirect('/login');
         foreach (['staff', 'admin', 'customer', 'freelancer'] as $role) {
             $this->actingAs($this->member($role));
