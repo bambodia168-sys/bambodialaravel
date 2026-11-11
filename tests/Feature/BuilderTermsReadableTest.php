@@ -103,4 +103,18 @@ final class BuilderTermsReadableTest extends TestCase
             ->assertOk()->assertSee('<h1>Legacy Published Agreement</h1>', false);
         $this->assertNull($publication->fresh()->body_format);
     }
+
+    public function test_legacy_html_snapshot_mislabeled_as_markdown_is_readable_without_mutating_source(): void
+    {
+        $body = '<h1>Advertising and Sponsored Listings</h1><h2>Disclosure requirements</h2>'
+            .'<p>Sponsored content must be clearly identified.</p>';
+        $publication = $this->publication('Mislabeled Old Terms', 'terms', $body, 'markdown');
+        $html = BuilderSubmissionTerms::renderPublication($publication);
+
+        $this->assertStringContainsString('<h1>Advertising and Sponsored Listings</h1>', $html);
+        $this->assertStringContainsString('<h2>Disclosure requirements</h2>', $html);
+        $this->assertStringNotContainsString('&lt;h1&gt;', $html);
+        $this->assertSame($body, $publication->fresh()->body_snapshot);
+        $this->assertSame('markdown', $publication->fresh()->body_format);
+    }
 }
