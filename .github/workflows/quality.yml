@@ -31,6 +31,7 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+          php artisan passport:keys
           mkdir -p database
       - name: Validate installed-site upgrade shell syntax
         run: |
@@ -117,6 +118,31 @@ jobs:
           bash -n support/ai-draft-studio-aapanel-upgrade.sh
           bash -n support/ai-draft-activation-recovery-aapanel-upgrade.sh
           bash -n support/ai-draft-format-aapanel-upgrade.sh
+          # OAuth rehearsal only: validate syntax and confirm a forbidden root
+          # is refused before any application or database operation.
+          bash -n support/mcp-oauth-isolated-aapanel-rehearsal.sh
+          bash -n support/bambodia-oauth-qa-recover-app.sh
+          bash -n support/bambodia-oauth-qa-provision-db.sh
+          bash -n support/mcp-oauth-qa-db-inspect.sh
+          bash -n support/mcp-oauth-qa-source-bootstrap.sh
+          if BAMBODIA_QA_APP=/www/wwwroot/bambodia.com \
+             BAMBODIA_QA_EXPECTED_SHA=0000000000000000000000000000000000000000 \
+             bash support/mcp-oauth-qa-source-bootstrap.sh --check; then
+            echo 'Unsafe OAuth QA source bootstrap accepted production webroot'; exit 1
+          fi
+          if BAMBODIA_QA_APP=/var/lib/bambodia-oauth-qa-acceptance \
+             BAMBODIA_QA_EXPECTED_SHA=invalid \
+             bash support/mcp-oauth-qa-source-bootstrap.sh --check; then
+            echo 'Unsafe OAuth QA bootstrap accepted unreviewed SHA'; exit 1
+          fi
+          python3 support/mcp-oauth-db-grant-guard.py --self-test
+          if BAMBODIA_QA_APP=/www/wwwroot/bambodia.com \
+             BAMBODIA_QA_DB=bambodia_oauthqa_ci \
+             BAMBODIA_QA_MYSQL_CNF=/root/not-present.cnf \
+             BAMBODIA_QA_EXPECTED_SHA=0000000000000000000000000000000000000000 \
+             bash support/mcp-oauth-isolated-aapanel-rehearsal.sh --check; then
+            echo 'Unsafe OAuth rehearsal preflight accepted a production root'; exit 1
+          fi
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l

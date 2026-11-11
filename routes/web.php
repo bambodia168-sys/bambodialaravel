@@ -169,6 +169,10 @@ Route::middleware('auth')->group(function (): void {
     Route::middleware('role:super_admin')->group(function (): void {
         Route::get('/developer', [DeveloperController::class, 'index'])->name('developer.index');
         Route::get('/developer/docs', [DeveloperController::class, 'documentation'])->name('developer.docs');
+        Route::get('/developer/oauth-connections', [\App\Http\Controllers\Developer\OAuthConnectionController::class, 'index'])
+            ->name('developer.oauth.index');
+        Route::delete('/developer/oauth-connections/{token}', [\App\Http\Controllers\Developer\OAuthConnectionController::class, 'destroy'])
+            ->name('developer.oauth.revoke')->middleware('throttle:8,1');
         Route::post('/developer/tokens', [DeveloperController::class, 'store'])->name('developer.store')->middleware('throttle:5,1');
         Route::delete('/developer/tokens/{token}', [DeveloperController::class, 'revoke'])->name('developer.revoke')->middleware('throttle:10,1');
         Route::get('/security-dashboard', [SecurityDashboardController::class, 'index'])->name('security.index');
@@ -548,3 +552,25 @@ foreach (\App\Http\Middleware\SetLocale::SUPPORTED as $languageCode) {
         }
     }
 }
+
+// Stateless, admin-token-authenticated MCP endpoint. A browser session is never sufficient
+// for access. Only this bearer-token route is exempt from the web CSRF middleware.
+Route::post('/mcp', [\App\Http\Controllers\Api\BambodiaMcpController::class, 'handle'])
+    ->middleware(['mcp.auth', 'throttle:30,1'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
+    ->name('mcp');
+
+// OAuth 2.1 discovery, protected-resource metadata, registration and consent
+// are maintained by Laravel MCP and Laravel Passport. Keep these outside the
+// localized web-route cloning loop; only the Passport consent page uses cookies.
+\Illuminate\Support\Facades\Route::middleware('throttle:10,1')->group(function (): void {
+    \Laravel\Mcp\Facades\Mcp::oauthRoutes(registration: false);
+
+    // Register the public RFC7591 endpoint explicitly so the CSRF exception
+    // attaches to the actual POST route, not a stale name lookup.
+    // Passport's browser approve/deny forms are NOT exempt from CSRF.
+    \Illuminate\Support\Facades\Route::post('/oauth/register',
+        \App\Http\Controllers\Api\BambodiaOAuthRegisterController::class)
+        ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
+        ->name('mcp.oauth.register');
+});
