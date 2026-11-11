@@ -115,6 +115,7 @@ jobs:
           # OAuth rehearsal only: validate syntax and confirm a forbidden root
           # is refused before any application or database operation.
           bash -n support/mcp-oauth-isolated-aapanel-rehearsal.sh
+          python3 support/mcp-oauth-db-grant-guard.py --self-test
           if BAMBODIA_QA_APP=/www/wwwroot/bambodia.com \
              BAMBODIA_QA_DB=bambodia_oauthqa_ci \
              BAMBODIA_QA_MYSQL_CNF=/root/not-present.cnf \
