@@ -104,6 +104,7 @@ jobs:
           node --check public/js/creator-profile-v3.js
           node --check public/js/creator-badge-tooltip-viewport.js
           node --check public/js/ai-draft-studio.js
+          node --check tests/browser/ai-draft-dialog-format.mjs
           if grep -Eq '^[[:space:]]*inset:[[:space:]]*auto[[:space:]]*!important' public/css/creator-badge-tooltip-viewport.css; then echo 'Unsafe viewport tooltip inset override'; exit 1; fi
           node --check tests/browser/badge-tooltip-viewport.mjs
           php -l examples/license-validation.php
@@ -115,6 +116,7 @@ jobs:
           bash -n support/security-alerts-aapanel-upgrade.sh
           bash -n support/ai-draft-studio-aapanel-upgrade.sh
           bash -n support/ai-draft-activation-recovery-aapanel-upgrade.sh
+          bash -n support/ai-draft-format-aapanel-upgrade.sh
           # OAuth rehearsal only: validate syntax and confirm a forbidden root
           # is refused before any application or database operation.
           bash -n support/mcp-oauth-isolated-aapanel-rehearsal.sh
