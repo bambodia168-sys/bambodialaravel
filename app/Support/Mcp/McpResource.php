@@ -29,7 +29,7 @@ final class McpResource
         $requested = parse_url($supplied);
         $expected = parse_url(self::uri());
         if (! is_array($requested) || ! is_array($expected)
-            || isset($requested['user'], $requested['pass'])
+            || isset($requested['user']) || isset($requested['pass'])
             || isset($requested['query']) || isset($requested['fragment'])) {
             return false;
         }
