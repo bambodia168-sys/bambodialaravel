@@ -550,4 +550,11 @@ Route::post('/mcp', [\App\Http\Controllers\Api\BambodiaMcpController::class, 'ha
 // localized web-route cloning loop; only the Passport consent page uses cookies.
 \Illuminate\Support\Facades\Route::middleware('throttle:10,1')->group(function (): void {
     \Laravel\Mcp\Facades\Mcp::oauthRoutes();
+
+    // RFC 7591 registration is an external JSON POST, not a browser form.
+    // Laravel 13's web CSRF middleware must be excluded on registration ONLY.
+    // OAuth approve/deny browser forms keep their normal session/CSRF gates.
+    \Illuminate\Support\Facades\Route::getRoutes()
+        ->getByName('mcp.oauth.register')
+        ?->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class]);
 });

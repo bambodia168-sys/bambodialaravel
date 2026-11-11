@@ -20,7 +20,7 @@ final class AuthenticateMcpToken
     public function handle(Request $request, Closure $next): Response
     {
         $secret = $request->bearerToken() ?? '';
-        $challenge = 'Bearer resource_metadata="'.url('/.well-known/oauth-protected-resource').'", scope="mcp:use"';
+        $challenge = 'Bearer resource_metadata="'.url('/.well-known/oauth-protected-resource/mcp').'", scope="mcp:use"';
         $reject = static fn (int $status, string $message): JsonResponse =>
             (new JsonResponse(['message' => $message], $status))
                 ->header('WWW-Authenticate', $challenge)
