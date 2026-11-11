@@ -97,9 +97,16 @@ try {
         foreach (['subject_kind', 'subject_id', 'subject_public_id', 'actor_id', 'action', 'from_status', 'to_status', 'review_fingerprint', 'owner_confirmation_reference', 'backup_reference', 'created_at'] as $column) {
             $configCheck(in_array($column, $available, true), 'missing_audit_column_'.$column);
         }
-        foreach (['users', 'marketplace_listings', 'marketplace_jobs', 'preview_visibility_actions'] as $table) {
+        foreach (['marketplace_listings', 'marketplace_jobs', 'preview_visibility_actions'] as $table) {
             $configCheck(\Illuminate\Support\Facades\DB::table($table)->count() === 0, 'disposable_database_not_empty_'.$table);
         }
+        // Bambodia's five-step installer provisions exactly one Super Admin.
+        // A migration-only rehearsal may have zero users. Neither may contain
+        // customer, staff or creator accounts at this empty-state checkpoint.
+        $users = \Illuminate\Support\Facades\DB::table('users')->select('role')->limit(2)->get();
+        $configCheck($users->count() <= 1
+            && ($users->count() === 0 || $users->first()->role === 'super_admin'),
+            'unexpected_qa_user_inventory');
     }
 
     echo json_encode([
@@ -108,7 +115,7 @@ try {
         'environment' => 'isolated_qa_attested_not_independently_proven',
         'withdrawal_writes' => 'disabled',
         'database' => 'dedicated_name_and_user_verified',
-        'preview_actions' => $mode === '--before-install' ? 'no_existing_tables' : 'schema_verified_and_empty',
+        'preview_actions' => $mode === '--before-install' ? 'no_existing_tables' : 'schema_verified_no_marketplace_fixtures',
         'warning' => 'Runbook evidence, independent backup restoration, signed owner approvals and physical browser tests are still required.',
     ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)."\n";
 } catch (\Throwable $e) {
