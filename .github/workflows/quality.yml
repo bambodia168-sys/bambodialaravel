@@ -122,6 +122,7 @@ jobs:
           bash -n support/mcp-oauth-isolated-aapanel-rehearsal.sh
           bash -n support/bambodia-oauth-qa-recover-app.sh
           bash -n support/bambodia-oauth-qa-provision-db.sh
+          bash -n support/mcp-oauth-qa-db-inspect.sh
           bash -n support/mcp-oauth-qa-source-bootstrap.sh
           if BAMBODIA_QA_APP=/www/wwwroot/bambodia.com \
              BAMBODIA_QA_EXPECTED_SHA=0000000000000000000000000000000000000000 \
