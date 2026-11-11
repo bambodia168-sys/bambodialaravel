@@ -9,7 +9,7 @@ if [[ $# -gt 0 ]]; then MODE="$1"; fi
 
 REPO="bambodia168-sys/bambodialaravel"
 BASE="935a7f58bab4d39e1a0a5684a6afe2c13bcb954b"
-CODE="539cd65fcda00af1809f27813a4dfd864e051230"
+CODE="d93cc6017ca07c7b1d88f209e0fe2e116e3da066"
 SOURCE="/root/bambodia-release-audit"
 APP="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
@@ -85,6 +85,8 @@ git -C "$SOURCE" diff --name-only "$CODE" refs/remotes/origin/main | LC_ALL=C so
 cmp -s "$TMP/expected-after" "$TMP/after" || fail "Unreviewed post-feature changes."
 
 cat > "$TMP/expected-feature" <<'EOF'
+.github/workflows/browser-emulation.yml
+.github/workflows/isolated-authenticated-journeys.yml
 README.md
 app/Support/MarketplaceReadinessAudit.php
 docs/ROADMAP_COMPLETION_2026.md
