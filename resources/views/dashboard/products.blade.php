@@ -9,7 +9,7 @@
     <form class="table-search" method="get">
       <x-icon name="search" size="17"/><input name="search" value="{{ $search }}" placeholder="Product title or ID" aria-label="Search product catalog">
       <select name="status" aria-label="Filter status" class="table-select">
-        @foreach(['all'=>'All statuses','draft'=>'Draft','pending'=>'Pending','published'=>'Published','rejected'=>'Rejected'] as $value=>$label)
+        @foreach(['all'=>'All statuses','draft'=>'Draft','pending'=>'Pending','published'=>'Published','rejected'=>'Rejected','withdrawn'=>'Withdrawn'] as $value=>$label)
           <option value="{{ $value }}" @selected($status===$value)>{{ $label }}</option>
         @endforeach
       </select><button class="btn subtle" type="submit">Search</button>
