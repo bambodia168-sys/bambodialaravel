@@ -115,6 +115,7 @@ jobs:
           bash -n support/security-alerts-aapanel-upgrade.sh
           bash -n support/ai-draft-studio-aapanel-upgrade.sh
           bash -n support/ai-draft-activation-recovery-aapanel-upgrade.sh
+          bash -n support/ai-draft-format-aapanel-upgrade.sh
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
