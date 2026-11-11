@@ -49,7 +49,7 @@ try {
   assertions+=2;
   // The admin navigation includes "Preview Visibility". Require the exact
   // Post Builder action, rather than a substring-matched sidebar link.
-  const previewLink=page.locator('.post-builder-top-actions')
+  const previewLink=page.locator('.policy-builder-top-actions')
     .getByRole('link',{name:'Preview',exact:true});
   if(await previewLink.count()!==1
       || await previewLink.getAttribute('target')!=='_blank'
