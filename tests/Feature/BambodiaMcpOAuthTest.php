@@ -126,7 +126,7 @@ final class BambodiaMcpOAuthTest extends TestCase
     public function test_authorization_provider_exposes_dedicated_scopes_and_short_token_lifetime(): void
     {
         $scopes = \Laravel\Passport\Passport::scopes();
-        $names = array_map(fn ($scope) => $scope->id, $scopes);
+        $names = $scopes->map(fn ($scope) => $scope->id)->all();
         $this->assertContains('mcp:use', $names);
         $this->assertContains('mcp.write', $names);
         $this->assertContains('offline_access', $names);
