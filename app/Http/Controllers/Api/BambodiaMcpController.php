@@ -51,7 +51,7 @@ final class BambodiaMcpController extends Controller
                     'instructions' => 'Admin-only connector. Search/list/get records; draft mutations require mcp.write. Publishing, legal approval, uploads, deployments and security changes must be handled in their existing authorized workflows.',
                 ],
                 'ping' => (object) [],
-                'tools/list' => ['tools' => $this->definitions($token->allows('mcp.write'))],
+                'tools/list' => ['tools' => $this->authorizeDefinitions($this->definitions($token->allows('mcp.write')))],
                 'tools/call' => $this->callTool($params, $request, $token),
                 'resources/list' => ['resources' => []],
                 'prompts/list' => ['prompts' => []],
@@ -203,6 +203,35 @@ final class BambodiaMcpController extends Controller
                 ], 'required' => ['entity','id','confirm_title']],
             ],
         ];
+    }
+
+    /**
+     * ChatGPT uses per-tool security metadata to determine when OAuth linking
+     * and elevated write authorization must be requested.
+     *
+     * This is a declaration only: AuthenticateMcpToken still enforces scopes.
+     */
+    private function authorizeDefinitions(array $definitions): array
+    {
+        $writes = [
+            'bambodia_create_draft', 'bambodia_update_draft',
+            'bambodia_delete_draft', 'bambodia_update_own_profile',
+            'bambodia_manage_site', 'bambodia_draft_media',
+        ];
+
+        foreach ($definitions as &$definition) {
+            $scopes = in_array($definition['name'], $writes, true)
+                ? ['mcp:use', 'mcp.write']
+                : ['mcp:use'];
+
+            $definition['_meta'] = [
+                'securitySchemes' => [
+                    ['type' => 'oauth2', 'scopes' => $scopes],
+                ],
+            ];
+        }
+
+        return $definitions;
     }
 
     private function result(string|int|null $id, mixed $result): JsonResponse
