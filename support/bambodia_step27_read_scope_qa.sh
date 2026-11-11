@@ -61,10 +61,14 @@ exec 9>/root/bambodia-oauth-browser-pkce.lock
 flock -n 9
 printf '%s\n' 'QA_PKCE_LOCK=ACQUIRED'
 printf '%s\n' 'This test will issue a temporary QA-only read-only OAuth token,' \
- 'verify read-only scope blocks draft creation, revoke test tokens,'
-printf 'Type TEST-QA-REFRESH to continue: ' > /dev/tty
+ 'verify read-only scope blocks draft creation, then revoke test grants.'
+printf 'Type TEST-QA-READ-SCOPE to continue: ' > /dev/tty
 IFS= read -r CONFIRM < /dev/tty
-test "$CONFIRM" = 'TEST-QA-READ-SCOPE'
+if [ "$CONFIRM" != 'TEST-QA-READ-SCOPE' ]; then
+  echo 'STEP27_CONFIRMATION=DECLINED'
+  exit 1
+fi
+echo 'STEP27_CONFIRMATION=PASS'
 
 printf '%s\n' '========== TEST READ-ONLY OAUTH WRITE BOUNDARY =========='
 if REPORT="$(
