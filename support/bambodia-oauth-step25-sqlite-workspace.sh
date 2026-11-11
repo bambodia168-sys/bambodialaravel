@@ -43,7 +43,7 @@ command -v python3 >/dev/null || fail 'Python 3 unavailable.'
   fail 'Unexpected source .env.testing; review before isolating.'
 
 "$PHP" -r '
-foreach (["pdo_sqlite","sqlite3","openssl","mbstring","pdo_mysql"] as $ext) {
+foreach (["pdo_sqlite","sqlite3","openssl","mbstring"] as $ext) {
     if (!extension_loaded($ext)) {
         fwrite(STDERR, "BLOCKED: Required PHP extension unavailable: ".$ext.PHP_EOL);
         exit(1);
@@ -184,6 +184,10 @@ chown -R root:www "$APP"
 chmod -R g+rX "$APP"
 chmod 750 "$APP"
 chmod 640 "$APP/.env"
+# Composer home/cache can contain private package credentials; keep root-only.
+# Runtime PHP never needs the Git object database either.
+chown -R root:root "$APP/.qa-home" "$APP/.qa-cache" "$APP/.git"
+chmod -R go-rwx "$APP/.qa-home" "$APP/.qa-cache" "$APP/.git"
 chown -R www:www "$APP/storage" "$APP/bootstrap/cache"
 chmod -R u+rwX "$APP/storage" "$APP/bootstrap/cache"
 
