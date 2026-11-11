@@ -228,24 +228,24 @@ try {
     // Exact write tool list from the pinned BambodiaMcpController. All
     // requests must fail at the scope gate, before argument validation.
     $models = [
-        \\App\\Models\\MarketplaceListing::class,
-        \\App\\Models\\MarketplaceJob::class,
-        \\App\\Models\\ContentEntry::class,
-        \\App\\Models\\Policy::class,
-        \\App\\Models\\CreatorProfile::class,
-        \\App\\Models\\SiteSeoPage::class,
-        \\App\\Models\\SiteSocialLink::class,
-        \\App\\Models\\MediaAsset::class,
+        \App\Models\MarketplaceListing::class,
+        \App\Models\MarketplaceJob::class,
+        \App\Models\ContentEntry::class,
+        \App\Models\Policy::class,
+        \App\Models\CreatorProfile::class,
+        \App\Models\SiteSeoPage::class,
+        \App\Models\SiteSocialLink::class,
+        \App\Models\MediaAsset::class,
     ];
     $beforeCounts = [];
     foreach ($models as $model) {
         $table = (new $model)->getTable();
-        qa(\\Illuminate\\Support\\Facades\\Schema::hasTable($table),
+        qa(\Illuminate\Support\Facades\Schema::hasTable($table),
            strtoupper($table).'_TABLE_PRESENT');
         $beforeCounts[$table] = $db->table($table)->count();
     }
-    qa($beforeCounts[(new \\App\\Models\\MarketplaceListing)->getTable()] === 0
-       && $beforeCounts[(new \\App\\Models\\ContentEntry)->getTable()] === 0,
+    qa($beforeCounts[(new \App\Models\MarketplaceListing)->getTable()] === 0
+       && $beforeCounts[(new \App\Models\ContentEntry)->getTable()] === 0,
        'QA_DRAFT_TABLES_EMPTY_BEFORE_TEST');
 
     $writeCalls = [
