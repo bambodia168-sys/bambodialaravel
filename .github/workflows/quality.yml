@@ -125,6 +125,7 @@ jobs:
           bash -n support/bambodia-oauth-qa-restore-provision.sh
           bash -n support/bambodia-oauth-browser-qa-source.sh
           bash -n support/bambodia-oauth-browser-qa-seed-fixtures.sh
+          bash -n support/bambodia-oauth-step25-sqlite-workspace.sh
           bash -n support/mcp-oauth-qa-db-inspect.sh
           bash -n support/mcp-oauth-qa-source-bootstrap.sh
           if BAMBODIA_QA_APP=/www/wwwroot/bambodia.com \
