@@ -8,7 +8,7 @@
  * external HTTPS, callback delivery, PKCE exchange or token issuance.
  *
  * Requires execution under the isolated browser-QA PHP runtime (as www).
- * No HTTP requests and no DB writes. Laravel may compile a view into QA storage.
+ * No HTTP requests and no DB writes. Existing OAuth artifacts are preserved.\n * Laravel may compile a view into QA storage.
  */
 declare(strict_types=1);
 
@@ -59,10 +59,12 @@ try {
         ];
     };
     $before = $counts();
-    if ($before['users'] !== 1 || $before['clients'] !== 1 ||
-        $before['codes'] !== 0 || $before['access'] !== 0 ||
-        $before['refresh'] !== 0) {
-        $failed('UNEXPECTED_QA_RECORD_COUNTS');
+    // A previously used browser-QA database can retain authorization codes
+    // and OAuth tokens from earlier isolated acceptance attempts. Preserve them.
+    // This offline view test requires only the one known synthetic principal and
+    // DCR client; ALL six table counts must be identical after rendering.
+    if ($before['users'] !== 1 || $before['clients'] !== 1) {
+        $failed('UNEXPECTED_QA_PRINCIPAL_OR_CLIENT_COUNTS');
     }
 
     $admin = User::query()->sole();
