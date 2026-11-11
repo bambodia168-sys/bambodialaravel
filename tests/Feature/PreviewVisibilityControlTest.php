@@ -300,4 +300,50 @@ final class PreviewVisibilityControlTest extends TestCase
         $this->assertDatabaseCount('preview_visibility_actions', 1);
     }
 
+
+    public function test_new_customer_activity_after_preview_invalidates_approval_snapshot(): void
+    {
+        config()->set('preview_visibility.enabled', true);
+        $super = $this->user('super_admin');
+        $owner = $this->user('freelancer');
+        $customer = $this->user('customer');
+        $listing = $this->listing($owner);
+
+        // The operator reviewed the item before a real customer saved it.
+        $oldForm = $this->form('listing', $listing);
+        SavedListing::query()->create([
+            'marketplace_listing_id' => $listing->id, 'user_id' => $customer->id,
+        ]);
+
+        $this->actingAs($super)->patch(route('dashboard.preview-visibility.withdraw', [
+            'kind' => 'listing', 'publicId' => $listing->public_id,
+        ]), $oldForm)->assertStatus(409);
+
+        $this->assertSame('published', $listing->fresh()->status);
+        $this->assertDatabaseCount('saved_listings', 1);
+        $this->assertDatabaseCount('preview_visibility_actions', 0);
+    }
+
+    public function test_job_proposal_blocks_withdrawal_even_when_report_is_current(): void
+    {
+        config()->set('preview_visibility.enabled', true);
+        $super = $this->user('super_admin');
+        $client = $this->user('customer');
+        $freelancer = $this->user('freelancer');
+        $job = $this->job($client);
+        \App\Models\JobProposal::query()->create([
+            'marketplace_job_id' => $job->id,
+            'freelancer_id' => $freelancer->id,
+            'cover_message' => 'A legitimate candidate response in an isolated QA fixture.',
+            'status' => 'submitted',
+        ]);
+
+        $this->actingAs($super)->patch(route('dashboard.preview-visibility.withdraw', [
+            'kind' => 'job', 'publicId' => $job->public_id,
+        ]), $this->form('job', $job))->assertStatus(409);
+
+        $this->assertSame('published', $job->fresh()->status);
+        $this->assertDatabaseCount('job_proposals', 1);
+        $this->assertDatabaseCount('preview_visibility_actions', 0);
+    }
 }
