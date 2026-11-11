@@ -21,7 +21,11 @@ try {
     await page.locator('input[name="email"]').fill('browser.admin@example.test');
     await page.locator('input[name="password"]').fill('BrowserOnlyPassword123!');
     await page.locator('form.auth-form button[type="submit"]').click();
-    await page.waitForURL(/\/dashboard/);
+    await page.waitForURL(/\/dashboard/, {timeout:15000}).catch(async () => {
+      const current = new URL(page.url()).pathname;
+      const message = (await page.locator('main,body').first().innerText()).slice(0,350);
+      throw Error(device.name+': isolated login failed ('+current+'): '+message);
+    });
 
     const response = await page.goto(base+'/builder?type=product',{waitUntil:'networkidle'});
     if (response?.status() !== 200) throw Error(device.name+': Builder route unavailable');
