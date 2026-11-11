@@ -69,11 +69,20 @@ try {
     $configCheck(config('filesystems.default') === 'local', 'external_default_storage_forbidden');
     $configCheck(in_array(config('mail.default'), ['log', 'array'], true), 'outbound_email_forbidden');
     $configCheck((string) config('app.key') !== '', 'unique_app_key_required');
-    $configCheck((string) env('MEDIA_LIBRARY_DISK', 'local') === 'local', 'external_media_storage_forbidden');
+    $configCheck(config('filesystems.media_library_disk', 'local') === 'local', 'external_media_storage_forbidden');
 
     $storage = realpath($root.'/storage');
     $configCheck(is_string($storage) && str_starts_with($storage, $root.'/'), 'storage_isolation_required');
     $configCheck(!is_link($root.'/storage'), 'storage_symlink_forbidden');
+    foreach ([
+        'private_disk' => config('filesystems.disks.local.root'),
+        'session_files' => config('session.files'),
+        'cache_files' => config('cache.stores.file.path'),
+    ] as $name => $path) {
+        $resolved = is_string($path) ? realpath($path) : false;
+        $configCheck(is_string($resolved) && str_starts_with($resolved, $storage.'/'),
+            'shared_or_missing_'.$name);
+    }
 
     $connected = \Illuminate\Support\Facades\DB::selectOne('SELECT DATABASE() AS selected_database');
     $configCheck(($connected->selected_database ?? null) === $db, 'connected_database_mismatch');
