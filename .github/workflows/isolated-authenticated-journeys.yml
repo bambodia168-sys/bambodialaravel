@@ -69,7 +69,10 @@ jobs:
           npm install --ignore-scripts
           npm run build
           npm install --no-save --ignore-scripts playwright
-          npx playwright install --with-deps chromium
+          # Keep actual Chromium browser acceptance; avoid ubuntu-latest apt
+          # font dependency downloads, which may be blocked by runner DNS.
+          # Missing runtime libraries will still fail the browser launch tests.
+          npx playwright install chromium
       - name: Seed strictly disposable MySQL instance
         run: |
           cp .env.example .env
