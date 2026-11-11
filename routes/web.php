@@ -555,7 +555,7 @@ Route::post('/mcp', [\App\Http\Controllers\Api\BambodiaMcpController::class, 'ha
     // attaches to the actual POST route, not a stale name lookup.
     // Passport's browser approve/deny forms are NOT exempt from CSRF.
     \Illuminate\Support\Facades\Route::post('/oauth/register',
-        \Laravel\Mcp\Server\Http\Controllers\OAuthRegisterController::class)
+        \App\Http\Controllers\Api\BambodiaOAuthRegisterController::class)
         ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
         ->name('mcp.oauth.register');
 });
