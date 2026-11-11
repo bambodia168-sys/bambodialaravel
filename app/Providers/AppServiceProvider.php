@@ -24,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
             'mcp.write' => 'Create and edit Bambodia unpublished drafts and approved settings',
             'offline_access' => 'Allow refreshing the connection without repeated login',
         ]);
-        Passport::defaultScopes(['mcp:use']);
+        // Never grant mcp:use implicitly to unrelated OAuth clients.
         Passport::tokensExpireIn(now()->addMinutes(30));
         Passport::refreshTokensExpireIn(now()->addDays(14));
         Passport::authorizationView(function (array $parameters) {
