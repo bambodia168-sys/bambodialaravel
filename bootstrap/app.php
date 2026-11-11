@@ -33,4 +33,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+        // A super-admin's manually submitted AI provider probe is throttled to
+        // two attempts per minute. Keep the limit, but return a useful message
+        // instead of leaving the administrator on the default 429 error page.
+        $exceptions->render(function (\Illuminate\Http\Exceptions\ThrottleRequestsException $exception, Request $request) {
+            if (! $request->routeIs('dashboard.ai-draft.test')) {
+                return null;
+            }
+
+            $retryAfter = max(1, (int) ($exception->getHeaders()['Retry-After'] ?? 60));
+
+            return redirect()->route('dashboard.ai-draft.index')
+                ->withErrors(['provider' => "Connection tests are limited to two per minute. Try again in {$retryAfter} seconds."])
+                ->withHeaders(['Retry-After' => (string) $retryAfter]);
+        });
     })->create();

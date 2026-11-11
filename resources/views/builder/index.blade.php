@@ -67,6 +67,12 @@
       </a>
     @else
       <div class="studio-type-actions" role="group" aria-label="Builder tools">
+        @if($canEdit)
+          <button type="button" class="studio-tool-action" data-modal-open="studio-ai-draft" @disabled(!$aiDraftReady)
+                  title="{{ $aiDraftReady ? 'Write a draft with AI; review before applying' : 'AI provider not enabled by administrator' }}">
+            <x-icon name="sparkles" size="17"/> AI Draft
+          </button>
+        @endif
         <button type="button" class="studio-tool-action" data-builder-preview-toggle>
           <x-icon name="eye" size="17"/> Preview
         </button>
@@ -653,6 +659,10 @@
         <button type="button" class="btn primary" data-builder-terms-accept><x-icon name="check-circle" size="17"/> Accept terms</button>
       </div>
     </dialog>
+    @if($canEdit)
+      @include('builder.ai-draft-dialog')
+      <script defer src="{{ asset('js/ai-draft-studio.js') }}?v=1"></script>
+    @endif
     <dialog id="studio-media-upload" class="studio-upload-dialog">
       <form method="post" action="{{ route('builder.media.store') }}" enctype="multipart/form-data" data-builder-media-form>
         @csrf

@@ -64,6 +64,7 @@
         ['route'=>'dashboard.languages.index','label'=>'Language Manager','icon'=>'globe'],
         ['route'=>'dashboard.typography.index','label'=>'Typography','icon'=>'palette'],
         ['route'=>'dashboard.system-settings','label'=>'System Settings','icon'=>'settings'],
+        ['route'=>'dashboard.ai-draft.index','label'=>'AI Draft Studio','icon'=>'sparkles','roles'=>['super_admin']],
         ['route'=>'dashboard.pages','label'=>'Page Manager','icon'=>'file-text'],
         ['route'=>'dashboard.posts','label'=>'Post Manager','icon'=>'newspaper'],
         ['route'=>'dashboard.policies','label'=>'Policy Center','icon'=>'scale'],

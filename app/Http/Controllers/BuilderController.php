@@ -7,6 +7,7 @@ use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
 use App\Models\AuditEvent;
+use App\Models\AiDraftProvider;
 use App\Models\FeatureFlag;
 use App\Models\LicenseDefinition;
 use App\Models\MarketplaceCategory;
@@ -89,9 +90,11 @@ class BuilderController extends Controller
                 ->where('marketplace_listing_id', $record->id)->latest('id')->get()
             : collect();
 
+        $aiDraftReady = AiDraftProvider::configured()?->ready() ?? false;
+
         return view('builder.index', compact(
             'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'licenses', 'regularLicenses', 'extendedLicenses', 'assets',
-            'termsPublications', 'termsSha256', 'suggestedTerms', 'productVersions', 'publishedLegalPolicies'
+            'termsPublications', 'termsSha256', 'suggestedTerms', 'productVersions', 'publishedLegalPolicies', 'aiDraftReady'
         ));
     }
 
@@ -153,15 +156,6 @@ class BuilderController extends Controller
 
     private function allowedTypes(Request $request): array
     {
-        $allowed = [];
-        if (in_array($request->user()->role, ['freelancer', 'super_admin'], true)
-            && FeatureFlag::isEnabled('creator_submissions')) {
-            $allowed = MarketplaceListing::TYPES;
-        }
-        if (in_array($request->user()->role, ['customer', 'subscriber', 'super_admin'], true)) {
-            $allowed[] = 'job';
-        }
-
-        return $allowed;
+        return \App\Support\BuilderAccess::allowedTypes($request->user());
     }
 }
