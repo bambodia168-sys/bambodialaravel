@@ -122,6 +122,7 @@ app/Support/Mcp/BambodiaTools.php
 app/Support/Mcp/DraftMediaTools.php
 EOF
 cat > "$TMP/expected-delta" <<'EOF'
+.github/workflows/quality.yml
 app/Http/Controllers/Api/BambodiaMcpController.php
 app/Http/Controllers/DeveloperController.php
 app/Models/ApiToken.php
@@ -132,6 +133,7 @@ app/Support/Mcp/DraftMediaTools.php
 docs/integrations/bambodia-mcp.md
 docs/integrations/chatgpt-custom-plugin.md
 routes/web.php
+support/bambodia-mcp-aapanel-upgrade.sh
 tests/Feature/BambodiaMcpTest.php
 EOF
 git -C "$SOURCE" diff --name-only "$BASE" "$RELEASE" | LC_ALL=C sort > "$TMP/delta"
@@ -140,11 +142,15 @@ cmp -s "$TMP/delta" "$TMP/expected-delta" ||
 
 echo "2. Check every live file against its known GitHub baseline."
 cat "$TMP/modified" "$TMP/added" > "$TMP/scope"
-# Main can advance independently, but only if none of the runtime files in
-# this scoped release were modified by another feature. This is deliberately
-# stronger than checking only the branch point or the total main SHA.
-git -C "$SOURCE" diff --quiet "$BASE" "$MAIN" --   $(cat "$TMP/scope") ||
-  fail "GitHub main changed MCP runtime files since the branch point."
+# The public main branch may independently gain features not yet installed
+# in the live aaPanel runtime. Never equate GitHub main with deployed files.
+# The strict per-file check below accepts ONLY the exact pinned branch-point
+# blob or the exact MCP release blob, and rejects all other live revisions.
+# In particular, we must never overwrite newer live security-alert routes.
+if ! git -C "$SOURCE" diff --quiet "$BASE" "$MAIN" -- $(cat "$TMP/scope"); then
+  echo "NOTICE=Main has independently changed some MCP-adjacent files."
+  echo "LIVE_FILE_BASELINES=STRICT; unexpected live changes will BLOCK."
+fi
 : > "$TMP/existing"
 : > "$TMP/new"
 mkdir -p "$TMP/payload"
