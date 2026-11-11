@@ -21,6 +21,7 @@ final class AiDraftSettingsController extends Controller
         return view('dashboard.ai-draft-settings', [
             'provider' => $provider,
             'models' => AiDraftProvider::MODELS,
+            'canEnable' => (bool) ($provider?->verified_at?->greaterThan(now()->subDay()) && $provider?->api_key),
             'usage' => AiDraftRequest::query()->with('author:id,name')
                 ->latest('id')->paginate(10)->withQueryString(),
             'usageToday' => AiDraftRequest::query()
@@ -92,12 +93,13 @@ final class AiDraftSettingsController extends Controller
         $provider = AiDraftProvider::configured();
         abort_unless($provider, 404);
 
-        if ((bool) $data['is_enabled']) {
-            abort_unless(
-                $provider->verified_at?->greaterThan(now()->subDay())
-                && (bool) $provider->api_key,
-                422, 'Test the provider connection within the previous 24 hours before enabling.'
-            );
+        if ((bool) $data['is_enabled']
+            && (! $provider->verified_at?->greaterThan(now()->subDay()) || ! $provider->api_key)) {
+            // Keep the fail-closed activation rule, but return to the dashboard
+            // with actionable feedback instead of a raw HTTP 422 error page.
+            return redirect()->route('dashboard.ai-draft.index')->withErrors([
+                'provider' => 'Test the provider connection successfully within the previous 24 hours before enabling AI drafting.',
+            ]);
         }
 
         $provider->update([

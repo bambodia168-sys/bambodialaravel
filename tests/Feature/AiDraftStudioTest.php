@@ -117,7 +117,12 @@ final class AiDraftStudioTest extends TestCase
         $this->provider(['is_enabled' => false, 'verified_at' => null]);
 
         $this->patch('/dashboard/ai-draft-studio/status', ['is_enabled' => 1])
-            ->assertStatus(422);
+            ->assertRedirect(route('dashboard.ai-draft.index'))
+            ->assertSessionHasErrors('provider');
+        $this->assertFalse(AiDraftProvider::configured()->is_enabled);
+        $this->get('/dashboard/ai-draft-studio')->assertOk()
+            ->assertSee('Not tested')
+            ->assertSee('Test the connection successfully before enabling');
         Http::fake(['https://api.openai.com/*' => Http::response([
             'id' => 'resp_live_test', 'status' => 'completed', 'output' => [],
         ], 200)]);
@@ -134,6 +139,28 @@ final class AiDraftStudioTest extends TestCase
         $this->assertTrue(AiDraftProvider::configured()->is_enabled);
         $this->patch('/dashboard/ai-draft-studio/status', ['is_enabled' => 0])
             ->assertRedirect();
+        $this->assertFalse(AiDraftProvider::configured()->is_enabled);
+    }
+
+    public function test_excessive_connection_attempts_keep_the_limit_but_redirect_to_actionable_feedback(): void
+    {
+        $owner = $this->member('super_admin');
+        $this->actingAs($owner);
+        $this->provider(['is_enabled' => false, 'verified_at' => null]);
+
+        Http::fake(['https://api.openai.com/*' => Http::response([
+            'id' => 'resp_live_test', 'status' => 'completed', 'output' => [],
+        ], 200)]);
+
+        // The first two probes execute. The third must not call the provider,
+        // even when requests come from the same authenticated admin.
+        $this->post('/dashboard/ai-draft-studio/test')->assertRedirect();
+        $this->post('/dashboard/ai-draft-studio/test')->assertRedirect();
+        $this->post('/dashboard/ai-draft-studio/test')
+            ->assertRedirect(route('dashboard.ai-draft.index'))
+            ->assertSessionHasErrors('provider');
+
+        Http::assertSentCount(2);
         $this->assertFalse(AiDraftProvider::configured()->is_enabled);
     }
 
