@@ -73,7 +73,7 @@ final class BuilderTermsReadableTest extends TestCase
                 ->assertSee('data-builder-terms-accept', false)
                 ->assertSee('name="terms_sha256"', false);
 
-            preg_match('~<dialog id="studio-terms-popup"\\b.*?</dialog>~s', $response->getContent(), $matches);
+            preg_match('~<dialog\s+id="studio-terms-popup"[^>]*>.*?</dialog>~s', $response->getContent(), $matches);
             $modal = $matches[0] ?? '';
             $this->assertNotSame('', $modal);
             // The supplemental terms editor may correctly contain escaped
