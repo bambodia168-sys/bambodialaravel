@@ -163,6 +163,10 @@ Route::middleware('auth')->group(function (): void {
     Route::middleware('role:super_admin')->group(function (): void {
         Route::get('/developer', [DeveloperController::class, 'index'])->name('developer.index');
         Route::get('/developer/docs', [DeveloperController::class, 'documentation'])->name('developer.docs');
+        Route::get('/developer/oauth-connections', [\App\Http\Controllers\Developer\OAuthConnectionController::class, 'index'])
+            ->name('developer.oauth.index');
+        Route::delete('/developer/oauth-connections/{token}', [\App\Http\Controllers\Developer\OAuthConnectionController::class, 'destroy'])
+            ->name('developer.oauth.revoke')->middleware('throttle:8,1');
         Route::post('/developer/tokens', [DeveloperController::class, 'store'])->name('developer.store')->middleware('throttle:5,1');
         Route::delete('/developer/tokens/{token}', [DeveloperController::class, 'revoke'])->name('developer.revoke')->middleware('throttle:10,1');
         Route::get('/security-dashboard', [SecurityDashboardController::class, 'index'])->name('security.index');
