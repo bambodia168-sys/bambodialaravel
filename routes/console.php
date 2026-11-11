@@ -82,3 +82,30 @@ Artisan::command('marketplace:readiness-audit {--json : Machine-readable report}
 
     return $this->option('strict') && $report['status'] !== 'pass' ? 2 : 0;
 })->purpose('Report publicly visible preview titles and Knowledge Base readiness; never modify content');
+
+
+/**
+ * Read-only owner/dependency assessment for published preview-marked inventory.
+ * This command never withdraws, updates, archives or deletes marketplace data.
+ */
+Artisan::command('marketplace:preview-review {--json : Print a structured review report} {--strict : Return 2 when any preview item requires manual review}', function (): int {
+    $report = \App\Support\PreviewContentReview::inspect();
+
+    if ($this->option('json')) {
+        $this->line(json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+    } else {
+        $this->info('Marketplace preview review: '.$report['status']);
+        foreach ($report['counts'] as $name => $count) {
+            $this->line($name.'='.$count);
+        }
+        foreach ($report['records'] as $record) {
+            $this->warn($record['kind'].' '.$record['public_id'].' '.$record['review_status']);
+        }
+        if ($report['sample_truncated']) {
+            $this->warn('Only the first 50 records were included; totals cover all public preview records.');
+        }
+        $this->line('No listing, job, customer, file or publication record was changed.');
+    }
+
+    return $this->option('strict') && $report['status'] !== 'no_preview_markers' ? 2 : 0;
+})->purpose('Read-only review of public preview item ownership, media and customer activity');
