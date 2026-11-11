@@ -18,7 +18,7 @@ class ProductManagerController extends Controller
     public function index(Request $request): View
     {
         $status = (string) $request->query('status', 'all');
-        abort_unless(in_array($status, ['all', 'draft', 'pending', 'published', 'rejected'], true), 404);
+        abort_unless(in_array($status, ['all', 'draft', 'pending', 'published', 'rejected', 'withdrawn'], true), 404);
         $search = mb_substr(trim((string) $request->query('search', '')), 0, 120);
 
         $products = MarketplaceListing::query()
