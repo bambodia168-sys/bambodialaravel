@@ -12,7 +12,6 @@ esac
 
 die() { printf 'BLOCKED: %s\n' "$*" >&2; exit 1; }
 info() { printf '%s\n' "$*"; }
-[[ "$(id -u)" == 0 ]] || die "This isolated-host helper requires root."
 : "${BAMBODIA_QA_APP:?Set BAMBODIA_QA_APP}"
 : "${BAMBODIA_QA_DB:?Set BAMBODIA_QA_DB}"
 : "${BAMBODIA_QA_MYSQL_CNF:?Set BAMBODIA_QA_MYSQL_CNF}"
@@ -28,6 +27,7 @@ QA_APP="$(realpath -e -- "$BAMBODIA_QA_APP")"
   die "Use a separate database named bambodia_oauthqa_*."
 [[ "$BAMBODIA_QA_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] ||
   die "Supply the exact 40-character PR commit."
+[[ "$(id -u)" == 0 ]] || die "This isolated-host helper requires root."
 [[ -f "$QA_APP/artisan" && -f "$QA_APP/vendor/autoload.php" && -f "$QA_APP/.env" ]] ||
   die "Laravel, dependencies or dedicated QA .env are missing."
 [[ ! -L "$QA_APP/.env" && ! -e "$QA_APP/bootstrap/cache/config.php" ]] ||
