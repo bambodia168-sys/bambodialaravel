@@ -109,6 +109,41 @@ final class BambodiaMcpTest extends TestCase
         $this->assertDatabaseHas('audit_events', ['event'=>'mcp.draft.deleted']);
     }
 
+    public function test_mcp_update_and_delete_reject_another_administrators_draft(): void
+    {
+        $owner = $this->admin();
+        $attacker = $this->admin();
+        $owned = MarketplaceListing::query()->create([
+            'user_id' => $owner->id,
+            'type' => 'service',
+            'title' => 'Private owner-only draft',
+            'description' => str_repeat('Private scope is enforced here. ', 3),
+            'status' => 'draft',
+        ]);
+
+        [, $secret] = ApiToken::issue($attacker, 'Other admin MCP write', ['mcp.read','mcp.write'], 1);
+        $this->withToken($secret);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name' => 'bambodia_update_draft',
+            'arguments' => ['entity' => 'service', 'id' => $owned->id,
+                'fields' => ['title' => 'Unauthorized edit']],
+        ]))->assertJsonPath('result.isError', true);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name' => 'bambodia_delete_draft',
+            'arguments' => ['entity' => 'service', 'id' => $owned->id,
+                'confirm_title' => $owned->title],
+        ]))->assertJsonPath('result.isError', true);
+
+        $this->assertDatabaseHas('marketplace_listings', [
+            'id' => $owned->id,
+            'user_id' => $owner->id,
+            'title' => 'Private owner-only draft',
+            'status' => 'draft',
+        ]);
+    }
+
     public function test_mcp_rejects_publishing_and_deleting_published_content(): void
     {
         $admin = $this->admin();

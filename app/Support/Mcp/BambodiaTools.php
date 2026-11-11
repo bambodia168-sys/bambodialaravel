@@ -122,8 +122,8 @@ final class BambodiaTools
         ])->validate();
         $entity = $values['entity'];
         $fields = $this->validateDraft($entity, $values['fields'], true);
-        $record = DB::transaction(function () use ($entity, $fields, $values): Model {
-            $record = $this->query($entity)->lockForUpdate()->findOrFail($values['id']);
+        $record = DB::transaction(function () use ($entity, $fields, $values, $actor): Model {
+            $record = $this->ownedDraftQuery($entity, $actor)->lockForUpdate()->findOrFail($values['id']);
             if ($record->status !== 'draft') {
                 throw ValidationException::withMessages(['status' => 'Only drafts can be edited through MCP. Use the existing review or publication workflow.']);
             }
@@ -142,8 +142,8 @@ final class BambodiaTools
             'confirm_title' => ['required', 'string', 'max:180'],
         ])->validate();
         $entity = $values['entity'];
-        DB::transaction(function () use ($values, $entity): void {
-            $record = $this->query($entity)->lockForUpdate()->findOrFail($values['id']);
+        DB::transaction(function () use ($values, $entity, $actor): void {
+            $record = $this->ownedDraftQuery($entity, $actor)->lockForUpdate()->findOrFail($values['id']);
             if ($record->status !== 'draft' || ! hash_equals((string) $record->title, $values['confirm_title'])) {
                 throw ValidationException::withMessages(['confirm_title' => 'Deletion requires draft status and an exact title match.']);
             }
@@ -205,6 +205,25 @@ final class BambodiaTools
             $data['body_format'] = 'html';
         }
         return $data;
+    }
+
+    /**
+     * Marketplace drafts are private to their authors, even when an MCP
+     * administrator can read global catalog records. Policies are site-wide
+     * legal artifacts with no owner column and remain super-admin-only
+     * operations under the existing audit/approval constraints.
+     */
+    private function ownedDraftQuery(string $entity, User $actor): Builder
+    {
+        $query = $this->query($entity);
+
+        return match ($entity) {
+            'product', 'project', 'service', 'freelance' => $query->where('user_id', $actor->id),
+            'job' => $query->where('client_id', $actor->id),
+            'post', 'page' => $query->where('author_id', $actor->id),
+            'policy' => $query,
+            default => throw ValidationException::withMessages(['entity' => 'Unknown draft entity.']),
+        };
     }
 
     private function query(string $entity): Builder
