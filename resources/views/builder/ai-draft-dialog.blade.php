@@ -1,10 +1,14 @@
+<link rel="stylesheet" href="{{ asset('css/ai-draft-studio.css') }}?v=2">
 <dialog class="studio-upload-dialog" id="studio-ai-draft" data-ai-draft-dialog
   data-generate-url="{{ route('builder.ai.generate') }}"
   data-review-url-template="{{ route('builder.ai.reviewed', ['draft'=>'__ID__']) }}"
   data-content-type="{{ $type }}"
   data-record-reference="{{ $record?->public_id ?? '' }}">
-  <div class="studio-card-heading">
-    <div><h3><x-icon name="sparkles" size="20"/> AI Draft Studio</h3><p class="hint">Assisted writing for your {{ $types[$type]['label'] }}. You remain responsible for accuracy and rights.</p></div>
+  <div class="studio-card-heading ai-draft-heading">
+    <div class="ai-draft-heading-copy">
+      <h3><x-icon name="sparkles" size="20"/> AI Draft Studio</h3>
+      <p class="hint">Assisted writing for your {{ $types[$type]['label'] }}. You remain responsible for accuracy and rights.</p>
+    </div>
     <button type="button" class="studio-editor-icon" data-modal-close title="Close" aria-label="Close AI Draft Studio"><x-icon name="x" size="19"/></button>
   </div>
   <form data-ai-generate-form>
@@ -35,8 +39,8 @@
         </select>
       </div>
     </div>
-    <label class="studio-field" style="display:flex;gap:10px;align-items:flex-start">
-      <input type="checkbox" name="consent" value="1" required style="margin-top:5px">
+    <label class="ai-draft-consent" for="ai-draft-consent">
+      <input id="ai-draft-consent" type="checkbox" name="consent" value="1" required>
       <span>I understand my brief will be sent to the configured AI provider to generate suggestions. I will review all claims, rights and content before saving.</span>
     </label>
     <div class="studio-submit-actions">
@@ -53,6 +57,7 @@
     </div>
     <div class="studio-field">
       <label for="ai-review-description">Suggested description</label>
+      <small class="hint">Paragraphs and feature bullets are preserved when applied to the Builder editor. Review and edit all content.</small>
       <textarea id="ai-review-description" data-ai-description rows="8" minlength="{{ $isJob ? 70 : 40 }}" maxlength="10000"></textarea>
     </div>
     <p class="hint">AI text may be inaccurate. Check every claim. Applying inserts your edited suggestion into this Builder form only; it does not save or publish anything.</p>
