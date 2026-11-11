@@ -32,6 +32,12 @@ QA_APP="$(realpath -e -- "$BAMBODIA_QA_APP")"
   die "Laravel, dependencies or dedicated QA .env are missing."
 [[ ! -L "$QA_APP/.env" && ! -e "$QA_APP/bootstrap/cache/config.php" ]] ||
   die "Refusing symlinked .env or cached config."
+for folder in storage bootstrap database vendor support; do
+  [[ -d "$QA_APP/$folder" && ! -L "$QA_APP/$folder" ]] ||
+    die "Missing or symlinked isolated application folder: $folder"
+done
+[[ -z "$(find "$QA_APP/storage" -type l -print -quit)" ]] ||
+  die "QA storage contains symlinks; private keys/media could escape isolation."
 [[ "$(git -C "$QA_APP" rev-parse HEAD)" == "$BAMBODIA_QA_EXPECTED_SHA" ]] ||
   die "QA checkout does not match the pinned PR revision."
 
@@ -64,13 +70,15 @@ env_value() {
 [[ "$(env_value MAIL_MAILER)" == log ]] || die "Use MAIL_MAILER=log."
 [[ "$(env_value QUEUE_CONNECTION)" == database ]] || die "Use a stopped database queue."
 [[ "$(env_value SESSION_DRIVER)" == file ]] || die "Use private file-based QA sessions."
-[[ -z "$(grep -E '^(DB_URL|DATABASE_URL)=' "$QA_APP/.env" || true)" ]] ||
-  die "Remove DB_URL/DATABASE_URL overrides."
+[[ -z "$(grep -E '^(DB_URL|DATABASE_URL|DB_SOCKET)=' "$QA_APP/.env" || true)" ]] ||
+  die "Remove DB_URL/DATABASE_URL/DB_SOCKET overrides."
 QA_URL="$(env_value APP_URL)"
 [[ "$QA_URL" =~ ^https://[a-zA-Z0-9.-]+(:[0-9]+)?$ ]] ||
   die "APP_URL must be a separate HTTPS QA origin."
-[[ "$QA_URL" != https://bambodia.com && "$QA_URL" != https://www.bambodia.com ]] ||
-  die "APP_URL cannot be the production domain."
+QA_HOST="$(printf '%s' "$QA_URL" | sed -E 's@^https://([^:/]+).*@\1@' | tr '[:upper:]' '[:lower:]')"
+QA_HOST="${QA_HOST%.}"
+[[ "$QA_HOST" != bambodia.com && "$QA_HOST" != www.bambodia.com ]] ||
+  die "APP_URL cannot identify the production domain."
 
 QA_USER="${BAMBODIA_QA_USER:-www}"
 [[ "$QA_USER" == www ]] || die "Only the dedicated www PHP runtime is supported."
@@ -109,12 +117,12 @@ WHO="$(mysql_qa "$BAMBODIA_QA_DB" -e 'SELECT CURRENT_USER()')"
 [[ "$WHO" == bambodiaqa_* && "$WHO" != *root* ]] ||
   die "MySQL credentials do not resolve to a QA-only user."
 GRANTS="$(mysql_qa "$BAMBODIA_QA_DB" -e 'SHOW GRANTS FOR CURRENT_USER()')"
-# A normal restricted MySQL user may have "GRANT USAGE ON *.*".
-# Reject *other* global privileges and any GRANT OPTION.
+# Ordinary restricted accounts may have the harmless "GRANT USAGE ON *.*".
+# Any other global grant and any WITH GRANT OPTION are disallowed.
 DANGEROUS_GRANTS="$(printf '%s\n' "$GRANTS" |
-  grep -E 'ON \\*\\.\\*|WITH GRANT OPTION' |
-  grep -v '^GRANT USAGE ON \\*\\.\\* ' || true)"
-[[ -z "$DANGEROUS_GRANTS" ]] ||
+  grep -F 'ON *.*' |
+  grep -v -F 'GRANT USAGE ON *.* ' || true)"
+[[ -z "$DANGEROUS_GRANTS" && "$GRANTS" != *'WITH GRANT OPTION'* ]] ||
   die "QA database account has excessive global privileges."
 info "QA_APP=$QA_APP"
 info "QA_DB=$BAMBODIA_QA_DB"
