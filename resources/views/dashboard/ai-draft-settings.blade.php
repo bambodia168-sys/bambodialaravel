@@ -36,7 +36,7 @@
     <div><strong>Provider:</strong> {{ $provider?->provider === 'openai' ? 'OpenAI Responses API' : 'Not connected' }}</div>
     <div><strong>Model:</strong> {{ $models[$provider?->model] ?? 'Not selected' }}</div>
     <div><strong>Latest successful test:</strong>
-      {{ $provider?->verified_at?->format('d M Y H:i').' UTC' ?? 'Not tested' }}
+      {{ $provider?->verified_at ? $provider->verified_at->format('d M Y H:i').' UTC' : 'Not tested' }}
     </div>
     <div><strong>Per-account daily limit:</strong> {{ $provider?->daily_limit ?? 5 }} requests</div>
     <div><strong>Platform daily limit:</strong> {{ $provider?->global_daily_limit ?? 100 }} requests</div>
@@ -50,7 +50,8 @@
         <form method="post" action="{{ route('dashboard.ai-draft.status') }}">
           @csrf @method('PATCH')
           <input type="hidden" name="is_enabled" value="{{ $provider?->is_enabled ? '0' : '1' }}">
-          <button class="btn primary" type="submit"><x-icon name="shield-check" size="16"/>
+          <button class="btn primary" type="submit" @disabled(! $provider?->is_enabled && ! $canEnable)
+                  title="{{ ! $provider?->is_enabled && ! $canEnable ? 'Test the connection successfully before enabling' : 'Update AI drafting status' }}"><x-icon name="shield-check" size="16"/>
             {{ $provider?->is_enabled ? 'Disable AI drafting' : 'Enable AI drafting' }}</button>
         </form>
         <button class="btn subtle" type="button" data-modal-open="ai-provider-disconnect">
@@ -58,6 +59,9 @@
         </button>
       @endif
     </div>
+    @if($provider?->api_key && ! $provider?->is_enabled && ! $canEnable)
+      <p class="hint" role="status">AI drafting remains disabled until a real connection test succeeds. Connection tests allow two attempts per minute. If a test fails, check your key, model access, API billing and outbound HTTPS.</p>
+    @endif
   </div>
 </section>
 
