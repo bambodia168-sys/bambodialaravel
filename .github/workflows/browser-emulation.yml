@@ -72,6 +72,7 @@ jobs:
           node tests/browser/badge-tooltip-viewport.mjs
           node tests/browser/post-builder.mjs
           node tests/browser/ai-draft-dialog-format.mjs
+          node tests/browser/builder-terms-readable.mjs
       - name: Keep screenshots for acceptance review
         if: always()
         uses: actions/upload-artifact@v4
