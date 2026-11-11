@@ -4,7 +4,6 @@ set -Eeuo pipefail
 umask 077
 
 [[ $# -eq 1 && "$1" == "--check" ]] || { echo 'Usage: script --check' >&2; exit 64; }
-APP="/var/lib/bambia-oauth-qa-acceptance"
 # Use only this approved, exact OAuth QA checkout path.
 APP="/var/lib/bambodia-oauth-qa-acceptance"
 DB="bambodia_oauthqa_acceptance"
