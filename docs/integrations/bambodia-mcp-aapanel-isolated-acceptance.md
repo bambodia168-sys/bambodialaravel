@@ -15,7 +15,20 @@ Draft PR #15 only. Do not merge, generate Passport keys on, or migrate Bambodia 
 
 ## Prepare and run on the isolated aaPanel host
 
-Use the standard restricted GitHub checkout + Composer procedure to provision the exact approved PR source into a new isolated QA directory. Supply `vendor/`, a new `.env`, and a pre-OAuth sanitized QA DB. Create a QA-only root-readable MySQL options file:
+First, perform the **source-only** bootstrap from the exact reviewed PR commit. The bootstrap requires `gh` authentication, a root-owned `/var/lib`, a completely absent target path and a 40-character approved PR HEAD. It has a read-only preflight and refuses the production webroot. Download the source bootstrap from the pinned GitHub commit, verify its Git blob SHA against the reviewed release record, and then execute these stages in order:
+
+~~~bash
+export BAMBODIA_QA_APP=/var/lib/bambodia-oauth-qa-acceptance
+export BAMBODIA_QA_EXPECTED_SHA=REPLACE_WITH_REVIEWED_PR_HEAD
+# Once the exact bootstrap file is verified:
+bash /root/bambodia-oauth-qa-source-bootstrap.sh --check
+# Only when SOURCE_CHECK=PASS:
+bash /root/bambodia-oauth-qa-source-bootstrap.sh --prepare-source
+~~~
+
+The `--prepare-source` stage creates **only a new checked-out Git tree** and does not install Composer packages, copy `.env`, access MySQL, run migrations, generate Passport keys, connect to R2, or start a worker. If it fails, do not auto-delete or overwrite the partial tree.
+
+**Separate follow-on provisioning (not performed by the source bootstrap):** install Composer dependencies without executing application or plugin scripts until the QA `.env` and schema have been reviewed; prepare new QA-only credentials and a sanitized pre-OAuth schema, then run the existing isolated rehearsal `--check`. Never copy production `.env`, secrets, or private media. The rehearsal requires `vendor/`, a QA `.env` and a dedicated pre-OAuth schema. Create a QA-only root-readable MySQL options file:
 
 ~~~ini
 [client]
