@@ -193,7 +193,45 @@ final class BambodiaMcpOAuthTest extends TestCase
             ->assertOk()
             ->assertJsonCount(4, 'result.tools');
 
-        $this->assertNotEmpty($exchange->json('refresh_token'));
+        $refreshToken = $exchange->json('refresh_token');
+        $this->assertNotEmpty($refreshToken);
+
+        $refreshed = $this->post('/oauth/token', [
+            'grant_type' => 'refresh_token',
+            'client_id' => $clientId,
+            'refresh_token' => $refreshToken,
+            'scope' => 'mcp:use',
+            'resource' => url('/mcp'),
+        ])->assertOk();
+
+        $nextAccessToken = $refreshed->json('access_token');
+        $nextRefreshToken = $refreshed->json('refresh_token');
+        $this->assertNotEmpty($nextAccessToken);
+        $this->assertNotEmpty($nextRefreshToken);
+
+        $this->withToken($nextAccessToken)
+            ->postJson('/mcp', $this->rpc('tools/list'))
+            ->assertOk()->assertJsonCount(4, 'result.tools');
+
+        // Decode only the test-generated JWT identifier (not a verification
+        // substitute). The real MCP middleware verifies the signed token.
+        $parts = explode('.', $nextAccessToken);
+        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true, 512, JSON_THROW_ON_ERROR);
+        $tokenId = $payload['jti'];
+
+        $this->actingAs($actor)->delete('/developer/oauth-connections/'.$tokenId, [
+            'password' => 'TestPassword123!',
+        ])->assertRedirect();
+
+        $this->withToken($nextAccessToken)
+            ->postJson('/mcp', $this->rpc('tools/list'))
+            ->assertUnauthorized();
+
+        $this->post('/oauth/token', [
+            'grant_type' => 'refresh_token',
+            'client_id' => $clientId,
+            'refresh_token' => $nextRefreshToken,
+        ])->assertStatus(400);
     }
 
     public function test_passport_scopes_allow_only_read_discovery_without_explicit_write_scope(): void
