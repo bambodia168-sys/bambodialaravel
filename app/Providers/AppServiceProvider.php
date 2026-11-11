@@ -19,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Passport owns authorization codes, refresh-token rotation and revocation.
         // Do not move this configuration below the install-time database checks.
+        Passport::useAccessTokenEntity(\App\Support\Mcp\BambodiaPassportAccessToken::class);
         Passport::tokensCan([
             'mcp:use' => 'Read Bambodia MCP resources and operational reports',
             'mcp.write' => 'Create and edit Bambodia unpublished drafts and approved settings',

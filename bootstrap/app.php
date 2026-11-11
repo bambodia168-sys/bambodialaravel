@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'capability' => EnsureCapability::class,
         ]);
         $middleware->web(append: [SetLocale::class, EnsureActiveAccount::class]);
+        $middleware->append(\App\Http\Middleware\RequireMcpOAuthResource::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Credentials are never echoed into validation redirects or flash data.

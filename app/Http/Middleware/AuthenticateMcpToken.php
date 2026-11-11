@@ -45,6 +45,20 @@ final class AuthenticateMcpToken
             if (! $owner instanceof User || ! $owner->tokenCan('mcp:use')) {
                 return $reject(401, 'Invalid or insufficient OAuth bearer token.');
             }
+
+            // Passport has already verified the signed JWT and checked
+            // revocation. Now require the same signed token to name /mcp as its
+            // SECOND audience (after Passport's client ID).
+            $verified = $owner->token();
+            if (! $verified instanceof \Laravel\Passport\AccessToken
+                || ! \App\Support\Mcp\McpResource::hasAudience(
+                    $secret,
+                    (string) ($verified->oauth_access_token_id ?? ''),
+                    (string) ($verified->oauth_client_id ?? '')
+                )) {
+                return $reject(401, 'OAuth token was not issued for this MCP resource.');
+            }
+
             $grant = new McpAccessGrant($owner->tokenCan('mcp.write'));
         }
 
