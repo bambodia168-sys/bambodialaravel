@@ -66,7 +66,7 @@ final class AiDraftStudioTest extends TestCase
                     'type' => 'output_text',
                     'text' => json_encode([
                         'title' => 'Professional Laravel Application Audit',
-                        'description' => str_repeat('I deliver an independent review of a Laravel application with a clear written report. ', 3),
+                        'description' => "I deliver a detailed Laravel application review.\r\n\r\nKey features:\r\n- Security review and structured recommendations\r\n- Written report with verified observations\r\n\r\nDesigned for application teams seeking clear technical feedback.",
                     ]),
                 ]],
             ]],
@@ -172,7 +172,8 @@ final class AiDraftStudioTest extends TestCase
         $response = $this->actingAs($author)->postJson('/builder/ai-drafts', $this->validRequest())
             ->assertOk()
             ->assertJsonPath('title', 'Professional Laravel Application Audit')
-            ->assertJsonPath('remaining', 4);
+            ->assertJsonPath('remaining', 4)
+            ->assertJsonPath('description', "I deliver a detailed Laravel application review.\n\nKey features:\n- Security review and structured recommendations\n- Written report with verified observations\n\nDesigned for application teams seeking clear technical feedback.");
 
         $id = (int) $response->json('id');
         $this->assertDatabaseHas('ai_draft_requests', [
@@ -190,6 +191,8 @@ final class AiDraftStudioTest extends TestCase
             && $request['store'] === false
             && $request['text']['format']['type'] === 'json_schema'
             && $request['model'] === 'gpt-4.1-mini'
+            && str_contains($request['instructions'], 'feature bullets')
+            && str_contains($request['input'], 'newlines') === false
         );
 
         $other = $this->member('freelancer');
@@ -297,7 +300,10 @@ final class AiDraftStudioTest extends TestCase
         $this->provider();
         $this->get('/builder?type=service')->assertOk()
             ->assertSee('AI Draft')->assertSee('data-generate-url', false)
-            ->assertSee('data-ai-apply', false);
+            ->assertSee('data-ai-apply', false)
+            ->assertSee('ai-draft-consent', false)
+            ->assertSee('ai-draft-studio.css', false)
+            ->assertSee('ai-draft-studio.js?v=2', false);
         $this->get('/')->assertOk()->assertDontSee('data-ai-draft-dialog', false);
     }
 
