@@ -63,13 +63,19 @@ final class BambodiaMcpOAuthTest extends TestCase
 
     public function test_dynamic_client_registration_accepts_chatgpt_only(): void
     {
-        $this->postJson('/oauth/register', [
+        $registration = $this->postJson('/oauth/register', [
             'client_name' => 'Bambodia Manager QA',
             'redirect_uris' => ['https://chatgpt.com/connector/oauth/qa-callback'],
         ])->assertCreated()
             ->assertJsonPath('token_endpoint_auth_method', 'none')
             ->assertJsonPath('scope', 'mcp:use');
         $this->assertDatabaseCount('oauth_clients', 1);
+
+        $client = Passport::client()->newQuery()->findOrFail($registration->json('client_id'));
+        $this->assertContains('mcp:use', $client->scopes);
+        $this->assertContains('mcp.write', $client->scopes);
+        // The default advertised scope remains read-only; writes need extra consent.
+        $this->assertNotSame('mcp:use mcp.write', $registration->json('scope'));
 
         $this->postJson('/oauth/register', [
             'client_name' => 'Untrusted Integration',
@@ -84,7 +90,9 @@ final class BambodiaMcpOAuthTest extends TestCase
         $this->withToken($secret)
             ->postJson('/mcp', $this->rpc('tools/list'))
             ->assertOk()
-            ->assertJsonCount(4, 'result.tools');
+            ->assertJsonCount(4, 'result.tools')
+            ->assertJsonPath('result.tools.0._meta.securitySchemes.0.type', 'oauth2')
+            ->assertJsonPath('result.tools.0._meta.securitySchemes.0.scopes.0', 'mcp:use');
         $this->assertNotNull($token->fresh()->last_used_at);
     }
 
