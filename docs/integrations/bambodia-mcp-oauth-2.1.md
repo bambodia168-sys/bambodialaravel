@@ -44,9 +44,9 @@ Never run OAuth migrations, generate Passport keys, or overwrite production PHP 
 4. **Revocation** — Test a real authorization-code exchange, access token, refresh, rotation/revocation, password-confirmed revocation, expiry, downgrade and removed administrator.
 5. **MCP read** — Test real authenticated `tools/call` for `bambodia_overview`, `bambodia_list`, `bambodia_get`, `bambodia_analytics` against scoped isolated records.
 6. **MCP write** — Test all six write tools exclusively against disposable drafts; deny cross-owner edits, publishing, unreviewed media and unconfirmed active SEO/social changes.
-7. **Real aaPanel staging** — Backup files/MySQL, preserve the installed `/www/wwwroot/bambodia-staging-qa` runtime and security-alert modules, generate Passport private keys using `php artisan passport:keys` with tight OS permissions, migrate only on an authorized isolated clone, audit route registration and DCR rate limits.
+7. **Real aaPanel staging** — The guarded helper `support/mcp-oauth-isolated-aapanel-rehearsal.sh` and operator guide `docs/integrations/bambodia-mcp-aapanel-isolated-acceptance.md` are now committed on the development branch. The operator must provision a separate `/var/lib/bambodia-oauth-qa-*` checkout and restricted `bambodia_oauthqa_*` MySQL database, then run `--check`, `--rehearse` and `--restore-check` against that isolated environment. **None of these commands has yet been executed on aaPanel.** Do not change the installed `/www/wwwroot/bambodia-staging-qa` runtime, live production, Security Alerts, or customer records. Independent DCR rate-limit and real-browser acceptance are still required.
 8. **ChatGPT workspace** — Test an actual OAuth consent/PKCE/login/refresh session, tool discovery and at least one authorized read call inside the user's eligible ChatGPT workspace. Availability/permission is plan dependent; successful raw curl requests alone do not prove plugin readiness.
-9. **Production** — Release only after explicit acceptance and protected deployment helper with rollback. PR #15 remains draft until then.
+9. **Production** — Release only after explicit acceptance, independent restore evidence and protected deployment helper with rollback. PR #15 remains draft until then.
 
 ## Rollback safety
 
