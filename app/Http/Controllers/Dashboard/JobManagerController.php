@@ -17,7 +17,7 @@ class JobManagerController extends Controller
     public function index(Request $request): View
     {
         $status=(string)$request->query('status','pending');
-        abort_unless(in_array($status,['all','pending','published','rejected','closed'],true),404);
+        abort_unless(in_array($status,['all','pending','published','rejected','closed','withdrawn'],true),404);
         $jobs=MarketplaceJob::query()->with('client:id,name,public_id')
             ->when($status !== 'all',fn($q)=>$q->where('status',$status))
             ->latest()->paginate(10)->withQueryString();
