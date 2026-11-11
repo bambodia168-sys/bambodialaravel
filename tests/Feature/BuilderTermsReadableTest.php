@@ -71,13 +71,15 @@ final class BuilderTermsReadableTest extends TestCase
                 ->assertSee('<h1>Seller Responsibilities</h1>', false)
                 ->assertSee('<li>Original assets</li>', false)
                 ->assertSee('data-builder-terms-accept', false)
-                ->assertSee('name="terms_sha256"', false)
-                ->assertDontSee('&lt;h1&gt;Verified Marketplace Terms', false)
-                ->assertDontSee('&lt;h2&gt;Important responsibilities', false);
+                ->assertSee('name="terms_sha256"', false);
 
             preg_match('~<dialog id="studio-terms-popup"\\b.*?</dialog>~s', $response->getContent(), $matches);
             $modal = $matches[0] ?? '';
             $this->assertNotSame('', $modal);
+            // The supplemental terms editor may correctly contain escaped
+            // HTML. The acceptance dialog itself must not display raw tags.
+            $this->assertStringNotContainsString('&lt;h1&gt;Verified Marketplace Terms', $modal);
+            $this->assertStringNotContainsString('&lt;h2&gt;Important responsibilities', $modal);
             $this->assertStringNotContainsString('window.unsafeCall', $modal);
             $this->assertStringNotContainsString('<script>', $modal);
             $this->assertStringNotContainsString('<iframe', $modal);
