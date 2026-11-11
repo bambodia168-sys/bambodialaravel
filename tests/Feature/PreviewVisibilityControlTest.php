@@ -259,4 +259,45 @@ final class PreviewVisibilityControlTest extends TestCase
         $this->assertSame('published', $item->fresh()->status);
         $this->assertDatabaseCount('preview_visibility_actions', 0);
     }
+    public function test_visibility_action_history_cannot_be_edited_or_deleted_through_models(): void
+    {
+        $super = $this->user('super_admin');
+        $owner = $this->user('freelancer');
+        $listing = $this->listing($owner);
+        $entry = PreviewVisibilityAction::query()->create([
+            'subject_kind' => 'listing',
+            'subject_id' => $listing->id,
+            'subject_public_id' => $listing->public_id,
+            'actor_id' => $super->id,
+            'action' => 'withdraw',
+            'from_status' => 'published',
+            'to_status' => 'withdrawn',
+            'review_fingerprint' => str_repeat('a', 64),
+            'owner_confirmation_reference' => 'QA-OWNER-APPROVED-2026',
+            'backup_reference' => 'QA-BACKUP-MANIFEST-2026',
+            'reason' => 'An independent test decision requiring immutable records.',
+        ]);
+
+        try {
+            $entry->update(['reason' => 'Tampered audit history.']);
+            $this->fail('Audit history update should be rejected.');
+        } catch (\LogicException $e) {
+            $this->assertSame('Preview visibility history is immutable.', $e->getMessage());
+        }
+
+        try {
+            $entry->fresh()->delete();
+            $this->fail('Audit history deletion should be rejected.');
+        } catch (\LogicException $e) {
+            $this->assertSame('Preview visibility history cannot be deleted.', $e->getMessage());
+        }
+
+        $this->assertDatabaseHas('preview_visibility_actions', [
+            'id' => $entry->id,
+            'reason' => 'An independent test decision requiring immutable records.',
+            'actor_id' => $super->id,
+        ]);
+        $this->assertDatabaseCount('preview_visibility_actions', 1);
+    }
+
 }
