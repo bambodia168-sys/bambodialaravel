@@ -119,6 +119,7 @@ jobs:
           bash -n support/ai-draft-format-aapanel-upgrade.sh
           bash -n support/builder-terms-readable-aapanel-upgrade.sh
           bash -n support/marketplace-readiness-audit-aapanel-upgrade.sh
+          bash -n support/preview-content-review-aapanel-upgrade.sh
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
