@@ -112,6 +112,16 @@ jobs:
           bash -n support/media-video-r2-aapanel-upgrade.sh
           bash -n support/media-video-controls-aapanel-upgrade.sh
           bash -n support/security-alerts-aapanel-upgrade.sh
+          # OAuth rehearsal only: validate syntax and confirm a forbidden root
+          # is refused before any application or database operation.
+          bash -n support/mcp-oauth-isolated-aapanel-rehearsal.sh
+          if BAMBODIA_QA_APP=/www/wwwroot/bambodia.com \
+             BAMBODIA_QA_DB=bambodia_oauthqa_ci \
+             BAMBODIA_QA_MYSQL_CNF=/root/not-present.cnf \
+             BAMBODIA_QA_EXPECTED_SHA=0000000000000000000000000000000000000000 \
+             bash support/mcp-oauth-isolated-aapanel-rehearsal.sh --check; then
+            echo 'Unsafe OAuth rehearsal preflight accepted a production root'; exit 1
+          fi
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
