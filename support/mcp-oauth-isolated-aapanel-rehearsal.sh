@@ -40,6 +40,8 @@ done
   die "QA storage contains symlinks; private keys/media could escape isolation."
 [[ "$(git -C "$QA_APP" rev-parse HEAD)" == "$BAMBODIA_QA_EXPECTED_SHA" ]] ||
   die "QA checkout does not match the pinned PR revision."
+[[ -z "$(git -C "$QA_APP" status --porcelain --untracked-files=no)" ]] ||
+  die "QA tracked source has local modifications; use a clean reviewed checkout."
 
 QA_CNF="$BAMBODIA_QA_MYSQL_CNF"
 [[ "$QA_CNF" == /root/* && -f "$QA_CNF" && ! -L "$QA_CNF" ]] ||
@@ -70,6 +72,14 @@ env_value() {
 [[ "$(env_value MAIL_MAILER)" == log ]] || die "Use MAIL_MAILER=log."
 [[ "$(env_value QUEUE_CONNECTION)" == database ]] || die "Use a stopped database queue."
 [[ "$(env_value SESSION_DRIVER)" == file ]] || die "Use private file-based QA sessions."
+[[ "$(env_value CACHE_STORE)" == file ]] || die "Use private file-backed QA cache."
+[[ "$(env_value SESSION_COOKIE)" =~ ^bambodia_oauthqa_[a-z0-9_]+$ ]] ||
+  die "Use a dedicated bambodia_oauthqa_* session cookie."
+SESSION_DOMAIN_LINE="$(grep -E '^SESSION_DOMAIN=' "$QA_APP/.env" | tail -n 1 || true)"
+[[ -z "$SESSION_DOMAIN_LINE" || "$SESSION_DOMAIN_LINE" == SESSION_DOMAIN=null || "$SESSION_DOMAIN_LINE" == SESSION_DOMAIN= ]] ||
+  die "QA must use host-only session cookies (no shared production domain)."
+[[ -z "$(grep -E '^(PASSPORT_PRIVATE_KEY|PASSPORT_PUBLIC_KEY)=' "$QA_APP/.env" || true)" ]] ||
+  die "QA must generate file-based Passport keys rather than inherit env keys."
 [[ -z "$(grep -E '^(DB_URL|DATABASE_URL|DB_SOCKET)=' "$QA_APP/.env" || true)" ]] ||
   die "Remove DB_URL/DATABASE_URL/DB_SOCKET overrides."
 QA_URL="$(env_value APP_URL)"
