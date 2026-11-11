@@ -28,8 +28,34 @@ final class BuilderSubmissionTerms
             ->whereIn('category', ['terms', 'commerce'])
             ->orderBy('policy_id')
             ->orderByDesc('revision')
-            ->get(['id', 'policy_id', 'revision', 'title', 'category', 'body_snapshot', 'sha256'])
+            ->get(['id', 'policy_id', 'revision', 'title', 'category', 'body_snapshot', 'body_format', 'sha256'])
             ->unique('policy_id')->values();
+    }
+
+    /**
+     * Display the immutable published policy snapshot using the same safe
+     * formatting rules as the public Policy Center. Historical snapshots
+     * may have no body_format; infer only common document tags in that case.
+     * Never change the snapshot, acceptance digest, or legal wording.
+     */
+    public static function renderPublication(PolicyPublication $publication): string
+    {
+        $body = (string) $publication->body_snapshot;
+        $format = $publication->body_format;
+
+        // Older imported revisions can contain complete HTML documents even
+        // when the format was null or incorrectly defaulted to markdown.
+        // Only recognize structural document tags (not arbitrary inline '<').
+        // PolicyContent sanitizes HTML regardless of the stored label.
+        $htmlDocument = preg_match(
+            '~^\\s*<(?:h[1-6]|p|div|ul|ol|blockquote|table|section)\\b~i',
+            $body
+        ) === 1;
+        if (! in_array($format, ['html', 'markdown'], true) || $htmlDocument) {
+            $format = $htmlDocument ? 'html' : 'markdown';
+        }
+
+        return PolicyContent::display($body, $format);
     }
 
     public static function digest(?Collection $publications = null): string

@@ -637,17 +637,26 @@
     </section>
 
 
+    <link rel="stylesheet" href="{{ asset('css/builder-terms-readable.css') }}?v=1">
     <dialog id="studio-terms-popup" class="studio-upload-dialog studio-terms-dialog" aria-labelledby="studio-terms-dialog-heading">
       <div class="studio-card-heading">
         <div><x-icon name="shield" size="22"/><h3 id="studio-terms-dialog-heading">Bambodia submission terms</h3></div>
         <button type="button" class="studio-editor-icon" data-builder-terms-close aria-label="Close terms"><x-icon name="x" size="19"/></button>
       </div>
-      <div class="studio-terms-policy-scroll">
-        <p>{{ \App\Support\BuilderSubmissionTerms::basis() }}</p>
+      <div class="studio-terms-policy-scroll" aria-label="Published submission terms">
+        <div class="studio-terms-intro">
+          <strong>Builder submission agreement</strong>
+          <p>{{ \App\Support\BuilderSubmissionTerms::basis() }}</p>
+        </div>
         @forelse($termsPublications as $publication)
-          <section>
-            <h4>{{ $publication->title }} · Revision {{ $publication->revision }}</h4>
-            <div class="studio-terms-body">{{ $publication->body_snapshot }}</div>
+          <section class="studio-terms-document" aria-labelledby="studio-terms-policy-{{ $publication->id }}">
+            <header class="studio-terms-document-head">
+              <h4 id="studio-terms-policy-{{ $publication->id }}">{{ $publication->title }}</h4>
+              <span class="studio-terms-revision">Revision {{ $publication->revision }}</span>
+            </header>
+            <div class="studio-terms-body">
+              {!! \App\Support\BuilderSubmissionTerms::renderPublication($publication) !!}
+            </div>
           </section>
         @empty
           <p class="hint">There is no current administrator-published Terms or Commerce policy snapshot. The Bambodia Builder submission rules above still apply.</p>

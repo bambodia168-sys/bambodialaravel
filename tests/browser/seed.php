@@ -137,13 +137,18 @@ $cover=\App\Models\MediaAsset::query()->create([
 $terms=\App\Models\Policy::query()->create([
     'title'=>'Browser QA Terms of Service',
     'category'=>'terms','status'=>'published','jurisdiction'=>'Test environment',
-    'body'=>str_repeat('A test-only published policy used to exercise required registration acceptance. ',3),
+    'body'=>'<h1>Browser QA Submission Terms</h1>'
+        .'<h2>Original work and licensing</h2>'
+        .'<p>A test-only published policy used to exercise required registration acceptance. '
+        .'Creators must provide accurate information.</p>'
+        .'<ul><li>Respect licensed rights</li><li>Review content before submission</li></ul>',
+    'body_format'=>'html',
     'reviewed_by'=>$admin->id,'reviewed_at'=>now(),
 ]);
 \App\Models\PolicyPublication::query()->create([
     'policy_id'=>$terms->id,'revision'=>1,
     'title'=>$terms->title,'category'=>'terms','jurisdiction'=>'Test environment',
-    'body_snapshot'=>$terms->body,
+    'body_snapshot'=>$terms->body,'body_format'=>'html',
     'sha256'=>\App\Models\PolicyPublication::digestFor($terms),
     'published_by'=>$admin->id,'created_at'=>now(),
 ]);

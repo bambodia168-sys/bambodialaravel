@@ -72,6 +72,10 @@ jobs:
           node tests/browser/badge-tooltip-viewport.mjs
           node tests/browser/post-builder.mjs
           node tests/browser/ai-draft-dialog-format.mjs
+          # Each suite uses its own test-only login. Reset isolated cache-based
+          # login throttles before a final independent browser session.
+          php artisan cache:clear
+          node tests/browser/builder-terms-readable.mjs
       - name: Keep screenshots for acceptance review
         if: always()
         uses: actions/upload-artifact@v4
