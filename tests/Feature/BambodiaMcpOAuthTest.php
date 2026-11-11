@@ -123,6 +123,71 @@ final class BambodiaMcpOAuthTest extends TestCase
         $this->assertDatabaseHas('content_entries', ['id' => $post->id, 'status' => 'draft']);
     }
 
+    public function test_real_pkce_authorization_code_exchange_and_bearer_tool_discovery(): void
+    {
+        $actor = $this->user();
+        $callback = 'https://chatgpt.com/connector/oauth/qa-callback';
+        $registration = $this->postJson('/oauth/register', [
+            'client_name' => 'Bambodia Manager PKCE QA',
+            'redirect_uris' => [$callback],
+        ])->assertCreated();
+
+        $clientId = $registration->json('client_id');
+        $state = \Illuminate\Support\Str::random(48);
+        $verifier = \Illuminate\Support\Str::random(64);
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+
+        $query = http_build_query([
+            'client_id' => $clientId,
+            'redirect_uri' => $callback,
+            'response_type' => 'code',
+            'scope' => 'mcp:use',
+            'state' => $state,
+            'code_challenge' => $challenge,
+            'code_challenge_method' => 'S256',
+            'resource' => url('/mcp'),
+        ]);
+
+        $this->actingAs($actor);
+        $authorization = $this->get('/oauth/authorize?'.$query)
+            ->assertOk()
+            ->assertSee('Connect Bambodia Manager');
+
+        $authToken = session('authToken');
+        $this->assertIsString($authToken);
+        $this->assertNotEmpty($authToken);
+
+        $approval = $this->post(route('passport.authorizations.approve'), [
+            'state' => $state,
+            'client_id' => $clientId,
+            'auth_token' => $authToken,
+        ])->assertRedirect();
+
+        parse_str(parse_url($approval->headers->get('Location'), PHP_URL_QUERY) ?: '', $callbackQuery);
+        $this->assertSame($state, $callbackQuery['state'] ?? null);
+        $this->assertNotEmpty($callbackQuery['code'] ?? null);
+
+        $exchange = $this->post('/oauth/token', [
+            'grant_type' => 'authorization_code',
+            'client_id' => $clientId,
+            'redirect_uri' => $callback,
+            'code' => $callbackQuery['code'],
+            'code_verifier' => $verifier,
+            'resource' => url('/mcp'),
+        ])->assertOk();
+
+        $accessToken = $exchange->json('access_token');
+        $this->assertIsString($accessToken);
+        $this->assertNotEmpty($accessToken);
+
+        $this->withToken($accessToken)
+            ->postJson('/mcp', $this->rpc('tools/list'))
+            ->assertOk()
+            ->assertJsonCount(4, 'result.tools');
+
+        $this->assertNotEmpty($exchange->json('refresh_token'));
+    }
+
     public function test_passport_scopes_allow_only_read_discovery_without_explicit_write_scope(): void
     {
         Passport::actingAs($this->user(), ['mcp:use']);
