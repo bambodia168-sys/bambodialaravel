@@ -319,6 +319,15 @@ final class BambodiaMcpOAuthTest extends TestCase
         $this->assertNotEmpty($nextAccessToken);
         $this->assertNotEmpty($nextRefreshToken);
 
+        $nextParts = explode('.', $nextAccessToken);
+        $nextClaims = json_decode(base64_decode(strtr($nextParts[1], '-_', '+/')), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(url('/mcp'), $nextClaims['aud'][1] ?? null);
+        $this->assertSame(rtrim(config('app.url'), '/'), $nextClaims['iss'] ?? null);
+
+        // Each HTTP request gets a fresh guard in production. PHPUnit keeps
+        // one container across synthetic requests unless we explicitly reset.
+        \Illuminate\Support\Facades\Auth::forgetGuards();
+
         $this->withToken($nextAccessToken)
             ->postJson('/mcp', $this->rpc('tools/list'))
             ->assertOk()->assertJsonCount(4, 'result.tools');
