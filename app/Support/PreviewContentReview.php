@@ -59,6 +59,28 @@ final class PreviewContentReview
         ];
     }
 
+    /**
+     * Snapshot one marked record, including withdrawn records for restoration.
+     * The caller must own authorization; this method never writes.
+     */
+    public static function record(string $kind, int $id): array
+    {
+        if ($kind === 'listing') {
+            $record = MarketplaceListing::query()->findOrFail($id);
+            abort_unless(in_array($record->status, ['published', 'withdrawn'], true)
+                && self::isPreviewTitle((string) $record->title), 404);
+
+            return self::listingReport($record);
+        }
+
+        abort_unless($kind === 'job', 404);
+        $record = MarketplaceJob::query()->findOrFail($id);
+        abort_unless(in_array($record->status, ['published', 'withdrawn'], true)
+            && self::isPreviewTitle((string) $record->title), 404);
+
+        return self::jobReport($record);
+    }
+
     public static function isPreviewTitle(string $title): bool
     {
         return preg_match('/\[\s*(?:LAYOUT TEST|DEMO|SAMPLE)\s*\]|\bPREVIEW ONLY\b/iu', $title) === 1;
