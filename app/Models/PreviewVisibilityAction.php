@@ -21,6 +21,20 @@ final class PreviewVisibilityAction extends Model
         return ['created_at' => 'datetime'];
     }
 
+    /**
+     * Audit decisions are append-only through Eloquent. Database-level access
+     * controls and verified backups remain separate release requirements.
+     */
+    protected static function booted(): void
+    {
+        static::updating(static function (): never {
+            throw new \LogicException('Preview visibility history is immutable.');
+        });
+        static::deleting(static function (): never {
+            throw new \LogicException('Preview visibility history cannot be deleted.');
+        });
+    }
+
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id');
