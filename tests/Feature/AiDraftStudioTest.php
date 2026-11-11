@@ -53,11 +53,11 @@ final class AiDraftStudioTest extends TestCase
     private function fakeGeneration(bool $success = true): void
     {
         if (! $success) {
-            Http::fake(['api.openai.com/*' => Http::response(['error' => ['message' => 'secret raw provider error']], 503)]);
+            Http::fake(['https://api.openai.com/*' => Http::response(['error' => ['message' => 'secret raw provider error']], 503)]);
             return;
         }
 
-        Http::fake(['api.openai.com/*' => Http::response([
+        Http::fake(['https://api.openai.com/*' => Http::response([
             'id' => 'resp_test_generation',
             'status' => 'completed',
             'output' => [[
@@ -114,7 +114,7 @@ final class AiDraftStudioTest extends TestCase
 
         $this->patch('/dashboard/ai-draft-studio/status', ['is_enabled' => 1])
             ->assertStatus(422);
-        Http::fake(['api.openai.com/*' => Http::response([
+        Http::fake(['https://api.openai.com/*' => Http::response([
             'id' => 'resp_live_test', 'status' => 'completed', 'output' => [],
         ], 200)]);
         $this->post('/dashboard/ai-draft-studio/test')->assertRedirect()
