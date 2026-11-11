@@ -30,7 +30,9 @@ Set these variables to your **actual distinct QA assets**, not a production path
 export BAMBODIA_QA_APP=/var/lib/bambodia-oauth-qa-acceptance
 export BAMBODIA_QA_DB=bambodia_oauthqa_acceptance
 export BAMBODIA_QA_MYSQL_CNF=/root/bambodia-oauth-qa.cnf
-export BAMBODIA_QA_EXPECTED_SHA="$(git -C "$BAMBODIA_QA_APP" rev-parse HEAD)"
+# Pin to the independently retrieved, latest approved PR HEAD (not the local checkout).
+export BAMBODIA_QA_EXPECTED_SHA="$(gh api repos/bambodia168-sys/bambodialaravel/pulls/15 --jq .head.sha)"
+test "$(git -C "$BAMBODIA_QA_APP" rev-parse HEAD)" = "$BAMBODIA_QA_EXPECTED_SHA"
 export BAMBODIA_QA_PHP=/www/server/php/85/bin/php
 
 # Zero-write environment, Git SHA and restricted database preflight:
