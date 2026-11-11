@@ -6,6 +6,7 @@ use App\Models\CloudStorageConnection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Passport\Passport;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -16,6 +17,25 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Passport owns authorization codes, refresh-token rotation and revocation.
+        // Do not move this configuration below the install-time database checks.
+        Passport::tokensCan([
+            'mcp:use' => 'Read Bambodia MCP resources and operational reports',
+            'mcp.write' => 'Create and edit Bambodia unpublished drafts and approved settings',
+            'offline_access' => 'Allow refreshing the connection without repeated login',
+        ]);
+        Passport::defaultScopes(['mcp:use']);
+        Passport::tokensExpireIn(now()->addMinutes(30));
+        Passport::refreshTokensExpireIn(now()->addDays(14));
+        Passport::authCodesExpireIn(now()->addMinutes(5));
+        Passport::authorizationView(function (array $parameters) {
+            $user = $parameters['user'] ?? null;
+            abort_unless($user instanceof \App\Models\User
+                && $user->role === 'super_admin'
+                && $user->account_status === 'active', 403);
+            return view('auth.oauth.authorize', $parameters);
+        });
+
         // The installer and migration commands start before this table exists.
         // Keep legacy .env settings active unless the admin explicitly chooses
         // a new Media Library upload mode in the verified Cloud Storage wizard.

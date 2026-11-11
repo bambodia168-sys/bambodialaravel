@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiToken;
+use App\Support\Mcp\McpAccessGrant;
 use App\Support\Mcp\BambodiaTools;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,7 +33,7 @@ final class BambodiaMcpController extends Controller
 
         $token = $request->attributes->get('bambodia_api_token');
         $owner = $request->attributes->get('bambodia_api_owner');
-        if (! $token instanceof ApiToken || ! $owner) {
+        if (! ($token instanceof ApiToken || $token instanceof McpAccessGrant) || ! $owner) {
             return $this->error($id, -32000, 'Unauthorized.');
         }
 
@@ -70,7 +71,7 @@ final class BambodiaMcpController extends Controller
         }
     }
 
-    private function callTool(array $params, Request $request, ApiToken $token): array
+    private function callTool(array $params, Request $request, ApiToken|McpAccessGrant $token): array
     {
         $name = $params['name'] ?? null;
         $args = $params['arguments'] ?? [];

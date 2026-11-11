@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureRole::class,
             'api.token' => AuthenticateApiToken::class,
+            'mcp.auth' => \App\Http\Middleware\AuthenticateMcpToken::class,
             'capability' => EnsureCapability::class,
         ]);
         $middleware->web(append: [SetLocale::class, EnsureActiveAccount::class]);
