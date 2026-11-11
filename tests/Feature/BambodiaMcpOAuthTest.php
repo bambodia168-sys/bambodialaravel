@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ApiToken;
 use App\Models\ContentEntry;
+use App\Models\MarketplaceListing;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
@@ -394,6 +395,63 @@ final class BambodiaMcpOAuthTest extends TestCase
             collect($response->json('result.tools'))
                 ->firstWhere('name', 'bambodia_create_draft')['_meta']['securitySchemes'][0]['scopes']
         );
+    }
+
+    public function test_real_oauth_write_token_can_modify_only_owned_disposable_drafts(): void
+    {
+        $actor = $this->user();
+        $another = $this->user();
+        $foreign = MarketplaceListing::query()->create([
+            'user_id' => $another->id,
+            'type' => 'service',
+            'title' => 'Another owner draft',
+            'description' => str_repeat('This is a separately owned private listing. ', 2),
+            'status' => 'draft',
+        ]);
+
+        $bearer = $this->authorizedBearer($actor, 'mcp:use mcp.write');
+        $this->withToken($bearer);
+
+        $created = $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name' => 'bambodia_create_draft',
+            'arguments' => ['entity' => 'service', 'fields' => [
+                'title' => 'Safe OAuth-owned service',
+                'description' => str_repeat('Created only for isolated OAuth write acceptance. ', 2),
+            ]],
+        ]))->assertOk()
+            ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.status', 'draft');
+        $id = $created->json('result.structuredContent.id');
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name' => 'bambodia_update_draft',
+            'arguments' => ['entity' => 'service', 'id' => $foreign->id,
+                'fields' => ['title' => 'Unauthorized cross-owner change']],
+        ]))->assertJsonPath('result.isError', true);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name' => 'bambodia_delete_draft',
+            'arguments' => ['entity' => 'service', 'id' => $foreign->id,
+                'confirm_title' => $foreign->title],
+        ]))->assertJsonPath('result.isError', true);
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name' => 'bambodia_update_draft',
+            'arguments' => ['entity' => 'service', 'id' => $id,
+                'fields' => ['title' => 'Safe updated OAuth service']],
+        ]))->assertJsonPath('result.structuredContent.title', 'Safe updated OAuth service');
+
+        $this->postJson('/mcp', $this->rpc('tools/call', [
+            'name' => 'bambodia_delete_draft',
+            'arguments' => ['entity' => 'service', 'id' => $id,
+                'confirm_title' => 'Safe updated OAuth service'],
+        ]))->assertJsonPath('result.structuredContent.deleted', true);
+
+        $this->assertDatabaseMissing('marketplace_listings', ['id' => $id]);
+        $this->assertDatabaseHas('marketplace_listings', [
+            'id' => $foreign->id, 'user_id' => $another->id,
+            'title' => 'Another owner draft', 'status' => 'draft',
+        ]);
     }
 
     public function test_oauth_without_read_scope_or_with_demoted_administrator_is_denied(): void
