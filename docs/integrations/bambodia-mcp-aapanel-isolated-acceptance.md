@@ -1,6 +1,6 @@
 # Bambodia MCP OAuth — protected aaPanel isolated rehearsal
 
-**Status: operator execution required. GitHub CI is not hosting acceptance.**
+**Status (2026-11-11): First isolated, empty-database OAuth migration and independent snapshot restore passed on aaPanel at the reviewed QA checkout SHA `34e86fbbdfcbe56e5e28e0286a47ba2309e48455`. Browser, OAuth authorization, token flows, populated-data migration and real ChatGPT integration remain pending. GitHub CI is not hosting acceptance.**
 Draft PR #15 only. Do not merge, generate Passport keys on, or migrate Bambodia production. Never point this helper at `/www/wwwroot/bambodia.com` or the established `/www/wwwroot/bambodia-staging-qa` runtime.
 
 ## Safety boundary
@@ -45,7 +45,8 @@ export BAMBODIA_QA_APP=/var/lib/bambodia-oauth-qa-acceptance
 export BAMBODIA_QA_DB=bambodia_oauthqa_acceptance
 export BAMBODIA_QA_MYSQL_CNF=/root/bambodia-oauth-qa.cnf
 # Pin to the independently retrieved, latest approved PR HEAD (not the local checkout).
-export BAMBODIA_QA_EXPECTED_SHA="$(gh api repos/bambodia168-sys/bambodialaravel/pulls/15 --jq .head.sha)"
+# This existing QA tree is PINNED to a previously reviewed branch snapshot; do not silently follow changing PR HEAD.
+export BAMBODIA_QA_EXPECTED_SHA="34e86fbbdfcbe56e5e28e0286a47ba2309e48455"
 test "$(git -C "$BAMBODIA_QA_APP" rev-parse HEAD)" = "$BAMBODIA_QA_EXPECTED_SHA"
 export BAMBODIA_QA_PHP=/www/server/php/85/bin/php
 
@@ -78,12 +79,27 @@ bash "$BAMBODIA_QA_APP/support/mcp-oauth-isolated-aapanel-rehearsal.sh" --restor
 
 The helper checks the backup hash, refuses nonempty restore databases and imports into **only the separate restore QA schema**. It compares both baseline core row counts and total table count. It never overwrites the original rehearsal DB. Full recovery of that DB requires a separately authorized recreation from the verified snapshot; never issue unscoped DROP or migration rollback on shared staging or production.
 
+## Verified aaPanel operator acceptance — 2026-11-11
+
+These are results supplied from actual aaPanel terminal commands, **not** automatically inferred from GitHub CI:
+
+- Isolated source: `/var/lib/bambodia-oauth-qa-acceptance` at commit `34e86fbbdfcbe56e5e28e0286a47ba2309e48455`; tracked files clean, Git origin verified; 96 installed production Composer packages matched the generated local lockfile.
+- New QA-only MySQL schema `bambodia_oauthqa_acceptance`; account `bambodiaqa_acceptance`, dedicated private `/root/bambodia-oauth-qa.cnf`; `QA_MYSQL_GRANTS=RESTRICTED` and `PREFLIGHT=PASS`.
+- Successful guarded `--rehearse`: protected snapshot `/root/bambodia-oauth-qa-snapshots/run.l0IsKwRj/before.sql`, SHA-256 `3498997c561f5941d8f095e10b50203396ae79b5dd7ae80e6c9673de26d533a0`. QA-only Passport keys generated; all six OAuth migrations passed; five OAuth tables and the sixth `oauth_clients.scopes` migration accepted; authorization/token routes present; baseline record counts unchanged.
+- Independent `--restore-check`: `bambodia_oauthqa_restore_acceptance` already existed, was verified separately accessible and **empty** (zero tables), and the protected snapshot restored with `RESTORE_CHECK=PASS`, `REHEARSAL_DB_UNCHANGED_BY_RESTORE_CHECK=YES`.
+- The snapshot was taken from a genuinely empty pre-OAuth QA schema. The restore succeeds but does **not** demonstrate preservation of existing marketplace accounts, permissions, attachments, customer data or historical UUID mappings.
+- The current QA app's `APP_URL=https://oauth-qa.invalid` is intentionally non-routable; it has not been browser-accepted or connected through real ChatGPT OAuth.
+
+**Protect existing accepted state:** Never repeat `--rehearse` or `--restore-check` against these already populated destinations. Never drop/recreate the accepted schemas just to rerun tests. Keep Passport private keys and snapshots out of public webroots and user-facing output.
+
+**Next gate:** Read-only assessment of an independently secured HTTPS QA hostname and a separate populated, sanitized pre-OAuth fixture environment. Do not point a public webserver at the existing `/var/lib` checkout or change the current `.env`/URL in place without a reviewed hosting plan. Verify isolation, DNS/TLS, temporary test identities, CSRF, PKCE/S256, consent allow/deny, state, refresh/revocation, DCR constraints, resource/audience/issuer, MCP tool scopes and denial cases. Actual ChatGPT integration requires an authorized OAuth sign-in in ChatGPT, not just synthetic HTTP or CI tests.
+
 ## Remaining acceptance gates
 
 | Gate | Evidence required | Status |
 |---|---|---|
-| Isolated migration and keys | Rehearsal output at pinned SHA, correct tables, private RSA keys, unchanged core records | Operator pending |
-| Backup/restore | Successful separate empty-schema `--restore-check` and retained hash manifest | Operator pending |
+| Isolated migration and keys | QA-only six migrations, five OAuth tables, scope column, private keys, unchanged empty baseline | **Passed for empty QA schema** |
+| Backup/restore | Distinct empty QA restore schema, verified SHA-256, successful `--restore-check` | **Passed for empty QA snapshot** |
 | Real-browser consent | Dedicated HTTPS QA hostname, admin login, PKCE, CSRF, state, approval/denial, role change during consent | Pending |
 | Refresh and revocation | Expiry, revocation, rotation; wrong/missing resource, audience and issuer rejection | Pending |
 | MCP authorization | Four read tools and six writes on disposable isolated drafts; cross-owner, role and scope denial | Pending |
