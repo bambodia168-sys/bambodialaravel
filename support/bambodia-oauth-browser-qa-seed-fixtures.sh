@@ -39,8 +39,17 @@ done
   die 'Browser QA dependencies are missing.'
 [[ ! -e "$APP/bootstrap/cache/config.php" ]] || die 'QA config cache detected.'
 [[ ! -e "$CRED" && ! -L "$CRED" ]] || die 'Fixture credentials file already exists; never overwrite.'
-[[ -d /root && "$(stat -c '%u:%a' /root)" == "0:700" ]] ||
-  die 'Private root directory must be owned by root with mode 0700.'
+# aaPanel host uses a root:root 0550 directory; root:root 0700 is also safe.
+# In both cases only root may read the O_EXCL-created 0600 fixture file.
+# Refuse symlinks, owner/group mismatches, and all other directory modes.
+[[ -d /root && ! -L /root && "$(realpath -e /root)" == /root ]] ||
+  die 'Private root directory is missing, symlinked or redirected.'
+ROOT_ID_MODE="$(stat -c '%u:%g:%a' /root)"
+case "$ROOT_ID_MODE" in
+  0:0:550|0:0:700) ;;
+  *) die 'Private root directory must be root:root with restrictive 0550 or 0700 mode.' ;;
+esac
+unset ROOT_ID_MODE
 for name in oauth-private.key oauth-public.key; do
   b="$APP/storage/$name"
   c="$CLI/storage/$name"
