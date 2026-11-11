@@ -154,9 +154,9 @@ final class AiDraftStudio
             $description = trim(strip_tags($parsed['description']));
             // Keep the provider's intentional plain-text paragraph and bullet
             // separators; never accept markup from the response.
-            $description = preg_replace('/\\r\\n?|[\\x{2028}\\x{2029}]/u', "\\n", $description) ?? $description;
-            $description = preg_replace('/[ \\t]+\\n/u', "\\n", $description) ?? $description;
-            $description = preg_replace('/\\n{3,}/u', "\\n\\n", $description) ?? $description;
+            $description = preg_replace('/\r\n?|[\x{2028}\x{2029}]/u', "\n", $description) ?? $description;
+            $description = preg_replace('/[ \t]+\n/u', "\n", $description) ?? $description;
+            $description = preg_replace('/\n{3,}/u', "\n\n", $description) ?? $description;
             $min = $type === 'job' ? 70 : 40;
             if (mb_strlen($title) < 8 || mb_strlen($title) > 180
                 || mb_strlen($description) < $min || mb_strlen($description) > 10000) {
