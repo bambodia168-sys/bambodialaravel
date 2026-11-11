@@ -28,7 +28,7 @@ final class PreviewContentReview
         $listings = MarketplaceListing::query()->publiclyAvailable()
             ->select([
                 'id', 'public_id', 'title', 'type', 'user_id', 'status',
-                'cover_media_id', 'featured_media_id', 'gallery_media_ids', 'updated_at',
+                'cover_media_id', 'featured_media_id', 'gallery_media_ids', 'description', 'updated_at',
             ])->orderBy('id');
 
         self::scan($listings, 'listing', $records, $totals, $blocked, $mediaReview);
@@ -36,7 +36,7 @@ final class PreviewContentReview
         $jobs = MarketplaceJob::query()->where('status', 'published')
             ->select([
                 'id', 'public_id', 'title', 'client_id', 'status',
-                'featured_media_id', 'gallery_media_ids', 'updated_at',
+                'featured_media_id', 'gallery_media_ids', 'description', 'updated_at',
             ])->orderBy('id');
 
         self::scan($jobs, 'job', $records, $totals, $blocked, $mediaReview);
@@ -57,6 +57,28 @@ final class PreviewContentReview
             'records' => $records,
             'next_action' => 'Review ownership, attachments, saved items, proposals, contracts and customer activity. No status changes are authorized by this report.',
         ];
+    }
+
+    /**
+     * Snapshot one marked record, including withdrawn records for restoration.
+     * The caller must own authorization; this method never writes.
+     */
+    public static function record(string $kind, int $id): array
+    {
+        if ($kind === 'listing') {
+            $record = MarketplaceListing::query()->findOrFail($id);
+            abort_unless(in_array($record->status, ['published', 'withdrawn'], true)
+                && self::isPreviewTitle((string) $record->title), 404);
+
+            return self::listingReport($record);
+        }
+
+        abort_unless($kind === 'job', 404);
+        $record = MarketplaceJob::query()->findOrFail($id);
+        abort_unless(in_array($record->status, ['published', 'withdrawn'], true)
+            && self::isPreviewTitle((string) $record->title), 404);
+
+        return self::jobReport($record);
     }
 
     public static function isPreviewTitle(string $title): bool
@@ -188,7 +210,10 @@ final class PreviewContentReview
         // detect changed records. It does not authorize publication changes.
         $fingerprint = hash('sha256', json_encode([
             $kind, $record->getKey(), $record->public_id, $record->title,
-            $record->status, $record->updated_at?->toISOString(), $ownerId, $related, $mediaReferences,
+            $record->status, $record->updated_at?->toISOString(), $ownerId,
+            $owner?->role, hash('sha256', (string) $record->description),
+            $record->featured_media_id, $record->cover_media_id ?? null,
+            $record->gallery_media_ids, $related, $mediaReferences,
         ], JSON_THROW_ON_ERROR));
 
         return [

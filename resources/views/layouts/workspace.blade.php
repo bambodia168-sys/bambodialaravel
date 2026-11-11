@@ -88,6 +88,7 @@
         ['route'=>'dashboard.licenses.index','label'=>'License Manager','icon'=>'scroll-text'],
         ['route'=>'dashboard.creator-applications','label'=>'Creator Applications','icon'=>'user-round-check'],
         ['route'=>'dashboard.reviews','label'=>'Review Queue','icon'=>'clipboard-check'],
+        ['route'=>'dashboard.preview-visibility.index','label'=>'Preview Visibility','icon'=>'shield-check','roles'=>['super_admin']],
         ['route'=>'dashboard.notifications.index','label'=>'Notification Analytics','icon'=>'bell'],
       ]];
     }

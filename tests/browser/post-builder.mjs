@@ -47,9 +47,18 @@ try {
   const editUrl=page.url(), publicPath=await page.locator('.policy-reference-row').innerText();
   if(!publicPath.includes('Post ID'))throw Error('Save did not create a post');
   assertions+=2;
+  // The admin navigation includes "Preview Visibility". Require the exact
+  // Post Builder action, rather than a substring-matched sidebar link.
+  const previewLink=page.locator('.policy-builder-top-actions')
+    .getByRole('link',{name:'Preview',exact:true});
+  if(await previewLink.count()!==1
+      || await previewLink.getAttribute('target')!=='_blank'
+      || !(await previewLink.getAttribute('href'))?.match(/\/post-manager\/\d+\/preview(?:\?|$)/)) {
+    throw Error('Post Builder draft preview must provide one safe new-tab action');
+  }
   const [popup]=await Promise.all([
-    context.waitForEvent('page',{timeout:10000}),
-    page.getByRole('link',{name:'Preview'}).first().click(),
+    context.waitForEvent('page',{timeout:15000}),
+    previewLink.click(),
   ]);
   await popup.waitForLoadState('domcontentloaded');
   if(!(await popup.locator('body').innerText()).includes(title))throw Error('Draft preview missing title');
