@@ -661,7 +661,7 @@
     </dialog>
     @if($canEdit)
       @include('builder.ai-draft-dialog')
-      <script defer src="{{ asset('js/ai-draft-studio.js') }}?v=1"></script>
+      <script defer src="{{ asset('js/ai-draft-studio.js') }}?v=2"></script>
     @endif
     <dialog id="studio-media-upload" class="studio-upload-dialog">
       <form method="post" action="{{ route('builder.media.store') }}" enctype="multipart/form-data" data-builder-media-form>

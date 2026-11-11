@@ -27,6 +27,58 @@ document.addEventListener('DOMContentLoaded', () => {
         status.classList.toggle('studio-editor-counter-error', error);
     };
 
+    // Convert structured plain text to semantic editor blocks. All model text
+    // stays textContent: HTML, attributes and scripts from AI are never parsed.
+    const formattedBlocks = (plain) => {
+        const fragment = document.createDocumentFragment();
+        const paragraphs = [];
+        let list = null;
+
+        const flushParagraph = () => {
+            if (!paragraphs.length) return;
+            const p = document.createElement('p');
+            p.textContent = paragraphs.join(' ');
+            fragment.appendChild(p);
+            paragraphs.length = 0;
+        };
+
+        for (const raw of String(plain).replace(/\r\n?/g, '\n').split('\n')) {
+            const line = raw.trim();
+            if (!line) {
+                flushParagraph();
+                list = null;
+                continue;
+            }
+
+            const bullet = line.match(/^(?:[-•*]\s+|[0-9]{1,2}[.)]\s+)(.+)$/u);
+            if (bullet) {
+                flushParagraph();
+                if (!list) {
+                    list = document.createElement('ul');
+                    fragment.appendChild(list);
+                }
+                const li = document.createElement('li');
+                li.textContent = bullet[1];
+                list.appendChild(li);
+                continue;
+            }
+
+            list = null;
+            if (line.length <= 75 && /[:：]$/u.test(line) && !/^https?:/i.test(line)) {
+                flushParagraph();
+                const heading = document.createElement('h3');
+                heading.textContent = line.slice(0, -1);
+                fragment.appendChild(heading);
+                continue;
+            }
+
+            paragraphs.push(line);
+        }
+
+        flushParagraph();
+        return fragment;
+    };
+
     const token = () => form?.querySelector('input[name="_token"]')?.value || '';
     const send = async (url, body) => {
         const response = await fetch(url, {
@@ -115,8 +167,9 @@ document.addEventListener('DOMContentLoaded', () => {
             builderTitle.value = newTitle;
             builderTitle.dispatchEvent(new Event('input', {bubbles: true}));
             if (surface && !surface.hidden) {
-                // textContent prevents arbitrary scripts and HTML from AI output.
-                surface.textContent = newDescription;
+                // Build safe paragraphs, headings and lists for the rich editor.
+                // Unlike innerHTML, this cannot execute model-supplied markup.
+                surface.replaceChildren(formattedBlocks(newDescription));
                 surface.dispatchEvent(new Event('input', {bubbles: true}));
             } else {
                 fallback.value = newDescription;
