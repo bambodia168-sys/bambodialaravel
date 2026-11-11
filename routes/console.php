@@ -49,3 +49,36 @@ Artisan::command('security:alerts-scan', function (): int {
 })->purpose('Evaluate configured security audit alert rules and notify super-admins');
 
 Schedule::command('security:alerts-scan')->everyMinute()->withoutOverlapping();
+
+
+/**
+ * Read-only publication inventory. Safe for an operator to run in production,
+ * unlike QA seeders, moderating commands or content cleanup scripts.
+ */
+Artisan::command('marketplace:readiness-audit {--json : Machine-readable report} {--strict : Exit 2 when editorial review is needed}', function (): int {
+    $report = \App\Support\MarketplaceReadinessAudit::inspect();
+
+    if ($this->option('json')) {
+        $this->line(json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+    } else {
+        $this->info('Bambodia public content readiness: '.$report['status']);
+        foreach ($report['counts'] as $name => $count) {
+            $this->line($name.'='.$count);
+        }
+        foreach ($report['preview_markers'] as $name => $count) {
+            $this->line('preview_markers.'.$name.'='.$count);
+        }
+        foreach ($report['samples'] as $sample) {
+            $this->warn($sample['kind'].' '.$sample['public_id'].': '.$sample['title']);
+        }
+        foreach ($report['notices'] as $notice) {
+            $this->warn($notice['code'].': '.$notice['message']);
+        }
+        if ($report['sample_truncated']) {
+            $this->warn('Only the first 25 marked public records are shown; totals include all matches.');
+        }
+        $this->line('No records were changed.');
+    }
+
+    return $this->option('strict') && $report['status'] !== 'pass' ? 2 : 0;
+})->purpose('Report publicly visible preview titles and Knowledge Base readiness; never modify content');

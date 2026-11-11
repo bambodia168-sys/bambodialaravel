@@ -59,3 +59,15 @@ For staging installation and hosting evidence, see docs/production-release-gates
 - support/http-release-probe.php: checks actual staging HTTPS, installer lockout and private-path security.
 
 A Chromium browser-emulation CI workflow and MySQL vault tests are included. Actual aaPanel/cPanel production acceptance, real physical-device checks, legal rights approval and payment-provider onboarding remain separate.
+
+## Completion roadmap and public content audit
+
+The outstanding development, hosting/device acceptance, OAuth/ChatGPT integration, and commercial-payment release gates are tracked in [docs/ROADMAP_COMPLETION_2026.md](docs/ROADMAP_COMPLETION_2026.md) and [GitHub issue #25](https://github.com/bambodia168-sys/bambodialaravel/issues/25).
+
+To review **published/public** preview-marker listings, published jobs and Support Knowledge Base publication coverage without changing records:
+
+```bash
+php artisan marketplace:readiness-audit --json --strict
+```
+
+The output includes only public content identifiers/titles and aggregate counts, not customer details or private drafts. Exit code 2 means human editorial review is required, **not** a command failure. The audit never hides/deletes records or publishes draft articles. Use existing authorized moderator controls and independent acceptance evidence for any later changes.
