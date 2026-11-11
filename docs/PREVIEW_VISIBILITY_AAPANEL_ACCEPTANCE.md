@@ -30,7 +30,7 @@ Generate separate keys/passwords privately; do not paste an `.env` or any secret
 
 ## 2. Read-only QA safety gate
 
-In the new QA project directory, after installing its **own** Composer dependencies, run this read-only gate **before creating any schema**. Substitute the actual dedicated origin; the expectation must match `APP_URL` exactly:
+In a **manual migration rehearsal** with a dedicated `.env` already created and its own Composer dependencies installed, run this read-only gate **before creating any schema**. Substitute the actual dedicated origin; the expectation must match `APP_URL` exactly:
 
 ```bash
 export BAMBODIA_PREVIEW_QA_ISOLATED=1
@@ -38,9 +38,9 @@ export BAMBODIA_PREVIEW_QA_EXPECTED_ORIGIN=https://YOUR-DEDICATED-QA-HOST
 php support/preview-visibility-qa-preflight.php --before-install
 ```
 
-It must print `status=PASS` in JSON. A `BLOCKED` result is a stop, **not** permission to relax the check. The gate rejects the existing aaPanel application paths, non-testing environments, `bambodia.com`, reused/non-QA MySQL naming, remote mail/queue/default storage, a missing dedicated environment, a nonempty database, and an enabled withdrawal switch. This cannot independently prove DNS ownership, vhost isolation, truly separate credentials/APP_KEY, or absence of other outbound integrations; an administrator must verify those out of band.
+It must print `"status":"PASS"` in JSON. A `BLOCKED` result is a stop, **not** permission to relax the check. The gate rejects the existing aaPanel application paths, non-testing environments, `bambodia.com`, reused/non-QA MySQL naming, remote mail/queue/default storage, a missing dedicated environment, a nonempty database, and an enabled withdrawal switch. This cannot independently prove DNS ownership, vhost isolation, truly separate credentials/APP_KEY, or absence of other outbound integrations; an administrator must verify those out of band.
 
-Only after this passes and the destination is independently confirmed disposable, install the **new QA instance's** schema using the reviewed release's normal fresh-install process. Do not call `migrate:fresh` on any non-disposable system. Before adding QA fixtures or users, run:
+The native five-step installer is a **separate path**: it creates `.env`, performs migrations and provisions exactly one Super Admin, so **do not precreate `.env` or run `--before-install` for native installer acceptance**. First independently verify an empty dedicated QA MySQL database, separate vhost and storage, complete the QA-only installer, then set `APP_ENV=testing` and the safe drivers listed above in the generated QA `.env`, and clear config cache on that QA instance. The installer-generated Super Admin must be the only user. For either native installer or manual-migration rehearsal, run this check **before any additional fixture accounts are created**:
 
 ```bash
 php support/preview-visibility-qa-preflight.php --after-install
@@ -48,7 +48,7 @@ php artisan migrate:status
 php artisan route:list --name=dashboard.preview-visibility
 ```
 
-The post-install gate requires the visibility-history schema and all relevant tables, checks they contain no user/listing/job/history records, and still requires writes disabled. Store sanitized logs and the exact release commit, UTC timestamp, PHP-FPM and MySQL versions; never store an APP_KEY, credential, cookie or private file.
+The post-install gate requires the visibility-history schema and all relevant tables; it permits zero users (manual migrations) or **exactly one installer-created Super Admin**, and requires zero listings, jobs and visibility-history records. It still requires writes disabled. Store sanitized logs and the exact release commit, UTC timestamp, PHP-FPM and MySQL versions; never store an APP_KEY, credential, cookie or private file.
 
 ## 3. Backup and **actual restoration** exercise — QA data only
 
@@ -75,7 +75,7 @@ After the empty-state gate, use an approved QA-only process to create distinct *
 | PV-11 | Attempt unauthorized PATCH with valid-looking form and CSRF/missing-CSRF cases | Roles remain denied; invalid CSRF rejected; zero state/history changes |
 | PV-12 | Test in actual iPhone Safari, Android Chrome, tablet and desktop browser | Dialog focus and closing, keyboard navigation, viewport, 10-row pagination, audit table, top-right feedback, accessible form labels |
 
-An independent reviewer must inspect database states, notifications, server logs and actual HTTP status, not merely click success banners. Test actions involving a disposable database must be logged privately, and `PREVIEW_VISIBILITY_WRITES_ENABLED=false` must be restored immediately afterward. Re-run the **read-only** QA gate after disabling writes, noting that the post-install empty-state mode is no longer applicable once fixtures exist. Verify the value via `php artisan config:show preview_visibility` and ensure no cached config inadvertently keeps writes enabled.
+An independent reviewer must inspect database states, notifications, server logs and actual HTTP status, not merely click success banners. Test actions involving a disposable database must be logged privately, and `PREVIEW_VISIBILITY_WRITES_ENABLED=false` must be restored immediately afterward. The preflight modes intentionally require **empty QA fixtures**, so neither mode is applicable after lifecycle tests have created records. Independently verify the disabled value using `php artisan config:show preview_visibility` and ensure no cached config inadvertently keeps writes enabled.
 
 ## 5. Release decision register
 
