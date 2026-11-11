@@ -67,7 +67,8 @@ env_value() {
 [[ "$(env_value DB_HOST)" == 127.0.0.1 ]] || die "DB_HOST must be 127.0.0.1."
 [[ "$(env_value DB_DATABASE)" == "$BAMBODIA_QA_DB" ]] ||
   die "QA database must match the .env target."
-[[ "$(env_value DB_USERNAME)" =~ ^bambodiaqa_[a-z0-9_]+$ ]] ||
+QA_DB_USER="$(env_value DB_USERNAME)"
+[[ "$QA_DB_USER" =~ ^bambodiaqa_[a-z0-9_]+$ ]] ||
   die "DB_USERNAME must be a restricted bambodiaqa_* user."
 [[ "$(env_value MAIL_MAILER)" == log ]] || die "Use MAIL_MAILER=log."
 [[ "$(env_value QUEUE_CONNECTION)" == database ]] || die "Use a stopped database queue."
@@ -95,7 +96,7 @@ QA_USER="${BAMBODIA_QA_USER:-www}"
 id "$QA_USER" >/dev/null || die "aaPanel www user missing."
 QA_PHP="${BAMBODIA_QA_PHP:-/www/server/php/85/bin/php}"
 [[ "$QA_PHP" == /* && -x "$QA_PHP" ]] || die "QA PHP executable not found."
-for tool in mysql mysqldump git sha256sum realpath runuser cmp; do
+for tool in mysql mysqldump git sha256sum realpath runuser cmp python3; do
   command -v "$tool" >/dev/null || die "Missing $tool"
 done
 
@@ -124,16 +125,17 @@ core_counts() {
 }
 
 WHO="$(mysql_qa "$BAMBODIA_QA_DB" -e 'SELECT CURRENT_USER()')"
-[[ "$WHO" == bambodiaqa_* && "$WHO" != *root* ]] ||
-  die "MySQL credentials do not resolve to a QA-only user."
 GRANTS="$(mysql_qa "$BAMBODIA_QA_DB" -e 'SHOW GRANTS FOR CURRENT_USER()')"
-# Ordinary restricted accounts may have the harmless "GRANT USAGE ON *.*".
-# Any other global grant and any WITH GRANT OPTION are disallowed.
-DANGEROUS_GRANTS="$(printf '%s\n' "$GRANTS" |
-  grep -F 'ON *.*' |
-  grep -v -F 'GRANT USAGE ON *.* ' || true)"
-[[ -z "$DANGEROUS_GRANTS" && "$GRANTS" != *'WITH GRANT OPTION'* ]] ||
-  die "QA database account has excessive global privileges."
+[[ -f "$QA_APP/support/mcp-oauth-db-grant-guard.py" && ! -L "$QA_APP/support/mcp-oauth-db-grant-guard.py" ]] ||
+  die "QA MySQL grant validator is missing or symlinked."
+# Cross-check the .env DB username with the resolved MySQL account.
+# Reject any schema grants outside the isolated rehearsal/restore databases,
+# including grants on production schemas that a global-only check misses.
+printf '%s\n' "$GRANTS" | python3 "$QA_APP/support/mcp-oauth-db-grant-guard.py" \
+  "$BAMBODIA_QA_DB" "$QA_DB_USER" "$WHO" ||
+  die "The QA account has unexpected MySQL privileges; stop before migration."
+unset GRANTS WHO
+
 info "QA_APP=$QA_APP"
 info "QA_DB=$BAMBODIA_QA_DB"
 info "QA_APP_URL=$QA_URL"
