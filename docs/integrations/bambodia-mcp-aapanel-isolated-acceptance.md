@@ -11,6 +11,7 @@ Draft PR #15 only. Do not merge, generate Passport keys on, or migrate Bambodia 
 - Fresh QA `.env`: `APP_ENV=staging`, `APP_DEBUG=false`, `DB_CONNECTION=mysql`, `DB_HOST=127.0.0.1`, `DB_DATABASE=bambodia_oauthqa_<unique>`, `DB_USERNAME=bambodiaqa_<unique>`, `MAIL_MAILER=log`, `QUEUE_CONNECTION=database`, `SESSION_DRIVER=file`, `CACHE_STORE=file`, `SESSION_COOKIE=bambodia_oauthqa_<unique>`, `SESSION_DOMAIN=null` (host-only), a unique QA `APP_KEY` and a separate HTTPS `APP_URL`. Do not set `PASSPORT_PRIVATE_KEY`, `PASSPORT_PUBLIC_KEY`, `DB_SOCKET` or `DB_URL` in this runtime. `https://oauth-qa.invalid` is a reserved non-routable example suitable for CLI schema tests only, not browser/ChatGPT acceptance.
 - Never copy live `.env`, sessions, OAuth/Passport keys, API tokens, clients, cached configuration, secrets or unapproved media into QA. The helper refuses cached config and existing Passport keys. Keep PHP runtime access restricted to the aaPanel `www` account.
 - Protected DB snapshots are stored under `/root/bambodia-oauth-qa-snapshots/`, not a public webroot. The helper does not connect to public production.
+- The `--check` preflight now compares the literal `.env` DB username with `CURRENT_USER()` and examines **every** `SHOW GRANTS` line. Only the selected QA schema and `bambodia_oauthqa_restore_*` schemas may have privileges. A user with any grant on a production/staging schema is rejected, even when the account has no global privileges. The validator has offline denial-case self-tests in CI.
 
 ## Prepare and run on the isolated aaPanel host
 
@@ -43,7 +44,7 @@ bash "$BAMBODIA_QA_APP/support/mcp-oauth-isolated-aapanel-rehearsal.sh" --rehear
 ~~~
 
 The `--rehearse` mode:
-1. Refuses an unapproved filesystem location, unexpected Git SHA, production URL, broad MySQL user, wrong database, cached configuration, shared runtime or non-isolated mail/queue/session settings.
+1. Refuses an unapproved filesystem location, unexpected Git SHA, production URL, wrong database, cached configuration, shared runtime, non-isolated mail/queue/session settings, mismatched DB identity or any MySQL grant outside the dedicated QA/restore schemas.
 2. Makes a root-private, SHA-256 checksummed backup of **only the dedicated QA DB**, recording existing marketplace/user row counts and table total.
 3. Generates fresh, owner-restricted Passport RSA keys **inside QA only**.
 4. Runs only the six explicit Passport/MCP migration paths, not unscoped `php artisan migrate`.
