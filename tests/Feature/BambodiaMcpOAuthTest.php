@@ -34,7 +34,48 @@ final class BambodiaMcpOAuthTest extends TestCase
         $this->postJson('/mcp', $this->rpc('initialize'))
             ->assertUnauthorized()
             ->assertHeader('WWW-Authenticate',
-                'Bearer resource_metadata="'.url('/.well-known/oauth-protected-resource').'", scope="mcp:use"');
+                'Bearer resource_metadata="'.url('/.well-known/oauth-protected-resource/mcp').'", scope="mcp:use"');
+    }
+
+    public function test_mcp_oauth_discovery_metadata_uses_s256_and_canonical_resource(): void
+    {
+        $this->getJson('/.well-known/oauth-protected-resource/mcp')
+            ->assertOk()
+            ->assertJsonPath('resource', url('/mcp'))
+            ->assertJsonPath('authorization_servers.0', url('/'));
+
+        $this->getJson('/.well-known/oauth-authorization-server')
+            ->assertOk()
+            ->assertJsonPath('authorization_endpoint', route('passport.authorizations.authorize'))
+            ->assertJsonPath('token_endpoint', route('passport.token'))
+            ->assertJsonPath('registration_endpoint', route('mcp.oauth.register'))
+            ->assertJsonPath('code_challenge_methods_supported.0', 'S256');
+
+        $registration = \Illuminate\Support\Facades\Route::getRoutes()
+            ->getByName('mcp.oauth.register');
+        $this->assertNotNull($registration);
+        $this->assertContains(
+            \Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
+            $registration->excludedMiddleware()
+        );
+        $this->assertSame(['https://chatgpt.com'], config('mcp.redirect_domains'));
+    }
+
+    public function test_dynamic_client_registration_accepts_chatgpt_only(): void
+    {
+        $this->postJson('/oauth/register', [
+            'client_name' => 'Bambodia Manager QA',
+            'redirect_uris' => ['https://chatgpt.com/connector/oauth/qa-callback'],
+        ])->assertCreated()
+            ->assertJsonPath('token_endpoint_auth_method', 'none')
+            ->assertJsonPath('scope', 'mcp:use');
+        $this->assertDatabaseCount('oauth_clients', 1);
+
+        $this->postJson('/oauth/register', [
+            'client_name' => 'Untrusted Integration',
+            'redirect_uris' => ['https://untrusted.example/steal'],
+        ])->assertStatus(400)->assertJsonPath('error', 'invalid_redirect_uri');
+        $this->assertDatabaseCount('oauth_clients', 1);
     }
 
     public function test_legacy_read_only_token_remains_usable_without_write_permissions(): void
