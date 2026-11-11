@@ -5,6 +5,8 @@ use App\Http\Controllers\ProfileEditorController;
 use App\Http\Controllers\CreatorProfileSectionController;
 use App\Http\Controllers\CreatorProfileItemController;
 use App\Http\Controllers\BuilderController;
+use App\Http\Controllers\AiDraftController;
+use App\Http\Controllers\Dashboard\AiDraftSettingsController;
 use App\Http\Controllers\SavedJobController;
 use App\Http\Controllers\SavedListingController;
 use App\Http\Controllers\Creator\CreatorProfileController;
@@ -151,6 +153,10 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/builder', [BuilderController::class, 'show'])->name('builder');
+    Route::post('/builder/ai-drafts', [AiDraftController::class, 'generate'])
+        ->name('builder.ai.generate')->middleware('throttle:4,1');
+    Route::post('/builder/ai-drafts/{draft}/reviewed', [AiDraftController::class, 'reviewed'])
+        ->whereNumber('draft')->name('builder.ai.reviewed')->middleware('throttle:10,1');
     Route::post('/builder/content/preview', [BuilderController::class, 'previewContent'])
         ->name('builder.content.preview')->middleware('throttle:30,1');
     Route::post('/builder/media', [MediaLibraryController::class, 'store'])
@@ -356,6 +362,15 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/notification-analytics', [NotificationAnalyticsController::class, 'index'])->name('dashboard.notifications.index');
             Route::get('/service-inquiries', [ServiceManagerController::class, 'index'])->name('dashboard.inquiries.index');
             Route::middleware('role:super_admin')->group(function (): void {
+                Route::get('/ai-draft-studio', [AiDraftSettingsController::class,'index'])->name('dashboard.ai-draft.index');
+                Route::post('/ai-draft-studio', [AiDraftSettingsController::class,'save'])
+                    ->name('dashboard.ai-draft.save')->middleware('throttle:6,1');
+                Route::post('/ai-draft-studio/test', [AiDraftSettingsController::class,'test'])
+                    ->name('dashboard.ai-draft.test')->middleware('throttle:2,1');
+                Route::patch('/ai-draft-studio/status', [AiDraftSettingsController::class,'status'])
+                    ->name('dashboard.ai-draft.status')->middleware('throttle:6,1');
+                Route::delete('/ai-draft-studio', [AiDraftSettingsController::class,'disconnect'])
+                    ->name('dashboard.ai-draft.disconnect')->middleware('throttle:3,1');
                 Route::get('/bot-protection', [TurnstileProtectionController::class,'index'])->name('dashboard.turnstile.index');
                 Route::post('/bot-protection/configure', [TurnstileProtectionController::class,'configure'])->name('dashboard.turnstile.configure')->middleware('throttle:5,1');
                 Route::post('/bot-protection/test', [TurnstileProtectionController::class,'verify'])->name('dashboard.turnstile.verify')->middleware('throttle:8,1');
