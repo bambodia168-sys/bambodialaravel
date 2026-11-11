@@ -13,7 +13,7 @@ class MarketplaceManagerController extends Controller
     {
         abort_unless(in_array($type,['project','freelance','service'],true),404);
         $status=(string)$request->query('status','all');
-        abort_unless(in_array($status,['all','pending','published','rejected','draft'],true),404);
+        abort_unless(in_array($status,['all','pending','published','rejected','draft','withdrawn'],true),404);
         $search=mb_substr(trim((string)$request->query('q','')),0,120);
         $listings=MarketplaceListing::query()->where('type',$type)
             ->with(['creator:id,public_id,name','category:id,name'])
