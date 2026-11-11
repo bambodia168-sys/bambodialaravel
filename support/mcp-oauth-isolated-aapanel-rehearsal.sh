@@ -109,7 +109,12 @@ WHO="$(mysql_qa "$BAMBODIA_QA_DB" -e 'SELECT CURRENT_USER()')"
 [[ "$WHO" == bambodiaqa_* && "$WHO" != *root* ]] ||
   die "MySQL credentials do not resolve to a QA-only user."
 GRANTS="$(mysql_qa "$BAMBODIA_QA_DB" -e 'SHOW GRANTS FOR CURRENT_USER()')"
-[[ "$GRANTS" != *'ON *.*'* && "$GRANTS" != *'WITH GRANT OPTION'* ]] ||
+# A normal restricted MySQL user may have "GRANT USAGE ON *.*".
+# Reject *other* global privileges and any GRANT OPTION.
+DANGEROUS_GRANTS="$(printf '%s\n' "$GRANTS" |
+  grep -E 'ON \\*\\.\\*|WITH GRANT OPTION' |
+  grep -v '^GRANT USAGE ON \\*\\.\\* ' || true)"
+[[ -z "$DANGEROUS_GRANTS" ]] ||
   die "QA database account has excessive global privileges."
 info "QA_APP=$QA_APP"
 info "QA_DB=$BAMBODIA_QA_DB"
@@ -149,6 +154,8 @@ if [[ "$MODE" == --restore-check ]]; then
   core_counts "$BAMBODIA_QA_RESTORE_DB" > "$(dirname "$BACKUP")/restored-counts.txt"
   cmp -s "$(dirname "$BACKUP")/core-counts.txt" "$(dirname "$BACKUP")/restored-counts.txt" ||
     die "Restored core row counts differ from snapshot."
+  [[ "$(table_count "$BAMBODIA_QA_RESTORE_DB")" == "$(cat "$(dirname "$BACKUP")/table-count.txt")" ]] ||
+    die "Restored table count differs from the protected snapshot."
   info "RESTORE_CHECK=PASS"
   info "RESTORE_DB=$BAMBODIA_QA_RESTORE_DB"
   info "REHEARSAL_DB_UNCHANGED_BY_RESTORE_CHECK=YES"
