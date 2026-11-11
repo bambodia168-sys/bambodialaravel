@@ -43,11 +43,16 @@ final class BuilderSubmissionTerms
         $body = (string) $publication->body_snapshot;
         $format = $publication->body_format;
 
-        if (! in_array($format, ['html', 'markdown'], true)) {
-            $format = preg_match(
-                '~<\\s*/?\\s*(?:h[1-6]|p|div|br|ul|ol|li|blockquote|strong|em)\\b~i',
-                $body
-            ) === 1 ? 'html' : 'markdown';
+        // Older imported revisions can contain complete HTML documents even
+        // when the format was null or incorrectly defaulted to markdown.
+        // Only recognize structural document tags (not arbitrary inline '<').
+        // PolicyContent sanitizes HTML regardless of the stored label.
+        $htmlDocument = preg_match(
+            '~^\\s*<(?:h[1-6]|p|div|ul|ol|blockquote|table|section)\\b~i',
+            $body
+        ) === 1;
+        if (! in_array($format, ['html', 'markdown'], true) || $htmlDocument) {
+            $format = $htmlDocument ? 'html' : 'markdown';
         }
 
         return PolicyContent::display($body, $format);
