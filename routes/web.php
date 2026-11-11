@@ -64,6 +64,7 @@ use App\Http\Controllers\Creator\CreatorApplicationController;
 use App\Http\Controllers\Dashboard\CreatorReviewController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\ReviewQueueController;
+use App\Http\Controllers\Dashboard\PreviewVisibilityController;
 use App\Http\Controllers\Dashboard\UserManagerController;
 use App\Http\Controllers\Dashboard\AccountVerificationController;
 use App\Http\Controllers\Dashboard\UserOwnershipTransferController;
@@ -479,6 +480,13 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/review-queue/{listing}', [ReviewQueueController::class, 'decide'])->name('dashboard.reviews.update')->middleware('capability:marketplace_review');
         });
         Route::middleware('role:super_admin')->group(function (): void {
+            Route::get('/preview-content', [PreviewVisibilityController::class, 'index'])->name('dashboard.preview-visibility.index');
+            Route::patch('/preview-content/{kind}/{publicId}/withdraw', [PreviewVisibilityController::class, 'withdraw'])
+                ->where('kind', 'listing|job')->where('publicId', '[0-9]{9}')
+                ->middleware('throttle:4,1')->name('dashboard.preview-visibility.withdraw');
+            Route::patch('/preview-content/{kind}/{publicId}/restore', [PreviewVisibilityController::class, 'restore'])
+                ->where('kind', 'listing|job')->where('publicId', '[0-9]{9}')
+                ->middleware('throttle:4,1')->name('dashboard.preview-visibility.restore');
             Route::get('/privacy-requests', [PrivacyRequestManagerController::class,'index'])->name('dashboard.privacy.index');
             Route::get('/privacy-requests/{privacyRequest}', [PrivacyRequestManagerController::class,'inspect'])
                 ->name('dashboard.privacy.inspect')->where('privacyRequest','[0-9]{9}');
