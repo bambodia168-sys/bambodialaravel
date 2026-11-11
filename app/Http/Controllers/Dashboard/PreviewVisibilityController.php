@@ -75,10 +75,15 @@ final class PreviewVisibilityController extends Controller
 
         $service->change($kind, $publicId, $action, $data, $request->user());
 
+        if ($action === 'restore') {
+            return redirect()->route(
+                $kind === 'job' ? 'dashboard.jobs.index' : 'dashboard.reviews',
+                $kind === 'job' ? ['status' => 'pending'] : []
+            )->with('status', 'The selected record was restored to pending moderation; it is not yet public.');
+        }
+
         return redirect()->route('dashboard.preview-visibility.index', [
-            'kind' => $kind, 'status' => $action === 'withdraw' ? 'withdrawn' : 'published',
-        ])->with('status', $action === 'withdraw'
-            ? 'The selected record was withdrawn. All original data is retained.'
-            : 'The selected record was restored to pending review; it is not yet public.');
+            'kind' => $kind, 'status' => 'withdrawn',
+        ])->with('status', 'The selected record was withdrawn. All original data is retained.');
     }
 }
