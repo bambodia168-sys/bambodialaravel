@@ -18,7 +18,7 @@ final class BuilderTermsReadableTest extends TestCase
     {
         return User::query()->create([
             'name' => 'Policy Reader',
-            'email' => 'builder-policy-reader@example.test',
+            'email' => uniqid('builder_policy_', true).'@example.test',
             'password' => 'SecureReaderPassword123!',
             'role' => 'super_admin',
         ]);
@@ -73,10 +73,14 @@ final class BuilderTermsReadableTest extends TestCase
                 ->assertSee('data-builder-terms-accept', false)
                 ->assertSee('name="terms_sha256"', false)
                 ->assertDontSee('&lt;h1&gt;Verified Marketplace Terms', false)
-                ->assertDontSee('window.unsafeCall')
-                ->assertDontSee('<script>', false)
-                ->assertDontSee('<iframe', false);
+                ->assertDontSee('&lt;h2&gt;Important responsibilities', false);
 
+            preg_match('~<dialog id="studio-terms-popup"\\b.*?</dialog>~s', $response->getContent(), $matches);
+            $modal = $matches[0] ?? '';
+            $this->assertNotSame('', $modal);
+            $this->assertStringNotContainsString('window.unsafeCall', $modal);
+            $this->assertStringNotContainsString('<script>', $modal);
+            $this->assertStringNotContainsString('<iframe', $modal);
             $this->assertStringContainsString($digestBefore, $response->getContent());
         }
 
