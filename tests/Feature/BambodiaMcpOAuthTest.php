@@ -223,6 +223,15 @@ final class BambodiaMcpOAuthTest extends TestCase
             'password' => 'TestPassword123!',
         ])->assertRedirect();
 
+        $this->assertTrue(Passport::token()->newQuery()->findOrFail($tokenId)->revoked);
+        $this->assertTrue(Passport::refreshToken()->newQuery()
+            ->where('access_token_id', $tokenId)->firstOrFail()->revoked);
+
+        // PHPUnit reuses one Laravel container for several synthetic requests.
+        // Clear the resolved guard so a fresh request rechecks Passport's
+        // database-backed revocation state, as production requests must.
+        \Illuminate\Support\Facades\Auth::forgetGuards();
+
         $this->withToken($nextAccessToken)
             ->postJson('/mcp', $this->rpc('tools/list'))
             ->assertUnauthorized();
