@@ -78,6 +78,12 @@ git -C "$SOURCE" fetch origin "refs/heads/main:refs/remotes/origin/main"
 # or overwrite the production MCP foundation.
 git -C "$SOURCE" fetch origin "refs/heads/feature/bambodia-mcp-foundation-20261110:refs/remotes/origin/feature/bambodia-mcp-foundation-20261110"
 git -C "$SOURCE" cat-file -e "$MCP^{commit}" || fail "Pinned deployed MCP foundation is unavailable."
+MCP_CONTROLLER="app/Http/Controllers/Api/BambodiaMcpController.php"
+[[ -f "$APP/$MCP_CONTROLLER" && ! -L "$APP/$MCP_CONTROLLER" ]] ||
+  fail "Known production MCP controller not found."
+[[ "$(git hash-object "$APP/$MCP_CONTROLLER")" ==
+   "$(git -C "$SOURCE" rev-parse "$MCP:$MCP_CONTROLLER")" ]] ||
+  fail "Production MCP controller has unrecognized modifications."
 [[ "$(git -C "$SOURCE" rev-parse "$MCP:app/Models/AuditEvent.php")" == "$MCP_AUDIT_SHA" ]] ||
   fail "Unexpected source MCP audit events."
 [[ "$(git -C "$SOURCE" rev-parse "$MCP:routes/web.php")" == "$MCP_ROUTES_SHA" ]] ||
@@ -249,7 +255,7 @@ done < "$TMP/runtime"
 [[ "$(sha256sum "$APP/.env" | cut -d' ' -f1)" == "$ENV_HASH" ]] || fail "Private .env changed."
 echo "VERIFIED_RUNTIME_FILES=14"
 echo "PRESERVED_MCP_AUDIT_AND_ROUTE=YES"
-echo "DATABASE_MIGRATIONS=ONE_ADDITIVE"
+echo "DATABASE_MIGRATIONS=ONE_ADDITIVE_SCOPED"
 if [[ "$MODE" == "--check" ]]; then
   echo "PREFLIGHT=PASS; PRODUCTION=UNCHANGED"
   exit 0
@@ -277,7 +283,9 @@ while IFS= read -r rel; do
 done < "$TMP/runtime"
 (
   cd "$APP"
-  runuser -u www -- "$PHP" artisan migrate --force --no-interaction
+  # Apply ONLY this release's additive migration; other pending unrelated
+  # migrations remain untouched until independently approved.
+  runuser -u www -- "$PHP" artisan migrate --path=database/migrations/2026_11_11_000001_create_security_alert_rules_and_alerts.php --force --no-interaction
   runuser -u www -- "$PHP" artisan route:clear
   runuser -u www -- "$PHP" artisan view:clear
   runuser -u www -- "$PHP" artisan view:cache
