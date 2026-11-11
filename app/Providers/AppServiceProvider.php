@@ -27,7 +27,6 @@ class AppServiceProvider extends ServiceProvider
         Passport::defaultScopes(['mcp:use']);
         Passport::tokensExpireIn(now()->addMinutes(30));
         Passport::refreshTokensExpireIn(now()->addDays(14));
-        Passport::authCodesExpireIn(now()->addMinutes(5));
         Passport::authorizationView(function (array $parameters) {
             $user = $parameters['user'] ?? null;
             abort_unless($user instanceof \App\Models\User
