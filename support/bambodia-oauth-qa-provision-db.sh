@@ -111,7 +111,7 @@ chmod 600 "$CNF"
 
 # Atomic replace of the ONE synthetic placeholder; no other .env keys changed.
 python3 - "$APP/.env" <<'PY'
-import os, sys, tempfile
+import os, sys, tempfile, grp
 from pathlib import Path
 env = Path(sys.argv[1])
 content = env.read_text()
@@ -122,7 +122,7 @@ assert len(secret) == 64 and all(c in '0123456789abcdef' for c in secret)
 fd, temp = tempfile.mkstemp(prefix='.bambodia-oauth-qa-env-', dir=env.parent)
 try:
     os.fchmod(fd, 0o640)
-    os.fchown(fd, 0, 1000) # aaPanel www gid from initial inventory
+    os.fchown(fd, 0, grp.getgrnam('www').gr_gid)
     with os.fdopen(fd, 'w') as stream:
         stream.write(content.replace(old, 'DB_PASSWORD=' + secret + '\n'))
     os.replace(temp, env)
