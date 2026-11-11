@@ -118,6 +118,17 @@ jobs:
           # OAuth rehearsal only: validate syntax and confirm a forbidden root
           # is refused before any application or database operation.
           bash -n support/mcp-oauth-isolated-aapanel-rehearsal.sh
+          bash -n support/mcp-oauth-qa-source-bootstrap.sh
+          if BAMBODIA_QA_APP=/www/wwwroot/bambodia.com \
+             BAMBODIA_QA_EXPECTED_SHA=0000000000000000000000000000000000000000 \
+             bash support/mcp-oauth-qa-source-bootstrap.sh --check; then
+            echo 'Unsafe OAuth QA source bootstrap accepted production webroot'; exit 1
+          fi
+          if BAMBODIA_QA_APP=/var/lib/bambodia-oauth-qa-acceptance \
+             BAMBODIA_QA_EXPECTED_SHA=invalid \
+             bash support/mcp-oauth-qa-source-bootstrap.sh --check; then
+            echo 'Unsafe OAuth QA bootstrap accepted unreviewed SHA'; exit 1
+          fi
           python3 support/mcp-oauth-db-grant-guard.py --self-test
           if BAMBODIA_QA_APP=/www/wwwroot/bambodia.com \
              BAMBODIA_QA_DB=bambodia_oauthqa_ci \
