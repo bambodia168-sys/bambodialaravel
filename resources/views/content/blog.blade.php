@@ -66,7 +66,7 @@
             @if($post->excerpt)<p class="blog-card-excerpt">{{ \Illuminate\Support\Str::limit($post->excerpt, 120) }}</p>@endif
             <div class="blog-card-bottom">
               <time datetime="{{ $post->published_at?->toDateString() }}">{{ $post->published_at?->format('d M Y') ?? 'Published' }}</time>
-              <a href="{{ $post->publicUrl() }}" class="blog-card-read">Read <x-icon name="arrow-up-right" size="16"/></a>
+              <a href="{{ $post->publicUrl() }}" class="blog-card-read">Read</a>
             </div>
           </div>
         </article>
