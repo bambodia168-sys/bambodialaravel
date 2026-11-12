@@ -53,3 +53,18 @@ The main site must initially remain disabled. For first activation enable read a
 ## Current proof boundary
 
 The separate QA site passed REAL HTTPS MCP developer-token read and unpublished draft write; the post was visible in Post Manager. ChatGPT creation failed before OAuth consent. A migrated main-domain source branch and default-disabled gates do not establish a functioning or authorized production plugin. Keep the new PR draft and production unchanged until the actual OAuth client linking and controlled production release requirements pass.
+
+
+## Physical main-domain aaPanel discovery — 2026-11-12
+
+The operator ran the pinned, read-only inspector and confirmed:
+- Production Nginx vhost: /www/server/panel/vhost/nginx/bambodia.com.conf, SHA256 5dae3552791fa6be8fc23474ad89c91ecacf2fc94fd9ceda7ee34033df5b1116; syntax VALID.
+- Live bambodia.com document root: /www/wwwroot/bambodia-staging-qa/public (despite that directory's staging-looking name). Do NOT assume the name implies an isolated site: the production domain actually serves it. Protect its own .env, customer database, storage, media and releases.
+- Application is installed; MCP controller code is already present, but vendor/laravel/mcp and vendor/laravel/passport packages are BOTH absent. Existing files are a partial integration and are not a working OAuth release.
+- Public GET / returned 200, GET /mcp returned 405, GET /.well-known/oauth-protected-resource returned 404, GET /.well-known/oauth-protected-resource/mcp returned 404, GET /.well-known/oauth-authorization-server returned 404.
+- Nginx vhost had no explicit root protected-resource handling. HTTP_AUTHORIZATION forwarding was not established by the direct vhost inspection (may be in included FastCGI config).
+- Production app code and database, QA app and database, Nginx and PHP-FPM were unchanged by the inspector.
+
+**Next specific task:** run one small read-only inventory support/bambodia-mcp-main-domain-install-target.sh --inventory, pinned from the current draft PR #46. Its output identifies whether that live app's APP_URL and environment match the main domain (without exposing secrets), whether a usable composer.lock exists and lists MCP/Passport packages, current deployed Git head, tracked drift count and PHP 8.4/8.5 availability. Review this once before constructing a host-specific installer. This is not repeated synthetic acceptance testing.
+
+**Reproducible dependencies:** No composer.lock is tracked in draft PR #46. The CI workflow successfully resolves dependencies, but an operator must not run arbitrary composer update on the live site. Produce and verify a release lock/build artifact compatible with real PHP runtime, then stage it outside production before an approved rollback-capable cutover. Never blindly graft the old isolated QA composer.lock into newer main.
