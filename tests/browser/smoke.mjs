@@ -234,6 +234,26 @@ try {
              c.avatarWidth<(device.viewport.width<700?90:110) ||
              c.avatarOffset>2 || c.hasBiography))
           throw new Error(device.name+' freelancer grid regression '+JSON.stringify(freelancerGeometry));
+        const avatarCard=freelancerCards.filter({hasText:'Browser QA Creator'}).first();
+        if(await avatarCard.count()!==1)
+          throw new Error(device.name+' missing uploaded-avatar test creator');
+        const uploadedAvatar=avatarCard.locator('a.marketplace-freelancer-avatar img');
+        if(await uploadedAvatar.count()!==1)
+          throw new Error(device.name+' uploaded creator avatar was replaced by an initial');
+        const avatarRender=await uploadedAvatar.evaluate(img=>({
+          complete:img.complete,
+          naturalWidth:img.naturalWidth,
+          src:img.getAttribute('src')||'',
+          alt:img.getAttribute('alt')||'',
+        }));
+        if(!avatarRender.complete || avatarRender.naturalWidth<1 ||
+           !avatarRender.src.includes('/storage/profile-avatars/browser-qa-creator.webp') ||
+           avatarRender.alt!=='Browser QA Creator profile photo')
+          throw new Error(device.name+' uploaded creator avatar did not load '+JSON.stringify(avatarRender));
+        const target=await avatarCard.locator('a.marketplace-freelancer-avatar').getAttribute('href');
+        const profileResponse=await page.request.get(target);
+        if(!profileResponse.ok() || !(await profileResponse.text()).includes('Browser QA Creator'))
+          throw new Error(device.name+' uploaded avatar links to an inaccessible creator profile');
         const firstFreelancer=freelancerCards.first();
         if(!(await firstFreelancer.getByText(/approved listings?/).count()))
           throw new Error(device.name+' approved listing count missing');
