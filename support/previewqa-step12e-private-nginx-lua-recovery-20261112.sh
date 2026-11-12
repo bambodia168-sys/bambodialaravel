@@ -111,6 +111,19 @@ grep -Fxq 'listen.mode = 0600' "$FPM_BACKUP" ||
 grep -Fxq 'error_log stderr warn;' "$HTTP_CONF" ||
   fail nginx_error_log_directive_changed
 grep -Fxq 'http {' "$HTTP_CONF" || fail http_context_changed
+[[ "$(grep -Ec '^[[:space:]]*listen[[:space:]]+' "$HTTP_CONF")" == 1 ]] ||
+  fail private_http_listener_count_changed
+grep -Fq "listen unix:$HTTP_SOCK;" "$HTTP_CONF" ||
+  fail expected_private_unix_http_listener_missing
+grep -Fq 'fastcgi_pass unix:/run/bambodia-previewqa/php-fpm.sock;' "$HTTP_CONF" ||
+  fail expected_dedicated_fastcgi_upstream_missing
+grep -Fq 'fastcgi_param SCRIPT_FILENAME /var/lib/bambodia-preview-restore-20261112/public/index.php;' "$HTTP_CONF" ||
+  fail fixed_laravel_front_controller_changed
+grep -Fq 'root /var/lib/bambodia-previewqa-http-static-20261112/public;' "$HTTP_CONF" ||
+  fail dedicated_static_docroot_changed
+if grep -Eq '^[[:space:]]*(include|load_module)[[:space:]]+' "$HTTP_CONF"; then
+  fail unexpected_nginx_includes_or_module_loading
+fi
 if grep -Eq '^[[:space:]]*lua_package_path[[:space:]]' "$HTTP_CONF"; then
   fail existing_qa_http_lua_path_already_changed
 fi
