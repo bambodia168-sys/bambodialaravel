@@ -11,7 +11,7 @@ test "$(grep -Fc "echo 'STEP12F_LOCAL_INGRESS_AUDIT=PASS'" "$SOURCE")" -eq 1
 test "$(grep -Fc "echo 'PUBLIC_HEALTH_AND_LOGIN_HEADERS=PASS'" "$SOURCE")" -eq 1
 grep -Fq 'HTTP_SOCKET_MODE=666_NGINX_DEFAULT_PRIVATE_0700_PARENT' "$SOURCE"
 grep -Fq 'fail private_HTTP_socket_directory_changed' "$SOURCE"
-grep -Fq 'fail shared_www_could_connect:' "$SOURCE"
+grep -Fq 'shared_www_could_connect:$socket' "$SOURCE"
 grep -Fq 'fail nobody_could_connect_private_HTTP_socket' "$SOURCE"
 grep -Fq 'fail unexpected_HTTP_unix_socket_mode' "$SOURCE"
 grep -Fq 'HTTP_unix_socket_owner_changed' "$SOURCE"
