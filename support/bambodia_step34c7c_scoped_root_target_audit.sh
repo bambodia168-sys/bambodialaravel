@@ -180,7 +180,7 @@ for i,(v,scope) in enumerate(php_params,1):
     value=words[1] if len(words)>1 else ''
     if '$document_root' in value or '$realpath_root' in value:
         kind='DERIVED_FROM_ACTIVE_ROOT'
-    elif '/var/lib/bambia-oauth-public-qa/' in value:
+    elif '/var/lib/bambodia-oauth-public-qa/' in value:
         kind='PRIVATE_QA_LITERAL'
     elif '$' in value: kind='OTHER_NGINX_VARIABLE'
     elif value.startswith('/'): kind=category(value)
