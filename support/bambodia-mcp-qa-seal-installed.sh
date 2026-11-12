@@ -96,7 +96,7 @@ echo '========== VERIFY REAL INSTALLED QA APPLICATION =========='
 ) || fail EXISTING_INSTALLATION_VERIFICATION_FAILED
 
 echo '========== SECURE THE COMPLETED QA INSTALLATION =========='
-python3 - "$MARKER" <<'PY'
+python3 - "$MARKER" "$(id -g www)" <<'PY'
 import datetime,os,pathlib,stat,sys
 p=pathlib.Path(sys.argv[1])
 parent=p.parent
@@ -108,7 +108,7 @@ fd=os.open(p,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o640)
 with os.fdopen(fd,"w") as f:
     now=datetime.datetime.now(datetime.timezone.utc).isoformat()
     f.write("Bambodia 0.0.1 - "+now+"\n")
-os.chown(p,0,int(os.environ.get("WWW_GID","0")))
+os.chown(p,0,int(sys.argv[2]))
 os.chmod(p,0o640)
 print("QA_INSTALL_LOCK=CREATED")
 PY
