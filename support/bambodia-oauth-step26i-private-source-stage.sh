@@ -58,8 +58,7 @@ case "$ORIGIN_RAW" in
       fail SOURCE_ORIGIN_REWRITTEN_UNEXPECTEDLY
     echo 'ACCEPTED_SOURCE_ORIGIN=PINNED_LOCAL_QA'
     ;;
-  "https://github.com/$REPO"|"https://github.com/$REPO.git"|
-  "git@github.com:$REPO"|"git@github.com:$REPO.git")
+  "https://github.com/$REPO"|"https://github.com/$REPO.git"|"git@github.com:$REPO"|"git@github.com:$REPO.git")
     [[ "$ORIGIN_EFFECTIVE" == "$ORIGIN_RAW" ]] ||
       fail SOURCE_ORIGIN_REWRITTEN_UNEXPECTEDLY
     echo 'ACCEPTED_SOURCE_ORIGIN=CANONICAL_GITHUB'
