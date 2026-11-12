@@ -92,6 +92,8 @@ PUB="$APP/public"
 [[ "$(git hash-object "$PUB/.htaccess")" == 'a165eb1fb39bf08883ea61b91e543c871b7b8b64' ]] ||
   fail unexpected_root_apache_rewrite_file_contents
 [[ -z "$(find "$PUB" -type l -print -quit)" ]] || fail symlink_in_public_tree
+[[ -z "$(find "$PUB" -mindepth 1 -type d -name '.*' -print -quit)" ]] ||
+  fail hidden_directory_in_public_tree
 [[ -z "$(find "$PUB" ! -type d ! -type f -print -quit)" ]] ||
   fail special_file_in_public_tree
 FILE_COUNT="$(find "$PUB" -type f | wc -l | tr -d ' ')"
