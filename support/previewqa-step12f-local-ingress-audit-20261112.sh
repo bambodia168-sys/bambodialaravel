@@ -47,6 +47,14 @@ done
   fail static_copy_has_symlinks
 [[ ! -e "$DOCROOT/index.php" && ! -e "$DOCROOT/.htaccess" ]] ||
   fail unexpected_PHP_or_Apache_file
+for backup in \
+  '/root/Bambodia-PreviewQA-HTTP-Ingress-20261112/php-fpm.conf' \
+  '/root/Bambodia-PreviewQA-Lua-Recovery-20261112/nginx.conf' \
+  '/root/Bambodia-PreviewQA-Lua-Recovery-20261112/http.service'; do
+  [[ -f "$backup" && ! -L "$backup" &&
+    "$(stat -c '%U:%G:%a' "$backup")" == root:root:600 ]] ||
+    fail "private_recovery_backup_unavailable:$backup"
+done
 
 echo '========== SERVICE AND SOCKET ISOLATION =========='
 systemctl is-active --quiet bambodia-previewqa-http.service ||
@@ -81,6 +89,8 @@ grep -Fxq '    lua_package_path "/www/server/nginx/lib/lua/?.lua;;";' "$HTTP_CON
   fail isolated_lua_runtime_path_missing
 grep -Fxq 'error_log stderr warn;' "$HTTP_CONF" ||
   fail dedicated_nginx_stderr_logging_changed
+grep -Fxq '    server_tokens off;' "$HTTP_CONF" ||
+  fail private_nginx_version_redaction_changed
 grep -Fq "listen unix:$HTTP_SOCK;" "$HTTP_CONF" ||
   fail private_only_unix_listener_missing
 [[ "$(grep -Ec '^[[:space:]]*listen[[:space:]]+' "$HTTP_CONF")" == 1 ]] ||
@@ -158,8 +168,42 @@ for route in /up /login; do
   label="$(printf '%s' "$route" | sed 's#^/##')"
   status="$(probe "$label" "$route" 'preview-qa.bambodia.com')"
   [[ "$status" == 200 ]] || fail "expected_200:$route:$status"
-  grep -Eiq '^X-Content-Type-Options:[[:space:]]*nosniff[[:space:]]*\r?$' \
+  grep -Eiq '^X-Content-Type-Options:[[:space:]]*nosniff[[:space:]]*\r?
+done
+echo 'PUBLIC_HEALTH_AND_LOGIN_HEADERS=PASS'
+for route in /index.php /.htaccess /.env /storage/ /installer/ /vendor/autoload.php; do
+  label="$(printf '%s' "$route" | sed 's#[^a-zA-Z0-9]#_#g')"
+  status="$(probe "blocked_$label" "$route" 'preview-qa.bambodia.com')"
+  [[ "$status" == 404 ]] || fail "private_path_exposed:$route:$status"
+done
+echo 'DIRECT_PHP_DOTFILES_STORAGE_INSTALLER_PATHS=HTTP_404'
+for route in /account /dashboard; do
+  label="$(printf '%s' "$route" | sed 's#^/##')"
+  status="$(probe "guest_$label" "$route" 'preview-qa.bambodia.com')"
+  case "$status" in
+    301|302|303|307|308|401|403) ;;
+    *) fail "private_route_not_protected_for_guest:$route:$status" ;;
+  esac
+  printf 'GUEST_%s_HTTP=%s\n' "$label" "$status"
+done
+echo 'PRIVATE_ACCOUNT_DASHBOARD_GUEST_ACCESS=DENIED'
+
+# This is only an observation, never evidence of Cloudflare Access protection.
+unexpected="$(probe 'unknown_host' /up 'unauthorized-origin.invalid')"
+printf 'UNRECOGNIZED_HOST_HEALTH_HTTP=%s\n' "$unexpected"
+if [[ "$unexpected" == 200 ]]; then
+  echo 'BEFORE_PUBLICATION=REVIEW_ORIGIN_HOST_ENFORCEMENT_AND_ACCESS'
+fi
+echo 'NO_POST_REQUESTS_OR_CREDENTIALS=YES'
+echo 'HTTP_TRANSPORT=LOCAL_UNIX_SOCKET_ONLY'
+echo 'PUBLIC_TLS_DNS_CLOUDFLARE=NOT_CONFIGURED_BY_SCRIPT'
+echo 'NO_CONFIG_OR_SERVICE_MUTATIONS=YES'
+echo 'STEP12F_LOCAL_INGRESS_AUDIT=PASS'
+ \
     "$TMP/$label.headers" || fail "missing_nosniff:$route"
+  if grep -Eiq '^Server:[^\r\n]*/[0-9]+\.[0-9]+' "$TMP/$label.headers"; then
+    fail "private_nginx_version_leaked:$route"
+  fi
 done
 echo 'PUBLIC_HEALTH_AND_LOGIN_HEADERS=PASS'
 for route in /index.php /.htaccess /.env /storage/ /installer/ /vendor/autoload.php; do
