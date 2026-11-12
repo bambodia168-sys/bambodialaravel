@@ -13,6 +13,7 @@ MODE="$1"
 
 WORKER='bambodia_pvrsqa'
 INGRESS='bambodia_pvhttp'
+SOURCE='/var/lib/bambodia-preview-qa-20261112'
 APP='/var/lib/bambodia-preview-restore-20261112'
 DOCROOT='/var/lib/bambodia-previewqa-http-static-20261112/public'
 HTTP_CONF='/etc/bambodia-previewqa-http/nginx.conf'
@@ -52,6 +53,11 @@ done
 [[ -x "$NGINX" && "$(readlink -f "$NGINX")" == '/www/server/nginx/sbin/nginx' ]] ||
   fail nginx_binary_changed
 [[ -x "$PHP" ]] || fail qa_php_binary_missing
+[[ -d "$SOURCE/.git" && ! -L "$SOURCE" &&
+  "$(git -C "$SOURCE" rev-parse HEAD)" == '584e1b29697fd87227dc42c987342fa405ea5c09' ]] ||
+  fail isolated_qa_source_revision_changed
+[[ -z "$(git -C "$SOURCE" status --porcelain --untracked-files=no)" ]] ||
+  fail isolated_qa_source_modified
 "$NGINX" -h 2>&1 | grep -Fq -- '-e filename' ||
   fail nginx_startup_stderr_flag_not_supported
 [[ -f "$LUA_MODULE" && ! -L "$LUA_MODULE" ]] || fail installed_resty_core_missing
