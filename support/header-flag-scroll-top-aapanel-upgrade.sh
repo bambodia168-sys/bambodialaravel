@@ -43,9 +43,8 @@ done
    "$(gh api "repos/$REPO/pulls/40" --jq '.base.ref')" == main &&
    "$(gh api "repos/$REPO/pulls/40" --jq '.draft')" == true ]] ||
   fail 'Feature pull request changed unexpectedly'
-for run in 0; do
-  : # CI run IDs are verified by the operator-facing pinned outer command.
-done
+# The pinned operator command also verifies all five GitHub workflows.
+# The helper itself confirms the immutable reviewed source for each file.
 echo 'GITHUB_MAIN_AND_PR_BRANCH=VERIFIED'
 
 TEMP="$(mktemp -d /root/bambodia-header-controls.XXXXXXXX)"
