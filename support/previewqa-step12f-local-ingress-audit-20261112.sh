@@ -23,7 +23,7 @@ PHP='/www/server/php/85/bin/php'
 
 echo '========== STEP 12F — LOCAL-ONLY HTTP INGRESS SECURITY REVIEW =========='
 [[ "$(id -u)" == 0 ]] || fail root_required
-for tool in git stat systemctl runuser grep find wc curl mktemp sed id; do
+for tool in git stat systemctl runuser grep find wc curl mktemp sed id getent; do
   command -v "$tool" >/dev/null || fail "missing_tool:$tool"
 done
 [[ -x "$PHP" ]] || fail qa_php_binary_missing
