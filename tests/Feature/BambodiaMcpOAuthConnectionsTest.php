@@ -13,6 +13,15 @@ final class BambodiaMcpOAuthConnectionsTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Controller authorization is under test here, not Vite asset builds.
+        // Keep the dashboard view renderable in isolated PHP-only test runners.
+        $this->withoutVite();
+    }
+
     private function actor(string $role = 'super_admin'): User
     {
         return User::query()->create([
