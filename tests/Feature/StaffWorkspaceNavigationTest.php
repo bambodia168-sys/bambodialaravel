@@ -22,7 +22,7 @@ class StaffWorkspaceNavigationTest extends TestCase
             ->assertDontSee('Administration')
             ->assertDontSee('Admin Dashboard');
 
-        $this->get('/account')
+        $this->get('/account?='.$user->public_id)
             ->assertOk()
             ->assertSee('Staff Workspace')
             ->assertDontSee('Administration');
@@ -66,7 +66,7 @@ class StaffWorkspaceNavigationTest extends TestCase
         $this->actingAs($user)->get('/dashboard')
             ->assertForbidden();
 
-        $this->get('/account')
+        $this->get('/account?='.$user->public_id)
             ->assertOk()
             ->assertDontSee('Staff Workspace')
             ->assertDontSee('Administration');
