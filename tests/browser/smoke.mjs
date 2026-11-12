@@ -146,6 +146,23 @@ try {
               throw new Error(device.name+' '+theme+' '+name+' insufficient contrast ratio '+value.toFixed(2));
           }
         }
+        // UI action convention: never add decorative arrows after button labels.
+        const decoratedActions=[
+          '.marketplace-freelancer-section .marketplace-section-heading .btn svg',
+          '#bambodia-jobs .marketplace-section-heading .btn svg',
+          '.home-blog-heading-actions > .btn svg',
+          '.blog-card-read svg',
+          '.bambodia-job-button svg',
+          '.marketplace-home-feed .marketplace-card-live-preview svg',
+          '.nav-category-explore svg',
+        ];
+        for(const selector of decoratedActions){
+          if(await page.locator(selector).count())
+            throw new Error(device.name+' has trailing action arrow '+selector);
+        }
+        // The arrow-only slider controls must remain functional.
+        if(!(await page.locator('[data-home-blog-next] svg').count()))
+          throw new Error(device.name+' blog navigation control lost its arrow');
         // All eight approved homepage previews remain visible at every viewport.
         // Small-screen discovery uses two columns without hiding item types.
         const service=page.getByText('Browser QA Published Service').first();
