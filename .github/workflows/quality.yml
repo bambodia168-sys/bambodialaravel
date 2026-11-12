@@ -34,6 +34,7 @@ jobs:
           mkdir -p database
       - name: Validate installed-site upgrade shell syntax
         run: |
+          bash -n support/previewqa-step12c-private-http-install-20261112.sh
           bash -n support/workspace-upgrade.sh
           bash -n support/frontend-navigation-upgrade.sh
           bash -n support/typography-upgrade.sh
