@@ -22,9 +22,10 @@
   $workspace = in_array($workspace, ['admin','account','creator','developer'], true) ? $workspace : 'account';
   $user = auth()->user();
   $currentName = preg_replace('/^localized\.(?:en|zh|km|ko|ja|th|vi|de|fr|hi|id|ms|es)\./', '', request()->route()?->getName() ?? '');
-  $workspaceTitles = ['admin'=>'Administration','account'=>'My Account','creator'=>'Creator Studio','developer'=>'Developer Workspace'];
+  $adminWorkspaceLabel = $user->role === 'staff' ? 'Staff Workspace' : 'Administration';
+  $workspaceTitles = ['admin'=>$adminWorkspaceLabel,'account'=>'My Account','creator'=>'Creator Studio','developer'=>'Developer Workspace'];
   $workspaceDescription = [
-    'admin'=>'Platform operations and management',
+    'admin'=>$user->role === 'staff' ? 'Permitted staff support operations' : 'Platform operations and management',
     'account'=>'Personal account and activity',
     'creator'=>'Creative work and customer delivery',
     'developer'=>'Integrations and API security',
@@ -33,7 +34,7 @@
 
   if ($workspace === 'admin') {
     $groups[] = ['heading'=>'Overview','items'=>[
-      ['route'=>'dashboard','label'=>'Dashboard overview','icon'=>'layout-dashboard'],
+      ['route'=>'dashboard','label'=>$user->role === 'staff' ? 'Support overview' : 'Dashboard overview','icon'=>'layout-dashboard'],
       ['route'=>'dashboard.badges.index','label'=>'Creator Badges','icon'=>'award'],
       ['route'=>'account.profile.edit','label'=>'My Profile','icon'=>'user-round'],
       ['route'=>'account.security','label'=>'Account Security','icon'=>'shield-check'],
@@ -214,8 +215,8 @@
     </nav>
     <div class="workspace-sidebar-bottom" aria-label="Switch workspaces">
       @if($workspace !== 'admin' && $user->isAdministrator())
-      <a href="{{ route('dashboard') }}" class="workspace-nav-link" title="Admin Dashboard">
-        <x-icon name="layout-dashboard" size="19"/><span class="workspace-nav-text">Administration</span>
+      <a href="{{ route('dashboard') }}" class="workspace-nav-link" title="{{ $adminWorkspaceLabel }}">
+        <x-icon name="layout-dashboard" size="19"/><span class="workspace-nav-text">{{ $adminWorkspaceLabel }}</span>
       </a>
       @endif
       @if($workspace !== 'developer' && $user->role === 'super_admin')
@@ -277,7 +278,7 @@
               <a href="{{ route('creator') }}"><x-icon name="palette" size="17"/> Creator Studio</a>
             @endif
             @if($user->isAdministrator())
-              <a href="{{ route('dashboard') }}"><x-icon name="layout-dashboard" size="17"/> Administration</a>
+              <a href="{{ route('dashboard') }}"><x-icon name="layout-dashboard" size="17"/> {{ $adminWorkspaceLabel }}</a>
             @endif
             @if($user->role === 'super_admin')
               <a href="{{ route('developer.index') }}"><x-icon name="terminal" size="17"/> Developer Workspace</a>
