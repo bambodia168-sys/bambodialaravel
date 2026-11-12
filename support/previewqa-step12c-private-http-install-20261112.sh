@@ -241,8 +241,13 @@ sed -e "s/^listen.group = $WORKER$/listen.group = $INGRESS/" \
   fail scoped_fpm_group_rewrite_missing
 [[ "$(grep -Fc 'listen.mode = 0660' "$TMP/php-fpm.conf")" == 1 ]] ||
   fail scoped_fpm_mode_rewrite_missing
-"$FPM_BIN" -t -y "$TMP/php-fpm.conf" >/dev/null 2>&1 ||
-  fail scoped_fpm_config_syntax_invalid
+# The intended ingress group does not exist during read-only preflight.
+# Validate an otherwise identical candidate using the existing private group;
+# validate the actual new group only AFTER useradd and BEFORE stopping FPM.
+sed "s#^listen.group = $INGRESS$#listen.group = $WORKER#" \
+  "$TMP/php-fpm.conf" > "$TMP/php-fpm.offline.conf"
+"$FPM_BIN" -t -y "$TMP/php-fpm.offline.conf" >/dev/null 2>&1 ||
+  fail scoped_fpm_offline_syntax_invalid
 
 cat > "$TMP/http.service" <<UNIT
 [Unit]
@@ -275,7 +280,7 @@ TasksMax=64
 WantedBy=multi-user.target
 UNIT
 echo 'CANDIDATE_NGINX_OFFLINE_SYNTAX=PASS'
-echo 'CANDIDATE_FPM_SCOPED_GROUP_SYNTAX=PASS'
+echo 'CANDIDATE_FPM_GROUP_OFFLINE_SYNTAX=PASS_IDENTITY_NOT_YET_CREATED'
 echo 'DEDICATED_HTTP_UNIX_SOCKET=PRIVATE_NO_TCP'
 echo 'SHARED_WWW_FASTCGI_ACCESS=REMAINS_DENIED'
 echo 'QA_WITHDRAWAL_WRITES=DISABLED'
@@ -298,6 +303,8 @@ useradd --system --user-group --no-create-home \
 if id -nG www | tr ' ' '\n' | grep -Fxq "$INGRESS"; then
   fail shared_www_is_member_of_dedicated_ingress_group
 fi
+"$FPM_BIN" -t -y "$TMP/php-fpm.conf" >/dev/null 2>&1 ||
+  fail actual_scoped_fpm_candidate_invalid
 install -d -o "$INGRESS" -g "$INGRESS" -m 700 "$HTTP_DIR"
 install -d -o "$INGRESS" -g "$INGRESS" -m 700 "$DOCROOT"
 while IFS= read -r -d '' file; do
