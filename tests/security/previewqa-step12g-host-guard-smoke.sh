@@ -11,6 +11,7 @@ grep -Fq 'return 421;' "$SRC"
 grep -Fq 'UNPRIVILEGED_QA_NGINX_HOST_GUARD_SYNTAX=PASS' "$SRC"
 grep -Fq 'UNKNOWN_HOST_BASELINE=HTTP_200_CURRENTLY_UNRESTRICTED' "$SRC"
 grep -Fq 'PERSISTENT_WRITES=NONE' "$SRC"
+grep -Fq 'chmod 770 "$TMP"' "$SRC"
 TMP="$(mktemp -d)"
 trap 'rm -rf -- "$TMP"' EXIT
 ANCHOR='        server_name preview-qa.bambodia.com localhost 127.0.0.1;'
