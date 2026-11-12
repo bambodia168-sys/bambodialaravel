@@ -145,6 +145,7 @@ jobs:
           bash -n support/bambodia-mcp-qa-functional-launch.sh
           bash -n support/bambodia-mcp-qa-finish-admin.sh
           bash -n support/bambodia-mcp-qa-https-activate.sh
+          bash -n support/bambodia-mcp-qa-correct-admin-email.sh
           php -l app/Http/Controllers/Developer/McpConnectionCenterController.php
           bash -n support/mcp-oauth-qa-db-inspect.sh
           bash -n support/mcp-oauth-qa-source-bootstrap.sh
