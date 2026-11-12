@@ -18,6 +18,13 @@
 @if(session('mcp_check_error'))
     <div class="workspace-overview-alert" role="alert"><x-icon name="alert" size="16"/> {{ session('mcp_check_error') }}</div>
 @endif
+@if(session('mcp_draft_created'))
+    <div class="workspace-overview-alert" role="status">
+        <x-icon name="check-circle" size="16"/>
+        The live MCP write tool created the unpublished post “{{ session('mcp_draft_created.title') }}”.
+        <a href="{{ route('dashboard.posts.edit', session('mcp_draft_created.id')) }}">Open this draft in Post Manager</a>
+    </div>
+@endif
 @if($errors->any())
     <div class="workspace-overview-alert" role="alert">Connection test not started. Confirm your account password and try again.</div>
 @endif
@@ -83,7 +90,30 @@
 <section class="panel workspace-overview-block">
     <div class="panel-head">
         <div>
-            <h2>3. Verify real user actions</h2>
+            <h2>3. Create an actual unpublished draft</h2>
+            <p>Test the real MCP write function against a disposable QA post, then open the resulting record in Post Manager. Nothing is submitted, approved or published.</p>
+        </div>
+    </div>
+    @if($qa)
+      <form method="POST" action="{{ route('developer.mcp.create-draft') }}" style="max-width:540px">
+        @csrf
+        <label for="mcp-write-password">Confirm administrator password</label>
+        <input id="mcp-write-password" name="password" type="password" autocomplete="current-password" required>
+        <label><input type="checkbox" name="confirm_test_draft" value="1" required> Create one unpublished QA draft through MCP. I will review it in Post Manager.</label>
+        <div class="dialog-actions">
+            <button class="btn primary" type="submit"><x-icon name="file-plus" size="16"/> Create QA draft through MCP</button>
+        </div>
+      </form>
+    @else
+      <p class="hint">Draft creation from this page is disabled outside the isolated QA environment.</p>
+    @endif
+    <p class="hint">If the HTTPS request times out, check Post Manager before trying again: a draft might already have been created. This check never publishes or deletes records.</p>
+</section>
+
+<section class="panel workspace-overview-block">
+    <div class="panel-head">
+        <div>
+            <h2>4. Verify ChatGPT authorization and real user actions</h2>
             <p>After ChatGPT completes OAuth authorization, run these requests in the connected chat and compare the result with your Bambodia dashboard.</p>
         </div>
     </div>
