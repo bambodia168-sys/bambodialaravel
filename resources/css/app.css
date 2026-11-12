@@ -290,31 +290,32 @@ svg{flex-shrink:0}
 .marketplace-freelancer-card{display:flex;flex-direction:column;min-width:0;min-height:255px;padding:20px 14px 16px;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:var(--shadow);transition:transform .18s,border-color .18s,box-shadow .18s}
 .marketplace-freelancer-card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 12px 30px rgba(10,27,53,.1)}
 .marketplace-freelancer-card-heading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;margin-bottom:13px}
-.marketplace-freelancer-avatar{display:grid;place-items:center;flex:0 0 76px;width:76px;height:76px;border-radius:23px;background:color-mix(in srgb,var(--accent) 13%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line));color:var(--accent);font-weight:800;font-size:30px}
-.marketplace-freelancer-visibility{display:inline-flex;align-items:center;gap:5px;min-width:0;color:var(--muted);font-size:11px;font-weight:700}
+.marketplace-freelancer-avatar{display:grid;place-items:center;flex:0 0 112px;width:112px;height:112px;border-radius:26px;background:color-mix(in srgb,var(--accent) 13%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line));color:var(--accent);font-weight:800;font-size:42px;line-height:1;text-decoration:none;overflow:hidden;transition:box-shadow .2s ease,transform .2s ease}
+.marketplace-freelancer-avatar img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;aspect-ratio:1}
+.marketplace-freelancer-avatar:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(10,27,53,.13)}
+.marketplace-freelancer-avatar:focus-visible{outline:3px solid var(--secondary);outline-offset:4px}
 .marketplace-freelancer-card h3{margin:0 0 6px;font-size:17px;line-height:1.35;overflow-wrap:anywhere;text-align:center}
 .marketplace-freelancer-card h3 a{color:var(--text)}
 .marketplace-freelancer-card h3 a:hover{color:var(--accent)}
-.marketplace-freelancer-card h3 a:focus-visible,.marketplace-freelancer-card-footer a:focus-visible{outline:3px solid var(--secondary);outline-offset:3px;border-radius:3px}
+.marketplace-freelancer-card h3 a:focus-visible{outline:3px solid var(--secondary);outline-offset:3px;border-radius:3px}
 .marketplace-freelancer-headline{margin:0 0 11px;text-align:center;color:var(--accent);font-size:12px;font-weight:750;line-height:1.5;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;min-height:3em}
 .marketplace-freelancer-card-footer{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--line);padding-top:13px;margin-top:auto}
-.marketplace-freelancer-card-footer span,.marketplace-freelancer-card-footer a{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:750}
+.marketplace-freelancer-card-footer span{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:750}
 .marketplace-freelancer-card-footer span{color:var(--muted)}
-.marketplace-freelancer-card-footer a{color:var(--accent)}
 .marketplace-freelancer-empty .btn{margin-top:8px}
 @media(max-width:1399px){.marketplace-freelancer-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:1099px){.marketplace-freelancer-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:699px){
   .marketplace-freelancer-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .marketplace-freelancer-card{min-height:240px;padding:15px 10px 12px}
-  .marketplace-freelancer-avatar{width:66px;height:66px;flex-basis:66px;border-radius:20px;font-size:26px}
+  .marketplace-freelancer-avatar{width:92px;height:92px;flex-basis:92px;border-radius:24px;font-size:36px}
   .marketplace-freelancer-card h3{font-size:14px}
   .marketplace-freelancer-headline{font-size:11px}
   .marketplace-freelancer-card-footer{gap:8px;padding-top:10px}
-  .marketplace-freelancer-card-footer span,.marketplace-freelancer-card-footer a{font-size:10px}
+  .marketplace-freelancer-card-footer span{font-size:10px}
 }
 @media(max-width:679px){.marketplace-freelancer-section .marketplace-section-heading{align-items:flex-start;gap:12px}.marketplace-freelancer-section .marketplace-section-heading>.btn{align-self:flex-start}}
-@media(prefers-reduced-motion:reduce){.marketplace-freelancer-card{transition:none}}
+@media(prefers-reduced-motion:reduce){.marketplace-freelancer-card,.marketplace-freelancer-avatar{transition:none}.marketplace-freelancer-avatar:hover{transform:none}}
 .marketplace-jobs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .marketplace-job-card{padding:23px;gap:13px}
 .marketplace-job-card h3{font-size:18px;line-height:1.4;margin:0;letter-spacing:normal}
