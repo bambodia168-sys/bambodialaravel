@@ -69,10 +69,11 @@ def asset_name(entry):
         refuse("unexpected Vite asset path")
     return value
 
-def preflight():
+def preflight(expected_head=None, require_node=False):
     if os.geteuid() != 0:
         refuse("Root operator required")
-    for binary in ("gh", "git", "python3", "node", "npm"):
+    binaries = ("gh", "git", "python3", "node", "npm") if require_node else ("gh", "git", "python3")
+    for binary in binaries:
         if not shutil.which(binary):
             refuse("Missing executable: " + binary)
     if APP.is_symlink() or APP.resolve() != APP or not (APP / "artisan").is_file():
@@ -92,6 +93,8 @@ def preflight():
     if (pr["head"]["ref"] != BRANCH or pr["base"]["ref"] != "main"
             or pr["state"] != "open" or not pr["draft"]):
         refuse("PR #45 changed")
+    if expected_head is not None and pr["head"]["sha"] != expected_head:
+        refuse("PR #45 head changed since CI verification")
     for rel, expected in LIVE_BASELINES.items():
         if git_blob(protected_file(APP / rel)) != expected:
             refuse("LIVE_FILE_DIVERGED_FROM_APPROVED_MAIN=" + rel)
@@ -106,18 +109,22 @@ def preflight():
         protected_file(APP / "public/build" / str(value))
     print("LIVE_VITE_MANIFEST=VERIFIED")
 
-def prepare(source, staged):
+def prepare(source, staged, bundle=None):
     for rel, expected in REVIEWED_SOURCES.items():
         if git_blob(protected_file(source / rel)) != expected:
             refuse("Reviewed source mismatch: " + rel)
     print("REVIEWED_SOURCE=VERIFIED")
-    cmd("npm", "install", "--ignore-scripts", "--no-audit", "--no-fund",
-        cwd=source, output=False)
-    cmd("npm", "run", "build", cwd=source, output=False)
+    if bundle is None:
+        cmd("npm", "install", "--ignore-scripts", "--no-audit", "--no-fund",
+            cwd=source, output=False)
+        cmd("npm", "run", "build", cwd=source, output=False)
+        bundle = source / "public/build"
+    else:
+        print("VITE_BUILD_SOURCE=VERIFIED_GITHUB_ACTIONS_ARTIFACT")
     live_manifest = protected_file(APP / "public/build/manifest.json")
     manifest_hash = sha256(live_manifest)
     old = json.loads(live_manifest.read_text())
-    new = json.loads(protected_file(source / "public/build/manifest.json").read_text())
+    new = json.loads(protected_file(bundle / "manifest.json").read_text())
     css = "resources/css/app.css"
     if old.keys() != new.keys():
         refuse("Vite manifest keys diverged")
@@ -129,7 +136,7 @@ def prepare(source, staged):
     old_asset, new_asset = asset_name(old[css]), asset_name(new[css])
     if (old_asset == new_asset or new_asset.suffix != ".css"):
         refuse("Expected new CSS bundle missing")
-    protected_file(source / "public/build" / str(new_asset))
+    protected_file(bundle / str(new_asset))
     if (APP / "public/build" / str(new_asset)).exists():
         refuse("Compiled CSS asset already exists")
     for rel in ("app/Http/Controllers/HomeController.php",
@@ -139,7 +146,7 @@ def prepare(source, staged):
         shutil.copyfile(source / rel, target)
     target = staged / "public/build" / str(new_asset)
     target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source / "public/build" / str(new_asset), target)
+    shutil.copyfile(bundle / str(new_asset), target)
     old[css]["file"] = str(new_asset)
     (staged / "public/build/manifest.json").write_text(
         json.dumps(old, ensure_ascii=False, indent=2) + "\n")
@@ -168,9 +175,9 @@ def atomic_copy(src, dst, owner=None):
         if os.path.lexists(name):
             os.unlink(name)
 
-def install(staged, asset, manifest_hash):
+def install(staged, asset, manifest_hash, expected_head=None):
     # Repeat all drift checks after downloading/building before any live write.
-    preflight()
+    preflight(expected_head=expected_head)
     if sha256(APP / "public/build/manifest.json") != manifest_hash:
         refuse("Live Vite manifest changed during isolated build")
     if BACKUPS.is_symlink():
@@ -243,13 +250,45 @@ def install(staged, asset, manifest_hash):
     print("HEADER_LANGUAGE_NGINX_DATABASE_PHP_FPM=UNCHANGED")
     print("RESULT=HOME_DISCOVERY_RESPONSIVE_DEPLOYED")
 
+def verified_ci_bundle(run_id, source, folder):
+    if not run_id.isdigit() or not 1 <= len(run_id) <= 20:
+        refuse("Invalid GitHub Actions run ID")
+    run = json.loads(cmd("gh", "api", "repos/" + REPO + "/actions/runs/" + run_id))
+    head = cmd("git", "-C", str(source), "rev-parse", "HEAD")
+    if (run.get("head_sha") != head or run.get("status") != "completed"
+            or run.get("conclusion") != "success"
+            or run.get("name") != "Bambodia Quality"
+            or run.get("event") != "pull_request"
+            or run.get("repository", {}).get("full_name") != REPO):
+        refuse("GitHub CI bundle does not belong to successful reviewed commit")
+    current = json.loads(cmd("gh", "api", "repos/" + REPO + "/pulls/45"))
+    if head != current["head"]["sha"]:
+        refuse("Source branch moved since approved CI run")
+    artifacts = json.loads(cmd("gh", "api", "repos/" + REPO + "/actions/runs/" + run_id + "/artifacts"))
+    candidates = [x for x in artifacts.get("artifacts", [])
+                  if x.get("name") == "Bambodia-Home-Discovery-Vite"
+                  and not x.get("expired") and x.get("size_in_bytes", 0) > 0]
+    if len(candidates) != 1:
+        refuse("Verified compiled Vite artifact missing or expired")
+    cmd("gh", "run", "download", run_id, "--repo", REPO,
+        "--name", "Bambodia-Home-Discovery-Vite",
+        "--dir", str(folder), output=False)
+    protected_file(folder / "manifest.json")
+    if (folder / "assets").is_symlink() or not (folder / "assets").is_dir():
+        refuse("Compiled Vite artifact directory unsafe")
+    print("CI_BUILD_ARTIFACT=VERIFIED_SUCCESSFUL_RUN " + run_id)
+    return head
+
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in ("--check", "--apply"):
-        refuse("Usage: python3 home-discovery-aapanel-upgrade.py --check|--apply")
-    preflight()
-    if sys.argv[1] == "--check":
+    check = sys.argv[1:] == ["--check"]
+    local = sys.argv[1:] == ["--apply"]
+    ci = (len(sys.argv) == 3 and sys.argv[1] == "--apply-ci")
+    if not (check or local or ci):
+        refuse("Usage: home-discovery-aapanel-upgrade.py --check|--apply|--apply-ci RUN_ID")
+    preflight(require_node=local)
+    if check:
         print("DEPLOYMENT=NOT_PERFORMED")
-        print("RESULT=READY_FOR_ISOLATED_HOME_DISCOVERY_BUILD")
+        print("RESULT=READY_FOR_VERIFIED_HOME_DISCOVERY_RELEASE")
         return
     with tempfile.TemporaryDirectory(prefix="bambodia-home-build-", dir="/root") as folder:
         base = Path(folder)
@@ -257,8 +296,13 @@ def main():
         cmd("gh", "repo", "clone", REPO, str(source), "--", "--branch", BRANCH,
             "--single-branch", "--depth", "1", output=False)
         staged.mkdir(mode=0o700)
-        asset, manifest_hash = prepare(source, staged)
-        install(staged, asset, manifest_hash)
+        bundle, head = None, None
+        if ci:
+            bundle = base / "ci-build"
+            bundle.mkdir(mode=0o700)
+            head = verified_ci_bundle(sys.argv[2], source, bundle)
+        asset, manifest_hash = prepare(source, staged, bundle=bundle)
+        install(staged, asset, manifest_hash, expected_head=head)
 
 if __name__ == "__main__":
     try:
