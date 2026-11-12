@@ -291,9 +291,9 @@ svg{flex-shrink:0}
 .marketplace-freelancer-card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 12px 30px rgba(10,27,53,.1)}
 .marketplace-freelancer-card-heading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;margin-bottom:13px}
 .marketplace-freelancer-avatar{display:grid;place-items:center;flex:0 0 112px;width:112px;height:112px;border-radius:26px;background:color-mix(in srgb,var(--accent) 13%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line));color:var(--accent);font-weight:800;font-size:42px;line-height:1;text-decoration:none;overflow:hidden;transition:box-shadow .2s ease,transform .2s ease}
-/* Preserve the entire uploaded portrait: cover cropped the top of tall headshots. */
-.marketplace-freelancer-avatar img{display:block;width:100%;height:100%;box-sizing:border-box;padding:6px;object-fit:contain;object-position:center center;background:var(--surface);aspect-ratio:1}
-@media(max-width:699px){.marketplace-freelancer-avatar img{padding:5px}}
+/* Head-and-shoulders framing: fill the avatar and bias the crop upward so
+   the top of the hair stays visible on tall portrait photos. */
+.marketplace-freelancer-avatar img{display:block;width:100%;height:100%;box-sizing:border-box;padding:0;object-fit:cover;object-position:50% 15%;background:var(--surface);aspect-ratio:1}
 .marketplace-freelancer-avatar:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(10,27,53,.13)}
 .marketplace-freelancer-avatar:focus-visible{outline:3px solid var(--secondary);outline-offset:4px}
 .marketplace-freelancer-card h3{margin:0 0 6px;font-size:17px;line-height:1.35;overflow-wrap:anywhere;text-align:center}
