@@ -91,14 +91,18 @@
       @foreach($freelancers as $freelancer)
         <article class="marketplace-freelancer-card">
           <div class="marketplace-freelancer-card-heading">
-            <span class="marketplace-freelancer-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($freelancer->name,0,1)) }}</span>
-            <span class="marketplace-freelancer-visibility"><x-icon name="user-round" size="14"/> Public profile</span>
+            <a class="marketplace-freelancer-avatar" href="{{ route('creators.show',$freelancer->public_id) }}" aria-label="View {{ $freelancer->name }} creator profile">
+              @if($freelancer->userProfile?->avatar_path)
+                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($freelancer->userProfile->avatar_path) }}" alt="{{ $freelancer->name }} profile photo" loading="lazy" decoding="async" width="112" height="112">
+              @else
+                <span aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($freelancer->name,0,1)) }}</span>
+              @endif
+            </a>
           </div>
           <h3><a href="{{ route('creators.show',$freelancer->public_id) }}">{{ $freelancer->name }}</a></h3>
           <p class="marketplace-freelancer-headline">{{ $freelancer->creatorProfile->headline }}</p>
           <div class="marketplace-freelancer-card-footer">
             <span><x-icon name="briefcase" size="15"/> {{ number_format($freelancer->public_listings_count) }} approved {{ \Illuminate\Support\Str::plural('listing',$freelancer->public_listings_count) }}</span>
-            <a href="{{ route('creators.show',$freelancer->public_id) }}">View portfolio <x-icon name="arrow-up-right" size="16"/></a>
           </div>
         </article>
       @endforeach
