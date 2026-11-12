@@ -136,7 +136,10 @@ echo 'UNKNOWN_HOST_BASELINE=HTTP_200_CURRENTLY_UNRESTRICTED'
 echo '========== BUILD NGINX HOST GUARD AS PRIVATE OFFLINE CANDIDATE =========='
 TMP="$(mktemp -d /run/bambodia-step12g.XXXXXXXX)"
 chown root:"$INGRESS" "$TMP"
-chmod 750 "$TMP"
+# An unprivileged nginx -t must be able to create its temporary Unix
+# listener/PID inside this ephemeral directory; group write is required.
+# The directory is still inaccessible to other users and is removed on exit.
+chmod 770 "$TMP"
 cat > "$TMP/host.guard" <<'NGINXGUARD'
         # Canonical QA origin only. Not a replacement for Cloudflare Access.
         if ($http_host !~* "^preview-qa[.]bambodia[.]com$") {
