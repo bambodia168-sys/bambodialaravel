@@ -39,7 +39,7 @@ done
   fail 'Expected existing branding assets missing'
 [[ "$(gh api "repos/$REPO/commits/main" --jq '.sha')" == "$MAIN" ]] ||
   fail 'GitHub main moved; code reconciliation required'
-[[ "$(gh api "repos/$REPO/pulls/40" --jq '.head.ref')" == 'feat/global-header-flags-scrolltop-20261112' &&
+[[ "$(gh api "repos/$REPO/pulls/41" --jq '.head.ref')" == 'feat/global-header-flags-scrolltop-20261112' &&
    "$(gh api "repos/$REPO/pulls/40" --jq '.base.ref')" == main &&
    "$(gh api "repos/$REPO/pulls/40" --jq '.draft')" == true ]] ||
   fail 'Feature pull request changed unexpectedly'
