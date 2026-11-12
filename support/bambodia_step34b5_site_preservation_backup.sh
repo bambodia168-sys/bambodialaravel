@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bambodia Step 34B.5 — preserve an existing occupied site before ANY reuse.
+# Bambodia Step 34B.5 - preserve an existing occupied site before ANY reuse.
 # Creates an offline root-only backup of site files and Nginx vhost.
 # Does not copy TLS private keys or modify the existing site or QA database.
 set -Eeuo pipefail
@@ -98,7 +98,7 @@ openssl x509 -in "$CERTDIR/fullchain.pem" -noout -fingerprint -sha256 \
 test -s "$BACKUP/public-cert-sha256.txt"
 
 cat > "$BACKUP/RESTORE_NOTES.txt" <<'NOTES'
-Bambodia OAuth QA hostname — PRESERVATION ONLY.
+Bambodia OAuth QA hostname - PRESERVATION ONLY.
 Contains an archived snapshot of the existing site files (including dotfiles),
 the exact previous Nginx vhost, and the public certificate fingerprint.
 This is NOT an authorized deployment or a tested rollback.
