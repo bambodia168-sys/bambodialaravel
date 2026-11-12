@@ -120,6 +120,8 @@ jobs:
           bash -n support/builder-terms-readable-aapanel-upgrade.sh
           bash -n support/marketplace-readiness-audit-aapanel-upgrade.sh
           bash -n support/preview-content-review-aapanel-upgrade.sh
+      - name: Check guarded homepage installer syntax
+        run: python3 -m py_compile support/home-discovery-aapanel-upgrade.py
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
