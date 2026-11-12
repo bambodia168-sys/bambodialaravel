@@ -46,3 +46,24 @@ Operator ran the pinned `support/bambodia-mcp-qa-functional-launch.sh --launch` 
 The corrected launcher searches common aaPanel Node version-manager bin directories for an actual compatible Node/npm pair. If none is available, it downloads the **official Node.js 24.22.3 LTS** Linux x64/arm64 build-only tarball into a new root-private recovery workspace, checks the exact SHA256 values published by the Node.js project for each architecture, and extracts it privately. It does **not** install Node system-wide, call `apt`, rewrite global PATH, change aaPanel Node versions, or reload any services. npm's cache is placed inside the same root-only recovery workspace, not under a global npm home. The previous checked QA source/DB and public Nginx restrictions remain unchanged, and the end goal is still the actual browser-connected MCP user workflows.
 
 The updated script is **not yet run by the operator**. It checks pre-existing source and empty QA database before any Composer or Laravel mutation. On a failure after any mutation, preserve the partial state and do not blindly run it again. PR #15 remains draft/unmerged.
+
+## Administrator finalization PASS and QA-only HTTPS activation (2026-11-12)
+
+The operator ran the pinned `support/bambodia-mcp-qa-finish-admin.sh --finish` from verified draft PR commit `6735337cbc2fe427ba25cd900e06df8a9122400f` / file blob `366a5563c0781f444d821a8f1a43c4a9fd0a0cdc`. Output passed:
+- `QA_PRIVATE_PACKAGES_ASSETS_MIGRATIONS_KEYS=RETAINED`
+- `QA_DEDICATED_DATABASE=READY_FOR_ONE_ADMIN`
+- `QA_ADMIN_CREATED=YES`
+- `QA_ADMIN_FINISH=PASS`
+- `QA_PRIVATE_RUNTIME=READY_FOR_HTTPS_ACTIVATION`
+- `QA_CONNECTOR_UI=/developer/mcp-connection`
+- `MIGRATIONS=NOT_REPEATED`, `NGINX=UNCHANGED`, `PRODUCTION=UNCHANGED`
+
+**Administrator login email caveat:** the operator entered `tonsamith168@gmail.cm` (not `.com`). This is the literal email currently stored for the QA-only administrator unless corrected through the existing account-management workflow. Do not guess, silently change a login identity or treat the QA password as exposed; it was entered hidden.
+
+A new **separately confirmed, QA-only** HTTPS activation helper `support/bambodia-mcp-qa-https-activate.sh --activate` is prepared in the draft PR. The operator must independently download the exact file at a pinned head SHA, verify Git blob/Bash syntax and then type `ACTIVATE-BAMBODIA-MCP-QA`. The helper:
+- Requires the exact known unchanged original `oauth-qa.bambodia.com` vhost hash, the existing old aaPanel webroot/ACME directory, the private QA Laravel index/env/Passport keys/compiled frontend, the PHP 8.5 FPM Unix socket, and `www` read-only access to app secrets with **no write permission** to `.env` or private signing key.
+- Saves a root-private copy of the **original vhost**, preserves existing certificate directives and Nginx includes; only replaces the single original QA `root` with Laravel's private `public` directory. Adds Laravel front-controller routing, index.php-only PHP 8.5 FPM execution, arbitrary PHP/hidden-file denial, explicit OAuth discovery metadata routes, and an ACME challenge location that still serves from the **original** aaPanel webroot.
+- Refuses ambiguous configurations (unexpected server blocks, existing root location/PHP handler, changed vhost hash), performs the current Nginx syntax check, and checks a **candidate** config with `nginx -t` after replacement. On failed validation/reload, the exit handler restores the original vhost backup and attempts a reload. It does not edit any other vhost, restart PHP-FPM, change MySQL, touch original QA files, or alter production application source.
+- Reports the original rollback file location and new URLs. **A successful Nginx reload is not a browser acceptance result**; the operator must physically open `https://oauth-qa.bambodia.com/login`, sign in with the literal QA email and password, visit `/developer/mcp-connection`, perform the real read and disposable draft actions, and review OAuth ChatGPT consent/PKCE/refresh/revocation separately.
+
+**As documented:** private QA installation has passed, but the new Nginx activation script has not run on aaPanel. PR #15 remains draft/unmerged. Do not claim the public endpoint or physical MCP actions are working yet.
