@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guarded aaPanel full-portrait freelancer avatar release. --check is read-only."""
+"""Guarded aaPanel professionally framed freelancer headshot release. --check is read-only."""
 import hashlib
 import json
 import os
@@ -16,17 +16,17 @@ BRANCH = "fix/home-freelancer-avatar-link-20261112"
 BASE = "133f82a3e8681f3efbc8de9424a83dc3306e15d5"
 APP = Path("/www/wwwroot/bambodia-staging-qa")
 VHOST = Path("/www/server/panel/vhost/nginx/bambodia.com.conf")
-BACKUPS = Path("/root/Bambodia-Home-Freelancer-Portrait-Backups")
+BACKUPS = Path("/root/Bambodia-Home-Freelancer-Headshot-Backups")
 LIVE_BASELINES = {
     "app/Http/Controllers/HomeController.php": "c1f974d2f36d97c40094514e2a162c5ec543cb61",
     "resources/views/home.blade.php": "65c5da2e3a1e4b5b3d6999fd430e9319a790ffa8",
-    "resources/css/app.css": "320de1e1efab53e5daa2deeeb9c9338a423aef29",
+    "resources/css/app.css": "cd99155b75dcc109d2220c6c22ca2a849b347f30",
     "resources/js/app.js": "4bc4f4096e02249cf2a0bcb10438139b324ae0c3",
 }
 REVIEWED_SOURCES = {
     "app/Http/Controllers/HomeController.php": "c1f974d2f36d97c40094514e2a162c5ec543cb61",
     "resources/views/home.blade.php": "65c5da2e3a1e4b5b3d6999fd430e9319a790ffa8",
-    "resources/css/app.css": "cd99155b75dcc109d2220c6c22ca2a849b347f30",
+    "resources/css/app.css": "0ee0d9eb8483226f1cec85fecad1002b3188f4ad",
     "resources/js/app.js": "4bc4f4096e02249cf2a0bcb10438139b324ae0c3",
     "package.json": "13ec88546892c1fd790d2161d7226c14e7be0b54",
     "vite.config.js": "1fd66d538c217d36db94b62968257a7d9a558bbb",
@@ -104,7 +104,7 @@ def preflight(expected_head=None, require_node=False):
             refuse("Previously deployed header drift: " + rel)
     print("HEADER_FLAG_AND_BACK_TO_TOP=PRESERVED")
     manifest = json.loads(protected_file(APP / "public/build/manifest.json").read_text())
-    if str(asset_name(manifest.get("resources/css/app.css"))) != "assets/app-D2VAf9li.css":
+    if str(asset_name(manifest.get("resources/css/app.css"))) != "assets/app-3sdvcUpS.css":
         refuse("Expected previous responsive CSS asset changed")
     for key in ("resources/css/app.css", "resources/js/app.js"):
         value = asset_name(manifest.get(key))
@@ -250,7 +250,7 @@ def install(staged, asset, manifest_hash, expected_head=None):
     print("PRIVATE_BACKUP_DIR=" + str(backup))
     print("DEPLOYED_FILES=5_HASH_VERIFIED")
     print("HEADER_LANGUAGE_NGINX_DATABASE_PHP_FPM=UNCHANGED")
-    print("RESULT=HOME_FREELANCER_PORTRAIT_FRAMING_DEPLOYED")
+    print("RESULT=HOME_FREELANCER_HEADSHOT_FRAMING_DEPLOYED")
 
 def verified_ci_bundle(run_id, source, folder):
     if not run_id.isdigit() or not 1 <= len(run_id) <= 20:
