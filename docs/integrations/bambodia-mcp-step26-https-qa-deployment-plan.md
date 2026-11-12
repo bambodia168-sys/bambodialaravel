@@ -82,3 +82,19 @@ Operator fetched pinned `Step26I` helper blob `44d463a13883e0f71df2ed4f6f951e345
 Revised the *Step26I script only* so it accepts an exact raw/effective origin of either (a) the original approved local QA source path, or (b) the canonical `bambodia168-sys/bambodialaravel` GitHub repository through standard HTTPS or SSH URL. It refuses a URL rewrite, fork, unauthorized remote and any other path; doesn't print an unexpected origin (which could contain credentials). The script continues to enforce the pinned source SHA, clean tracked files, exact approved Composer lock hash, original vhost SHA, dedicated account/empty QA schema/grants, absent target and separate `STAGE-STEP26I` confirmation. On the corrected check it reports `ACCEPTED_SOURCE_ORIGIN=PINNED_LOCAL_QA` or `ACCEPTED_SOURCE_ORIGIN=CANONICAL_GITHUB` if accepted; otherwise stops with `STEP26I_BLOCKED` and must be investigated, not bypassed.
 
 **Step26I has NOT passed.** Do not modify the existing browser-QA origin or retry the previous pinned helper. A new pinned reviewed commit/blob must be downloaded with a fresh `--check` before the source-only `--stage-source`. No MySQL writes, Nginx reload or production activation is part of this correction.
+
+## Step 26I source-only clone failed after accepted preflight (2026-11-12)
+
+Operator retried the origin-corrected Step 26I blob `af1daf9f332a73f5236db9f19ca4f580a766955a` with `ACCEPTED_SOURCE_ORIGIN=CANONICAL_GITHUB`, `STEP26I_SOURCE_STAGING_PREFLIGHT=PASS`, exact source commit and Composer lock, original Nginx hash unchanged, dedicated MySQL QA account grants restricted, and empty new schema verified. Operator entered explicit `STAGE-STEP26I`. **The clone then failed**:
+
+```text
+warning: source repository is shallow, ignoring --local
+remote: fatal: unable to read a1a923f833deb02605bdd851ad10fd470c4c8c62
+fatal: git upload-pack: aborting due to possible repository corruption on the remote side
+fatal: early EOF
+fatal: fetch-pack: invalid index-pack output
+```
+
+Git ignored `--local` for the shallow source, attempting an upload-pack clone. The failed pack was unable to read the reported object; this is *not* proof of a corrupted live marketplace repository or proof the accepted HEAD's files are missing. **Do not rerun the clone, run git gc/fsck repair/fetch on accepted QA, or remove a partially created staging directory** without first checking its actual state. The `STEP26I_PRIVATE_SOURCE_STAGING=PASS` acceptance marker was not issued; staging is **NOT ACCEPTED**. The failure occurred after source/DB preflight and before Composer, migrations, Nginx activation; no DB or Nginx changes are targeted by the failed clone.
+
+New script `support/bambodia-oauth-step26i-clone-failure-diagnose.sh` performs **read-only** forensic inspection: validates accepted SHA and byte-identical lock, vhost hash, checks shallow Git status and whether the specific missing object is available using `GIT_NO_LAZY_FETCH=1`, and reports whether the new private destination is absent or contains an incomplete Git tree, without exposing contents, repairing/fetching, modifying or deleting anything. It must run *before* selecting a GitHub-direct pinned source acquisition method or a separate exact-HEAD export method. Even if the target is absent, no source staging or deletion is authorized by this diagnostic. PR #15 remains draft and production remains unchanged.
