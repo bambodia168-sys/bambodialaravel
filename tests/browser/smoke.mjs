@@ -246,14 +246,16 @@ try {
           src:img.getAttribute('src')||'',
           alt:img.getAttribute('alt')||'',
           objectFit:getComputedStyle(img).objectFit,
+          objectPosition:getComputedStyle(img).objectPosition,
           paddingTop:parseFloat(getComputedStyle(img).paddingTop),
           paddingBottom:parseFloat(getComputedStyle(img).paddingBottom),
         }));
         if(!avatarRender.complete || avatarRender.naturalWidth<1 ||
            !avatarRender.src.includes('/storage/profile-avatars/browser-qa-creator.webp') ||
            avatarRender.alt!=='Browser QA Creator profile photo' ||
-           avatarRender.objectFit!=='contain' ||
-           avatarRender.paddingTop<5 || avatarRender.paddingBottom<5)
+           avatarRender.objectFit!=='cover' ||
+           avatarRender.objectPosition!=='50% 15%' ||
+           avatarRender.paddingTop!==0 || avatarRender.paddingBottom!==0)
           throw new Error(device.name+' uploaded creator avatar did not load '+JSON.stringify(avatarRender));
         const target=await avatarCard.locator('a.marketplace-freelancer-avatar').getAttribute('href');
         const profileResponse=await page.request.get(target);
