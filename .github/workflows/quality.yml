@@ -38,6 +38,7 @@ jobs:
           bash -n support/previewqa-step12c-failure-readonly-diagnostics-20261112.sh
           bash -n support/previewqa-step12d-nginx-lua-runtime-readonly-20261112.sh
           bash -n support/previewqa-step12e-private-nginx-lua-recovery-20261112.sh
+          bash -n support/previewqa-step12f-local-ingress-audit-20261112.sh
           bash tests/security/previewqa-step12e-lua-repair-smoke.sh
           bash tests/security/previewqa-step12c-offline-group-smoke.sh
           bash -n support/workspace-upgrade.sh
