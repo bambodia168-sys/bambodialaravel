@@ -93,3 +93,66 @@ An independent reviewer must inspect database states, notifications, server logs
 **STOP / ROLLBACK:** On any unexpected real customer ID, shared DB/storage, permission bypass, missing history event, public exposure, credential leak or failed restoration, disable writes, freeze QA activity, preserve sanitized evidence and report the failure to Issue #35. Do not attempt automatic live cleanup. Preserve the two customer-linked listings and five media-linked listings identified in Issue #35. Counts may change: re-run `marketplace:preview-review --json --strict` as a read-only production audit before any later owner-level decision.
 
 **Current decision:** No aaPanel production installation or content withdrawal is authorized by this runbook. It supports **independent evidence collection**, not automatic approval.
+
+## 7. Executable host acceptance tools and safe order
+
+The repository now provides operator-executed, **QA-only** helpers. None has been run on the actual aaPanel host by the GitHub pipeline.
+
+**A. First run a fully read-only aaPanel inventory.** On the actual aaPanel root terminal, after verifying the source file comes from the independently reviewed PR commit, use:
+
+```bash
+bash support/preview-visibility-aapanel-discovery.sh --check
+```
+
+This reports PHP and service availability, protected application presence, disk free space and whether the proposed QA directory exists, without reading secrets or changing files. The discovery helper by itself never creates a QA instance or verifies a vhost.
+
+**B. Before fixture creation, run the preflight** as described in section 2. After creating test-only fixture accounts and records, the read-only ongoing guard is:
+
+```bash
+export BAMBODIA_PREVIEW_QA_ISOLATED=1
+export BAMBODIA_PREVIEW_QA_EXPECTED_ORIGIN=https://YOUR-DEDICATED-QA-HOST
+/www/server/php/85/bin/php support/preview-visibility-qa-preflight.php --audit
+```
+
+This mode validates the same protected isolation settings and permits only test-marked listing/job titles. It requires writes to remain disabled; it does **not** prove all source media/identities are synthetic or authenticate a rights holder.
+
+**C. Prove QA backup and restoration** only after creating a truly separate, EMPTY `bambodia_previewrestore_...` schema and restricted restore MySQL credentials. Use two distinct, private `0600` MySQL option files outside all web directories. These must be provisioned by the host operator without publishing credentials. Set the source app path, exact QA source database name and restore database name explicitly:
+
+```bash
+export BAMBODIA_PREVIEW_QA_ISOLATED=1
+export BAMBODIA_PREVIEW_QA_EXPECTED_ORIGIN=https://YOUR-DEDICATED-QA-HOST
+export BAMBODIA_PREVIEW_QA_PHP=/www/server/php/85/bin/php
+bash support/preview-visibility-qa-restore-proof.sh --check \
+  /var/lib/bambodia-preview-qa-20261112 \
+  bambodia_previewqa_example1 bambodia_previewrestore_example1 \
+  /root/previewqa-source-client.cnf /root/previewqa-restore-client.cnf
+```
+
+Only if the **empty restore database** and protected path checks pass, perform the scoped restore:
+
+```bash
+export BAMBODIA_PREVIEW_QA_RESTORE_CONFIRM=bambodia_previewrestore_example1
+bash support/preview-visibility-qa-restore-proof.sh --apply \
+  /var/lib/bambodia-preview-qa-20261112 \
+  bambodia_previewqa_example1 bambodia_previewrestore_example1 \
+  /root/previewqa-source-client.cnf /root/previewqa-restore-client.cnf
+```
+
+This script refuses all database names outside the dedicated QA and restore prefixes, refuses existing restore tables, rejects an enabled withdrawal switch, verifies application DB identity, and never writes to its source database. It produces compressed backup evidence in a private root directory, compares restored table inventory, **exact row counts and extended MySQL checksums**, extracts synthetic local media separately and verifies SHA-256 hashes. A failed restore is **not automatically dropped or retried**. Its PASS result is explicitly limited to **QA DB+media restoration**; a separately booted recovery app on its own HTTPS origin, restored QA encryption key and file/media access must still be tested before real-host sign-off.
+
+**D. Run actual HTTPS Chromium read-only acceptance.** From a trusted QA workstation with Playwright installed, create a JSON file outside any web root with `0600` permissions containing exactly six *disposable* role entries, each with `email` and `password`: `super_admin`, `admin`, `staff`, `freelancer`, `customer` and `outsider`. Never publish or paste this file. With at least one synthetic marked listing and one marked job in the QA DB, run:
+
+```bash
+export BAMBODIA_PREVIEW_QA_ISOLATED=1
+export BAMBODIA_PREVIEW_QA_EXPECTED_ORIGIN=https://YOUR-DEDICATED-QA-HOST
+export QA_BASE_URL=https://YOUR-DEDICATED-QA-HOST
+export QA_REAL_BROWSER_ACK=readonly-synthetic-only
+export QA_BROWSER_ROLES_FILE=/root/private-previewqa-roles.json
+node tests/browser/preview-visibility-real-host.mjs
+```
+
+The script requires **HTTPS and an exact independent QA origin**, refuses Bambodia's production origin, logs in as the six test roles using separate browser contexts, verifies default-disabled actions and server 403s for non-Super Admins, and tests real browser dialogs at multiple emulated viewport sizes. The script performs **no withdrawal or restore POST/PATCH**. Manual PV-03–PV-11, actual external account authorization evidence, cross-browser Safari, physical devices and full accessibility acceptance still require an independent reviewer.
+
+**E. Record physical device evidence separately.** On actual iPhone Safari, Android Chrome and tablet Safari/Chrome, use the private QA URL and synthetic test-only accounts; document actual model/browser version, UTC time, tested SHA, responsive/dialog/navigation behavior, public absence after controlled withdrawal, restoration to pending only, keyboard/focus where available, screenshots without credentials, and reviewer sign-off. Do not mark real physical devices PASS from Chromium emulation. Keep the 25 actual production-marked records completely out of this matrix.
+
+The dedicated GitHub workflow `Bambodia Preview QA Restore Proof` runs the same DB/media restore script on a disposable CI MySQL service. Its success validates the helper only; it cannot certify the real aaPanel filesystem, PHP-FPM, Nginx, database isolation, or physical devices.
