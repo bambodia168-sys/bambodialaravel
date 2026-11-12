@@ -35,7 +35,7 @@
   </div>
   <div class="bambodia-job-actions">
     <a class="bambodia-job-button" href="{{ $job->publicUrl() }}" aria-label="{{ $previewOnly ? 'View preview of' : 'View job details for' }} {{ $job->title }}">
-      {{ $previewOnly ? 'View preview' : 'View job' }} <x-icon name="arrow-up-right" size="16"/>
+      {{ $previewOnly ? 'View preview' : 'View job' }}
     </a>
     @auth
       @if($isSaved)
