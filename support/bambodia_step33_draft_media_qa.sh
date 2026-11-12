@@ -229,7 +229,7 @@ try {
     }
     $socialBefore = $db->table('site_social_links')
        ->orderBy('id')->get()->map(static fn ($row)=>(array)$row)->all();
-    qa(count($socialBefore) >= 2,'EXISTING_SITE_SOCIAL_BASELINE=PASS');
+    qa(count($socialBefore) >= 2,'EXISTING_SITE_SOCIAL_BASELINE');
 
     $stage='CREATE_TEMP_IDENTITIES';
     $nonce=bin2hex(random_bytes(8));
