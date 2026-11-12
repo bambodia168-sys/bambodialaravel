@@ -124,6 +124,7 @@ jobs:
           bash -n support/preview-visibility-qa-db-initialize.sh
           bash -n support/preview-visibility-qa-artifact-audit.sh
           bash -n support/preview-visibility-qa-runtime-stage.sh
+          bash -n support/preview-visibility-qa-boot-preflight.sh
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
