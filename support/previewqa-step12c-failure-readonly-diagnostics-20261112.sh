@@ -72,6 +72,20 @@ if getent passwd "$INGRESS" >/dev/null; then
 else
   echo 'DEDICATED_HTTP_ACCOUNT=MISSING'
 fi
+if getent passwd "$INGRESS" >/dev/null; then
+  if runuser -u "$INGRESS" -- test -r "$HTTP_CONF"; then
+    echo 'INGRESS_USER_CAN_READ_OWN_NGINX_CONFIG=YES'
+  else
+    echo 'INGRESS_USER_CAN_READ_OWN_NGINX_CONFIG=NO'
+  fi
+  if runuser -u "$INGRESS" -- test -x "$HTTP_ROOT/public"; then
+    echo 'INGRESS_USER_CAN_TRAVERSE_STATIC_ROOT=YES'
+  else
+    echo 'INGRESS_USER_CAN_TRAVERSE_STATIC_ROOT=NO'
+  fi
+fi
+echo '========== NGINX CONFIG DIRECTORY TRAVERSAL =========='
+namei -l "$HTTP_CONF" || true
 if getent group "$INGRESS" >/dev/null; then
   echo 'DEDICATED_HTTP_GROUP=EXISTS'
 else
