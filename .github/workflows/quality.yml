@@ -126,6 +126,17 @@ jobs:
           bash -n support/preview-visibility-qa-runtime-stage.sh
           bash -n support/preview-visibility-qa-boot-preflight.sh
           bash -n support/preview-visibility-qa-migrate-backup.sh
+          bash -n support/preview-visibility-qa-restore-stage7.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          source = Path('support/preview-visibility-qa-restore-stage7.sh').read_text()
+          blocks = re.findall(r"<<'PY'\n(.*?)\nPY", source, re.S)
+          assert len(blocks) == 2, 'Expected source and recovery embedded Python blocks'
+          for block in blocks:
+              compile(block, '<stage7 Python block>', 'exec')
+          print('Stage 7 embedded Python syntax: PASS')
+          PY
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
