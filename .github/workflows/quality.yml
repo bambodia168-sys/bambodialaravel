@@ -128,6 +128,24 @@ jobs:
           bash -n support/preview-visibility-qa-migrate-backup.sh
           bash -n support/preview-visibility-qa-restore-stage7.sh
           bash -n support/preview-visibility-qa-http-stage8.sh
+          bash -n support/preview-visibility-qa-synthetic-stage9.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          source = Path('support/preview-visibility-qa-synthetic-stage9.sh').read_text()
+          python_blocks = re.findall(r"<<'PY'\n(.*?)\nPY", source, re.S)
+          php_blocks = re.findall(r"<<'PHP'\n(.*?)\nPHP", source, re.S)
+          assert len(python_blocks) == 2, 'Expected 2 embedded Stage 9 Python blocks'
+          assert len(php_blocks) == 1, 'Expected 1 embedded Stage 9 PHP block'
+          for block in python_blocks:
+              compile(block, '<Stage 9 Python block>', 'exec')
+          for block in php_blocks:
+              proc = subprocess.run(['php', '-l'], input='<?php\n' + block,
+                                    capture_output=True, text=True, check=False)
+              assert proc.returncode == 0, proc.stdout + proc.stderr
+          print('Stage 9 shell, Python and PHP embedded syntax: PASS')
+          PY
           python3 - <<'PY'
           from pathlib import Path
           import re
