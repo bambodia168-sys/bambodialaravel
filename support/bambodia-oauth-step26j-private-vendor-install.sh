@@ -7,6 +7,8 @@
 set -Eeuo pipefail
 set +x
 umask 077
+export GIT_NO_LAZY_FETCH=1
+export GIT_OPTIONAL_LOCKS=0
 MODE="${1:-}"
 case "$MODE" in --check|--install-deps) ;; *)
   echo 'Usage: bash script --check|--install-deps' >&2
@@ -129,7 +131,30 @@ RESULT="$("$MYSQL" --defaults-file="$MYSQL_CNF" --protocol=TCP \
   fail QA_DB_READ_ONLY_AUTH_FAILED
 [[ "$RESULT" == "$(printf 'USER=%s@127.0.0.1\nTABLES=0' "$QA_USER")" ]] ||
   fail QA_ACCOUNT_OR_EMPTY_SCHEMA_CHANGED
+GRANTS="$("$MYSQL" --defaults-file="$MYSQL_CNF" --protocol=TCP \
+  --host=127.0.0.1 --port=3306 --batch --skip-column-names \
+  --silent --connect-timeout=8 --execute \
+  'SHOW GRANTS FOR CURRENT_USER()')" ||
+  fail QA_MYSQL_GRANT_READ_FAILED
+printf '%s\n' "$GRANTS" | python3 -c '
+import re,sys
+lines=sys.stdin.read().splitlines()
+if not lines: raise SystemExit("STEP26J_BLOCKED=QA_GRANTS_ABSENT")
+seen=False
+for line in lines:
+    if not line.startswith("GRANT ") or " WITH GRANT OPTION" in line:
+        raise SystemExit("STEP26J_BLOCKED=QA_MYSQL_GRANTS_UNEXPECTED")
+    if re.search(r" ON \*\.\* TO ",line):
+        if not line.startswith("GRANT USAGE ON *.* TO "):
+            raise SystemExit("STEP26J_BLOCKED=QA_MYSQL_GLOBAL_PRIVILEGE")
+    elif re.search(r" ON \x60?bambodia_oauthqa_https\x60?\.\* TO ",line):
+        seen=True
+    else:
+        raise SystemExit("STEP26J_BLOCKED=QA_MYSQL_GRANT_OUTSIDE_SCHEMA")
+if not seen: raise SystemExit("STEP26J_BLOCKED=QA_SCHEMA_GRANT_ABSENT")
+'
 echo 'QA_MYSQL_ACCOUNT=DEDICATED'
+echo 'QA_MYSQL_GRANTS=RESTRICTED'
 echo 'QA_DATABASE=EMPTY_NO_MIGRATIONS'
 
 echo '========== VERIFY PHP AND COMPOSER =========='
