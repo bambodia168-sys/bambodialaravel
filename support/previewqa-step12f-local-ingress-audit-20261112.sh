@@ -106,7 +106,19 @@ done
   "$(stat -c '%U:%G' "$HTTP_SOCK")" == "$INGRESS:$INGRESS" ]] ||
   fail HTTP_unix_socket_owner_changed
 mode="$(stat -c '%a' "$HTTP_SOCK")"
-(( (8#$mode & 077) == 0 )) || fail HTTP_unix_socket_too_permissive
+# Nginx chmods a bound Unix listener to 0666. A socket's file mode is
+# therefore NOT the sole access boundary. Require the parent to remain
+# bambodia_pvhttp-owned and 0700 (checked above), plus actual denied
+# connections by non-privileged other users (checked below).
+case "$mode" in
+  600|660)
+    printf 'HTTP_SOCKET_MODE=%s_RESTRICTED\n' "$mode" ;;
+  666)
+    echo 'HTTP_SOCKET_MODE=666_NGINX_DEFAULT_PRIVATE_0700_PARENT' ;;
+  *)
+    printf 'UNEXPECTED_HTTP_SOCKET_MODE=%s\n' "$mode" >&2
+    fail unexpected_HTTP_unix_socket_mode ;;
+esac
 [[ -S "$FPM_SOCK" && ! -L "$FPM_SOCK" &&
   "$(stat -c '%U:%G:%a' "$FPM_SOCK")" == "$WORKER:$INGRESS:660" ]] ||
   fail FPM_unix_socket_permissions_changed
@@ -125,6 +137,23 @@ exit(2);
     fail "shared_www_could_connect:$socket"
   fi
 done
+# Independent, unprivileged account test; do not confuse a missing PHP
+# executable with connection denial. If nobody exists, it must run PHP.
+if getent passwd nobody >/dev/null; then
+  runuser -u nobody -- "$PHP" -r 'exit(0);' ||
+    fail nobody_cannot_execute_test_client
+  if runuser -u nobody -- "$PHP" -r '
+$fp=@stream_socket_client("unix://".$argv[1],$e,$m,2);
+if ($fp) { fclose($fp); exit(0); }
+exit(2);
+' "$HTTP_SOCK"; then
+    fail nobody_could_connect_private_HTTP_socket
+  fi
+  echo 'OTHER_NONPRIVILEGED_NOBODY_HTTP_CONNECT=DENIED'
+else
+  echo 'OTHER_NONPRIVILEGED_NOBODY_TEST=NOT_AVAILABLE'
+fi
+echo 'PRIVATE_HTTP_SOCKET_EFFECTIVE_ISOLATION=PASS_0700_PARENT_AND_CONNECT_DENIAL'
 echo 'PRIVATE_HTTP_AND_FASTCGI_SOCKET_ISOLATION=PASS'
 echo 'SHARED_WWW_CONNECT_BOTH_SOCKETS=DENIED'
 echo 'DEDICATED_HTTP_ACCOUNT_CANNOT_READ_ENV=PASS'
