@@ -148,6 +148,18 @@ jobs:
         run: |
           php support/hosting-preflight.php --webroot=public --json > /tmp/bambodia-preflight.json
           php -r '$r=json_decode(file_get_contents("/tmp/bambodia-preflight.json"),true,512,JSON_THROW_ON_ERROR); if (!isset($r["status"],$r["blockers"],$r["results"]) || !is_array($r["results"])) exit(1);'
+      - name: Generate isolated Passport keys for OAuth feature tests
+        env:
+          APP_ENV: testing
+        run: |
+          test "${GITHUB_ACTIONS}" = true
+          test ! -e storage/oauth-private.key
+          test ! -e storage/oauth-public.key
+          php artisan passport:keys --no-interaction --no-ansi
+          test -s storage/oauth-private.key
+          test -s storage/oauth-public.key
+          chmod 600 storage/oauth-private.key storage/oauth-public.key
+          echo "CI_ONLY_PASSPORT_KEYS=GENERATED"
       - name: Test routes and workflows
         env:
           APP_ENV: testing
