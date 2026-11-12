@@ -57,7 +57,7 @@ COUNT="$(find "$SRC" -type f | wc -l | tr -d ' ')"
 while IFS= read -r -d '' file; do
   base="$(basename -- "$file")"
   case "$base" in
-    *.js|*.css|*.map|*.png|*.jpg|*.jpeg|*.webp|*.gif|*.svg|*.woff|*.woff2|*.ttf|*.otf|*.ico|*.avif|manifest.json)
+    *.js|*.css|*.map|*.png|*.jpg|*.jpeg|*.webp|*.gif|*.svg|*.woff|*.woff2|*.ttf|*.otf|*.ico|*.avif|manifest.json|fonts-manifest.json)
       ;;
     *) printf 'UNRECOGNIZED_ASSET=%s\n' "$base" >&2
        fail asset_extension_not_allowlisted ;;
