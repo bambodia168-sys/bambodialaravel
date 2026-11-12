@@ -149,7 +149,7 @@ python3 - "$TMP/qa-grants" "$DB" "$DBUSER" <<'PY'
 import sys
 grants=open(sys.argv[1]).read().splitlines()
 dbname,username=sys.argv[2:]
-if not any(("ON \`"+dbname+"\`.*") in x or ("ON "+dbname+".*") in x for x in grants):
+if not any(("ON `"+dbname+"`.*") in x or ("ON "+dbname+".*") in x for x in grants):
     raise SystemExit("BLOCKED=QA account missing schema-scoped grant")
 for grant in grants:
     # USAGE on *.* is normal; elevated global privileges are not.
