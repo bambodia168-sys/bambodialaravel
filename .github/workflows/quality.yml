@@ -36,6 +36,7 @@ jobs:
         run: |
           bash -n support/previewqa-step12c-private-http-install-20261112.sh
           bash -n support/previewqa-step12c-failure-readonly-diagnostics-20261112.sh
+          bash -n support/previewqa-step12d-nginx-lua-runtime-readonly-20261112.sh
           bash tests/security/previewqa-step12c-offline-group-smoke.sh
           bash -n support/workspace-upgrade.sh
           bash -n support/frontend-navigation-upgrade.sh
