@@ -1088,9 +1088,9 @@ try {
       if(!(await admin.getByRole('heading',{name:'Regular License'}).isVisible())
         || !(await admin.getByRole('heading',{name:'Extended License'}).isVisible()))
         throw new Error('Builder Studio license guidance missing');
-      const actions=admin.locator('.studio-choice-link svg');
-      if(await actions.count()!==5)
-        throw new Error('Builder Studio listing cards missing correct navigation icons');
+      const actions=admin.locator('.studio-choice-link');
+      if(await actions.count()!==5 || await actions.locator('svg').count()!==0)
+        throw new Error('Builder Studio choice links must have labels without trailing arrow icons');
       checks+=8;
       for(const kind of ['product','project','service','freelance','job']){
         const response=await admin.goto(origin+'/en/builder?type='+kind,{waitUntil:'networkidle'});
