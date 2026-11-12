@@ -62,7 +62,7 @@ import pathlib,json,stat,re,sys
 v=pathlib.Path(sys.argv[1]); root=pathlib.Path(sys.argv[2])
 active="\n".join(x for x in v.read_text().splitlines() if not x.lstrip().startswith("#"))
 if [s.strip() for s in re.findall(r'(?m)^\s*root\s+([^;]+);',active)]!=[
-  "/www/wwwroot/bambia-staging-qa/public".replace("bambia","bambodia")]:
+  "/www/wwwroot/bambodia-staging-qa/public"]:
     raise SystemExit("MCP_ASSET_REUSE_BLOCKED=LIVE_NGINX_ROOT_CHANGED")
 def inspect(root):
     paths={};size=0
