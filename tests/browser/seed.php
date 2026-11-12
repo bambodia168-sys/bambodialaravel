@@ -25,6 +25,19 @@ $creator=\App\Models\User::query()->create([
     'is_public'=>true,
 ]);
 
+// Verify homepage cards use the same uploaded profile image as the creator page.
+// This image comes from a tracked, non-sensitive test fixture, not a real user.
+$avatarFixture=file_get_contents(public_path('images/bambodia-logo.webp'));
+if($avatarFixture===false){
+    throw new \RuntimeException('Browser QA avatar fixture unavailable');
+}
+\Illuminate\Support\Facades\Storage::disk('public')
+    ->put('profile-avatars/browser-qa-creator.webp',$avatarFixture);
+\App\Models\UserProfile::query()->create([
+    'user_id'=>$creator->id,
+    'avatar_path'=>'profile-avatars/browser-qa-creator.webp',
+]);
+
 // Three additional public freelancers and one private profile for browser acceptance.
 foreach (['Browser QA Designer','Browser QA Developer','Browser QA Writer','Browser QA Private Freelancer'] as $name) {
     $person=\App\Models\User::query()->create([
