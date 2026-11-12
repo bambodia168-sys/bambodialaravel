@@ -196,7 +196,8 @@ test "$approval" = 'TEST-PRIVATE-OAUTH-TOKEN-AND-CONSENT-DENIALS' ||
 echo 'STEP34C10_EXPLICIT_NEGATIVE_PATH_APPROVAL=PASS'
 
 echo '========== RUN PHP85 KERNEL WITH NEGATIVE OAUTH REQUESTS =========='
-python3 - "$PHP" "$APP" <<'PY'
+# Always run the post-probe database census even if an HTTP assertion fails.
+if python3 - "$PHP" "$APP" <<'PY'
 import json,subprocess,sys
 php,app=sys.argv[1:]
 # Do not output HTTP bodies or tokens. The reserved app origin is inert.
@@ -279,6 +280,11 @@ if failed:
     raise SystemExit("STEP34C10_BLOCKED=PRIVATE_NEGATIVE_OAUTH_CASE_FAILED")
 print("PRIVATE_OAUTH_TOKEN_CONSENT_AND_BEARER_DENIALS=PASS")
 PY
+then
+  KERNEL_PROBE_RESULT=PASS
+else
+  KERNEL_PROBE_RESULT=FAILED
+fi
 
 echo '========== VERIFY ALL ISOLATED DATABASE COUNTS UNCHANGED =========='
 AFTER="$(snapshot_db)" || fail POSTPROBE_DATABASE_SNAPSHOT_FAILED
@@ -298,6 +304,8 @@ test "$(sha256sum "$VHOST" | awk '{print $1}')" = "$VHOST_SHA" &&
 test "$(sha256sum "$APP/composer.lock" | awk '{print $1}')" = "$LOCK_SHA" ||
   fail LOCKFILE_CHANGED
 echo 'ISOLATED_QA_ALL_TABLE_ROW_COUNTS=UNCHANGED'
+test "$KERNEL_PROBE_RESULT" = PASS ||
+  fail NEGATIVE_OAUTH_HTTP_CHECK_FAILED_BUT_DB_COUNTS_VERIFIED
 echo 'STEP34C10_PRIVATE_OAUTH_DENIAL_ACCEPTANCE=PASS'
 echo 'NO_ADMIN_CLIENT_OR_OAUTH_GRANT_CREATED=YES'
 echo 'NO_PUBLIC_OAUTH_ISSUER_OR_HTTP_SERVER=YES'
