@@ -103,6 +103,8 @@ jobs:
           node --check public/js/creator-profile-v3.js
           node --check public/js/creator-badge-tooltip-viewport.js
           node --check public/js/ai-draft-studio.js
+          node --check public/js/site-identity-assets.js
+          bash -n support/site-identity-aapanel-guarded-upgrade.sh
           node --check tests/browser/ai-draft-dialog-format.mjs
           node --check tests/browser/builder-terms-readable.mjs
           if grep -Eq '^[[:space:]]*inset:[[:space:]]*auto[[:space:]]*!important' public/css/creator-badge-tooltip-viewport.css; then echo 'Unsafe viewport tooltip inset override'; exit 1; fi

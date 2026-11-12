@@ -10,6 +10,8 @@ final class SiteManifestController extends Controller
 {
     public function __invoke(): JsonResponse
     {
+        $pwaDimensions = SiteBrandAsset::actualDimensionsFor('pwa_icon');
+
         return response()->json([
             'name' => SiteSetting::setting('identity.name'),
             'short_name' => SiteSetting::setting('identity.name'),
@@ -21,8 +23,9 @@ final class SiteManifestController extends Controller
             'theme_color' => '#c2410c',
             'icons' => [[
                 'src' => SiteBrandAsset::urlFor('pwa_icon'),
-                'sizes' => 'any',
-                'type' => 'image/png',
+                'sizes' => $pwaDimensions
+                    ? $pwaDimensions[0].'x'.$pwaDimensions[1] : 'any',
+                'type' => SiteBrandAsset::actualMimeFor('pwa_icon'),
                 'purpose' => 'any',
             ]],
         ])->header('Content-Type', 'application/manifest+json; charset=utf-8')
