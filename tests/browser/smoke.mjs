@@ -197,7 +197,7 @@ try {
         const previewHref=await featuredProduct.locator('.marketplace-card-live-preview').getAttribute('href');
         if(previewHref!=='https://example.com/original-browser-product-preview')
           throw new Error(device.name+' product demo link must be creator-provided, not invented');
-        // Opted-in public freelancers only; responsive cards and real portfolio links.
+        // Opted-in public freelancers only; clickable avatars and no redundant CTAs.
         const freelancerCards=page.locator('.marketplace-freelancer-grid .marketplace-freelancer-card');
         if(await freelancerCards.count()!==4)
           throw new Error(device.name+' expected 4 public freelancer cards');
@@ -211,7 +211,10 @@ try {
           columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
           items:[...grid.children].map(card=>({
             href:card.querySelector('h3 a')?.getAttribute('href'),
-            footer:card.querySelector('.marketplace-freelancer-card-footer a')?.getAttribute('href'),
+            avatarHref:card.querySelector('a.marketplace-freelancer-avatar')?.getAttribute('href'),
+            avatarTag:card.querySelector('.marketplace-freelancer-avatar')?.tagName,
+            portfolioCta:!!card.querySelector('.marketplace-freelancer-card-footer a'),
+            publicProfileLabel:card.textContent.includes('Public profile'),
             right:card.getBoundingClientRect().right,
             avatarWidth:card.querySelector('.marketplace-freelancer-avatar')?.getBoundingClientRect().width,
             avatarOffset:(()=>{
@@ -225,8 +228,11 @@ try {
         const freelancerColumns=device.viewport.width>=1400?5:device.viewport.width>=1100?4:device.viewport.width>=700?3:2;
         if(freelancerGeometry.columns!==freelancerColumns ||
            freelancerGeometry.items.some(c=>!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(c.href??'') ||
-             c.href!==c.footer || c.right>device.viewport.width+3 ||
-             c.avatarWidth<64 || c.avatarOffset>2 || c.hasBiography))
+             c.href!==c.avatarHref || c.avatarTag!=='A' ||
+             c.portfolioCta || c.publicProfileLabel ||
+             c.right>device.viewport.width+3 ||
+             c.avatarWidth<(device.viewport.width<700?90:110) ||
+             c.avatarOffset>2 || c.hasBiography))
           throw new Error(device.name+' freelancer grid regression '+JSON.stringify(freelancerGeometry));
         const firstFreelancer=freelancerCards.first();
         if(!(await firstFreelancer.getByText(/approved listings?/).count()))
