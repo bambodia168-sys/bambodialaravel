@@ -278,6 +278,17 @@ done
     COMPOSER_CACHE_DIR="$DEST/.composer-cache" \
     TMPDIR="$DEST/.composer-tmp" COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_NO_INTERACTION=1 \
+    # Compatibility gate: require the exact lock to produce an install
+    # plan under this PHP/Composer pair before writing vendor packages.
+    "$PHP" -d "include_path=/usr/share/php:." "$COMPOSER" \
+    install --dry-run --no-dev --no-scripts --no-plugins \
+    --prefer-dist --no-interaction --no-progress --no-ansi
+  echo 'COMPOSER_LOCK_INSTALL_DRY_RUN=PASS'
+  env -i HOME=/root PATH=/usr/bin:/bin \
+    COMPOSER_HOME="$DEST/.composer-home" \
+    COMPOSER_CACHE_DIR="$DEST/.composer-cache" \
+    TMPDIR="$DEST/.composer-tmp" COMPOSER_ALLOW_SUPERUSER=1 \
+    COMPOSER_NO_INTERACTION=1 \
     "$PHP" -d "include_path=/usr/share/php:." "$COMPOSER" \
     install --no-dev --no-scripts --no-plugins \
     --prefer-dist --no-interaction --optimize-autoloader \
