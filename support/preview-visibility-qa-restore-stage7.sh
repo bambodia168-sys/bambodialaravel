@@ -24,7 +24,7 @@ PHP=/www/server/php/85/bin/php
 MYSQL=/www/server/mysql/bin/mysql
 
 [[ "$(id -u)" == 0 ]] || fail 'Authorized aaPanel root terminal required'
-for cmd in git python3 realpath mktemp sha256sum gzip tar stat runuser; do
+for cmd in git python3 realpath mktemp sha256sum gzip tar stat runuser awk cmp grep wc; do
   command -v "$cmd" >/dev/null || fail "Missing: $cmd"
 done
 [[ -x "$MYSQL" && -x "$PHP" ]] || fail 'aaPanel MySQL/PHP binaries missing'
@@ -336,6 +336,19 @@ def exclude(folder, names):
     banned={".git",".env","storage"} if Path(folder)==src else set()
     if Path(folder).name=="bootstrap": banned.add("cache")
     return banned.intersection(names)
+if Path("/var/lib").is_symlink():
+    raise SystemExit("BLOCKED=restore application parent must not be a symlink")
+space=os.statvfs("/var/lib")
+if space.f_bavail*space.f_frsize < 400*1024*1024:
+    raise SystemExit("BLOCKED=less than 400 MiB free for isolated recovery runtime")
+for parent, dirs, files in os.walk(src):
+    if Path(parent)==src:
+        dirs[:]=[x for x in dirs if x not in (".git","storage")]
+    if Path(parent).name=="bootstrap":
+        dirs[:]=[x for x in dirs if x!="cache"]
+    for name in dirs+files:
+        if (Path(parent)/name).is_symlink():
+            raise SystemExit("BLOCKED=symlink in QA runtime, refusing copy")
 shutil.copytree(src,dst,symlinks=False,ignore=exclude)
 www_gid=grp.getgrnam("www").gr_gid
 www_uid=__import__("pwd").getpwnam("www").pw_uid
