@@ -14,7 +14,7 @@
   <span class="workspace-overview-metric-label"><x-icon :name="$icon" size="18"/> {{ $label }}</span>
   <strong>{{ number_format((int)$value) }}</strong>
   @if($href)
-    <span class="workspace-overview-metric-action">{{ $action }} <x-icon name="chevron-right" size="15"/></span>
+    <span class="workspace-overview-metric-action">{{ $action }}</span>
   @endif
 @if($href)
 </a>
