@@ -136,7 +136,7 @@ jobs:
           source = Path('support/preview-visibility-qa-synthetic-stage9.sh').read_text()
           python_blocks = re.findall(r"<<'PY'\n(.*?)\nPY", source, re.S)
           php_blocks = re.findall(r"<<'PHP'\n(.*?)\nPHP", source, re.S)
-          assert len(python_blocks) == 2, 'Expected 2 embedded Stage 9 Python blocks'
+          assert len(python_blocks) == 3, 'Expected 3 embedded Stage 9 Python blocks'
           assert len(php_blocks) == 1, 'Expected 1 embedded Stage 9 PHP block'
           for block in python_blocks:
               compile(block, '<Stage 9 Python block>', 'exec')
