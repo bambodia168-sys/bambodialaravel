@@ -40,7 +40,7 @@
         <a class="marketplace-card-live-preview" href="{{ $preview }}" target="_blank"
            rel="noopener noreferrer nofollow external"
            aria-label="Open creator-provided live preview for {{ $listing->title }}">
-          Live Preview <x-icon name="arrow-up-right" size="15"/>
+          Live Preview
         </a>
       @endif
     </div>
