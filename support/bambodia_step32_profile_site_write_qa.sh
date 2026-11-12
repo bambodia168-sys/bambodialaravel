@@ -21,6 +21,9 @@ test -z "$(git -C "$APP" status --porcelain --untracked-files=no)"
 test -f "$APP/vendor/autoload.php" && test -f "$APP/composer.lock"
 test "$(sha256sum "$APP/composer.lock" | cut -d' ' -f1)" = "$LOCK_HASH"
 test -f "$APP/.env" && test ! -L "$APP/.env"
+test -d "$APP/public/build" && test ! -L "$APP/public/build"
+test -s "$APP/public/build/manifest.json" && test ! -L "$APP/public/build/manifest.json"
+test ! -e "$APP/public/hot" && test ! -L "$APP/public/hot"
 test "$(stat -c '%U:%G:%a' "$APP/.env")" = 'root:www:640'
 test ! -e "$APP/bootstrap/cache/config.php"
 test -x "$PHP" && test -x "$MYSQL" && test -c /dev/tty
