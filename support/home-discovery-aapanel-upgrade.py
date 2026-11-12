@@ -114,7 +114,9 @@ def prepare(source, staged):
     cmd("npm", "install", "--ignore-scripts", "--no-audit", "--no-fund",
         cwd=source, output=False)
     cmd("npm", "run", "build", cwd=source, output=False)
-    old = json.loads(protected_file(APP / "public/build/manifest.json").read_text())
+    live_manifest = protected_file(APP / "public/build/manifest.json")
+    manifest_hash = sha256(live_manifest)
+    old = json.loads(live_manifest.read_text())
     new = json.loads(protected_file(source / "public/build/manifest.json").read_text())
     css = "resources/css/app.css"
     if old.keys() != new.keys():
@@ -147,7 +149,7 @@ def prepare(source, staged):
         refuse("PHP CLI unavailable for source lint")
     cmd(php, "-l", str(staged / "app/Http/Controllers/HomeController.php"))
     print("COMPILED_CSS=VERIFIED " + str(new_asset))
-    return str(new_asset)
+    return str(new_asset), manifest_hash
 
 def atomic_copy(src, dst, owner=None):
     fd, name = tempfile.mkstemp(prefix=".home-discovery-", dir=dst.parent)
@@ -166,9 +168,11 @@ def atomic_copy(src, dst, owner=None):
         if os.path.lexists(name):
             os.unlink(name)
 
-def install(staged, asset):
+def install(staged, asset, manifest_hash):
     # Repeat all drift checks after downloading/building before any live write.
     preflight()
+    if sha256(APP / "public/build/manifest.json") != manifest_hash:
+        refuse("Live Vite manifest changed during isolated build")
     if BACKUPS.is_symlink():
         refuse("Backup root is a symlink")
     BACKUPS.mkdir(mode=0o700, exist_ok=True)
@@ -253,8 +257,8 @@ def main():
         cmd("gh", "repo", "clone", REPO, str(source), "--", "--branch", BRANCH,
             "--single-branch", "--depth", "1", output=False)
         staged.mkdir(mode=0o700)
-        asset = prepare(source, staged)
-        install(staged, asset)
+        asset, manifest_hash = prepare(source, staged)
+        install(staged, asset, manifest_hash)
 
 if __name__ == "__main__":
     try:
