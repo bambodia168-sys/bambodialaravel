@@ -648,7 +648,7 @@ try {
                 $active += $db->table($table)
                     ->where('revoked',false)->count();
             }
-            $clean = $socialPreserved && $active === 0
+            $clean = $active === 0
                && $db->table('users')->count() === 1
                && $db->table('oauth_clients')->count() === 1
                && $db->table('creator_profiles')->count() === 0
