@@ -273,13 +273,12 @@ done
   cd "$DEST"
   # Preserve only the necessary, explicit environment and avoid inherited
   # COMPOSER_AUTH, global PHP runtime overrides, shell wrappers and secrets.
+  # The dry run must validate the locked install plan before vendor writes.
   env -i HOME=/root PATH=/usr/bin:/bin \
     COMPOSER_HOME="$DEST/.composer-home" \
     COMPOSER_CACHE_DIR="$DEST/.composer-cache" \
     TMPDIR="$DEST/.composer-tmp" COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_NO_INTERACTION=1 \
-    # Compatibility gate: require the exact lock to produce an install
-    # plan under this PHP/Composer pair before writing vendor packages.
     "$PHP" -d "include_path=/usr/share/php:." "$COMPOSER" \
     install --dry-run --no-dev --no-scripts --no-plugins \
     --prefer-dist --no-interaction --no-progress --no-ansi
