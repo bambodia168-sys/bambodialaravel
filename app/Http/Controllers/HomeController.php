@@ -54,7 +54,7 @@ class HomeController extends Controller
                 ->select(['id','public_id','name'])
                 ->where('role','freelancer')
                 ->whereHas('creatorProfile',fn($query)=>$query->where('is_public',true))
-                ->with('creatorProfile:user_id,headline,is_public')
+                ->with(['creatorProfile:user_id,headline,is_public', 'userProfile:user_id,avatar_path'])
                 ->withCount(['publishedListings as public_listings_count'])
                 ->orderByDesc('public_listings_count')
                 ->orderByDesc('id')
