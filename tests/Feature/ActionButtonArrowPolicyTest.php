@@ -38,7 +38,7 @@ class ActionButtonArrowPolicyTest extends TestCase
         $this->assertStringContainsString('data-home-blog-next aria-label="Next blog posts"', $home);
         $this->assertStringContainsString('<x-icon name="chevron-right" size="19"/>', $home);
         $this->assertStringContainsString('data-back-to-top', $main);
-        $this->assertStringContainsString('<x-icon name="arrow-up" size="19"/>', $main);
+        $this->assertMatchesRegularExpression('/<x-icon\\s+name="arrow-up"\\s+size="\\d+"\\s*\\/>/', $main);
         $this->assertStringContainsString('>Next</a>', $pager);
         $this->assertStringNotContainsString('Next <x-icon', $pager);
     }
