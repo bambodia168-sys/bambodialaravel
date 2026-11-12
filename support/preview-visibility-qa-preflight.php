@@ -6,8 +6,8 @@
  */
 declare(strict_types=1);
 
-if (PHP_SAPI !== 'cli' || count($argv) !== 2 || !in_array($argv[1], ['--before-install', '--after-install'], true)) {
-    fwrite(STDERR, "Usage: php support/preview-visibility-qa-preflight.php --before-install|--after-install\n");
+if (PHP_SAPI !== 'cli' || count($argv) !== 2 || !in_array($argv[1], ['--before-install', '--after-install', '--audit'], true)) {
+    fwrite(STDERR, "Usage: php support/preview-visibility-qa-preflight.php --before-install|--after-install|--audit\n");
     exit(2);
 }
 
@@ -106,16 +106,31 @@ try {
         foreach (['subject_kind', 'subject_id', 'subject_public_id', 'actor_id', 'action', 'from_status', 'to_status', 'review_fingerprint', 'owner_confirmation_reference', 'backup_reference', 'created_at'] as $column) {
             $configCheck(in_array($column, $available, true), 'missing_audit_column_'.$column);
         }
-        foreach (['marketplace_listings', 'marketplace_jobs', 'preview_visibility_actions'] as $table) {
-            $configCheck(\Illuminate\Support\Facades\DB::table($table)->count() === 0, 'disposable_database_not_empty_'.$table);
+        if ($mode === '--audit') {
+            // Never disclose private records. Check that all QA listing/job
+            // titles are explicitly synthetic; this is an extra guard,
+            // not independent proof of database provenance.
+            foreach (['marketplace_listings', 'marketplace_jobs'] as $table) {
+                $invalid = \Illuminate\Support\Facades\DB::table($table)
+                    ->where('title', 'not like', '%[LAYOUT TEST]%')
+                    ->where('title', 'not like', '%[QA PREVIEW]%')
+                    ->exists();
+                $configCheck(!$invalid, 'unexpected_non_qa_content_'.$table);
+            }
+        } else {
+            foreach (['marketplace_listings', 'marketplace_jobs', 'preview_visibility_actions'] as $table) {
+                $configCheck(\Illuminate\Support\Facades\DB::table($table)->count() === 0, 'disposable_database_not_empty_'.$table);
+            }
         }
         // Bambodia's five-step installer provisions exactly one Super Admin.
         // A migration-only rehearsal may have zero users. Neither may contain
         // customer, staff or creator accounts at this empty-state checkpoint.
         $users = \Illuminate\Support\Facades\DB::table('users')->select('role')->limit(2)->get();
-        $configCheck($users->count() <= 1
-            && ($users->count() === 0 || $users->first()->role === 'super_admin'),
-            'unexpected_qa_user_inventory');
+        if ($mode !== '--audit') {
+            $configCheck($users->count() <= 1
+                && ($users->count() === 0 || $users->first()->role === 'super_admin'),
+                'unexpected_qa_user_inventory');
+        }
     }
 
     echo json_encode([
@@ -124,7 +139,9 @@ try {
         'environment' => 'isolated_qa_attested_not_independently_proven',
         'withdrawal_writes' => 'disabled',
         'database' => 'dedicated_name_and_user_verified',
-        'preview_actions' => $mode === '--before-install' ? 'no_existing_tables' : 'schema_verified_no_marketplace_fixtures',
+        'preview_actions' => $mode === '--before-install'
+            ? 'no_existing_tables' : ($mode === '--audit'
+                ? 'schema_verified_with_synthetic_qa_content_only' : 'schema_verified_no_marketplace_fixtures'),
         'warning' => 'Runbook evidence, independent backup restoration, signed owner approvals and physical browser tests are still required.',
     ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)."\n";
 } catch (\Throwable $e) {
