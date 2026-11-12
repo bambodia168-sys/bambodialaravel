@@ -6,6 +6,9 @@
 set -Eeuo pipefail
 set +x
 umask 077
+# Avoid Git refresh/index writes and implicit fetches throughout preflight.
+export GIT_NO_LAZY_FETCH=1
+export GIT_OPTIONAL_LOCKS=0
 MODE="${1:-}"
 case "$MODE" in --check|--stage-source) ;; *)
   echo 'Usage: bash script --check|--stage-source' >&2; exit 64 ;;
