@@ -209,7 +209,7 @@ VERSION="$(
     COMPOSER_HOME="$DEST/.composer-home" \
     COMPOSER_CACHE_DIR="$DEST/.composer-cache" \
     TMPDIR="$DEST/.composer-tmp" COMPOSER_ALLOW_SUPERUSER=1 \
-    "$PHP" "$COMPOSER" --version --no-ansi --no-plugins 2>/dev/null
+    "$PHP" -d "include_path=/usr/share/php:." "$COMPOSER" --version --no-ansi --no-plugins 2>/dev/null
 )" || fail COMPOSER_PHP85_VERSION_COMMAND_FAILED
 printf '%s\n' "$VERSION" | grep -Eq '^Composer version (2|3)\.[0-9]+' ||
   fail COMPOSER_PHP85_VERSION_OUTPUT_INVALID
@@ -258,7 +258,7 @@ done
   export TMPDIR="$DEST/.composer-tmp"
   export COMPOSER_ALLOW_SUPERUSER=1
   export COMPOSER_NO_INTERACTION=1
-  "$PHP" "$COMPOSER" install --no-dev --no-scripts --no-plugins \
+  "$PHP" -d "include_path=/usr/share/php:." "$COMPOSER" install --no-dev --no-scripts --no-plugins \
     --prefer-dist --no-interaction --optimize-autoloader \
     --no-progress --no-ansi
 )
