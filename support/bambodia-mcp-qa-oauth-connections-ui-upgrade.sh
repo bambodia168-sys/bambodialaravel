@@ -13,7 +13,7 @@ VIEW=resources/views/developer/oauth-connections.blade.php
 CSS=public/css/mcp-oauth-connections.css
 VIEW_BEFORE=cac991e62ee1d0956268b018f7585375eb63d20e
 VIEW_AFTER=a133fcc2ef8d02ea5f0e99a25424fefb4c85df98
-CSS_AFTER=25134071825b6fa49ad0a593bb0651bdb80eced9
+CSS_AFTER=4afb56e9084180ef044256a2d264b4b5c5e45eef
 fail(){ echo "MCP_OAUTH_UI_BLOCKED=$*" >&2; exit 1; }
 
 [[ "$(id -u)" -eq 0 ]] || fail ROOT_REQUIRED
