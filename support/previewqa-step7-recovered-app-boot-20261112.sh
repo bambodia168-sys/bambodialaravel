@@ -25,7 +25,7 @@ fail(){ printf 'BLOCKED=%s\n' "$*" >&2; exit 2; }
 
 printf '========== STEP 7 — PREPARE ISOLATED RECOVERED APPLICATION ==========\n'
 [[ "$(id -u)" -eq 0 ]] || fail 'root_operator_required'
-for cmd in git php tar cmp stat sha256sum curl runuser setsid useradd getent mktemp; do
+for cmd in git tar cmp stat sha256sum curl runuser setsid useradd getent mktemp; do
   command -v "$cmd" >/dev/null || fail "missing_binary:$cmd"
 done
 [[ -x "$PHP" ]] || fail 'php_85_unavailable'
@@ -190,6 +190,7 @@ printf 'RECOVERED_LARAVEL_HTTP=PASS\n'
 cleanup
 SERVER_PID=''
 trap - EXIT
+"$PHP" -r '$s=@stream_socket_client("tcp://127.0.0.1:8097",$e,$m,1); if ($s) {fclose($s);exit(2);} exit(0);' || fail 'temporary_http_server_still_listening'
 printf '========== STEP 7 — VERIFIED RECOVERY ==========\n'
 printf 'RECOVERED_APP_PATH=%s\n' "$RECOVER"
 printf 'RECOVERED_DB=%s\n' "$RESTORE_DB"
