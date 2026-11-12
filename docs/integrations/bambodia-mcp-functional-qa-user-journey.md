@@ -38,3 +38,11 @@ The launch script:
 5. Only after those **actual user journeys** pass should PR #15 be considered for independent review/merge. Production change requires separate authorization.
 
 **Status as authored:** the feature and deployment action are committed to the draft branch. Neither the private launch nor QA Nginx activation has run yet; real browser and ChatGPT OAuth connection remain unverified.
+
+## First operator launch blocked at missing npm; corrected launch ready (2026-11-12)
+
+Operator ran the pinned `support/bambodia-mcp-qa-functional-launch.sh --launch` at draft PR head `2b8abd4628b4df6b3a791a1c6fa56c75a3d26bf3` (Git blob `3a007c1c900f388fafbc214d98693660d6659a45`), verified `gh` PR draft/head, exact blob and `bash -n`. It printed only `QA_LAUNCH_BLOCKED=MISSING_npm`. That original script performed `command -v npm` in the **first** prerequisite loop; no private Composer or npm installation, source overlay, QA environment/key creation, database migration, administrator creation, Nginx or production write was reached. Because execution stopped before any mutation, it is safe to launch the **updated, independently pinned replacement script**, not the old pinned file.
+
+The corrected launcher searches common aaPanel Node version-manager bin directories for an actual compatible Node/npm pair. If none is available, it downloads the **official Node.js 24.22.3 LTS** Linux x64/arm64 build-only tarball into a new root-private recovery workspace, checks the exact SHA256 values published by the Node.js project for each architecture, and extracts it privately. It does **not** install Node system-wide, call `apt`, rewrite global PATH, change aaPanel Node versions, or reload any services. npm's cache is placed inside the same root-only recovery workspace, not under a global npm home. The previous checked QA source/DB and public Nginx restrictions remain unchanged, and the end goal is still the actual browser-connected MCP user workflows.
+
+The updated script is **not yet run by the operator**. It checks pre-existing source and empty QA database before any Composer or Laravel mutation. On a failure after any mutation, preserve the partial state and do not blindly run it again. PR #15 remains draft/unmerged.
