@@ -166,6 +166,12 @@ test "$(sha256sum "$VHOST" | awk '{print $1}')" = "$VHOST_HASH"
 test "$(git -C "$QA" rev-parse HEAD)" = "$QA_SHA"
 test -z "$(git -C "$QA" status --porcelain --untracked-files=no)"
 
+SCRATCH="$WORK"
+rm -rf --one-file-system -- "$SCRATCH"
+test ! -e "$SCRATCH" && test ! -L "$SCRATCH"
+WORK=""
+echo 'RESTORE_SCRATCH_REMOVED=PASS'
+
 echo 'STEP34B6_OFFLINE_RESTORE_REHEARSAL=PASS'
 echo 'EXISTING_WEBSITE_AND_VHOST=UNCHANGED'
 echo 'CERTIFICATE_PRIVATE_KEYS=NOT_READ_OR_COPIED'
