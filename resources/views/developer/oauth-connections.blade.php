@@ -46,7 +46,7 @@
       @endif
     </div>
 
-    @if($tokens->isEmpty())
+    @if($tokens->count() === 0)
       <div class="mcp-oauth-empty">
         <div class="mcp-oauth-empty__icon"><x-icon name="link" size="25"/></div>
         <h3>No OAuth connections yet</h3>
@@ -121,7 +121,7 @@
     @endif
   </section>
 
-  @if($tokens->isNotEmpty())
+  @if($tokens->count() > 0)
     @foreach($tokens as $token)
       @unless($token->revoked)
         <dialog class="config-dialog mcp-oauth-dialog" id="mcp-oauth-revoke-{{ $token->getKey() }}" aria-labelledby="mcp-oauth-revoke-title-{{ $token->getKey() }}">
