@@ -288,6 +288,8 @@ python3 -c '
 import hashlib,os,pathlib,stat,sys
 root=pathlib.Path(sys.argv[1])
 seen=set()
+omitted=set()
+expected_count=0
 for entry in sys.stdin.buffer.read().split(b"\0"):
     if not entry: continue
     meta,sep,filename=entry.partition(b"\t")
@@ -297,7 +299,17 @@ for entry in sys.stdin.buffer.read().split(b"\0"):
     mode,obj=fields[0],fields[2].decode("ascii")
     if mode not in (b"100644",b"100755"):
         raise SystemExit("STEP26IA_BLOCKED=UNSUPPORTED_TREE_MODE")
-    path=root.joinpath(*pathlib.PurePosixPath(os.fsdecode(filename)).parts)
+    rel=pathlib.PurePosixPath(os.fsdecode(filename))
+    if rel.is_absolute() or ".." in rel.parts or "." in rel.parts or ".git" in rel.parts:
+        raise SystemExit("STEP26IA_BLOCKED=UNSAFE_TREE_PATH")
+    path=root.joinpath(*rel.parts)
+    expected_count+=1
+    if not path.exists() and not path.is_symlink():
+        name=rel.as_posix()
+        if name not in ("CHANGELOG.md",".styleci.yml") and not name.startswith(".github/"):
+            raise SystemExit("STEP26IA_BLOCKED=REQUIRED_TRACKED_FILE_ABSENT")
+        omitted.add(name)
+        continue
     st=path.lstat()
     if not stat.S_ISREG(st.st_mode):
         raise SystemExit("STEP26IA_BLOCKED=STAGED_OBJECT_NOT_REGULAR")
@@ -312,10 +324,11 @@ for entry in sys.stdin.buffer.read().split(b"\0"):
         raise SystemExit("STEP26IA_BLOCKED=GIT_TREE_CONTENT_MISMATCH")
     seen.add(path.relative_to(root))
 actual={p.relative_to(root) for p in root.rglob("*") if p.is_file()}
-if actual!=seen:
+if actual!=seen or len(seen)!=675 or len(omitted)!=7 or expected_count!=682:
     raise SystemExit("STEP26IA_BLOCKED=ARCHIVE_TREE_FILE_SET_MISMATCH")
 print("APPROVED_TREE_BLOB_HASHES=ALL_MATCH")
 print("VERIFIED_TRACKED_FILES="+str(len(seen)))
+print("APPROVED_EXPORT_IGNORED_FILES="+str(len(omitted)))
 ' "$DEST"
 
 [[ ! -e "$DEST/.git" && ! -L "$DEST/.git" &&
