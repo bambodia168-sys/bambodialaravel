@@ -110,6 +110,8 @@ extra=r"""
         fastcgi_param DOCUMENT_ROOT /var/lib/bambodia-oauth-https-qa/public;
         fastcgi_param HTTP_PROXY "";
         fastcgi_param HTTPS $https;
+        # OAuth/MCP requires forwarding the Authorization bearer header.
+        fastcgi_param HTTP_AUTHORIZATION $http_authorization;
         fastcgi_pass unix:/tmp/php-cgi-85.sock;
         fastcgi_read_timeout 60s;
     }
