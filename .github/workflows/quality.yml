@@ -127,6 +127,17 @@ jobs:
           bash -n support/preview-visibility-qa-boot-preflight.sh
           bash -n support/preview-visibility-qa-migrate-backup.sh
           bash -n support/preview-visibility-qa-restore-stage7.sh
+          bash -n support/preview-visibility-qa-http-stage8.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          source = Path('support/preview-visibility-qa-http-stage8.sh').read_text()
+          blocks = re.findall(r"<<'PY'\n(.*?)\nPY", source, re.S)
+          assert len(blocks) == 2, 'Expected two embedded Stage 8 Python blocks'
+          for block in blocks:
+              compile(block, '<Stage 8 Python block>', 'exec')
+          print('Stage 8 embedded Python syntax: PASS')
+          PY
           python3 - <<'PY'
           from pathlib import Path
           import re
