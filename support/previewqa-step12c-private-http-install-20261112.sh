@@ -150,6 +150,9 @@ done
 if getent passwd "$INGRESS" >/dev/null || getent group "$INGRESS" >/dev/null; then
   fail dedicated_ingress_identity_already_exists
 fi
+if [[ -n "$(systemctl show "$HTTP_SVC" -p FragmentPath --value 2>/dev/null || true)" ]]; then
+  fail dedicated_http_systemd_unit_already_defined
+fi
 [[ ! -e /www/wwwroot/preview-qa.bambodia.com &&
    ! -L /www/wwwroot/preview-qa.bambodia.com ]] || fail public_qa_root_present
 [[ ! -e /www/server/panel/vhost/nginx/preview-qa.bambodia.com.conf &&
@@ -284,7 +287,6 @@ fi
 
 [[ "$(printenv BAMBODIA_QA_PRIVATE_HTTP_INSTALL || true)" == 'APPROVE_QA_LOCAL_UNIX_ONLY' ]] ||
   fail explicit_qa_only_install_approval_missing
-APPLY_STARTED=yes
 echo '========== PROVISION PRIVATE QA-ONLY STATIC INGRESS =========='
 install -d -o root -g root -m 700 "$BACKUP"
 install -o root -g root -m 600 "$FPM_CONF" "$BACKUP/php-fpm.conf"
@@ -319,6 +321,7 @@ cmp -s "$TMP/nginx.conf" "$HTTP_CONF" || fail installed_nginx_conf_mismatch
 cmp -s "$TMP/http.service" "$HTTP_UNIT" || fail installed_systemd_unit_mismatch
 
 echo '========== RECONFIGURE ONLY DEDICATED QA FASTCGI SOCKET =========='
+APPLY_STARTED=yes
 systemctl stop "$FPM_SVC" || fail dedicated_fpm_stop_failed
 install -o root -g root -m 600 "$TMP/php-fpm.conf" "$FPM_CONF"
 cmp -s "$TMP/php-fpm.conf" "$FPM_CONF" || fail installed_fpm_config_mismatch
