@@ -9,6 +9,8 @@
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
   @include('layouts.partials.site-typography')
+  {{-- Page-specific styles; no changes to public website layouts. --}}
+  @stack('workspace-head')
   {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
   <link rel="stylesheet" href="{{ asset('css/creator-badge-tooltip-viewport.css') }}?v=1">
   <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>

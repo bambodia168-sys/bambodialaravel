@@ -19,6 +19,8 @@
 </div>
 <div class="workspace-quick-actions">
   <a class="btn subtle compact" href="{{ route('developer.docs') }}"><x-icon name="book" size="16"/> API endpoints and scope reference</a>
+  <a class="btn primary compact" href="{{ route('developer.mcp.index') }}"><x-icon name="plug" size="16"/> Bambodia Manager MCP</a>
+  <a class="btn subtle compact" href="{{ route('developer.oauth.index') }}"><x-icon name="shield" size="16"/> OAuth connections</a>
   <a class="btn subtle compact" href="{{ route('developer.index',['status'=>'active']) }}#api-token-list">
     <x-icon name="key" size="16"/> Review active credentials ({{ $tokenStats['active'] }})
   </a>
