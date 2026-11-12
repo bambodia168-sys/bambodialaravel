@@ -38,6 +38,18 @@ get protected_mcp /.well-known/oauth-protected-resource/mcp
 get protected_root /.well-known/oauth-protected-resource
 get authorization /.well-known/oauth-authorization-server
 
+echo '========== DCR ROUTE SAFE REJECTION (NO CLIENT CREATED) =========='
+# Intentionally INVALID metadata: missing redirect_uris, so the controller
+# must return 400 and cannot create a client or OAuth credentials.
+dcr_status="$(curl --silent --show-error --proto '=https' \
+  --connect-timeout 8 --max-time 18 --max-redirs 0 \
+  -H 'Accept: application/json' -H 'Content-Type: application/json' \
+  --data '{}' \
+  -D "$WORK/registration.headers" -o "$WORK/registration.body" \
+  -w '%{http_code}' "$HOST/oauth/register")" || fail DCR_INVALID_PROBE_UNREACHABLE
+printf '%s' "$dcr_status" > "$WORK/registration.status"
+echo "HTTPS_DCR_INVALID_REQUEST_STATUS=$dcr_status"
+
 echo '========== MCP BEARER AUTH CHALLENGE =========='
 status="$(curl --silent --show-error --proto '=https' \
   --connect-timeout 8 --max-time 18 --max-redirs 0 \
@@ -96,6 +108,16 @@ check(isinstance(auth.get("response_types_supported"),list)
       and "code" in auth["response_types_supported"],"AUTHORIZATION_CODE_FLOW_NOT_ADVERTISED")
 check(isinstance(auth.get("scopes_supported"),list)
       and "mcp:use" in auth["scopes_supported"],"MCP_SCOPE_NOT_ADVERTISED")
+
+registration_status=status("registration")
+check(registration_status=="400","DCR_INVALID_REGISTRATION_EXPECTED_HTTP_400")
+try:
+    registration_error=json.loads((root/"registration.body").read_text())
+    check(isinstance(registration_error,dict)
+          and registration_error.get("error")=="invalid_client_metadata",
+          "DCR_INVALID_REGISTRATION_EXPECTED_VALIDATION_ERROR")
+except (UnicodeDecodeError,ValueError):
+    check(False,"DCR_INVALID_REGISTRATION_MUST_BE_JSON")
 
 check(status("mcp_auth")=="401","ANONYMOUS_MCP_EXPECTED_401")
 headers=(root/"mcp_auth.headers").read_text(errors="replace")
