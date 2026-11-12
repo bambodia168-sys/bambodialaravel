@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\SiteBrandAsset;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class BrandingAssetsTest extends TestCase
 {
+    use RefreshDatabase;
     public function test_default_assets_and_dynamic_header_brand_bindings_are_present(): void
     {
         $originalAssets=[
