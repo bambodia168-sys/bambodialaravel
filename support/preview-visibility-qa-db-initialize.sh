@@ -29,7 +29,7 @@ for bin in git python3 stat mktemp realpath; do command -v "$bin" >/dev/null || 
 [[ ! -e "$QA/bootstrap/cache/config.php" ]] || fail 'QA config cache already exists'
 [[ ! -e "$QA/public/storage" && ! -L "$QA/public/storage" ]] || fail 'Unexpected QA public storage'
 [[ -d "$QA/storage/framework/sessions" && ! -L "$QA/storage/framework/sessions" ]] || fail 'QA session path invalid'
-"$PHP" -m | grep -Fxq pdo_mysql || fail 'PHP pdo_mysql unavailable'
+"$PHP" -r 'exit(extension_loaded("pdo_mysql") ? 0 : 1);' || fail 'PHP pdo_mysql unavailable'
 id www >/dev/null || fail 'www user absent'
 echo '========== BAMBODIA INDEPENDENT QA MYSQL / APP KEY =========='
 echo "MODE=$MODE"
