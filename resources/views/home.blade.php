@@ -36,7 +36,7 @@
   <div class="marketplace-section-heading">
     <div><span class="eyebrow">Explore Bambodia</span><h2 id="browse-by-type-heading">Find the work that fits</h2>
       <p>Browse real, approved marketplace listings by type.</p></div>
-    <a class="btn subtle compact" href="{{ route('marketplace.search') }}">Explore all listings <x-icon name="chevron-right" size="16"/></a>
+    <a class="btn subtle compact" href="{{ route('marketplace.search') }}">Explore all listings</a>
   </div>
   <div class="marketplace-type-directory-grid">
     @foreach([
@@ -51,7 +51,6 @@
         <small>{{ $directory['intro'] }}</small>
         <span class="marketplace-directory-footer">
           <span>{{ number_format((int)($listingTotals[$directory['type']] ?? 0)) }} approved</span>
-          <x-icon name="chevron-right" size="17"/>
         </span>
       </a>
     @endforeach
@@ -84,7 +83,7 @@
       <h2 id="freelancer-section-title">Freelancer</h2>
       <p>Meet professionals with public portfolios and explore their approved work.</p>
     </div>
-    <a class="btn subtle" href="{{ route('creators.index') }}">View all freelancers <x-icon name="arrow-up-right" size="17"/></a>
+    <a class="btn subtle" href="{{ route('creators.index') }}">View all freelancers</a>
   </div>
   @if($freelancers->isNotEmpty())
     <div class="marketplace-freelancer-grid" aria-label="Public freelancer profiles">
@@ -121,7 +120,7 @@
 <section id="bambodia-jobs" class="container marketplace-section bambodia-jobs-section" aria-labelledby="bambodia-jobs-title">
   <div class="marketplace-section-heading">
     <div><span class="eyebrow">Work opportunities</span><h2 id="bambodia-jobs-title">Latest approved jobs</h2><p>Explore approved client opportunities and find work that fits your skills.</p></div>
-    <a class="btn subtle" href="{{ route('jobs') }}">Explore all jobs <x-icon name="arrow-up-right" size="17"/></a>
+    <a class="btn subtle" href="{{ route('jobs') }}">Explore all jobs</a>
   </div>
   @if($recentJobs->isNotEmpty())
     <div class="bambodia-job-list" aria-label="Latest approved job opportunities">
@@ -142,7 +141,7 @@
       <p>Explore news, ideas and practical guides from Bambodia.</p>
     </div>
     <div class="home-blog-heading-actions">
-      <a class="btn subtle" href="{{ route('blog') }}">View all posts <x-icon name="arrow-up-right" size="16"/></a>
+      <a class="btn subtle" href="{{ route('blog') }}">View all posts</a>
       @if($recentPosts->isNotEmpty())
         <div class="home-blog-controls" aria-label="Blog slider navigation">
           <button type="button" class="home-blog-arrow" data-home-blog-prev aria-label="Previous blog posts" disabled><x-icon name="chevron-left" size="19"/></button>
@@ -182,7 +181,7 @@
               @if($post->excerpt)<p class="blog-card-excerpt">{{ \Illuminate\Support\Str::limit($post->excerpt,108) }}</p>@endif
               <div class="blog-card-bottom">
                 <time datetime="{{ $post->published_at->toDateString() }}">{{ $post->published_at->format('d M Y') }}</time>
-                <a href="{{ $post->publicUrl() }}" class="blog-card-read">Read <x-icon name="arrow-up-right" size="15"/></a>
+                <a href="{{ $post->publicUrl() }}" class="blog-card-read">Read</a>
               </div>
             </div>
           </article>
