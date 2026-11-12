@@ -158,6 +158,12 @@ for path in .composer-home .composer-cache .composer-tmp; do
  chown -R root:root "$APP/$path"
  chmod 700 "$APP/$path"
 done
+# Storage's top directory must not be writable by PHP-FPM: Passport keys
+# live directly beneath it. Only nested cache/session/log folders are writable.
+chown root:www "$APP/storage"
+chmod 750 "$APP/storage"
+chown root:www "$APP/storage/oauth-private.key" "$APP/storage/oauth-public.key"
+chmod 640 "$APP/storage/oauth-private.key" "$APP/storage/oauth-public.key"
 [[ "$(sha256sum "$VHOST" | cut -d' ' -f1)" == "$VHASH" ]] || fail VHOST_CHANGED
 echo "PRIVATE_QA_RUNTIME=READY_FOR_HTTPS_ACTIVATION"
 echo "FUNCTIONAL_QA_UI=/developer/mcp-connection"
