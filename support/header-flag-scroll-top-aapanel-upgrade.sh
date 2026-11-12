@@ -68,8 +68,20 @@ while IFS= read -r REL; do
   else
     [[ -f "$TARGET" ]] || fail "Existing header template absent: $REL"
     EXPECTED="$(gh api "repos/$REPO/contents/$REL?ref=$MAIN" --jq '.sha')"
-    [[ "$(git hash-object "$TARGET")" == "$EXPECTED" ]] ||
-      fail "LIVE_FILE_DIVERGED_FROM_APPROVED_MAIN=$REL"
+    LIVE_SHA="$(git hash-object "$TARGET")"
+    if [[ "$REL" == resources/views/layouts/workspace.blade.php &&
+          "$LIVE_SHA" == 349c2ef792cb232d3e9e3f94953eb50cdd37aace ]]; then
+      # Authorized read-only host diagnosis: this exact live file differs
+      # from reviewed main by only the absent Super Admin Preview Visibility
+      # navigation entry. Preserve the absence; never re-enable the link.
+      [[ "$EXPECTED" == 58a26b782a9507530e0f7e6078da9c5d273b36f9 ]] ||
+        fail 'Workspace main baseline changed unexpectedly'
+      KEEP_PREVIEW_MENU_ABSENT=1
+      echo 'LIVE_WORKSPACE=PINNED_PREVIEW_MENU_ABSENT_VARIANT'
+    else
+      [[ "$LIVE_SHA" == "$EXPECTED" ]] ||
+        fail "LIVE_FILE_DIVERGED_FROM_APPROVED_MAIN=$REL"
+    fi
   fi
   mkdir -p "$TEMP/staged/$(dirname "$REL")"
   gh api -H 'Accept: application/vnd.github.raw+json' \
@@ -79,6 +91,26 @@ while IFS= read -r REL; do
      "$(git hash-object "$TEMP/staged/$REL")" == "$EXPECTED" ]] ||
     fail "Staged source integrity mismatch: $REL"
   echo "REVIEWED_SOURCE_VERIFIED=$REL"
+
+  if [[ "$REL" == resources/views/layouts/workspace.blade.php &&
+        "${KEEP_PREVIEW_MENU_ABSENT:-0}" == 1 ]]; then
+    # First authenticate the exact immutable reviewed file (above). Then
+    # carry forward only the one-line omission observed in the live file.
+    python3 - "$TEMP/staged/$REL" <<'PY'
+from pathlib import Path
+import sys
+
+p = Path(sys.argv[1])
+original = p.read_bytes()
+omitted = (b"        ['route'=>'dashboard.preview-visibility.index',"
+           b"'label'=>'Preview Visibility','icon'=>'shield-check',"
+           b"'roles'=>['super_admin']],\n")
+if original.count(omitted) != 1:
+    raise SystemExit("BLOCKED=Preview Visibility staging variant not unique")
+p.write_bytes(original.replace(omitted, b"", 1))
+print("WORKSPACE_PREVIEW_MENU=LIVE_ABSENCE_PRESERVED")
+PY
+  fi
 done <<'FILES'
 resources/views/layouts/main.blade.php
 resources/views/layouts/workspace.blade.php
