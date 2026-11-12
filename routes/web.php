@@ -173,6 +173,8 @@ Route::middleware('auth')->group(function (): void {
             ->name('developer.mcp.index');
         Route::post('/developer/mcp-connection/check', [\App\Http\Controllers\Developer\McpConnectionCenterController::class, 'check'])
             ->name('developer.mcp.check')->middleware('throttle:3,1');
+        Route::post('/developer/mcp-connection/create-draft', [\App\Http\Controllers\Developer\McpConnectionCenterController::class, 'createQaDraft'])
+            ->name('developer.mcp.create-draft')->middleware('throttle:2,1');
         Route::get('/developer/oauth-connections', [\App\Http\Controllers\Developer\OAuthConnectionController::class, 'index'])
             ->name('developer.oauth.index');
         Route::delete('/developer/oauth-connections/{token}', [\App\Http\Controllers\Developer\OAuthConnectionController::class, 'destroy'])
