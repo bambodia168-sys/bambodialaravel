@@ -130,6 +130,27 @@ jobs:
           bash -n support/preview-visibility-qa-http-stage8.sh
           bash -n support/preview-visibility-qa-synthetic-stage9.sh
           bash -n support/preview-visibility-qa-auth-stage10.sh
+          bash -n support/preview-visibility-qa-lifecycle-stage11.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          source = Path("support/preview-visibility-qa-lifecycle-stage11.sh").read_text()
+          py = re.findall(r"<<'PY'\n(.*?)\nPY",source,re.S)
+          php = re.findall(r"<<'PHP'\n(.*?)\nPHP",source,re.S)
+          assert len(py)==4, "Expected 4 Stage11 Python blocks"
+          assert len(php)==4, "Expected 4 Stage11 PHP blocks"
+          for block in py:
+              compile(block,"<Stage11 embedded Python>","exec")
+          for block in php:
+              proc=subprocess.run(["php","-l"],input="<?php\n"+block,
+                  capture_output=True,text=True,check=False)
+              assert proc.returncode==0,proc.stdout+proc.stderr
+          assert "PREVIEW_VISIBILITY_WRITES_ENABLED=true" in source
+          assert "APP=/var/lib/bambodia-pvt-53309a26f4cd" in source
+          assert "STAGE11_SYNTHETIC_WITHDRAW_RESTORE_LIFECYCLE_PASS" in source
+          print("Stage11 embedded Python/PHP syntax: PASS")
+          PY
           python3 - <<'PY'
           from pathlib import Path
           import re
