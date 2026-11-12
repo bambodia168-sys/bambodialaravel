@@ -129,6 +129,14 @@ jobs:
         run: npm install --ignore-scripts
       - name: Compile production frontend
         run: npm run build
+      - name: Retain isolated homepage Vite build for guarded aaPanel acceptance
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/home-discovery-responsive-grids-20261112'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bambodia-Home-Discovery-Vite
+          path: public/build/
+          if-no-files-found: error
+          retention-days: 7
       - name: Lint compiled Blade templates
         run: |
           php artisan view:cache
