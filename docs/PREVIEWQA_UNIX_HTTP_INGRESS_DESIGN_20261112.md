@@ -44,8 +44,10 @@ Nginx vhost.
 
 Its document root must contain only independently allowlisted, checksum-
 verified static files, copied from the existing synthetic QA's public tree.
-Do NOT copy public/index.php, symlinks, .env, hidden files, private media, or
-arbitrary upload files. Route non-static requests to the dedicated PHP-FPM
+Do NOT copy public/index.php, public/.htaccess, symlinks, .env, hidden files,
+private media, or arbitrary upload files. The Apache rewrite file at the exact
+public/.htaccess path is inspected against its pinned Git blob and deliberately
+excluded from any static package; all other hidden files must fail closed. Route non-static requests to the dedicated PHP-FPM
 socket using fixed SCRIPT_FILENAME equal to the recovered Laravel front
 controller. Reject arbitrary PHP paths, dotfiles, installers and /storage
 access at the ingress layer.
