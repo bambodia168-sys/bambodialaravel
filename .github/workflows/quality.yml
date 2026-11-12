@@ -149,6 +149,7 @@ jobs:
           bash -n support/bambodia-mcp-qa-seal-installed.sh
           bash -n support/bambodia-mcp-qa-ui-upgrade.sh
           bash -n support/bambodia-mcp-qa-oauth-connections-ui-upgrade.sh
+          bash -n support/bambodia-mcp-qa-chatgpt-compatibility.sh
           php -l app/Http/Controllers/Developer/McpConnectionCenterController.php
           bash -n support/mcp-oauth-qa-db-inspect.sh
           bash -n support/mcp-oauth-qa-source-bootstrap.sh
