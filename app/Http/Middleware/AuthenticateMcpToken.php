@@ -19,6 +19,13 @@ final class AuthenticateMcpToken
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Reject before touching Passport or developer-token tables. This is
+        // important during a staged production release before OAuth migrations.
+        if (! config('mcp.production_enabled', false)
+            || \App\Support\Mcp\McpResource::issuer() !== 'https://bambodia.com') {
+            return response()->json(['message' => 'Bambodia Manager MCP is not enabled.'], 503)
+                ->header('Cache-Control', 'no-store');
+        }
         $secret = $request->bearerToken() ?? '';
         $challenge = 'Bearer resource_metadata="'.url('/.well-known/oauth-protected-resource/mcp').'", scope="mcp:use"';
         $reject = static fn (int $status, string $message): JsonResponse =>
