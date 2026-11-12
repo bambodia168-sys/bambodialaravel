@@ -21,8 +21,9 @@ final class SiteManifestController extends Controller
             'theme_color' => '#c2410c',
             'icons' => [[
                 'src' => SiteBrandAsset::urlFor('pwa_icon'),
-                'sizes' => 'any',
-                'type' => 'image/png',
+                'sizes' => (($dimensions = SiteBrandAsset::actualDimensionsFor('pwa_icon'))
+                    ? $dimensions[0].'x'.$dimensions[1] : 'any'),
+                'type' => SiteBrandAsset::actualMimeFor('pwa_icon'),
                 'purpose' => 'any',
             ]],
         ])->header('Content-Type', 'application/manifest+json; charset=utf-8')
