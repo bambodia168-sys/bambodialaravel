@@ -146,13 +146,13 @@ try {
               throw new Error(device.name+' '+theme+' '+name+' insufficient contrast ratio '+value.toFixed(2));
           }
         }
-        // The compact phone homepage renders only two previews; remaining
-        // approved types stay available through the category/search pages.
+        // All eight approved homepage previews remain visible at every viewport.
+        // Small-screen discovery uses two columns without hiding item types.
         const service=page.getByText('Browser QA Published Service').first();
-        if(!(await service.count()) || (device.viewport.width>550 && !(await service.isVisible())))
+        if(!(await service.count()) || !(await service.isVisible()))
           throw new Error(device.name+' homepage missing approved listing');
         // Shared listing cards: clickable artwork/title, two-line text and
-        // four / two / one responsive columns without clipped or hidden links.
+        // four / three / two responsive columns without clipped or hidden links.
         const cards=await page.locator('.marketplace-home-feed .marketplace-card').count();
         if(cards<1 || cards>8)
           throw new Error(device.name+' homepage must show at most eight balanced cards; saw '+cards);
@@ -168,6 +168,9 @@ try {
           const titleStyle=getComputedStyle(title);
           return {
             columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+            visibleCards:[...grid.querySelectorAll('.marketplace-card')]
+              .filter(item=>getComputedStyle(item).display!=='none').length,
+            cardRight:card.getBoundingClientRect().right,
             titleClamp:titleStyle.webkitLineClamp,
             fullTitleWidth:Math.abs(title.getBoundingClientRect().width
               - card.querySelector('h3').getBoundingClientRect().width)<2,
@@ -179,8 +182,9 @@ try {
             viewDetails:!!card.querySelector('.marketplace-card-actions a'),
           };
         });
-        const expectedColumns=device.viewport.width>=1200?4:device.viewport.width>550?2:1;
+        const expectedColumns=device.viewport.width>=1200?4:device.viewport.width>700?3:2;
         if(cardMetrics.missing || cardMetrics.columns!==expectedColumns
+          || cardMetrics.visibleCards!==cards || cardMetrics.cardRight>device.viewport.width+3
           || cardMetrics.titleClamp!=='2' || !cardMetrics.fullTitleWidth
           || !cardMetrics.sameDestination || cardMetrics.hasSummary || !cardMetrics.hasCreator
           || !cardMetrics.priceSymbol || cardMetrics.hasUnsupportedRatings || cardMetrics.viewDetails)
@@ -209,12 +213,20 @@ try {
             href:card.querySelector('h3 a')?.getAttribute('href'),
             footer:card.querySelector('.marketplace-freelancer-card-footer a')?.getAttribute('href'),
             right:card.getBoundingClientRect().right,
+            avatarWidth:card.querySelector('.marketplace-freelancer-avatar')?.getBoundingClientRect().width,
+            avatarOffset:(()=>{
+              const avatar=card.querySelector('.marketplace-freelancer-avatar')?.getBoundingClientRect();
+              const rect=card.getBoundingClientRect();
+              return avatar?Math.abs((avatar.left+avatar.right)/2-(rect.left+rect.right)/2):999;
+            })(),
+            hasBiography:!!card.querySelector('.marketplace-freelancer-bio'),
           })),
         }));
-        const freelancerColumns=device.viewport.width>=1200?4:device.viewport.width>=680?2:1;
+        const freelancerColumns=device.viewport.width>=1400?5:device.viewport.width>=1100?4:device.viewport.width>=700?3:2;
         if(freelancerGeometry.columns!==freelancerColumns ||
            freelancerGeometry.items.some(c=>!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(c.href??'') ||
-             c.href!==c.footer || c.right>device.viewport.width+3))
+             c.href!==c.footer || c.right>device.viewport.width+3 ||
+             c.avatarWidth<64 || c.avatarOffset>2 || c.hasBiography))
           throw new Error(device.name+' freelancer grid regression '+JSON.stringify(freelancerGeometry));
         const firstFreelancer=freelancerCards.first();
         if(!(await firstFreelancer.getByText(/approved listings?/).count()))
