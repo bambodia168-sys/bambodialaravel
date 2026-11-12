@@ -207,20 +207,23 @@ http {
     }
 }
 NGINXCONFIG
-# nginx -t opens the configured PID file even during an offline syntax
-# check. The real service's /run path is intentionally not installed yet:
-# test a separate temporary copy with a PID under the temporary directory.
-# Keep the actual proposed service configuration unchanged.
-sed "s#^pid /run/bambodia-previewqa-http/nginx.pid;#pid $TMP/nginx.pid;#" \
-  "$TMP/nginx.conf" > "$TMP/nginx.offline.conf"
+# nginx -t also opens the PID file and binds the listening Unix socket.
+# The real /run paths deliberately do not exist yet. In a syntax-only test,
+# redirect BOTH side effects into the root-private temporary directory.
+# Keep the proposed service configuration in nginx.conf unchanged.
+sed -e "s#^pid /run/bambodia-previewqa-http/nginx.pid;#pid $TMP/nginx.pid;#" \
+    -e "s#listen unix:/run/bambodia-previewqa-http/http.sock;#listen unix:$TMP/http.sock;#" \
+    "$TMP/nginx.conf" > "$TMP/nginx.offline.conf"
 grep -Fxq "pid $TMP/nginx.pid;" "$TMP/nginx.offline.conf" ||
   fail offline_pid_path_rewrite_missing
+grep -Fq "listen unix:$TMP/http.sock;" "$TMP/nginx.offline.conf" ||
+  fail offline_http_socket_path_rewrite_missing
 if ! nginx -t -c "$TMP/nginx.offline.conf" > "$TMP/nginx-test.log" 2>&1; then
   sed -n '1,25p' "$TMP/nginx-test.log" >&2
   fail standalone_unix_http_nginx_candidate_syntax
 fi
-echo 'OFFLINE_NGINX_PID=EPHEMERAL_PRIVATE_PATH'
-echo 'DEPLOYED_NGINX_PID_PATH=UNCHANGED_NOT_INSTALLED'
+echo 'OFFLINE_NGINX_PID_AND_LISTEN_SOCKET=EPHEMERAL_PRIVATE_PATHS'
+echo 'DEPLOYED_NGINX_PID_AND_LISTEN_SOCKET=UNCHANGED_NOT_INSTALLED'
 echo 'CANDIDATE_DEDICATED_UNIX_HTTP_NGINX_SYNTAX=PASS'
 echo 'DEDICATED_INGRESS_IDENTITY=NOT_YET_CREATED'
 echo 'PRIVATE_FASTCGI_GROUP_SHARING=NOT_YET_AUTHORIZED'
