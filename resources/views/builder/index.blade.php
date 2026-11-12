@@ -107,7 +107,7 @@
             <span class="studio-choice-icon"><x-icon :name="$meta['icon']" size="24"/></span>
             <strong>{{ $meta['label'] }}</strong>
             <span class="studio-choice-description">{{ $meta['text'] }}</span>
-            <span class="studio-choice-link">Create {{ strtolower($meta['label']) }} <x-icon name="chevron-right" size="17"/></span>
+            <span class="studio-choice-link">Create {{ strtolower($meta['label']) }}</span>
           </a>
         @endforeach
       </div>
