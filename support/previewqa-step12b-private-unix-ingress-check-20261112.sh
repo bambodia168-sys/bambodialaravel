@@ -207,8 +207,20 @@ http {
     }
 }
 NGINXCONFIG
-nginx -t -c "$TMP/nginx.conf" >/dev/null 2>&1 ||
+# nginx -t opens the configured PID file even during an offline syntax
+# check. The real service's /run path is intentionally not installed yet:
+# test a separate temporary copy with a PID under the temporary directory.
+# Keep the actual proposed service configuration unchanged.
+sed "s#^pid /run/bambodia-previewqa-http/nginx.pid;#pid $TMP/nginx.pid;#" \
+  "$TMP/nginx.conf" > "$TMP/nginx.offline.conf"
+grep -Fxq "pid $TMP/nginx.pid;" "$TMP/nginx.offline.conf" ||
+  fail offline_pid_path_rewrite_missing
+if ! nginx -t -c "$TMP/nginx.offline.conf" > "$TMP/nginx-test.log" 2>&1; then
+  sed -n '1,25p' "$TMP/nginx-test.log" >&2
   fail standalone_unix_http_nginx_candidate_syntax
+fi
+echo 'OFFLINE_NGINX_PID=EPHEMERAL_PRIVATE_PATH'
+echo 'DEPLOYED_NGINX_PID_PATH=UNCHANGED_NOT_INSTALLED'
 echo 'CANDIDATE_DEDICATED_UNIX_HTTP_NGINX_SYNTAX=PASS'
 echo 'DEDICATED_INGRESS_IDENTITY=NOT_YET_CREATED'
 echo 'PRIVATE_FASTCGI_GROUP_SHARING=NOT_YET_AUTHORIZED'
