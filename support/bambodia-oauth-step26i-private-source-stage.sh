@@ -44,8 +44,32 @@ done
   fail SOURCE_COMMIT_NOT_ACCEPTED
 [[ -z "$(git -C "$SOURCE" status --porcelain --untracked-files=no)" ]] ||
   fail SOURCE_TRACKED_FILES_MODIFIED
-[[ "$(git -C "$SOURCE" remote get-url origin)" == "/var/lib/bambodia-oauth-qa-acceptance" ]] ||
-  fail SOURCE_ORIGIN_NOT_EXPECTED
+# Browser-QA was originally cloned from the accepted local CLI checkout.
+# Subsequent read-only QA work may have reconciled its remote to the canonical
+# repository. Accept ONLY those two verifiable provenance identities. Never
+# accept an arbitrary remote, GitHub fork, credential-in-URL or rewritten URL.
+ORIGIN_RAW="$(git -C "$SOURCE" config --local --get remote.origin.url 2>/dev/null)" ||
+  fail SOURCE_ORIGIN_MISSING
+ORIGIN_EFFECTIVE="$(git -C "$SOURCE" remote get-url origin 2>/dev/null)" ||
+  fail SOURCE_ORIGIN_NOT_RESOLVABLE
+case "$ORIGIN_RAW" in
+  "/var/lib/bambodia-oauth-qa-acceptance")
+    [[ "$ORIGIN_EFFECTIVE" == "$ORIGIN_RAW" ]] ||
+      fail SOURCE_ORIGIN_REWRITTEN_UNEXPECTEDLY
+    echo 'ACCEPTED_SOURCE_ORIGIN=PINNED_LOCAL_QA'
+    ;;
+  "https://github.com/$REPO"|"https://github.com/$REPO.git"|
+  "git@github.com:$REPO"|"git@github.com:$REPO.git")
+    [[ "$ORIGIN_EFFECTIVE" == "$ORIGIN_RAW" ]] ||
+      fail SOURCE_ORIGIN_REWRITTEN_UNEXPECTEDLY
+    echo 'ACCEPTED_SOURCE_ORIGIN=CANONICAL_GITHUB'
+    ;;
+  *)
+    # Do not print the actual origin: it may embed authentication material.
+    fail SOURCE_ORIGIN_NOT_ALLOWLISTED
+    ;;
+esac
+unset ORIGIN_RAW ORIGIN_EFFECTIVE
 [[ -s "$SOURCE/composer.lock" && ! -L "$SOURCE/composer.lock" &&
    "$(sha256sum "$SOURCE/composer.lock" | cut -d ' ' -f1)" == "$LOCK_SHA" ]] ||
   fail ACCEPTED_COMPOSER_LOCK_INVALID
