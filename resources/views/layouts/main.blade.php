@@ -51,7 +51,6 @@
               <a class="nav-category-heading" href="{{ route('marketplace.search',['type'=>$categoryType]) }}">
                 <x-icon :name="$categoryIcons[$categoryType]" size="18"/>
                 <span>{{ $categoryLabel }}</span>
-                <x-icon name="chevron-right" size="15"/>
               </a>
               @if($categoryGroups->has($categoryType))
               @foreach($categoryGroups->get($categoryType) as $category)
@@ -65,7 +64,7 @@
             </section>
           @endforeach
         </nav>
-        <a class="nav-category-explore" href="{{ route('marketplace.search') }}">Explore all listings <x-icon name="chevron-right" size="16"/></a>
+        <a class="nav-category-explore" href="{{ route('marketplace.search') }}">Explore all listings</a>
       </div>
     </details>
     @endif
