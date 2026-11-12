@@ -245,10 +245,15 @@ try {
           naturalWidth:img.naturalWidth,
           src:img.getAttribute('src')||'',
           alt:img.getAttribute('alt')||'',
+          objectFit:getComputedStyle(img).objectFit,
+          paddingTop:parseFloat(getComputedStyle(img).paddingTop),
+          paddingBottom:parseFloat(getComputedStyle(img).paddingBottom),
         }));
         if(!avatarRender.complete || avatarRender.naturalWidth<1 ||
            !avatarRender.src.includes('/storage/profile-avatars/browser-qa-creator.webp') ||
-           avatarRender.alt!=='Browser QA Creator profile photo')
+           avatarRender.alt!=='Browser QA Creator profile photo' ||
+           avatarRender.objectFit!=='contain' ||
+           avatarRender.paddingTop<5 || avatarRender.paddingBottom<5)
           throw new Error(device.name+' uploaded creator avatar did not load '+JSON.stringify(avatarRender));
         const target=await avatarCard.locator('a.marketplace-freelancer-avatar').getAttribute('href');
         const profileResponse=await page.request.get(target);
