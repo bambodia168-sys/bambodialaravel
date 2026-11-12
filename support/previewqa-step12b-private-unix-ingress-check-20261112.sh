@@ -84,6 +84,13 @@ PUB="$APP/public"
   "$(stat -c '%U:%G:%a' "$PUB")" == "$WORKER:$WORKER:700" ]] ||
   fail recovered_public_directory_changed
 [[ -s "$PUB/index.php" && ! -L "$PUB/index.php" ]] || fail front_controller_missing
+# The Apache-only root rewrite file is NOT a static asset. Permit ONLY the
+# known, byte-for-byte baseline and exclude it from any future static copy.
+# Other hidden files (including nested .htaccess) remain prohibited.
+[[ -f "$PUB/.htaccess" && ! -L "$PUB/.htaccess" ]] ||
+  fail expected_root_apache_rewrite_file_missing_or_symlinked
+[[ "$(git hash-object "$PUB/.htaccess")" == 'a165eb1fb39bf08883ea61b91e543c871b7b8b64' ]] ||
+  fail unexpected_root_apache_rewrite_file_contents
 [[ -z "$(find "$PUB" -type l -print -quit)" ]] || fail symlink_in_public_tree
 [[ -z "$(find "$PUB" ! -type d ! -type f -print -quit)" ]] ||
   fail special_file_in_public_tree
@@ -96,8 +103,13 @@ PHP_COUNT="$(find "$PUB" -type f -iname '*.php' | wc -l | tr -d ' ')"
 [[ "$PHP_COUNT" -eq 1 ]] || fail other_php_files_in_public_tree
 while IFS= read -r -d '' file; do
   base="$(basename -- "$file")"
-  if [[ "$base" == index.php ]]; then
+  if [[ "$file" == "$PUB/index.php" || "$file" == "$PUB/.htaccess" ]]; then
     continue
+  fi
+  # No hidden files, even with otherwise allowlisted file extensions.
+  if [[ "$base" == .* ]]; then
+    printf 'HIDDEN_PUBLIC_FILE_NOT_ALLOWED=%s\n' "$base" >&2
+    fail unapproved_hidden_file_in_public_tree
   fi
   case "$base" in
     *.js|*.css|*.map|*.png|*.jpg|*.jpeg|*.webp|*.gif|*.svg|*.woff|*.woff2|*.ttf|*.otf|*.ico|*.avif|*.webmanifest|robots.txt|sitemap.xml|manifest.json|fonts-manifest.json)
@@ -110,6 +122,9 @@ while IFS= read -r -d '' file; do
 done < <(find "$PUB" -type f -print0)
 echo "PUBLIC_TREE_FILE_COUNT=$FILE_COUNT"
 echo 'PUBLIC_TREE_PHP_FILE_COUNT=1_FRONT_CONTROLLER_NOT_FOR_STATIC_COPY'
+echo 'ROOT_APACHE_HTACCESS=EXACT_BASELINE_EXCLUDED_FROM_STATIC_COPY'
+echo 'STATIC_COPY_EXCLUSIONS=ROOT_INDEX_PHP_AND_ROOT_HTACCESS'
+echo "STATIC_COPY_ALLOWLIST_COUNT=$((FILE_COUNT - 2))"
 echo 'PUBLIC_TREE_SYMLINKS=ZERO'
 echo 'STATIC_ONLY_ASSET_ALLOWLIST=PASS'
 
