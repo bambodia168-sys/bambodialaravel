@@ -23,7 +23,7 @@
       <a class="account-metric" href="{{ route($accountMetricRoutes[$key]) }}">
         <span>{{ $accountMetricLabels[$key] }}</span>
         <strong>{{ number_format($count) }}</strong>
-        <small>Open workspace <x-icon name="chevron-right" size="13"/></small>
+        <small>Open workspace</small>
       </a>
     @endforeach
   </div>
@@ -61,7 +61,7 @@
           <span class="workspace-overview-row-main"><strong>{{ $agreement->title }}</strong>
             <small>{{ ucfirst($agreement->status) }} · {{ $agreement->updated_at->format('d M Y') }}</small>
           </span>
-          <span class="workspace-overview-row-action">View contract <x-icon name="chevron-right" size="15"/></span>
+          <span class="workspace-overview-row-action">View contract</span>
         </a>
       @empty<p class="workspace-overview-empty">No active agreements need attention.</p>
       @endforelse
