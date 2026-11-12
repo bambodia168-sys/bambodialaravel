@@ -131,6 +131,24 @@ jobs:
           bash -n support/preview-visibility-qa-synthetic-stage9.sh
           bash -n support/preview-visibility-qa-auth-stage10.sh
           bash -n support/preview-visibility-qa-lifecycle-stage11.sh
+          bash -n support/preview-visibility-qa-stage11-diagnose.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          source = Path("support/preview-visibility-qa-stage11-diagnose.sh").read_text()
+          py = re.findall(r"<<'PY'\n(.*?)\nPY",source,re.S)
+          php = re.findall(r"<<'PHP'\n(.*?)\nPHP",source,re.S)
+          assert len(py)==1,"Expected 1 diagnostic Python block"
+          assert len(php)==1,"Expected 1 diagnostic PHP block"
+          for block in py:
+              compile(block,"<Stage11 diagnostic Python>","exec")
+          for block in php:
+              proc=subprocess.run(["php","-l"],input="<?php\n"+block,
+                  capture_output=True,text=True,check=False)
+              assert proc.returncode==0,proc.stdout+proc.stderr
+          print("Stage11 diagnosis embedded Python/PHP lint: PASS")
+          PY
           python3 - <<'PY'
           from pathlib import Path
           import re
