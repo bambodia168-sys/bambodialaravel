@@ -38,6 +38,7 @@ fail() { printf 'BLOCKED: %s\n' "$*" >&2; exit 1; }
 id www >/dev/null || fail 'www account unavailable.'
 command -v openssl >/dev/null || fail 'OpenSSL unavailable.'
 command -v git >/dev/null || fail 'Git unavailable.'
+command -v gh >/dev/null || fail 'GitHub CLI unavailable.'
 command -v python3 >/dev/null || fail 'Python 3 unavailable.'
 [[ ! -e "$SRC/.env.testing" && ! -L "$SRC/.env.testing" ]] ||
   fail 'Unexpected source .env.testing; review before isolating.'
@@ -114,10 +115,22 @@ IFS= read -r CONFIRM < /dev/tty
 [[ "$CONFIRM" == PREPARE-STEP25 ]] || fail 'Operator declined.'
 unset CONFIRM
 
-echo '========== CLONE TRACKED SOURCE INTO DEDICATED WORKSPACE =========='
-git -c core.hooksPath=/dev/null clone --local --no-hardlinks --no-checkout -- "$SRC" "$APP"
-[[ -d "$APP/.git" && ! -L "$APP" ]] || fail 'Disposable checkout not created safely.'
-git -c core.hooksPath=/dev/null -C "$APP" checkout --detach "$SHA"
+echo '========== CLONE PINNED SOURCE DIRECTLY FROM AUTHORIZED GITHUB =========='
+# SRC is a shallow/promisor checkout. Cloning it locally can require missing
+# upstream objects and fail. Do not modify, repair or deepen accepted QA.
+# Fetch independently from the authenticated upstream into an ABSENT target.
+REPO="bambodia168-sys/bambodialaravel"
+[[ "$(gh api "repos/$REPO/commits/$SHA" --jq '.sha')" == "$SHA" ]] ||
+  fail 'Approved source SHA not verified on GitHub; nothing cloned.'
+gh repo clone "$REPO" "$APP" -- --filter=blob:none --no-checkout --depth=1 ||
+  fail 'Independent GitHub clone failed; inspect any partial target, do not overwrite.'
+[[ -d "$APP/.git" && ! -L "$APP" ]] || fail 'Disposable GitHub checkout not created safely.'
+[[ "$(git -C "$APP" remote get-url origin)" == *"github.com"* ]] ||
+  fail 'Unexpected Git remote; preserve workspace for review.'
+git -c core.hooksPath=/dev/null -C "$APP" fetch --depth=1 origin "$SHA" ||
+  fail 'Approved source SHA could not be fetched. Do not substitute a new commit.'
+git -c core.hooksPath=/dev/null -C "$APP" checkout --detach "$SHA" ||
+  fail 'Could not checkout exact approved source; preserve workspace.'
 [[ "$(git -C "$APP" rev-parse HEAD)" == "$SHA" ]] || fail 'Disposable source SHA mismatch.'
 [[ -z "$(git -C "$APP" status --porcelain --untracked-files=no)" ]] ||
   fail 'Disposable source changed unexpectedly.'
