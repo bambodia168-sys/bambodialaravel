@@ -18,7 +18,7 @@ REPO=bambodia168-sys/bambodialaravel
 FEATURE=b799d74c81bda133c351d792540d58eb46923a55
 fail(){ echo "QA_LAUNCH_BLOCKED=$*" >&2; exit 1; }
 [[ $(id -u) == 0 ]] || fail ROOT_REQUIRED
-for cmd in gh git python3 sha256sum npm node find; do command -v "$cmd" >/dev/null || fail "MISSING_$cmd"; done
+for cmd in gh git python3 sha256sum find stat; do command -v "$cmd" >/dev/null || fail "MISSING_$cmd"; done
 id www >/dev/null || fail WWW_MISSING
 [[ -x "$PHP" && -x "$MYSQL" ]] || fail RUNTIME_MISSING
 [[ -d "$APP" && ! -L "$APP" && "$(stat -c %u:%a "$APP")" == 0:700 ]] || fail QA_ROOT_CHANGED
@@ -54,6 +54,62 @@ for item in "${items[@]}"; do
  [[ "$(git hash-object "$WORK/$path")" == "$expected" ]] || fail OVERLAY_BLOB_MISMATCH
 done
 echo "QA_FUNCTIONAL_CODE=VERIFIED"
+
+echo "========== RESOLVE NODE + NPM FOR QA FRONTEND =========="
+# aaPanel Node.js version manager may not add npm to root's PATH.
+NODE_BIN_DIR=""
+for candidate in \
+  "$(dirname "$(command -v node || echo /nonexistent/node)")" \
+  /usr/local/bin /usr/bin /opt/node/bin \
+  /www/server/nodejs/bin /www/server/nodejs/*/bin \
+  /www/server/nodejs/*/*/bin /www/server/nodejs/*/*/*/bin \
+  /www/server/node/*/bin /root/.nvm/versions/node/*/bin; do
+  [[ -d "$candidate" && -x "$candidate/node" && -e "$candidate/npm" ]] || continue
+  if PATH="$candidate:$PATH" "$candidate/node" -e \
+    'const [a,b]=process.versions.node.split(".").map(Number); process.exit((a===22&&b>=12)||(a===24&&b>=0)?0:1)' \
+    >/dev/null 2>&1 &&
+    PATH="$candidate:$PATH" "$candidate/npm" --version >/dev/null 2>&1; then
+    NODE_BIN_DIR="$candidate"
+    echo "QA_NODE_RUNTIME=EXISTING_AAPANEL_OR_SYSTEM_INSTALLATION"
+    break
+  fi
+done
+if [[ -z "$NODE_BIN_DIR" ]]; then
+  # Official Node.js 24 LTS binary, downloaded only into the ROOT-PRIVATE
+  # QA recovery workspace. No global install or aaPanel service changes.
+  for cmd in curl tar uname; do command -v "$cmd" >/dev/null || fail "MISSING_$cmd"; done
+  case "$(uname -m)" in
+    x86_64)
+      NODE_ARCH=x64
+      NODE_ARCH_SHA256=4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb ;;
+    aarch64)
+      NODE_ARCH=arm64
+      NODE_ARCH_SHA256=6e51a2ada00f0011cc266f65d98922b403d7ad88f809ca2aa615a5fe1ce6e86c ;;
+    *) fail UNSUPPORTED_LOCAL_NODE_ARCHITECTURE ;;
+  esac
+  NODE_VERSION=24.22.3
+  NODE_ARCHIVE="node-v$NODE_VERSION-linux-$NODE_ARCH.tar.xz"
+  echo "QA_NODE_RUNTIME=OFFICIAL_QA_LOCAL_BUILD_ONLY"
+  curl --fail --location --proto '=https' --tlsv1.2 --retry 2 \
+    --connect-timeout 15 --max-time 180 \
+    "https://nodejs.org/dist/v$NODE_VERSION/$NODE_ARCHIVE" \
+    --output "$WORK/$NODE_ARCHIVE" || fail NODE_OFFICIAL_DOWNLOAD_FAILED
+  [[ "$(sha256sum "$WORK/$NODE_ARCHIVE" | cut -d ' ' -f1)" == "$NODE_ARCH_SHA256" ]] ||
+    fail NODE_OFFICIAL_ARCHIVE_SHA256_MISMATCH
+  mkdir -m 700 "$WORK/node-runtime"
+  tar -xJf "$WORK/$NODE_ARCHIVE" -C "$WORK/node-runtime" \
+    --no-same-owner --no-same-permissions ||
+    fail NODE_VERIFIED_ARCHIVE_EXTRACTION_FAILED
+  NODE_BIN_DIR="$WORK/node-runtime/node-v$NODE_VERSION-linux-$NODE_ARCH/bin"
+fi
+[[ -x "$NODE_BIN_DIR/node" && -e "$NODE_BIN_DIR/npm" ]] ||
+  fail NODE_NPM_RUNTIME_INCOMPLETE
+export PATH="$NODE_BIN_DIR:$PATH"
+node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit((a===22&&b>=12)||a===24?0:1)' ||
+  fail NODE_VITE_RUNTIME_NOT_SUPPORTED
+npm --version >/dev/null || fail NPM_NOT_EXECUTABLE
+echo "QA_NODE_VERSION=$(node --version)"
+echo "QA_NPM_RUNTIME=READY"
 
 echo "========== INSTALL LOCKED PRIVATE PHP PACKAGES =========="
 for name in .composer-home .composer-cache .composer-tmp; do
