@@ -17,7 +17,7 @@ RESTORE_CNF='/root/bambodia-previewqa-20261112-restore.cnf'
 ORIGINAL_CNF='/root/bambodia-previewqa-20261112-mysql.cnf'
 CONFIG='/root/Bambodia-PreviewQA-Private-Config-20261112/qa-app.env'
 EVIDENCE='/root/Bambodia-PreviewQA-Restore-Proof/restore-20261112T032915Z.2GXtfqP6'
-ORIGIN='http://127.0.0.1:8097'
+ORIGIN='http://127.0.0.1:18097'
 PHP='/www/server/php/85/bin/php'
 MYSQL="$(command -v mysql || true)"
 
@@ -63,7 +63,7 @@ for pair in 'users:2' 'marketplace_listings:1' 'marketplace_jobs:1' 'preview_vis
 done
 cmp -s "$CONFIG" "$QA/.env" || fail 'original_qa_env_changed_since_backup'
 # Refuse running any service when the localhost port is already in use.
-"$PHP" -r '$s=@stream_socket_client("tcp://127.0.0.1:8097",$e,$m,1); if ($s) {fclose($s);exit(2);} exit(0);' || fail 'loopback_port_8097_in_use'
+"$PHP" -r '$s=@stream_socket_client("tcp://127.0.0.1:18097",$e,$m,1); if ($s) {fclose($s);exit(2);} exit(0);' || fail 'loopback_port_18097_in_use'
 printf 'RESTORE_EVIDENCE=VERIFIED\nRESTORED_DB_INVENTORY=PASS\n'
 
 printf '========== CONSTRUCT ISOLATED RECOVERY FILESYSTEM ==========\n'
@@ -100,7 +100,7 @@ if (!is_string($original) || !is_string($mysql) ||
     preg_match("/^DB_URL=/m",$original)===1) exit(2);
 $edits=[
  "APP_ENV"=>"testing", "APP_DEBUG"=>"false",
- "APP_URL"=>"http://127.0.0.1:8097",
+ "APP_URL"=>"http://127.0.0.1:18097",
  "DB_HOST"=>"127.0.0.1", "DB_DATABASE"=>"bambodia_previewrestore_20261112",
  "DB_USERNAME"=>"pvrs_20261112", "DB_PASSWORD"=>$m[1],
  "SESSION_DRIVER"=>"file", "CACHE_STORE"=>"file", "QUEUE_CONNECTION"=>"sync",
@@ -133,7 +133,7 @@ require $r."/vendor/autoload.php";
 $a=require $r."/bootstrap/app.php";
 $a->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 if (config("app.env")!=="testing" || config("app.debug")!==false ||
-    config("app.url")!=="http://127.0.0.1:8097" ||
+    config("app.url")!=="http://127.0.0.1:18097" ||
     config("preview_visibility.enabled")!==false ||
     config("database.default")!=="mysql" ||
     config("database.connections.mysql.database")!=="bambodia_previewrestore_20261112" ||
@@ -165,7 +165,7 @@ cleanup(){
   fi
 }
 trap cleanup EXIT
-setsid runuser -u "$SYSUSER" -- "$PHP" -S 127.0.0.1:8097 \
+setsid runuser -u "$SYSUSER" -- "$PHP" -S 127.0.0.1:18097 \
   -t "$RECOVER/public" "$RECOVER/public/index.php" > "$LOG" 2>&1 &
 SERVER_PID=$!
 
@@ -190,7 +190,7 @@ printf 'RECOVERED_LARAVEL_HTTP=PASS\n'
 cleanup
 SERVER_PID=''
 trap - EXIT
-"$PHP" -r '$s=@stream_socket_client("tcp://127.0.0.1:8097",$e,$m,1); if ($s) {fclose($s);exit(2);} exit(0);' || fail 'temporary_http_server_still_listening'
+"$PHP" -r '$s=@stream_socket_client("tcp://127.0.0.1:18097",$e,$m,1); if ($s) {fclose($s);exit(2);} exit(0);' || fail 'temporary_http_server_still_listening'
 printf '========== STEP 7 — VERIFIED RECOVERY ==========\n'
 printf 'RECOVERED_APP_PATH=%s\n' "$RECOVER"
 printf 'RECOVERED_DB=%s\n' "$RESTORE_DB"
