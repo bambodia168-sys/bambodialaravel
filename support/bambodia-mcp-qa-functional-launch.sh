@@ -90,7 +90,7 @@ if [[ -z "$NODE_BIN_DIR" ]]; then
   NODE_VERSION=24.22.3
   NODE_ARCHIVE="node-v$NODE_VERSION-linux-$NODE_ARCH.tar.xz"
   echo "QA_NODE_RUNTIME=OFFICIAL_QA_LOCAL_BUILD_ONLY"
-  curl --fail --location --proto '=https' --tlsv1.2 --retry 2 \
+  curl --fail --location --proto '=https' --proto-redir '=https' --tlsv1.2 --retry 2 \
     --connect-timeout 15 --max-time 180 \
     "https://nodejs.org/dist/v$NODE_VERSION/$NODE_ARCHIVE" \
     --output "$WORK/$NODE_ARCHIVE" || fail NODE_OFFICIAL_DOWNLOAD_FAILED
@@ -139,7 +139,13 @@ for item in "${items[@]}"; do
 done
 
 echo "========== BUILD QA WEBSITE ASSETS =========="
-( cd "$APP"; npm install --ignore-scripts --no-audit --no-fund && npm run build )
+mkdir -m 700 "$WORK/npm-cache"
+(
+  cd "$APP"
+  export npm_config_cache="$WORK/npm-cache"
+  npm install --ignore-scripts --no-audit --no-fund
+  npm run build
+)
 [[ -s "$APP/public/build/manifest.json" ]] || fail ASSETS_MISSING
 
 echo "========== CREATE INDEPENDENT QA CONFIGURATION =========="
