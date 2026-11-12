@@ -96,7 +96,6 @@
           </div>
           <h3><a href="{{ route('creators.show',$freelancer->public_id) }}">{{ $freelancer->name }}</a></h3>
           <p class="marketplace-freelancer-headline">{{ $freelancer->creatorProfile->headline }}</p>
-          <p class="marketplace-freelancer-bio">{{ \Illuminate\Support\Str::limit($freelancer->creatorProfile->biography,135) }}</p>
           <div class="marketplace-freelancer-card-footer">
             <span><x-icon name="briefcase" size="15"/> {{ number_format($freelancer->public_listings_count) }} approved {{ \Illuminate\Support\Str::plural('listing',$freelancer->public_listings_count) }}</span>
             <a href="{{ route('creators.show',$freelancer->public_id) }}">View portfolio <x-icon name="arrow-up-right" size="16"/></a>
