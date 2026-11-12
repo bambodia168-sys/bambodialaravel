@@ -71,6 +71,25 @@ if [[ -d /www/server/panel/vhost/nginx ]] &&
   fail 'QA/recovery unexpectedly referenced by production Nginx configuration'
 fi
 id www >/dev/null || fail 'Missing aaPanel www service user'
+python3 - "$REC" <<'PY'
+import os,sys
+from pathlib import Path
+source=Path(sys.argv[1])
+if Path("/var/lib").is_symlink():
+    raise SystemExit("BLOCKED=/var/lib is linked")
+space=os.statvfs("/var/lib")
+if space.f_bavail*space.f_frsize < 450*1024*1024:
+    raise SystemExit("BLOCKED=less than 450 MiB free for synthetic workspace")
+for root,dirs,files in os.walk(source):
+    if Path(root)==source:
+        dirs[:]=[x for x in dirs if x not in (".git","storage")]
+    if Path(root).name=="bootstrap":
+        dirs[:]=[x for x in dirs if x!="cache"]
+    for name in dirs+files:
+        if (Path(root)/name).is_symlink():
+            raise SystemExit("BLOCKED=linked source runtime file")
+print("SYNTHETIC_RUNTIME_CAPACITY_AND_SOURCE=PASS")
+PY
 "$PHP" -r 'exit(extension_loaded("pdo_mysql")?0:1);' ||
   fail 'pdo_mysql extension unavailable'
 
