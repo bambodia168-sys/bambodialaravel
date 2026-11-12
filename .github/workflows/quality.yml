@@ -120,6 +120,9 @@ jobs:
           bash -n support/builder-terms-readable-aapanel-upgrade.sh
           bash -n support/marketplace-readiness-audit-aapanel-upgrade.sh
           bash -n support/preview-content-review-aapanel-upgrade.sh
+          bash -n support/preview-visibility-aapanel-discovery.sh
+          bash -n support/preview-visibility-qa-restore-proof.sh
+          node --check tests/browser/preview-visibility-real-host.mjs
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
