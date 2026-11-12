@@ -120,6 +120,127 @@ jobs:
           bash -n support/builder-terms-readable-aapanel-upgrade.sh
           bash -n support/marketplace-readiness-audit-aapanel-upgrade.sh
           bash -n support/preview-content-review-aapanel-upgrade.sh
+          bash -n support/preview-visibility-independent-qa.sh
+          bash -n support/preview-visibility-qa-db-initialize.sh
+          bash -n support/preview-visibility-qa-artifact-audit.sh
+          bash -n support/preview-visibility-qa-runtime-stage.sh
+          bash -n support/preview-visibility-qa-boot-preflight.sh
+          bash -n support/preview-visibility-qa-migrate-backup.sh
+          bash -n support/preview-visibility-qa-restore-stage7.sh
+          bash -n support/preview-visibility-qa-http-stage8.sh
+          bash -n support/preview-visibility-qa-synthetic-stage9.sh
+          bash -n support/preview-visibility-qa-auth-stage10.sh
+          bash -n support/preview-visibility-qa-lifecycle-stage11.sh
+          bash -n support/preview-visibility-qa-stage11-diagnose.sh
+          bash -n support/preview-visibility-qa-stage11-http-env-diagnose.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          source = Path("support/preview-visibility-qa-stage11-http-env-diagnose.sh").read_text()
+          blocks = re.findall(r"<<'PY'\n(.*?)\nPY",source,re.S)
+          php = re.findall(r"<<'PHP'\n(.*?)\nPHP",source,re.S)
+          assert len(blocks)==2, "Expected 2 embedded HTTP diagnostic Python blocks"
+          assert len(php)==1, "Expected 1 embedded diagnostic PHP router"
+          for block in blocks:
+              compile(block,"<HTTP diagnostic Python>","exec")
+          for block in php:
+              proc=subprocess.run(["php","-l"],input=block,
+                   capture_output=True,text=True)
+              assert proc.returncode==0,proc.stdout+proc.stderr
+          print("HTTP diagnostic Python+PHP syntax: PASS")
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          source = Path("support/preview-visibility-qa-stage11-diagnose.sh").read_text()
+          py = re.findall(r"<<'PY'\n(.*?)\nPY",source,re.S)
+          php = re.findall(r"<<'PHP'\n(.*?)\nPHP",source,re.S)
+          assert len(py)==1,"Expected 1 diagnostic Python block"
+          assert len(php)==1,"Expected 1 diagnostic PHP block"
+          for block in py:
+              compile(block,"<Stage11 diagnostic Python>","exec")
+          for block in php:
+              proc=subprocess.run(["php","-l"],input="<?php\n"+block,
+                  capture_output=True,text=True,check=False)
+              assert proc.returncode==0,proc.stdout+proc.stderr
+          print("Stage11 diagnosis embedded Python/PHP lint: PASS")
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          source = Path("support/preview-visibility-qa-lifecycle-stage11.sh").read_text()
+          py = re.findall(r"<<'PY'\n(.*?)\nPY",source,re.S)
+          php = re.findall(r"<<'PHP'\n(.*?)\nPHP",source,re.S)
+          assert len(py)==4, "Expected 4 Stage11 Python blocks"
+          assert len(php)==4, "Expected 4 Stage11 PHP blocks"
+          for block in py:
+              compile(block,"<Stage11 embedded Python>","exec")
+          for block in php:
+              proc=subprocess.run(["php","-l"],input="<?php\n"+block,
+                  capture_output=True,text=True,check=False)
+              assert proc.returncode==0,proc.stdout+proc.stderr
+          assert "PREVIEW_VISIBILITY_WRITES_ENABLED=true" in source
+          assert "APP=/var/lib/bambodia-pvt-53309a26f4cd" in source
+          assert "STAGE11_SYNTHETIC_WITHDRAW_RESTORE_LIFECYCLE_PASS" in source
+          print("Stage11 embedded Python/PHP syntax: PASS")
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          source = Path('support/preview-visibility-qa-auth-stage10.sh').read_text()
+          py = re.findall(r"<<'PY'\n(.*?)\nPY", source, re.S)
+          php = re.findall(r"<<'PHP'\n(.*?)\nPHP", source, re.S)
+          assert len(py) == 2, 'Expected Stage10 config and HTTP Python blocks'
+          assert len(php) == 3, 'Expected Stage10 inventory, fixture, postassert PHP blocks'
+          for block in py:
+              compile(block, '<stage10 embedded python>', 'exec')
+          for block in php:
+              proc = subprocess.run(['php', '-l'], input='<?php\n' + block,
+                                   capture_output=True, text=True)
+              assert proc.returncode == 0, proc.stdout + proc.stderr
+          print('Stage10 embedded Python/PHP syntax: PASS')
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          source = Path('support/preview-visibility-qa-synthetic-stage9.sh').read_text()
+          python_blocks = re.findall(r"<<'PY'\n(.*?)\nPY", source, re.S)
+          php_blocks = re.findall(r"<<'PHP'\n(.*?)\nPHP", source, re.S)
+          assert len(python_blocks) == 3, 'Expected 3 embedded Stage 9 Python blocks'
+          assert len(php_blocks) == 1, 'Expected 1 embedded Stage 9 PHP block'
+          for block in python_blocks:
+              compile(block, '<Stage 9 Python block>', 'exec')
+          for block in php_blocks:
+              proc = subprocess.run(['php', '-l'], input='<?php\n' + block,
+                                    capture_output=True, text=True, check=False)
+              assert proc.returncode == 0, proc.stdout + proc.stderr
+          print('Stage 9 shell, Python and PHP embedded syntax: PASS')
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          source = Path('support/preview-visibility-qa-http-stage8.sh').read_text()
+          blocks = re.findall(r"<<'PY'\n(.*?)\nPY", source, re.S)
+          assert len(blocks) == 2, 'Expected two embedded Stage 8 Python blocks'
+          for block in blocks:
+              compile(block, '<Stage 8 Python block>', 'exec')
+          print('Stage 8 embedded Python syntax: PASS')
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          source = Path('support/preview-visibility-qa-restore-stage7.sh').read_text()
+          blocks = re.findall(r"<<'PY'\n(.*?)\nPY", source, re.S)
+          assert len(blocks) == 2, 'Expected source and recovery embedded Python blocks'
+          for block in blocks:
+              compile(block, '<stage7 Python block>', 'exec')
+          print('Stage 7 embedded Python syntax: PASS')
+          PY
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
