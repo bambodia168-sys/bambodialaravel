@@ -126,8 +126,7 @@ echo '========== VERIFY EXISTING ISOLATED SCHEMA WITHOUT WRITES =========='
 PUB_MYSQL(){ "$MYSQL" --defaults-extra-file="$PUB_CNF" --batch --skip-column-names "$@"; }
 QA_MYSQL(){ "$MYSQL" --defaults-extra-file="$QA_CNF" --protocol=TCP \
   --host=127.0.0.1 --batch --skip-column-names bambodia_oauthqa_browser "$@"; }
-test "$(PUB_MYSQL -e 'SELECT CURRENT_USER()')" = 'bambiaqa_public@127.0.0.1' ||
-  test "$(PUB_MYSQL -e 'SELECT CURRENT_USER()')" = 'bambodiaqa_public@127.0.0.1' ||
+test "$(PUB_MYSQL -e 'SELECT CURRENT_USER()')" = 'bambodiaqa_public@127.0.0.1' ||
   fail ISOLATED_MYSQL_PRINCIPAL_MISMATCH
 test "$(PUB_MYSQL -e 'SELECT DATABASE()')" = 'bambodia_oauthqa_public' ||
   fail ISOLATED_DB_NAME_CHANGED
