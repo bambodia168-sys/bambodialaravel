@@ -143,6 +143,82 @@ final class McpConnectionCenterController extends Controller
             ->with($passed ? 'mcp_check_success' : 'mcp_check_error', $message);
     }
 
+    /**
+     * One explicit operator action creates ONE unpublished QA post through
+     * the actual HTTPS MCP write tool. The result is verified against the
+     * same Post Manager model used by the administrator dashboard.
+     */
+    public function createQaDraft(Request $request): RedirectResponse
+    {
+        abort_unless($this->isQa(), 403, 'Draft checks are restricted to isolated QA.');
+
+        $request->validate([
+            'password' => ['required', 'current_password'],
+            'confirm_test_draft' => ['required', 'accepted'],
+        ]);
+
+        /** @var User $actor */
+        $actor = $request->user();
+        [$token, $secret] = ApiToken::issue(
+            $actor, 'QA one-time MCP draft check', ['mcp.read', 'mcp.write'], 7
+        );
+        $token->forceFill(['expires_at' => now()->addMinutes(3)])->save();
+
+        $title = 'QA MCP Draft '.now()->format('Ymd-His').'-'.substr(bin2hex(random_bytes(4)), 0, 8);
+        $message = 'Could not confirm the test draft. Check Post Manager before repeating to avoid duplicate drafts.';
+
+        try {
+            $result = Http::withToken($secret)
+                ->acceptJson()
+                ->timeout(15)
+                ->withOptions(['allow_redirects' => false, 'verify' => true])
+                ->post(self::QA_ORIGIN.'/mcp', [
+                    'jsonrpc' => '2.0',
+                    'id' => 'qa-create-post',
+                    'method' => 'tools/call',
+                    'params' => [
+                        'name' => 'bambodia_create_draft',
+                        'arguments' => [
+                            'entity' => 'post',
+                            'fields' => [
+                                'title' => $title,
+                                'body' => '<p>Functional QA connection test: an unpublished blog post created through the Bambodia MCP HTTPS endpoint, for administrator verification only.</p>',
+                            ],
+                        ],
+                    ],
+                ]);
+
+            $draft = $result->json('result.structuredContent');
+            if ($result->ok()
+                && $result->json('result.isError') === false
+                && is_array($draft)
+                && is_numeric($draft['id'] ?? null)
+                && ($draft['title'] ?? null) === $title
+                && ($draft['status'] ?? null) === 'draft') {
+                $entry = \App\Models\ContentEntry::query()
+                    ->whereKey((int) $draft['id'])
+                    ->where('author_id', $actor->id)
+                    ->where('type', 'post')
+                    ->where('status', 'draft')
+                    ->where('title', $title)
+                    ->first();
+                if ($entry) {
+                    return redirect()->route('developer.mcp.index')->with('mcp_draft_created', [
+                        'id' => (int) $entry->id,
+                        'title' => $title,
+                    ]);
+                }
+            }
+        } catch (Throwable $e) {
+            // No retry: the post may have been created before an HTTP timeout.
+        } finally {
+            $token->forceFill(['revoked_at' => now()])->save();
+            unset($secret);
+        }
+
+        return redirect()->route('developer.mcp.index')->with('mcp_check_error', $message);
+    }
+
     private function isQa(): bool
     {
         return config('app.env') === 'staging'
