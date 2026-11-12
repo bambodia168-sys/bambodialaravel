@@ -322,6 +322,7 @@ python3 - "$QA" "$RECOVERY_APP" "$BACKUP/qa-env-and-private-media.tar.gz" \
   "$TMP/dest.cnf" "$DEST" "$DEST_USER" "$SUFFIX" <<'PY'
 from pathlib import Path, PurePosixPath
 import grp
+import hashlib
 import os
 import re
 import shutil
@@ -399,7 +400,17 @@ with tarfile.open(tarpath,"r:gz") as tar:
             target.parent.mkdir(parents=True,exist_ok=True)
             data=tar.extractfile(member)
             if data is None: raise SystemExit("BLOCKED=media archive entry unreadable")
-            with open(target,"xb") as outfile: shutil.copyfileobj(data,outfile)
+            expected=hashlib.sha256()
+            with open(target,"xb") as outfile:
+                for chunk in iter(lambda: data.read(1024*1024),b""):
+                    expected.update(chunk)
+                    outfile.write(chunk)
+            actual=hashlib.sha256()
+            with open(target,"rb") as reread:
+                for chunk in iter(lambda: reread.read(1024*1024),b""):
+                    actual.update(chunk)
+            if actual.digest()!=expected.digest():
+                raise SystemExit("BLOCKED=recovered private-media SHA256 mismatch")
             os.chown(target,www_uid,www_gid)
             os.chmod(target,0o600)
             count+=1
@@ -432,6 +443,7 @@ with os.fdopen(fd,"w") as outfile:
 os.chown(dst/".env",www_uid,www_gid)
 os.chmod(dst/".env",0o600)
 print("RECOVERY_APP_PRIVATE_MEDIA_FILES="+str(count))
+print("RECOVERY_APP_PRIVATE_MEDIA_SHA256=PASS")
 print("RECOVERY_APP_SEPARATE_STORAGE=PASS")
 print("RESTORED_ENCRYPTION_KEY=FROM_VERIFIED_PRIVATE_QA_BACKUP")
 PY
