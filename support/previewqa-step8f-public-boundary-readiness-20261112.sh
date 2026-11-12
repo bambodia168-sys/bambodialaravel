@@ -40,6 +40,18 @@ done
 [[ -f "$APP/.env" && ! -L "$APP/.env" &&
   "$(stat -c '%U:%G:%a' "$APP/.env")" = "$WORKER:$WORKER:600" ]] ||
   fail recovered_env_private_mode
+[[ -x /www/server/php/85/bin/php ]] || fail php85_cli_missing
+runuser -u "$WORKER" -- /www/server/php/85/bin/php -r '
+$p=$argv[1]; require $p."/vendor/autoload.php";
+$a=require $p."/bootstrap/app.php";
+$a->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+if (config("app.env")!=="testing" || config("app.debug")!==false ||
+    config("preview_visibility.enabled")!==false ||
+    config("database.default")!=="mysql" ||
+    config("database.connections.mysql.database")!=="bambodia_previewrestore_20261112" ||
+    config("database.connections.mysql.username")!=="pvrs_20261112") exit(2);
+echo "RESTORED_QA_CONFIG=SAFE_AND_DEFAULT_OFF\n";
+' "$APP" || fail recovered_qa_configuration_changed
 [[ -f "$FPMCONF" && ! -L "$FPMCONF" ]] || fail dedicated_fpm_config_missing
 grep -Fxq 'user = bambodia_pvrsqa' "$FPMCONF" ||
   fail fpm_worker_identity_changed
