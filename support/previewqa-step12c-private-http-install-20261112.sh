@@ -244,8 +244,170 @@ sed -e "s/^listen.group = $WORKER$/listen.group = $INGRESS/" \
 # The intended ingress group does not exist during read-only preflight.
 # Validate an otherwise identical candidate using the existing private group;
 # validate the actual new group only AFTER useradd and BEFORE stopping FPM.
-sed "s#^listen.group = $INGRESS$#listen.group = $WORKER#" \
+# Escape the literal end-of-line '
+"$FPM_BIN" -t -y "$TMP/php-fpm.offline.conf" >/dev/null 2>&1 ||
+  fail scoped_fpm_offline_syntax_invalid
+
+cat > "$TMP/http.service" <<UNIT
+[Unit]
+Description=Bambodia isolated localhost QA Nginx HTTP Unix socket (no TCP)
+After=bambodia-previewqa-fpm.service
+Requires=bambodia-previewqa-fpm.service
+
+[Service]
+Type=simple
+User=bambodia_pvhttp
+Group=bambodia_pvhttp
+UMask=0077
+RuntimeDirectory=bambodia-previewqa-http
+RuntimeDirectoryMode=0700
+ExecStart=$NGINX_BIN -c /etc/bambodia-previewqa-http/nginx.conf -g 'daemon off;'
+Restart=no
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+LimitNOFILE=2048
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+echo 'CANDIDATE_NGINX_OFFLINE_SYNTAX=PASS'
+echo 'CANDIDATE_FPM_GROUP_OFFLINE_SYNTAX=PASS_IDENTITY_NOT_YET_CREATED'
+echo 'DEDICATED_HTTP_UNIX_SOCKET=PRIVATE_NO_TCP'
+echo 'SHARED_WWW_FASTCGI_ACCESS=REMAINS_DENIED'
+echo 'QA_WITHDRAWAL_WRITES=DISABLED'
+if [[ "$MODE" == '--check' ]]; then
+  echo 'PERSISTENT_WRITES=NONE'
+  echo 'STEP12C_CHECK=PASS'
+  exit 0
+fi
+
+[[ "$(printenv BAMBODIA_QA_PRIVATE_HTTP_INSTALL || true)" == 'APPROVE_QA_LOCAL_UNIX_ONLY' ]] ||
+  fail explicit_qa_only_install_approval_missing
+echo '========== PROVISION PRIVATE QA-ONLY STATIC INGRESS =========='
+install -d -o root -g root -m 700 "$BACKUP"
+install -o root -g root -m 600 "$FPM_CONF" "$BACKUP/php-fpm.conf"
+cmp -s "$FPM_CONF" "$BACKUP/php-fpm.conf" || fail fpm_original_backup_mismatch
+useradd --system --user-group --no-create-home \
+  --home-dir /nonexistent --shell /usr/sbin/nologin "$INGRESS" ||
+  fail dedicated_ingress_identity_creation_failed
+[[ "$(id -u "$INGRESS")" != 0 ]] || fail ingress_account_is_root
+if id -nG www | tr ' ' '\n' | grep -Fxq "$INGRESS"; then
+  fail shared_www_is_member_of_dedicated_ingress_group
+fi
+"$FPM_BIN" -t -y "$TMP/php-fpm.conf" >/dev/null 2>&1 ||
+  fail actual_scoped_fpm_candidate_invalid
+install -d -o "$INGRESS" -g "$INGRESS" -m 700 "$HTTP_DIR"
+install -d -o "$INGRESS" -g "$INGRESS" -m 700 "$DOCROOT"
+while IFS= read -r -d '' file; do
+  if [[ "$file" == "$PUB/index.php" || "$file" == "$PUB/.htaccess" ]]; then continue; fi
+  rel="$(realpath --relative-to="$PUB" "$file")"
+  dest="$DOCROOT/$rel"
+  install -d -o "$INGRESS" -g "$INGRESS" -m 700 "$(dirname "$dest")"
+  install -o "$INGRESS" -g "$INGRESS" -m 400 "$file" "$dest"
+  cmp -s "$file" "$dest" || fail copied_static_asset_differs
+done < <(find "$PUB" -type f -print0)
+[[ "$(find "$DOCROOT" -type f | wc -l | tr -d ' ')" == 43 ]] ||
+  fail copied_static_asset_count_not_43
+[[ ! -e "$DOCROOT/index.php" && ! -e "$DOCROOT/.htaccess" ]] ||
+  fail private_php_or_apache_file_copied
+echo 'PRIVATE_STATIC_COPY=43_FILES_BYTE_VERIFIED'
+
+install -d -o root -g "$INGRESS" -m 750 "$CONF_DIR"
+install -o root -g "$INGRESS" -m 640 "$TMP/nginx.conf" "$HTTP_CONF"
+install -o root -g root -m 644 "$TMP/http.service" "$HTTP_UNIT"
+cmp -s "$TMP/nginx.conf" "$HTTP_CONF" || fail installed_nginx_conf_mismatch
+cmp -s "$TMP/http.service" "$HTTP_UNIT" || fail installed_systemd_unit_mismatch
+
+echo '========== RECONFIGURE ONLY DEDICATED QA FASTCGI SOCKET =========='
+APPLY_STARTED=yes
+systemctl stop "$FPM_SVC" || fail dedicated_fpm_stop_failed
+install -o root -g root -m 600 "$TMP/php-fpm.conf" "$FPM_CONF"
+cmp -s "$TMP/php-fpm.conf" "$FPM_CONF" || fail installed_fpm_config_mismatch
+"$FPM_BIN" -t -y "$FPM_CONF" >/dev/null 2>&1 ||
+  fail installed_scoped_fpm_config_invalid
+systemctl daemon-reload || fail systemd_unit_reload_failed
+systemctl start "$FPM_SVC" || fail dedicated_fpm_restart_failed
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+  if systemctl is-active --quiet "$FPM_SVC" &&
+     [[ -S "$FPM_SOCK" ]] &&
+     [[ "$(stat -c '%U:%G:%a' "$FPM_SOCK")" == "$WORKER:$INGRESS:660" ]]; then
+    break
+  fi
+  sleep 1
+done
+[[ -S "$FPM_SOCK" &&
+  "$(stat -c '%U:%G:%a' "$FPM_SOCK")" == "$WORKER:$INGRESS:660" ]] ||
+  fail new_scoped_fpm_socket_permissions_invalid
+if runuser -u www -- test -w "$FPM_SOCK"; then
+  fail shared_www_can_access_new_fpm_socket
+fi
+runuser -u "$INGRESS" -- "$PHP" -r '
+$fp=@stream_socket_client("unix://".$argv[1],$e,$m,2);
+if (!$fp) exit(2);
+fclose($fp);
+' "$FPM_SOCK" || fail dedicated_ingress_cannot_connect_fpm
+
+echo '========== START DEDICATED UNIX-ONLY QA HTTP SERVICE =========='
+systemctl start "$HTTP_SVC" || fail isolated_http_nginx_start_failed
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+  if systemctl is-active --quiet "$HTTP_SVC" && [[ -S "$HTTP_SOCK" ]]; then break; fi
+  sleep 1
+done
+[[ -S "$HTTP_SOCK" &&
+  "$(stat -c '%U:%G' "$HTTP_SOCK")" == "$INGRESS:$INGRESS" ]] ||
+  fail isolated_http_socket_not_ready
+[[ "$(stat -c '%U:%G:%a' /run/bambodia-previewqa-http)" == "$INGRESS:$INGRESS:700" ]] ||
+  fail isolated_http_runtime_dir_not_private
+if runuser -u www -- "$PHP" -r '
+$fp=@stream_socket_client("unix://".$argv[1],$e,$m,2);
+if ($fp) { fclose($fp); exit(0); }
+exit(2);
+' "$HTTP_SOCK"; then
+  fail shared_www_could_connect_private_http_socket
+fi
+for url_path in /up /login; do
+  code="$(curl --silent --show-error --max-time 8 --output /dev/null \
+      --write-out '%{http_code}' --unix-socket "$HTTP_SOCK" \
+      -H 'Host: preview-qa.bambodia.com' "http://localhost$url_path")" ||
+    fail "private_http_request_failed:$url_path"
+  [[ "$code" == 200 ]] || fail "private_http_expected_200_path_$url_path:got_$code"
+done
+[[ "$(systemctl is-enabled "$HTTP_SVC" 2>/dev/null || true)" == disabled ]] ||
+  fail dedicated_http_unit_unexpectedly_enabled_at_boot
+[[ "$(systemctl is-enabled "$FPM_SVC" 2>/dev/null || true)" == disabled ]] ||
+  fail dedicated_fpm_unit_unexpectedly_enabled_at_boot
+
+ACCEPTED=yes
+echo '========== STEP 12C PRIVATE QA HTTP ACCEPTANCE =========='
+echo 'PRIVATE_STATIC_FILES=43'
+echo 'PRIVATE_HTTP_UNIX_SOCKET=ACTIVE_NO_TCP_LISTENER'
+echo 'DEDICATED_HTTP_USER=bambodia_pvhttp'
+echo 'QA_FPM_SOCKET_OWNER_GROUP=bambodia_pvrsqa:bambodia_pvhttp'
+echo 'QA_FPM_SOCKET_MODE=0660'
+echo 'SHARED_WWW_PRIVATE_FPM_ACCESS=DENIED'
+echo 'SHARED_WWW_PRIVATE_HTTP_ACCESS=DENIED'
+echo 'PRIVATE_HTTP_UP_AND_LOGIN=200'
+echo 'PRIVATE_HTTP_SERVICE_ENABLED_AT_BOOT=NO'
+echo 'QA_FPM_ENABLED_AT_BOOT=NO'
+echo 'ROOT_PRIVATE_FPM_BACKUP=CREATED'
+echo 'PUBLIC_DNS_HTTPS_CLOUDFLARED=NOT_CONFIGURED'
+echo 'PRODUCTION_SHARED_NGINX_AND_FPM=UNTOUCHED'
+echo 'PREVIEW_VISIBILITY_WRITES=DISABLED'
+echo 'STEP12C=PASS'
+ anchor: unescaped '$#' expands in
+# Bash to the positional argument count and breaks this sed substitution.
+sed "s#^listen.group = ${INGRESS}\$#listen.group = ${WORKER}#" \
   "$TMP/php-fpm.conf" > "$TMP/php-fpm.offline.conf"
+grep -Fxq "listen.group = $WORKER" "$TMP/php-fpm.offline.conf" ||
+  fail offline_fpm_group_substitution_missing
 "$FPM_BIN" -t -y "$TMP/php-fpm.offline.conf" >/dev/null 2>&1 ||
   fail scoped_fpm_offline_syntax_invalid
 
