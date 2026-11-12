@@ -436,8 +436,14 @@ try {
         // Categories own the four marketplace types; language is in the header.
         if(await page.locator('.nav-marketplace-links').count())
           throw new Error(device.name+' duplicate marketplace type links remain in the header');
-        if(!(await page.locator('.site-header .nav-language-menu summary .locale-flag').isVisible()))
+        const headerLanguage=page.locator('.site-header .nav-language-menu');
+        if(!(await headerLanguage.locator('summary .locale-flag').isVisible()))
           throw new Error(device.name+' active language flag missing in header');
+        const selectedLanguageLabel=await headerLanguage.locator('summary').getAttribute('aria-label');
+        if(!selectedLanguageLabel?.includes('Language:'))
+          throw new Error(device.name+' language flag lost its accessible selected-language name');
+        if(await headerLanguage.locator('.language-options form button[name="locale"]').count()!==8)
+          throw new Error(device.name+' existing language options were changed');
         if(!(await page.locator('.site-nav .nav-category-menu summary svg').isVisible()))
           throw new Error(device.name+' category grid icon is not visible');
 
@@ -492,8 +498,8 @@ try {
             throw new Error(device.name+' mobile search was not submitted');
           await page.goto(origin+'/',{waitUntil:'networkidle'});
         }else if(geometry.mobileSearch?.visible || !geometry.desktopSearch?.visible
-                || !geometry.languageName?.visible){
-          throw new Error(device.name+' desktop search/language visibility is wrong '+JSON.stringify(geometry));
+                || geometry.languageName?.visible){
+          throw new Error(device.name+' desktop search/flag-only visibility is wrong '+JSON.stringify(geometry));
         }
 
         await page.locator('.nav-category-menu summary').click();
@@ -581,20 +587,18 @@ try {
         });
         await backToTop.waitFor({state:'visible',timeout:3000});
         const floatBounds=await backToTop.boundingBox();
-        const verticalLabel=await backToTop.locator('.back-to-top-label').evaluate(el=>{
-          const style=getComputedStyle(el);
-          const bounds=el.getBoundingClientRect();
-          return {text:el.textContent.trim(),writingMode:style.writingMode,
-            transform:style.transform,width:bounds.width,height:bounds.height,
-            children:el.children.length};
-        });
-        if(!floatBounds || floatBounds.height<=floatBounds.width*1.7 ||
-           verticalLabel.text!=='Back to Top' ||
-           verticalLabel.writingMode!=='vertical-rl' ||
-           verticalLabel.transform==='none' ||
-           verticalLabel.height<=verticalLabel.width*2 ||
-           verticalLabel.children!==0)
-          throw new Error(device.name+' Back to Top text must be truly vertical, not multi-line '+JSON.stringify({floatBounds,verticalLabel}));
+        const arrowOnly={
+          svg:await backToTop.locator('svg').count(),
+          text:await backToTop.innerText(),
+          label:await backToTop.getAttribute('aria-label'),
+          title:await backToTop.getAttribute('title'),
+        };
+        if(!floatBounds || floatBounds.width<40 || floatBounds.width>64 ||
+           floatBounds.height<40 || floatBounds.height>64 ||
+           arrowOnly.svg!==1 || arrowOnly.text.trim()!=='' ||
+           arrowOnly.label!=='Back to top' || arrowOnly.title!=='Back to top' ||
+           await backToTop.locator('.back-to-top-label').count()!==0)
+          throw new Error(device.name+' Back to Top must be one compact, accessible SVG arrow '+JSON.stringify({floatBounds,arrowOnly}));
         const socialBounds=await footer.boundingBox();
         if(floatBounds && socialBounds && socialBounds.y<device.viewport.height &&
            floatBounds.y+floatBounds.height>socialBounds.y-4)
@@ -914,6 +918,13 @@ try {
         throw new Error('Account workspace did not use shared premium shell');
       if(!(await page.locator('.workspace-menu-search input').isVisible()))
         throw new Error('Account header search is missing');
+      const accountLanguage=page.locator('.workspace-top-actions > .language-menu');
+      if(!(await accountLanguage.locator('summary .locale-flag').isVisible()) ||
+         await accountLanguage.locator('summary .language-current').isVisible())
+        throw new Error('Account header must display only the selected language flag');
+      if(!(await accountLanguage.locator('summary').getAttribute('aria-label'))?.includes('Language:') ||
+         await accountLanguage.locator('.language-options form button[name="locale"]').count()!==8)
+        throw new Error('Account language dropdown options or accessibility changed');
       await page.locator('[data-workspace-toggle]').click();
       if(!(await page.locator('body.workspace-collapsed').count()))
         throw new Error('Desktop sidebar did not collapse to icons');
