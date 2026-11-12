@@ -146,6 +146,10 @@ done
   "$PHP" "$COMPOSER" install --prefer-dist --no-interaction --no-progress \
     --no-plugins --no-scripts
 )
+# Composer runs as root with umask 077. Restore www-readable code only
+# inside the disposable vendor tree; keep Composer caches/Git/keys isolated.
+chown -R root:www "$TARGET/vendor"
+chmod -R g+rX "$TARGET/vendor"
 echo '========== VERIFY INSTALLED PACKAGE VERSIONS =========='
 python3 - "$SOURCE" "$TARGET" <<'PY'
 import json,pathlib,sys
