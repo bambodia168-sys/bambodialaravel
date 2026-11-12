@@ -133,6 +133,7 @@ jobs:
           bash -n support/bambodia-oauth-step26d-webroot-occupancy-audit.sh
           bash -n support/bambodia-oauth-step26e-private-staging-readiness.sh
           bash -n support/bambodia-oauth-step26f-php-fpm-qa-readiness.sh
+          bash -n support/bambodia-oauth-step26g-mysql-reservation-audit.sh
           bash -n support/mcp-oauth-qa-db-inspect.sh
           bash -n support/mcp-oauth-qa-source-bootstrap.sh
           if BAMBODIA_QA_APP=/www/wwwroot/bambodia.com \
