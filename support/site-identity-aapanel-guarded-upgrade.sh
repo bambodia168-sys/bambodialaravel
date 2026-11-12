@@ -58,9 +58,10 @@ foreach ([[0,0],[63,0],[0,63],[63,63]] as [$x,$y]) {
 
 [[ "$(gh api "repos/$REPO/commits/main" --jq '.sha')" == "$MAIN" ]] ||
     fail 'GitHub main differs from reviewed base, reconcile first'
-[[ "$(gh api "repos/$REPO/pulls/39" --jq '.head.sha')" == "$REVIEW" &&
+[[ "$(gh api "repos/$REPO/pulls/39" --jq '.head.ref')" == "feat/site-identity-asset-specs-transparent-icons-20261112" &&
+   "$(gh api "repos/$REPO/pulls/39" --jq '.base.ref')" == main &&
    "$(gh api "repos/$REPO/pulls/39" --jq '.draft')" == true ]] ||
-    fail 'PR #39 reviewed SHA or draft state changed'
+    fail 'PR #39 branch, base or draft state changed'
 for run in 43166946138 43166945958 43166946026 43166945950 43166946059; do
     [[ "$(gh api "repos/$REPO/actions/runs/$run" --jq '.head_sha')" == "$REVIEW" &&
        "$(gh api "repos/$REPO/actions/runs/$run" --jq '.conclusion')" == success ]] ||
