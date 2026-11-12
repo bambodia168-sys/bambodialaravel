@@ -98,3 +98,22 @@ Implemented a **page-scoped premium responsive redesign** on draft PR #15:
 - CI quality workflow adds a `bash -n` gate for the new UI deploy helper; workflow result not verified yet.
 
 **Status:** redesign source committed on the draft PR; **not yet installed** on live QA until the operator executes the pinned helper. Continue with real physical read and draft actions after the redesigned page loads and input fields are visible. Keep PR #15 draft/unmerged pending user-visible functional acceptance.
+
+## Physical end-to-end MCP read/write accepted from browser (2026-11-12)
+
+The administrator provided seven direct screenshots of the live isolated QA Developer Workspace, MCP Connection Center, OAuth Connections, and Post Manager. Confirmed actual on-page success alerts:
+
+- **Read:** `Live HTTPS MCP check passed: tool discovery, administrator authorization, overview, and post listing. This does not yet verify OAuth sign-in or writes.`
+- **Write:** `The live MCP tool created the unpublished draft QA MCP Draft 20261112-144457-b56ff54f.`
+- **Database/UI verification:** the linked Post Manager edit page `/dashboard/post-manager/2/edit` displays the **same QA post title** and generated HTML body. Its status selector says **Draft**, and the publication sidebar says **Not published**.
+- **OAuth Connections** lists **zero** associated MCP OAuth access tokens. The successful read/write path used the intentionally short-lived scoped QA developer bearer, **not** an OAuth authorization code/PKCE flow from ChatGPT. The zero count is therefore not a failure of the MCP bearer transport; it is evidence there has not yet been a successfully recorded ChatGPT OAuth connection.
+
+This represents **real functional acceptance** of QA MCP HTTPS bearer transport, authorized tool discovery, read tool, unpublished post creation and UI database consistency. Automated counts are no longer substitutes for these user actions. **OAuth dynamic client registration, administrator consent, PKCE callback, token refresh, revocation from ChatGPT and ChatGPT app tool discovery remain unaccepted.**
+
+The screenshots also showed the `/developer/oauth-connections` screen rendered a bare table with concatenated headings and displayed a `Go To page 1` control for zero entries. To fix the actual browser UI rather than adding more infrastructure tests, draft PR #15 now contains a page-only change:
+- `resources/views/developer/oauth-connections.blade.php` with a readable no-connections state, a **Connect ChatGPT** link back to MCP Connection Center, themed status cards, and 10-per-page tabular connection history when OAuth tokens exist.
+- `public/css/mcp-oauth-connections.css`, using shared light/dark workspace tokens and responsive table layout.
+- Secure OAuth revoke action remains password-confirmed `DELETE` through the **existing** `developer.oauth.revoke` route, moved to the existing centered dialog pattern so action controls are not cramped inside a table. Pagination and Go To appear only when more than one page of results exists.
+- `support/bambodia-mcp-qa-oauth-connections-ui-upgrade.sh --apply`, a **QA-only**, backed-up, pinned-blob and explicitly confirmed two-file visual update. No OAuth controller, token/grant, MySQL, Nginx or production mutations. This action is **not yet operator-executed**; the current live QA OAuth Connections page remains as seen in the screenshot until the operator approves the update.
+
+For the next real connection acceptance, OpenAI's current Help Center describes Plugins → Add custom MCP server, a public HTTPS MCP endpoint, OAuth authentication, consent/authorization, and tool discovery. Full custom MCP/write is currently workspace/plan-gated, typically to Business/Enterprise/Edu eligible users; the operator must use an eligible workspace. **Do not claim their account supports it without seeing the option.** Do not mark PR #15 merged or production-ready until an authorized real ChatGPT OAuth connection and refresh/revocation have passed.
