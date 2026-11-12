@@ -120,9 +120,22 @@ jobs:
           bash -n support/builder-terms-readable-aapanel-upgrade.sh
           bash -n support/marketplace-readiness-audit-aapanel-upgrade.sh
           bash -n support/preview-content-review-aapanel-upgrade.sh
+          bash -n support/preview-visibility-aapanel-discovery.sh
+          bash -n support/preview-visibility-qa-restore-proof.sh
+          node --check tests/browser/preview-visibility-real-host.mjs
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Verify isolated QA preflight refuses unsafe defaults
+        run: |
+          if php support/preview-visibility-qa-preflight.php --before-install > /tmp/previewqa-blocked.json 2>&1; then
+            echo 'Preflight unexpectedly accepted an unapproved environment'; exit 1
+          fi
+          grep -Fq '"status":"BLOCKED"' /tmp/previewqa-blocked.json
+          if BAMBODIA_PREVIEW_QA_ISOLATED=1 BAMBODIA_PREVIEW_QA_EXPECTED_ORIGIN=https://preview-qa.example.test php support/preview-visibility-qa-preflight.php --after-install > /tmp/previewqa-blocked.json 2>&1; then
+            echo 'Preflight unexpectedly accepted the unisolated default source'; exit 1
+          fi
+          grep -Fq '"status":"BLOCKED"' /tmp/previewqa-blocked.json
       - name: Install frontend dependencies
         run: npm install --ignore-scripts
       - name: Compile production frontend

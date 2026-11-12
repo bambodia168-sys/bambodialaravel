@@ -1,0 +1,127 @@
+name: Bambodia Preview QA Restore Proof
+on:
+  pull_request:
+    paths:
+      - 'support/preview-visibility-qa-preflight.php'
+      - 'support/preview-visibility-qa-restore-proof.sh'
+      - '.github/workflows/preview-qa-restore-acceptance.yml'
+      - 'docs/PREVIEW_VISIBILITY_AAPANEL_ACCEPTANCE.md'
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-restore:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: isolated-ci-root-only
+          MYSQL_DATABASE: bambodia_previewqa_ci001
+          MYSQL_USER: pvqa_ci001
+          MYSQL_PASSWORD: qa-app-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    steps:
+      - name: Checkout PR source
+        uses: actions/checkout@v4
+      - name: PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, dom, pdo_mysql, fileinfo, xml, curl, zip
+          coverage: none
+      - name: MySQL CLI
+        run: |
+          if ! command -v mysql >/dev/null || ! command -v mysqldump >/dev/null; then
+            sudo apt-get update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y default-mysql-client
+          fi
+      - name: Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Initialize isolated synthetic MySQL users
+        run: |
+          mysql -h127.0.0.1 -uroot -p'isolated-ci-root-only' <<'SQL'
+          CREATE DATABASE bambodia_previewrestore_ci001;
+          CREATE USER 'pvqa_snapshot'@'%' IDENTIFIED BY 'qa-snapshot-only';
+          GRANT SELECT, SHOW VIEW, TRIGGER ON bambodia_previewqa_ci001.* TO 'pvqa_snapshot'@'%';
+          CREATE USER 'pvrs_ci001'@'%' IDENTIFIED BY 'qa-restore-only';
+          GRANT ALL PRIVILEGES ON bambodia_previewrestore_ci001.* TO 'pvrs_ci001'@'%';
+          SQL
+      - name: Configure disposable app with no external integrations
+        run: |
+          cp .env.example .env
+          sed -i \
+            -e 's|^APP_ENV=.*|APP_ENV=testing|' \
+            -e 's|^APP_URL=.*|APP_URL=http://127.0.0.1:8096|' \
+            -e 's|^DB_DATABASE=.*|DB_DATABASE=bambodia_previewqa_ci001|' \
+            -e 's|^DB_USERNAME=.*|DB_USERNAME=pvqa_ci001|' \
+            -e 's|^DB_PASSWORD=.*|DB_PASSWORD=qa-app-only|' \
+            .env
+          printf '\nPREVIEW_VISIBILITY_WRITES_ENABLED=false\n' >> .env
+          php artisan key:generate
+          php artisan config:clear
+      - name: Check empty QA isolation and migrate disposable schema
+        env:
+          BAMBODIA_PREVIEW_QA_ISOLATED: '1'
+          BAMBODIA_PREVIEW_QA_EXPECTED_ORIGIN: http://127.0.0.1:8096
+        run: |
+          php support/preview-visibility-qa-preflight.php --before-install
+          php artisan migrate --force
+          php support/preview-visibility-qa-preflight.php --after-install
+          bash -n support/preview-visibility-qa-restore-proof.sh
+      - name: Seed small synthetic records and media (CI database only)
+        run: |
+          php -r '
+          require "vendor/autoload.php";
+          $a = require "bootstrap/app.php";
+          $a->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $owner = \App\Models\User::query()->create([
+              "name"=>"Synthetic QA Creator", "email"=>"pvqa.creator@example.test",
+              "password"=>"SyntheticCiOnlyPassword123!", "role"=>"freelancer"
+          ]);
+          $customer = \App\Models\User::query()->create([
+              "name"=>"Synthetic QA Customer", "email"=>"pvqa.customer@example.test",
+              "password"=>"SyntheticCiOnlyPassword123!", "role"=>"customer"
+          ]);
+          \App\Models\MarketplaceListing::query()->create([
+              "user_id"=>$owner->id,"type"=>"service",
+              "title"=>"[LAYOUT TEST] Synthetic QA restore listing",
+              "description"=>"Synthetic-only QA data, no real customer.", "status"=>"published"
+          ]);
+          \App\Models\MarketplaceJob::query()->create([
+              "client_id"=>$customer->id,
+              "title"=>"[LAYOUT TEST] Synthetic QA restore job",
+              "description"=>"Synthetic-only QA job, no real applicants.",
+              "category"=>"development", "status"=>"published"
+          ]);
+          '
+          mkdir -p storage/app/private/qa-synthetic
+          printf 'Synthetic QA media; no customer files.\n' > storage/app/private/qa-synthetic/fixture.txt
+      - name: Exercise separate-schema restore and private-media SHA-256 checks
+        env:
+          BAMBODIA_PREVIEW_QA_ISOLATED: '1'
+          BAMBODIA_PREVIEW_QA_EXPECTED_ORIGIN: http://127.0.0.1:8096
+          BAMBODIA_PREVIEW_QA_RESTORE_CONFIRM: bambodia_previewrestore_ci001
+        run: |
+          php support/preview-visibility-qa-preflight.php --audit
+          printf '[client]\nhost=127.0.0.1\nuser=pvqa_snapshot\npassword=qa-snapshot-only\n' > "$RUNNER_TEMP/source.cnf"
+          printf '[client]\nhost=127.0.0.1\nuser=pvrs_ci001\npassword=qa-restore-only\n' > "$RUNNER_TEMP/restore.cnf"
+          chmod 0600 "$RUNNER_TEMP/source.cnf" "$RUNNER_TEMP/restore.cnf"
+          export BAMBODIA_PREVIEW_QA_BACKUP_ROOT="$RUNNER_TEMP/bambodia-restore-proof"
+          bash support/preview-visibility-qa-restore-proof.sh --check "$GITHUB_WORKSPACE" \
+            bambodia_previewqa_ci001 bambodia_previewrestore_ci001 \
+            "$RUNNER_TEMP/source.cnf" "$RUNNER_TEMP/restore.cnf"
+          bash support/preview-visibility-qa-restore-proof.sh --apply "$GITHUB_WORKSPACE" \
+            bambodia_previewqa_ci001 bambodia_previewrestore_ci001 \
+            "$RUNNER_TEMP/source.cnf" "$RUNNER_TEMP/restore.cnf" > "$RUNNER_TEMP/restore-result.txt"
+          grep -Fxq 'QA_DB_RESTORE=PASS' "$RUNNER_TEMP/restore-result.txt"
+          grep -Fxq 'QA_MEDIA_RESTORE=PASS' "$RUNNER_TEMP/restore-result.txt"
+          grep -Fxq 'SOURCE_SWITCH=DISABLED' "$RUNNER_TEMP/restore-result.txt"
+          cat "$RUNNER_TEMP/restore-result.txt"
