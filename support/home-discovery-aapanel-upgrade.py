@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Guarded aaPanel homepage responsive release. --check is read-only."""
-import argparse
 import hashlib
 import json
 import os
@@ -81,7 +80,8 @@ def preflight():
     if "root " + str(APP / "public") + ";" not in protected_file(VHOST).read_text():
         refuse("Nginx document root changed")
     protected_file(APP / ".env")
-    for relative in ("app/Http/Controllers", "resources/views", "resources/css",
+    for relative in ("app", "app/Http", "app/Http/Controllers", "resources",
+                     "resources/views", "resources/css", "public",
                      "public/build", "public/build/assets"):
         directory = APP / relative
         if directory.is_symlink() or not directory.is_dir():
@@ -141,7 +141,11 @@ def prepare(source, staged):
     old[css]["file"] = str(new_asset)
     (staged / "public/build/manifest.json").write_text(
         json.dumps(old, ensure_ascii=False, indent=2) + "\n")
-    cmd("php", "-l", str(staged / "app/Http/Controllers/HomeController.php"))
+    php = shutil.which("php") or next((x for x in ("/www/server/php/85/bin/php",
+             "/www/server/php/84/bin/php") if Path(x).is_file()), None)
+    if not php:
+        refuse("PHP CLI unavailable for source lint")
+    cmd(php, "-l", str(staged / "app/Http/Controllers/HomeController.php"))
     print("COMPILED_CSS=VERIFIED " + str(new_asset))
     return str(new_asset)
 
@@ -236,11 +240,10 @@ def install(staged, asset):
     print("RESULT=HOME_DISCOVERY_RESPONSIVE_DEPLOYED")
 
 def main():
-    args = argparse.ArgumentParser(description=__doc__)
-    args.add_argument("mode", choices=("--check", "--apply"))
-    options = args.parse_args()
+    if len(sys.argv) != 2 or sys.argv[1] not in ("--check", "--apply"):
+        refuse("Usage: python3 home-discovery-aapanel-upgrade.py --check|--apply")
     preflight()
-    if options.mode == "--check":
+    if sys.argv[1] == "--check":
         print("DEPLOYMENT=NOT_PERFORMED")
         print("RESULT=READY_FOR_ISOLATED_HOME_DISCOVERY_BUILD")
         return
