@@ -195,6 +195,7 @@ printf "\n" > /dev/tty
 cd "$APP"
 printf '%s\n%s\n' "$ADMIN_EMAIL" "$ADMIN_PASSWORD" |
 env -i HOME=/root PATH=/usr/bin:/bin "$PHP" -r '
+require "vendor/autoload.php";
 $app=require "bootstrap/app.php";
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 $email=trim(fgets(STDIN));$pass=rtrim(fgets(STDIN),"\r\n");
