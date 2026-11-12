@@ -28,6 +28,8 @@ fail() { printf 'BLOCKED: %s\n' "$*" >&2; exit 1; }
   fail 'Approved browser-QA source has tracked changes.'
 [[ -f "$SRC/phpunit.xml" && -f "$SRC/composer.lock" && -f "$SRC/composer.json" ]] ||
   fail 'Pinned test configuration or dependency lock missing.'
+[[ ! -L "$SRC/composer.lock" && -s "$SRC/composer.lock" ]] ||
+  fail 'Accepted browser-QA dependency lock is symlinked or empty.'
 [[ -d /var/lib && ! -L /var/lib && "$(stat -c '%u' /var/lib)" == 0 ]] ||
   fail 'Expected root-owned /var/lib unavailable.'
 [[ "$(realpath -m -- "$APP")" == "$APP" ]] ||
@@ -139,6 +141,18 @@ for f in .env .env.testing storage/oauth-private.key storage/oauth-public.key ve
     fail "Unexpected private/runtime file in new checkout: $f"
 done
 
+echo '========== TRANSFER REVIEWED QA DEPENDENCY LOCK (NO SECRETS) =========='
+# The accepted browser QA has a locally generated, untracked composer.lock.
+# A fresh GitHub clone at this SHA does NOT include it. Composer install
+# without a lock silently resolves newer versions, defeating reproducibility.
+[[ ! -e "$APP/composer.lock" && ! -L "$APP/composer.lock" ]] ||
+  fail 'Unexpected composer.lock in new checkout; do not overwrite.'
+SOURCE_LOCK_SHA="$(sha256sum "$SRC/composer.lock" | cut -d ' ' -f1)"
+install -m 640 -- "$SRC/composer.lock" "$APP/composer.lock"
+[[ "$(sha256sum "$APP/composer.lock" | cut -d ' ' -f1)" == "$SOURCE_LOCK_SHA" ]] ||
+  fail 'Copied QA dependency lock differs from accepted source.'
+echo 'SOURCE_DEPENDENCY_LOCK=COPIED_EXACTLY'
+
 echo '========== CREATE ISOLATED SQLITE-ONLY CONFIGURATION =========='
 KEY="base64:$(openssl rand -base64 32 | tr -d '\n')"
 [[ "$KEY" == base64:* && "${#KEY}" -gt 40 ]] || fail 'QA-only application key generation failed.'
@@ -191,6 +205,10 @@ echo '========== INSTALL LOCKED DEV DEPENDENCIES IN NEW WORKSPACE ONLY =========
 )
 [[ -f "$APP/vendor/autoload.php" && -f "$APP/vendor/bin/phpunit" ]] ||
   fail 'Dev dependencies missing; preserve new workspace for inspection.'
+[[ "$(sha256sum "$APP/composer.lock" | cut -d ' ' -f1)" == "$SOURCE_LOCK_SHA" ]] ||
+  fail 'Composer unexpectedly changed the accepted source dependency lock.'
+unset SOURCE_LOCK_SHA
+echo 'LOCKED_DEPENDENCY_PARITY=VERIFIED'
 
 echo '========== ISOLATE TEST RUNTIME PERMISSIONS =========='
 chown -R root:www "$APP"
