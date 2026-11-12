@@ -51,7 +51,11 @@ done
 [[ ! -e "$BACKUP" && ! -L "$BACKUP" ]] || fail recovery_backup_already_exists_do_not_rerun
 [[ ! -e "$LOGDIR" && ! -L "$LOGDIR" ]] || fail qa_log_directory_already_exists_do_not_rerun
 [[ ! -S "$SOCKET" ]] || fail dedicated_socket_already_exists_no_repair
-[[ "$(systemctl show "$SVC" -p FragmentPath --value)" = "$UNIT" ]] || fail unexpected_service_unit
+# systemd may unload an inactive, disabled unit after a stop; the on-disk
+# unit is already verified above. If systemd reports a fragment path, it
+# must match the dedicated QA unit; absence is permitted at preflight.
+REPORTED_UNIT="$(systemctl show "$SVC" -p FragmentPath --value 2>/dev/null || true)"
+[[ -z "$REPORTED_UNIT" || "$REPORTED_UNIT" = "$UNIT" ]] || fail unexpected_service_unit
 ENABLED="$(systemctl is-enabled "$SVC" 2>/dev/null || true)"
 [[ "$ENABLED" = disabled ]] || fail dedicated_service_boot_status_changed
 grep -Fxq 'ExecStart=/www/server/php/85/sbin/php-fpm -F -y /etc/bambodia-previewqa/php-fpm.conf' "$UNIT" ||
@@ -90,6 +94,7 @@ sed 's#^error_log = /proc/self/fd/2$#error_log = /var/log/bambodia-previewqa/php
   fail corrected_error_log_not_unique
 echo 'RECOVERY_SCOPE=ONE_DEDICATED_QA_FPM_CONFIG'
 echo 'ORIGINAL_CONFIG_EXACT_MATCH=PASS'
+echo 'SYSTEMD_UNIT_UNLOADED_AT_PREFLIGHT=PERMITTED'
 echo 'FIX=ROOT_PRIVATE_ERROR_LOG_FILE'
 echo 'SHARED_PHP_FPM_UNIT=UNTOUCHED'
 
@@ -105,7 +110,17 @@ fi
 echo '========== STOP DEDICATED RESTART LOOP ONLY =========='
 APPLY_STARTED=1
 systemctl stop "$SVC" || fail dedicated_service_stop_failed
-systemctl reset-failed "$SVC" || fail dedicated_unit_reset_failed
+# systemctl stop may unload this disabled QA unit; reset-failed then reports
+# "Unit not loaded" even though the on-disk service configuration is valid.
+# Re-read only systemd's unit definitions. No shared service is restarted.
+systemctl daemon-reload || fail dedicated_systemd_daemon_reload_failed
+LOADED="$(systemctl show "$SVC" -p LoadState --value 2>/dev/null || true)"
+[[ "$LOADED" = loaded ]] || fail dedicated_qa_unit_not_loadable
+if systemctl reset-failed "$SVC" >/dev/null 2>&1; then
+  echo 'DEDICATED_QA_FAILURE_COUNTER=RESET'
+else
+  echo 'DEDICATED_QA_FAILURE_COUNTER=NOT_APPLICABLE_UNIT_WAS_UNLOADED'
+fi
 [[ "$(systemctl is-active "$SVC" 2>/dev/null || true)" != active ]] ||
   fail dedicated_service_still_active
 
