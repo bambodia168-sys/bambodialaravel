@@ -30,7 +30,7 @@ echo 'EXISTING_RECOVERY_APPLICATION=PRESERVED'
 echo '========== PUBLIC DNS READ-ONLY LOOKUP =========='
 if command -v dig >/dev/null 2>&1; then
   for type in A AAAA CNAME; do
-    answer="$(dig +time=2 +tries=1 +short "$HOST" "$type" | sed '/^$/d' | head -n 8)"
+    answer="$(dig +time=2 +tries=1 +short "$HOST" "$type" | sed '/^$/d' | awk 'NR<=8')"
     if [[ -n "$answer" ]]; then
       printf 'DNS_%s=RESULTS_PRESENT\n' "$type"
       printf '%s\n' "$answer" | sed 's/^/DNS_ANSWER=/'
@@ -40,7 +40,7 @@ if command -v dig >/dev/null 2>&1; then
   done
 else
   if command -v getent >/dev/null 2>&1; then
-    result="$(getent ahosts "$HOST" 2>/dev/null | awk '{print $1}' | sort -u | head -n 8 || true)"
+    result="$(getent ahosts "$HOST" 2>/dev/null | awk '{print $1}' | sort -u | awk 'NR<=8' || true)"
     if [[ -n "$result" ]]; then
       echo 'DNS_RESOLUTION=RESULTS_PRESENT'
       printf '%s\n' "$result" | sed 's/^/DNS_ANSWER=/'
