@@ -3,6 +3,7 @@
 # schema and localhost account. No Laravel, migrations, Nginx or other DB writes.
 # --check is read-only and never connects. --provision explicitly confirmed.
 set -Eeuo pipefail
+set +x
 umask 077
 MODE="${1:-}"
 case "$MODE" in --check|--provision) ;; *)
@@ -118,7 +119,7 @@ echo 'NEW_PRIVATE_QA_CREDENTIAL=GENERATED_AND_PROTECTED'
 echo '========== CREATE NEW QA SCHEMA AND RESTRICTED LOCAL ACCOUNT =========='
 echo 'Enter the LOCAL MySQL administrative password again (hidden).'
 if ! {
-  printf 'CREATE DATABASE \`%s\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n' "$DB"
+  printf 'CREATE DATABASE `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n' "$DB"
   printf "CREATE USER '%s'@'%s' IDENTIFIED BY '%s';\n" "$USERNAME" "$DBHOST" "$QA_PASSWORD"
   printf "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, DROP, REFERENCES, CREATE TEMPORARY TABLES ON \`%s\`.* TO '%s'@'%s';\n" "$DB" "$USERNAME" "$DBHOST"
 } | env -i HOME=/root PATH=/usr/bin:/bin \
