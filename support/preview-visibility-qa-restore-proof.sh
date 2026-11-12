@@ -22,9 +22,14 @@ for f in "$SCNF" "$DCNF"; do
   [[ -f "$f" && ! -L "$f" && "$(stat -c %a "$f")" == '600' ]] || fail "MySQL CNF must be a private 0600 regular file"
 done
 [[ "$(realpath -e -- "$SCNF")" != "$(realpath -e -- "$DCNF")" ]] || fail "Use separate source/restore credentials"
-for bin in mysql mysqldump gzip tar sha256sum cmp mktemp find sort xargs awk; do
+for bin in gzip tar sha256sum cmp mktemp find sort xargs awk; do
   command -v "$bin" >/dev/null || fail "Missing $bin"
 done
+MYSQL="${BAMBODIA_PREVIEW_QA_MYSQL:-$(command -v mysql || true)}"
+MYSQLDUMP="${BAMBODIA_PREVIEW_QA_MYSQLDUMP:-$(command -v mysqldump || true)}"
+[[ -x "$MYSQL" ]] || MYSQL="/www/server/mysql/bin/mysql"
+[[ -x "$MYSQLDUMP" ]] || MYSQLDUMP="/www/server/mysql/bin/mysqldump"
+[[ -x "$MYSQL" && -x "$MYSQLDUMP" ]] || fail "MySQL command binaries unavailable"
 PHP="${BAMBODIA_PREVIEW_QA_PHP:-$(command -v php)}"
 [[ -x "$PHP" ]] || fail "PHP CLI unavailable"
 [[ "${BAMBODIA_PREVIEW_QA_ISOLATED:-}" == '1' ]] || fail "QA isolation opt-in not set"
@@ -43,9 +48,9 @@ echo (string) config("database.connections.mysql.database");')" ||
   fail "Cannot verify Laravel database identity"
 [[ "$ACTUAL_DB" == "$SRC" ]] || fail "Source DB does not match verified Laravel QA DB"
 
-m_src=(mysql "--defaults-extra-file=$SCNF" --batch --skip-column-names --raw)
-m_dst=(mysql "--defaults-extra-file=$DCNF" --batch --skip-column-names --raw)
-dump=(mysqldump "--defaults-extra-file=$SCNF" --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF --triggers --hex-blob)
+m_src=("$MYSQL" "--defaults-extra-file=$SCNF" --batch --skip-column-names --raw)
+m_dst=("$MYSQL" "--defaults-extra-file=$DCNF" --batch --skip-column-names --raw)
+dump=("$MYSQLDUMP" "--defaults-extra-file=$SCNF" --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF --triggers --hex-blob)
 "${m_src[@]}" "$SRC" -e 'SELECT 1' >/dev/null || fail "Source connection denied"
 "${m_dst[@]}" "$DEST" -e 'SELECT 1' >/dev/null || fail "Destination connection denied"
 [[ "$("${m_src[@]}" "$SRC" -e 'SELECT DATABASE()')" == "$SRC" ]] || fail "Source session DB mismatch"
