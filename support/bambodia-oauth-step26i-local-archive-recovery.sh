@@ -129,6 +129,63 @@ for row in entries:
 if count<10: raise SystemExit("STEP26IA_BLOCKED=INSUFFICIENT_TRACKED_FILES")
 print("APPROVED_TREE_REGULAR_FILES="+str(count))
 '
+# The pinned .gitattributes contains export-ignore for .github/,
+# CHANGELOG.md and .styleci.yml. Git archive intentionally omits them.
+# Verify exact allowed omissions and every included blob BEFORE creating a
+# destination, or a later stage verifier could leave a partial QA tree.
+echo '========== VERIFY EXPORTED SNAPSHOT MATCHES APPROVED GIT BLOBS =========='
+[[ "$(git -C "$SOURCE" rev-parse "$SHA:.gitattributes")" == \
+   "fcb21d396d657f597ef8b6729f73d89b0a871c9b" ]] ||
+  fail SOURCE_GITATTRIBUTES_MISMATCH
+git -C "$SOURCE" archive --format=tar "$SHA" |
+python3 -c '
+import hashlib,pathlib,subprocess,sys,tarfile
+source,sha=sys.argv[1:]
+tree=subprocess.check_output(["git","-C",source,"ls-tree","-rz",
+                              "--full-tree",sha])
+expected={}
+for raw in tree.split(b"\0"):
+    if not raw: continue
+    meta,sep,name=raw.partition(b"\t")
+    fields=meta.split()
+    if sep!=b"\t" or len(fields)!=3 or fields[1]!=b"blob" or fields[0] not in (b"100644",b"100755"):
+        raise SystemExit("STEP26IA_BLOCKED=UNSUPPORTED_TREE_ENTRY")
+    path=pathlib.PurePosixPath(name.decode("utf-8","surrogateescape"))
+    if path.is_absolute() or not path.parts or ".." in path.parts or "." in path.parts or ".git" in path.parts:
+        raise SystemExit("STEP26IA_BLOCKED=UNSAFE_TREE_PATH")
+    expected[path]=fields[2].decode("ascii")
+found=set()
+with tarfile.open(fileobj=sys.stdin.buffer,mode="r|") as arc:
+    for item in arc:
+        path=pathlib.PurePosixPath(item.name)
+        if path.is_absolute() or not path.parts or ".." in path.parts or "." in path.parts or ".git" in path.parts:
+            raise SystemExit("STEP26IA_BLOCKED=UNSAFE_ARCHIVE_PATH")
+        if item.isdir(): continue
+        if not item.isfile() or path not in expected or path in found:
+            raise SystemExit("STEP26IA_BLOCKED=UNKNOWN_OR_DUPLICATE_ARCHIVE_FILE")
+        f=arc.extractfile(item)
+        if f is None: raise SystemExit("STEP26IA_BLOCKED=ARCHIVE_READ_FAILED")
+        digest=hashlib.sha1()
+        digest.update(("blob "+str(item.size)+"\0").encode("ascii"))
+        while True:
+            chunk=f.read(1024*1024)
+            if not chunk: break
+            digest.update(chunk)
+        if digest.hexdigest()!=expected[path]:
+            raise SystemExit("STEP26IA_BLOCKED=ARCHIVE_BLOB_HASH_MISMATCH")
+        found.add(path)
+missing=set(expected)-found
+def permitted(p):
+    s=p.as_posix()
+    return s in ("CHANGELOG.md",".styleci.yml") or s.startswith(".github/")
+if len(missing)!=7 or not all(map(permitted,missing)):
+    raise SystemExit("STEP26IA_BLOCKED=UNAPPROVED_ARCHIVE_OMISSIONS")
+if len(found)!=675 or len(expected)!=682:
+    raise SystemExit("STEP26IA_BLOCKED=ARCHIVE_TREE_COUNT_CHANGED")
+print("ARCHIVE_FILES_MATCH_APPROVED_GIT_BLOBS="+str(len(found)))
+print("GITATTRIBUTES_EXPORT_IGNORED_FILES="+str(len(missing)))
+print("GIT_ARCHIVE_MANIFEST_RECONCILED=PASS")
+' "$SOURCE" "$SHA"
 for name in artisan composer.json phpunit.xml public/index.php; do
   [[ -s "$SOURCE/$name" && ! -L "$SOURCE/$name" ]] ||
     fail "EXPECTED_SOURCE_FILE_MISSING_$name"
