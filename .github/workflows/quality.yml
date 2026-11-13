@@ -148,6 +148,10 @@ jobs:
           ast.parse(parts[1].split("\nPY\n", 1)[0])
           for required in (
               "SOURCE_REF=396614486e3b7e50a28cd42932af6b4aa6536cfd",
+              "GITHUB_PINNED_OAUTH_SECURITY_FILES=6_VERIFIED",
+              "MCP_PRIVATE_OAUTH_PREIMAGES=6_APPROVED",
+              "MCP_PRIVATE_OAUTH_SECURITY_SOURCE_FILES=6",
+              "app/Http/Middleware/EnsureMcpOAuthConsentAdmin.php",
               "MCP_PRIVATE_FRONTEND_AND_23_VITE_ASSETS=PRESERVED",
               "MCP_PROTECTED_MCP_MERGE_SNAPSHOTS=9_UNCHANGED",
               "SYNC-MCP-PRIVATE-OAUTH-ONLY",
