@@ -1,0 +1,54 @@
+/* Bambodia public footer — calm two-tone surfaces in both supported themes.
+   Scoped to the public layout; account/admin workspaces are unaffected.
+   Keep footer branding, navigation, icons and responsive geometry unchanged. */
+:root:not([data-theme="dark"]) .site-body .site-footer {
+  --footer-main-bg: #f1f5fb;
+  --footer-bottom-bg: #e6edf7;
+  --footer-heading-color: #17243b;
+  --footer-link-color: #526782;
+  --footer-divider-color: #cfdae8;
+}
+:root[data-theme="dark"] .site-body .site-footer {
+  --footer-main-bg: #111d30;
+  --footer-bottom-bg: #0b1424;
+  --footer-heading-color: #f6f9ff;
+  --footer-link-color: #b6c7df;
+  --footer-divider-color: #2a3c54;
+}
+.site-body .site-footer {
+  background: var(--footer-main-bg);
+  color: var(--footer-heading-color);
+  border-top: 1px solid var(--footer-divider-color);
+}
+.site-body .site-footer .footer-columns h3 {
+  color: var(--footer-heading-color);
+}
+.site-body .site-footer .footer-columns a:not(.brand) {
+  color: var(--footer-link-color);
+  transition: color .16s ease;
+}
+.site-body .site-footer .footer-columns a:not(.brand):hover,
+.site-body .site-footer .footer-columns a:not(.brand):focus-visible {
+  color: var(--accent);
+}
+.site-body .site-footer .footer-bottom-band {
+  width: 100%;
+  background: var(--footer-bottom-bg);
+  border-top: 1px solid var(--footer-divider-color);
+}
+.site-body .site-footer .footer-bottom {
+  border-top: 0;
+  color: var(--footer-link-color);
+}
+.site-body .site-footer .footer-social a {
+  color: var(--footer-link-color);
+}
+.site-body .site-footer .footer-social a:hover,
+.site-body .site-footer .footer-social a:focus-visible {
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-body .site-footer .footer-columns a:not(.brand) {
+    transition: none;
+  }
+}
