@@ -256,6 +256,43 @@ echo "========== RUN ISOLATED MCP OAUTH FEATURE TESTS =========="
 qa_php "$QA/vendor/bin/phpunit" --colors=never --filter=BambodiaMcp
 echo "PHYSICAL_PHP85_MCP_OAUTH_TESTS=PASS"
 
+echo "========== ADD EARLY EXCEPTION CLASSIFIER IN DISPOSABLE QA ONLY =========="
+# Install a narrowly scoped, text-free Laravel reporter in the copy AFTER
+# unit/feature tests. This is never applied to private SOURCE or live.
+python3 - "$QA/bootstrap/app.php" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+assert path.is_file() and not path.is_symlink()
+source = path.read_text(encoding="utf-8")
+anchor = '        // Credentials are never echoed into validation redirects or flash data.'
+assert source.count(anchor) == 1
+addition = r'''        // Only invoked by the private physical HTTP QA server.
+        if (getenv('BAMBODIA_QA_HTTP_INSTRUMENT') === '1') {
+            $exceptions->report(function (\Throwable $exception): void {
+                $name = str_replace(chr(92), '.', get_class($exception));
+                if (preg_match('/^[A-Za-z0-9_.]{1,160}$/D', $name) !== 1) {
+                    $name = 'OTHER';
+                }
+                $root = base_path().DIRECTORY_SEPARATOR;
+                $file = $exception->getFile();
+                $relative = str_starts_with($file, $root)
+                    ? substr($file, strlen($root)) : 'OTHER';
+                if (preg_match('~^(?:app|routes|bootstrap|config|vendor)/[A-Za-z0-9_./-]{1,160}$~D', $relative) !== 1) {
+                    $relative = 'OTHER';
+                }
+                error_log('QA_HTTP_EARLY_EXCEPTION_CLASS='.$name);
+                error_log('QA_HTTP_EARLY_EXCEPTION_SITE='.$relative.':'.(int) $exception->getLine());
+            });
+        }
+'''
+path.write_text(source.replace(anchor, addition + anchor), encoding="utf-8")
+PY
+"$PHP" -l "$QA/bootstrap/app.php" >/dev/null ||
+ fail QA_EARLY_EXCEPTION_CLASSIFIER_SYNTAX
+echo "QA_EARLY_EXCEPTION_CLASSIFIER=DISPOSABLE_COPY_ONLY"
+
 echo "========== CREATE ISOLATED SQLITE DATABASE FOR REAL LOOPBACK HTTP =========="
 HTTP_DB="$QA/storage/chatgpt-loopback.sqlite"
 [[ ! -e "$HTTP_DB" && ! -L "$HTTP_DB" ]] || fail QA_HTTP_DATABASE_ALREADY_EXISTS
@@ -273,6 +310,7 @@ http_php() {
   "CACHE_STORE=array" "SESSION_DRIVER=file" \
   "SESSION_SECURE_COOKIE=false" "QUEUE_CONNECTION=sync" \
   "MAIL_MAILER=array" "LOG_CHANNEL=stderr" "BCRYPT_ROUNDS=4" \
+  "BAMBODIA_QA_HTTP_INSTRUMENT=1" \
   "COMPOSER_HOME=$QA/.composer-home" "COMPOSER_CACHE_DIR=$QA/.composer-cache" \
   "$PHP" "$@"
 }
@@ -429,6 +467,14 @@ error_lines = [
     ))
 ]
 print("QA_HTTP_ERROR_ENTRY_COUNT=" + str(len(error_lines)))
+# Match only our own minimal, known-key QA reporter lines. Never echo
+# freeform log lines or application exception messages.
+for field in ("CLASS", "SITE"):
+    pattern = (r"QA_HTTP_EARLY_EXCEPTION_" + field +
+               r"=([A-Za-z0-9_./:-]{1,170})")
+    matches = re.findall(pattern, "\n".join(lines))
+    print("QA_HTTP_EARLY_EXCEPTION_" + field + "=" +
+          (matches[0] if matches else "NOT_FOUND"))
 def safe_origin(item):
     origin = re.search(
         r"\bat\s+" + re.escape(str(qa)) +
