@@ -11,7 +11,7 @@ VHOST=/www/server/panel/vhost/nginx/bambodia.com.conf
 PHP=/www/server/php/85/bin/php
 fail() { echo "MCP_OAUTH_QA_BLOCKED=$*" >&2; exit 1; }
 [[ "$(id -u)" == 0 ]] || fail ROOT_REQUIRED
-for cmd in python3 git sha256sum stat cp du df awk openssl; do command -v "$cmd" >/dev/null || fail "MISSING_$cmd"; done
+for cmd in python3 git sha256sum stat cp du df awk openssl composer; do command -v "$cmd" >/dev/null || fail "MISSING_$cmd"; done
 [[ -x "$PHP" ]] || fail PHP85_MISSING
 [[ -d "$OVERLAY" && ! -L "$OVERLAY" && "$(stat -c '%u:%a' "$OVERLAY")" == "0:700" ]] || fail OVERLAY_UNSAFE
 [[ -d "$SOURCE" && ! -L "$SOURCE" && -f "$SOURCE/artisan" && -f "$SOURCE/vendor/autoload.php" ]] || fail PRIVATE_SOURCE_MISSING
@@ -21,6 +21,7 @@ for cmd in python3 git sha256sum stat cp du df awk openssl; do command -v "$cmd"
 [[ "$(git hash-object "$LIVE/composer.json")" == "457992551f4f234ad442d9db5ad73c8b54689e7b" ]] || fail LIVE_COMPOSER_CHANGED
 [[ "$(sha256sum "$LIVE/composer.lock" | cut -d' ' -f1)" == "ed0a78f5d3bf3a9bf6490a97d5570751fd8c3be905414d27a38d9036e56fef03" ]] || fail LIVE_LOCK_CHANGED
 [[ "$(sha256sum "$SOURCE/composer.lock" | cut -d' ' -f1)" == "4dd3f77f0758b741fb8372e38a94edceb486a42b5bfedcd1f6d41feb601c2ce8" ]] || fail PRIVATE_LOCK_CHANGED
+[[ "$(git hash-object "$SOURCE/composer.json")" == "fc687c2f0f82e034af38b6183b0c58502a0c7948" ]] || fail PRIVATE_COMPOSER_MANIFEST_CHANGED
 for path in "$SOURCE/.env" "$SOURCE/.env.testing" "$SOURCE/storage/oauth-private.key" "$SOURCE/storage/oauth-public.key" "$SOURCE/bootstrap/cache/config.php"; do
  [[ ! -e "$path" && ! -L "$path" ]] || fail PRIVATE_SECRETS_PRESENT
 done
@@ -98,13 +99,28 @@ if (config("database.default")!=="sqlite" ||
 }
 echo "SQLITE_IN_MEMORY_AND_DISABLED_MCP=PASS\n";
 '
+echo "========== INSTALL PINNED DEV TEST DEPENDENCIES IN QA COPY =========="
+# The private production vendor deliberately excludes dev packages. Laravel's
+# artisan test command is therefore absent. Restore the lockfile-pinned dev
+# packages only inside the disposable QA copy, with scripts and plugins off.
+# A completely cleared environment avoids production credentials/configuration.
+mkdir -m 700 -p "$QA/.composer-home" "$QA/.composer-cache"
+env -i "PATH=$PATH" "HOME=$QA" "APP_ENV=testing" "APP_DEBUG=false"  "APP_URL=https://bambodia.com" "APP_KEY=$KEY"  "DB_CONNECTION=sqlite" "DB_DATABASE=:memory:" "DB_URL="  "CACHE_STORE=array" "SESSION_DRIVER=array" "QUEUE_CONNECTION=sync"  "MAIL_MAILER=array" "LOG_CHANNEL=stderr"  "COMPOSER_HOME=$QA/.composer-home"  "COMPOSER_CACHE_DIR=$QA/.composer-cache"  "COMPOSER_ALLOW_SUPERUSER=1" "COMPOSER_NO_INTERACTION=1"  composer install --no-scripts --no-plugins  --prefer-dist --no-interaction --no-progress
+[[ "$(sha256sum "$QA/composer.lock" | cut -d' ' -f1)" == "4dd3f77f0758b741fb8372e38a94edceb486a42b5bfedcd1f6d41feb601c2ce8" ]] || fail QA_LOCK_CHANGED_DURING_DEV_INSTALL
+[[ "$(git hash-object "$QA/composer.json")" == "fc687c2f0f82e034af38b6183b0c58502a0c7948" ]] || fail QA_MANIFEST_CHANGED_DURING_DEV_INSTALL
+[[ -f "$QA/vendor/bin/phpunit" && -f "$QA/vendor/phpunit/phpunit/phpunit" ]] || fail QA_PHPUNIT_DEPENDENCIES_MISSING
+qa_php "$QA/vendor/bin/phpunit" --version
+echo "QA_PHPUNIT_FROM_LOCKED_DEV_DEPENDENCIES=PASS"
+
 echo "========== CREATE EPHEMERAL QA PASSPORT KEYS =========="
 qa_php artisan passport:keys --no-interaction --no-ansi > /dev/null
 [[ -s "$QA/storage/oauth-private.key" && -s "$QA/storage/oauth-public.key" ]] || fail QA_OAUTH_KEYS_NOT_GENERATED
 chmod 600 "$QA/storage/oauth-private.key" "$QA/storage/oauth-public.key"
 echo "EPHEMERAL_PASSPORT_KEYS=GENERATED_IN_DISPOSABLE_QA"
 echo "========== RUN ISOLATED MCP OAUTH FEATURE TESTS =========="
-qa_php artisan test --no-ansi --filter=BambodiaMcp
+# Direct PHPUnit invocation avoids depending on Laravel's artisan test
+# registration, which is not installed in production-only vendor trees.
+qa_php "$QA/vendor/bin/phpunit" --colors=never --filter=BambodiaMcp
 echo "PHYSICAL_PHP85_MCP_OAUTH_TESTS=PASS"
 echo "QA_COPY_AND_EPHEMERAL_KEYS=REMOVED_AT_EXIT"
 echo "PRODUCTION_SOURCE_DATABASE_KEYS_NGINX=UNCHANGED"
