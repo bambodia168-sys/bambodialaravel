@@ -105,19 +105,32 @@ echo "SQLITE_IN_MEMORY_AND_DISABLED_MCP=PASS\n";
 echo "========== INSTALL PINNED DEV TEST DEPENDENCIES IN QA COPY =========="
 # Source includes a production-only vendor/ tree. The locked PHPUnit tools
 # must be installed in the disposable copy, never in the live or private source.
-# Invoke Composer EXPLICITLY through the same verified PHP 8.5 binary that
-# runs Laravel. The server's plain "composer" command defaults to PHP 8.3.
-COMPOSER_SCRIPT="$(command -v composer)"
-[[ -f "$COMPOSER_SCRIPT" && -r "$COMPOSER_SCRIPT" ]] ||
+# The server's "composer" shell wrapper explicitly execs /usr/bin/php83.
+# Never pass that shell script to PHP: PHP will merely print the shell text
+# and return success. Call the PHP Composer entrypoint it wraps, directly,
+# via the known PHP 8.5 CLI and the system Composer include_path.
+COMPOSER_ENTRY=/usr/bin/composer
+[[ -f "$COMPOSER_ENTRY" && ! -L "$COMPOSER_ENTRY" && -r "$COMPOSER_ENTRY" ]] ||
   fail COMPOSER_PHP_ENTRYPOINT_MISSING
+"$PHP" -r '
+ $head=file_get_contents($argv[1],false,null,0,1024);
+ if (!is_string($head) || !preg_match("/(?:\A|\n)<\?php\b/", $head)) {
+   fwrite(STDERR,"MCP_OAUTH_QA_BLOCKED=COMPOSER_ENTRY_IS_NOT_PHP\n"); exit(2);
+ }
+' "$COMPOSER_ENTRY" || fail COMPOSER_ENTRY_IS_NOT_PHP
 mkdir -m 700 -p "$QA/.composer-home" "$QA/.composer-cache"
 echo "========== VERIFY COMPOSER ON PHP 8.5 =========="
-qa_php "$COMPOSER_SCRIPT" --version --no-ansi ||
-  fail COMPOSER_CANNOT_RUN_UNDER_PHP85
-echo "COMPOSER_INTERPRETER=PINNED_PHP85"
-qa_php "$COMPOSER_SCRIPT" install \
-  --no-scripts --no-plugins \
-  --prefer-dist --no-interaction --no-progress
+COMPOSER_VERSION="$(qa_php -d "include_path=/usr/share/php:." \
+ "$COMPOSER_ENTRY" --version --no-ansi)" ||
+ fail COMPOSER_PHP85_BOOT_FAILED
+[[ "$COMPOSER_VERSION" == "Composer version "* ]] ||
+ fail COMPOSER_VERSION_NOT_EXECUTED
+echo "$COMPOSER_VERSION"
+echo "COMPOSER_INTERPRETER=VERIFIED_PHP85_ENTRYPOINT"
+qa_php -d "include_path=/usr/share/php:." \
+ "$COMPOSER_ENTRY" install \
+ --no-scripts --no-plugins \
+ --prefer-dist --no-interaction --no-progress
 [[ "$(sha256sum "$QA/composer.lock" | cut -d' ' -f1)" == "4dd3f77f0758b741fb8372e38a94edceb486a42b5bfedcd1f6d41feb601c2ce8" ]] || fail QA_LOCK_CHANGED_DURING_DEV_INSTALL
 [[ "$(git hash-object "$QA/composer.json")" == "fc687c2f0f82e034af38b6183b0c58502a0c7948" ]] || fail QA_MANIFEST_CHANGED_DURING_DEV_INSTALL
 [[ -f "$QA/vendor/bin/phpunit" && -f "$QA/vendor/phpunit/phpunit/phpunit" ]] || fail QA_PHPUNIT_DEPENDENCIES_MISSING
