@@ -9,16 +9,29 @@ REPORT=/root/Bambodia-MCP-Main-Overlay.ApguAhIY/review/mcp-private-critical-reco
 PHP=/www/server/php/85/bin/php
 fail() { echo "PRIVATE_MCP_ROUTE_BLOCKED=$*" >&2; exit 1; }
 [[ "$(id -u)" == 0 ]] || fail ROOT_REQUIRED
-[[ -f "$APP/artisan" && -f "$APP/vendor/autoload.php" && -f "$REPORT" ]] || fail PRIVATE_SOURCE_MISSING
-[[ ! -f "$APP/.env" && ! -f "$APP/.env.testing" && ! -f "$APP/bootstrap/cache/config.php" ]] || fail PRIVATE_ENV_UNSAFE
+[[ -d "$APP" && ! -L "$APP" && ! -L "$APP/storage" && ! -L "$APP/bootstrap" ]] || fail PRIVATE_PATH_UNSAFE
+[[ -f "$APP/artisan" && ! -L "$APP/artisan" && -f "$APP/vendor/autoload.php" && -f "$REPORT" && ! -L "$REPORT" ]] || fail PRIVATE_SOURCE_MISSING
+[[ ! -e "$APP/.env" && ! -e "$APP/.env.testing" && ! -e "$APP/bootstrap/cache/config.php" ]] || fail PRIVATE_ENV_UNSAFE
+if find "$APP/bootstrap/cache" -maxdepth 1 -name "routes-*.php" -print -quit | grep -q .; then fail PRIVATE_CACHED_ROUTES_PRESENT; fi
 [[ -x "$PHP" ]] || fail PHP_85_MISSING
 python3 - "$REPORT" <<'PY'
-import json, pathlib, sys
-r=json.loads(pathlib.Path(sys.argv[1]).read_text())
+import json, pathlib, sys, hashlib
+p=pathlib.Path(sys.argv[1]);r=json.loads(p.read_text())
+source=p.parent.parent/"source"; review=p.parent/"live-critical";live=pathlib.Path("/www/wwwroot/bambodia-staging-qa")
+for rel,hash_key in [("routes/web.php","route_sha256"),("app/Http/Controllers/Api/BambodiaMcpController.php","controller_sha256"),("app/Support/Mcp/BambodiaTools.php","draft_tools_sha256")]:
+ f=source/rel; l=live/rel; snapshot=review/rel
+ assert f.is_file() and not f.is_symlink()
+ assert hashlib.sha256(f.read_bytes()).hexdigest()==r.get(hash_key),rel
+ assert l.is_file() and not l.is_symlink() and snapshot.is_file()
+ assert l.read_bytes()==snapshot.read_bytes(),rel
+layout="resources/views/layouts/workspace.blade.php"
+assert hashlib.sha256((source/layout).read_bytes()).hexdigest()=="01154b97c1418441ddf0fcf60e50e81bbf5208a9265ae428550c2c7a2749beda"
+assert (live/layout).read_bytes()==(review/layout).read_bytes()
 assert r.get("private_overlay_only") is True
 assert r.get("production_deployment") is False
 assert r.get("production_activation") is False
 print("PRIVATE_RECONCILIATION_REPORT=VERIFIED")
+print("LIVE_AND_PRIVATE_MCP_SOURCE_INTEGRITY=PASS")
 PY
 cd "$APP"
 KEY="base64:$(openssl rand -base64 32)"
