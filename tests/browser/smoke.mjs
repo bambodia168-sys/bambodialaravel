@@ -434,6 +434,7 @@ try {
                 };
               });
               if(!expanded.exitVisible || expanded.state!=='true' ||
+                 !(await exitFullscreen.evaluate(el=>document.activeElement===el)) ||
                  expanded.label!=='Exit full screen' ||
                  expanded.width<expanded.viewportWidth-3 ||
                  expanded.height<expanded.viewportHeight-3 ||
@@ -446,6 +447,7 @@ try {
                 document.querySelector('[data-blog-premium-player]')?.dataset.fullscreen==='false',
                 null,{timeout:7000});
               if(await exitFullscreen.isVisible() ||
+                 !(await enterFullscreen.evaluate(el=>document.activeElement===el)) ||
                  await enterFullscreen.getAttribute('aria-label')!=='Enter full screen' ||
                  await enterFullscreen.getAttribute('aria-pressed')!=='false' ||
                  await enterFullscreen.isHidden())
