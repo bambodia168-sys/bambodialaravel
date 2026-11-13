@@ -850,6 +850,41 @@ try {
            footerLayout.width>device.viewport.width+5)
           throw new Error(device.name+' copyright/social must remain one row '+JSON.stringify(footerLayout));
 
+        // Footer palette must change in both directions without replacing the
+        // footer logo, its links, its column grid or the compact copyright row.
+        const footerPalette=await page.evaluate(()=>{
+          const root=document.documentElement;
+          const initial=root.dataset.theme;
+          const footer=document.querySelector('footer.site-footer');
+          const band=footer.querySelector('.footer-bottom-band');
+          const link=footer.querySelector('.footer-columns a:not(.brand)');
+          const snapshot=(theme)=>{
+            root.dataset.theme=theme;
+            return {
+              main:getComputedStyle(footer).backgroundColor,
+              bottom:getComputedStyle(band).backgroundColor,
+              link:getComputedStyle(link).color,
+              separator:getComputedStyle(band).borderTopColor,
+              bandWidth:band.getBoundingClientRect().width,
+              viewportWidth:document.documentElement.clientWidth,
+            };
+          };
+          try{return {light:snapshot('light'),dark:snapshot('dark')};}
+          finally{root.dataset.theme=initial;}
+        });
+        if(footerPalette.light.main!=='rgb(241, 245, 251)' ||
+           footerPalette.light.bottom!=='rgb(230, 237, 247)' ||
+           footerPalette.light.link!=='rgb(82, 103, 130)' ||
+           footerPalette.light.separator!=='rgb(207, 218, 232)' ||
+           footerPalette.dark.main!=='rgb(17, 29, 48)' ||
+           footerPalette.dark.bottom!=='rgb(11, 20, 36)' ||
+           footerPalette.dark.link!=='rgb(182, 199, 223)' ||
+           footerPalette.dark.separator!=='rgb(42, 60, 84)' ||
+           Math.abs(footerPalette.light.bandWidth-footerPalette.light.viewportWidth)>3 ||
+           Math.abs(footerPalette.dark.bandWidth-footerPalette.dark.viewportWidth)>3)
+          throw new Error(device.name+' public footer two-tone palette or full-width band mismatch '+JSON.stringify(footerPalette));
+        checks+=4;
+
         const backToTop=page.locator('[data-back-to-top]');
         if(await backToTop.isVisible())
           throw new Error(device.name+' Back to Top should be hidden at page start');
