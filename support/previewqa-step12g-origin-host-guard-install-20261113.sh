@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Step 12G: PREPARE an isolated Nginx Host-header restriction, never install it.
-# Fail closed if the live QA service/config no longer matches local acceptance.
-# Root-private /run temporary candidate only; no service restart, no DNS, no TCP.
+# Step 12G: one-time guarded activation of QA-only canonical Host filtering.
+# --check: ephemeral /run syntax test only, no persistent change or restart.
+# --apply: explicit operator approval, backup, restart only private QA HTTP.
+# No shared nginx/FPM, production, DNS, TLS, cloudflared or public TCP.
 set -Eeuo pipefail
 set +x
 umask 077
@@ -19,11 +20,19 @@ cleanup(){
     # Stop only the dedicated QA HTTP origin; QA FastCGI and shared aaPanel
     # services are not touched during a failed Host guard activation.
     systemctl stop bambodia-previewqa-http.service >/dev/null 2>&1 || true
-    if [[ -f "$BACKUP/nginx.conf" && ! -L "$BACKUP/nginx.conf" ]]; then
-      install -o root -g bambodia_pvhttp -m 640 "$BACKUP/nginx.conf" \
-        /etc/bambodia-previewqa-http/nginx.conf || true
+    if systemctl is-active --quiet bambodia-previewqa-http.service; then
+      echo 'CRITICAL_QA_HTTP_STILL_ACTIVE_MANUAL_ISOLATION_REQUIRED' >&2
+    else
+      echo 'QA_HTTP=STOPPED_ON_FAILURE' >&2
     fi
-    echo 'QA_HTTP=STOPPED_AND_OLD_CONFIG_RESTORED_AFTER_FAILURE' >&2
+    if [[ -f "$BACKUP/nginx.conf" && ! -L "$BACKUP/nginx.conf" ]] &&
+       install -o root -g bambodia_pvhttp -m 640 "$BACKUP/nginx.conf" \
+         /etc/bambodia-previewqa-http/nginx.conf &&
+       cmp -s "$BACKUP/nginx.conf" /etc/bambodia-previewqa-http/nginx.conf; then
+      echo 'QA_HTTP_ORIGINAL_CONFIG=RESTORED' >&2
+    else
+      echo 'CRITICAL_QA_HTTP_CONFIG_ROLLBACK_FAILED_INSPECT_ROOT_BACKUP' >&2
+    fi
     echo 'QA_FPM=UNCHANGED' >&2
   fi
   [[ -z "$TMP" ]] || rm -rf -- "$TMP"
@@ -236,7 +245,7 @@ echo '========== ACTIVATE QA-ONLY HOST RESTRICTION =========='
 CHANGE_STARTED=yes
 systemctl stop bambodia-previewqa-http.service ||
   fail dedicated_qa_http_stop_failed
-# Atomic file replacement, not an append or an edit of shared Nginx.
+# Replace only the dedicated QA HTTP config; shared Nginx is untouched.
 install -o root -g "$INGRESS" -m 640 "$TMP/restricted.conf" "$HTTP_CONF"
 cmp -s "$TMP/restricted.conf" "$HTTP_CONF" ||
   fail installed_host_guard_config_mismatch
