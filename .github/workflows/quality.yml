@@ -42,6 +42,8 @@ jobs:
           bash tests/security/previewqa-step12f-unix-socket-mode-smoke.sh
           bash -n support/previewqa-step12g-origin-host-guard-preflight-20261113.sh
           bash tests/security/previewqa-step12g-host-guard-smoke.sh
+          bash -n support/previewqa-step12g-origin-host-guard-install-20261113.sh
+          bash tests/security/previewqa-step12g-host-guard-install-smoke.sh
           bash tests/security/previewqa-step12e-lua-repair-smoke.sh
           bash tests/security/previewqa-step12c-offline-group-smoke.sh
           bash -n support/workspace-upgrade.sh
