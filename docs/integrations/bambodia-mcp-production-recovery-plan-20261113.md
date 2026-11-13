@@ -118,3 +118,14 @@ Gate 4: Rehearse the pinned prechange app code, Composer/vendor, Vite assets, sc
 Gate 5: Only after real backup/restore/rollback evidence and independent approval, test Nginx/PHP-FPM HTTPS discovery, Authorization propagation, OAuth PKCE, callback restrictions, admin consent/denial, refresh/revoke, access/ownership and read-only tools. Independent desktop/mobile acceptance and ChatGPT account linking remain separate release gates.
 
 **Current status: private-file review PROPOSAL prepared; no live permission changes, no approved off-server destination/key custody, no backup, no restore, no rollback, no MCP activation. PR #46 DRAFT/UNMERGED; production release BLOCKED.**
+
+
+## Gate 3.1 — isolated restore target environment preflight (TOOL PREPARED, NOT EXECUTED)
+
+Tool: support/bambodia-mcp-isolated-restore-preflight-20261113.py --inspect --restore-root /var/lib/bambodia-mcp-restore-qa/INSTANCE
+
+The path above is an *example private workspace convention*, not an existing installed or approved host. The script intentionally refuses the production document root, paths outside /var/lib/bambodia-mcp-restore-qa, ancestor symlinks, missing Artisan source and cached Laravel configuration. It reads only selected nonsecret environment flags from a private restore clone. The script requires explicit APP_ENV=testing, APP_DEBUG=false, loopback APP_URL, MAIL_MAILER=array, QUEUE_CONNECTION=null, CACHE_STORE=array, SESSION_DRIVER=array, logging/null broadcast, both MCP switches false and a supported test DB driver. It never connects to a DB, performs a restoration, rekeys customer data, runs migrations, changes permissions or emits sensitive paths.
+
+IMPORTANT: Even if all environment flags are PASS, the script explicitly emits ACTUAL_DATABASE_IDENTITY=NOT_VERIFIED and HOST_NETWORK_ISOLATION=NOT_VERIFIED. A dedicated reviewer must independently prove the restore host's firewall/egress limitations, source/target schema separation, no scheduled jobs or live credentials, and restored data integrity. A restored customer's encrypted Laravel data may require separately escrowed application key material; never reuse live OAuth signing secrets in tests. No physical isolated restoration or rollback rehearsal has happened.
+
+Synthetic unit tests under tests/security/test_bambodia_mcp_recovery_preflight.py exercise the private-file detection, symlink rejection, incomplete backup approvals, and unsafe restore mail/queue/MCP/public URL flags. The Quality workflow lints these inspectors and executes tests. CI success does NOT substitute for physical off-server backup and restore acceptance.
