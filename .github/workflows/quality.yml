@@ -148,6 +148,34 @@ jobs:
           assert len(sections) == 3, "Two embedded Python review/adapter programs required"
           for section in sections[1:]:
               ast.parse(section.split("\nPY\n",1)[0])
+          # Exercise the exact locally adapted script without running Laravel,
+          # contacting a network, or accessing a real environment.
+          import subprocess
+          import sys
+          import tempfile
+          with tempfile.TemporaryDirectory() as temp:
+              root = Path(temp)
+              original = root / "upstream.sh"
+              updated = root / "refreshed.sh"
+              original.write_text(
+                  Path("support/bambodia-mcp-chatgpt-loopback-qa.sh").read_text()
+              )
+              adapter = sections[2].split("\nPY\n", 1)[0]
+              result = subprocess.run(
+                  [sys.executable, "-c", adapter, str(original), str(updated)],
+                  capture_output=True, text=True,
+              )
+              assert result.returncode == 0, result.stderr[:300]
+              contents = updated.read_text()
+              assert "qa_patch_php" not in contents
+              assert "QA_SOURCE_RELEASE" not in contents
+              assert "OVERLAY=/root/Bambodia-MCP-Overlay-Refresh.hZDR51NJ" in contents
+              assert "REFRESHED_CANDIDATE_PUBLIC_HTTP_SMOKE=PASS" in contents
+              syntax = subprocess.run(
+                  ["bash", "-n", str(updated)], capture_output=True, text=True,
+              )
+              assert syntax.returncode == 0, syntax.stderr[:300]
+          print("MCP_REFRESHED_QA_ADAPTER_SYNTHESIS=PASS")
           for guard in (
               "REFRESHED_CANDIDATE_OAUTH_SOURCE=6_OF_6_VERIFIED",
               "REFRESHED_CANDIDATE_FRONTEND=11_OF_11_MATCH_LIVE",
