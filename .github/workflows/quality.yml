@@ -140,6 +140,16 @@ jobs:
           assert len(chunks) == 2, "Expected one isolated Python verification"
           ast.parse(chunks[1].split("\nPY\n", 1)[0])
           print("MCP_PHYSICAL_OAUTH_QA_PYTHON_SYNTAX=PASS")
+          for required in (
+              "composer install --no-scripts --no-plugins",
+              'qa_php "$QA/vendor/bin/phpunit" --colors=never --filter=BambodiaMcp',
+              "QA_PHPUNIT_FROM_LOCKED_DEV_DEPENDENCIES=PASS",
+              "QA_LOCK_CHANGED_DURING_DEV_INSTALL",
+              "QA_MANIFEST_CHANGED_DURING_DEV_INSTALL",
+          ):
+              assert required in src, "Missing guarded disposable PHPUnit workflow: " + required
+          assert "qa_php artisan test" not in src
+          print("MCP_DISPOSABLE_DEV_TEST_RUNNER_GUARD=PASS")
           PY
           python3 - <<'PY'
           import ast
