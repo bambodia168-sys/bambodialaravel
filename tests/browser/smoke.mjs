@@ -839,6 +839,8 @@ try {
             usersHasSupport:!!users?.querySelector('a[href*="/support-center"]'),
             legalPolicyLink:legal?.querySelector('a[href*="/policy-center"]')?.getAttribute('href'),
             legalPolicyCount:legal?.querySelectorAll('a[href*="/policy-center"]').length||0,
+            termsHref:[...legal?.querySelectorAll('a')||[]]
+              .find(a=>a.textContent.trim()==='Terms of Service')?.getAttribute('href')||null,
             emailLabels:[...users?.querySelectorAll('a[href^="mailto:"]')||[]]
               .map(a=>a.textContent.trim())
           };
@@ -852,6 +854,13 @@ try {
            footerOrganization.emailLabels.some(x=>x!=='Email Support'))
           throw new Error(device.name+' footer legal/user grouping mismatch '+
             JSON.stringify(footerOrganization));
+        // A newer "terms"-category review policy must never be presented as
+        // the canonical Terms of Service.
+        if(footerOrganization.termsHref &&
+           !/^\/policies\/[0-9]{8}-terms-of-service$/.test(
+             new URL(footerOrganization.termsHref,origin).pathname))
+          throw new Error(device.name+' footer Terms of Service targets a different policy '+
+            footerOrganization.termsHref);
 
 
         const footerLayout=await page.evaluate(()=>{

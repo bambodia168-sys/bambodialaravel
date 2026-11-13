@@ -137,6 +137,7 @@ jobs:
           python3 -m py_compile support/freelance-terminology-aapanel.py
           python3 -m py_compile support/footer-marketplace-short-labels-aapanel.py
           python3 -m py_compile support/footer-legal-and-users-aapanel.py
+          python3 -m py_compile support/footer-terms-link-aapanel.py
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
