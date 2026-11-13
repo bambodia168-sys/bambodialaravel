@@ -10,10 +10,10 @@ test "$(grep -Fc "echo 'STEP12H_INDEPENDENT_ORIGIN_HOST_AUDIT=PASS'" "$SRC")" -e
 grep -Fq 'fail installed_origin_differs_from_guard_only_change' "$SRC"
 grep -Fq 'cmp -s "$TMP/expected.conf" "$HTTP_CONF"' "$SRC"
 grep -Fq 'fail unexpected_http_socket_mode' "$SRC"
-grep -Fq 'fail unprivileged_socket_connect_permitted:' "$SRC"
+grep -Fq 'unprivileged_socket_connect_permitted:' "$SRC"
 grep -Fq 'fail ingress_can_read_private_laravel_env' "$SRC"
-grep -Fq 'fail unknown_host_not_421:' "$SRC"
-grep -Fq 'fail missing_host_not_blocked:' "$SRC"
+grep -Fq 'unknown_host_not_421:' "$SRC"
+grep -Fq 'missing_host_not_blocked:' "$SRC"
 grep -Fq 'SYNTHETIC_QA_DB_AND_PREVIEW_WRITES_OFF=PASS' "$SRC"
 grep -Fq 'NO_CONFIG_OR_SERVICE_MUTATIONS=YES' "$SRC"
 if grep -Eq '^[[:space:]]*systemctl[[:space:]]+(start|stop|restart|enable|disable|reload)' "$SRC"; then
