@@ -41,7 +41,7 @@ final class FreelanceTerminologyTest extends TestCase
     {
         $layout = $this->source('resources/views/layouts/main.blade.php');
         self::assertStringContainsString(
-            "url('/search?type=freelance') }}\">{{ __('ui.find_freelance_offers') }}</a>",
+            "url('/search?type=freelance') }}\">{{ __('ui.footer_marketplace_freelance') }}</a>",
             $layout
         );
         self::assertStringNotContainsString("__('ui.find_freelancers')", $layout);
