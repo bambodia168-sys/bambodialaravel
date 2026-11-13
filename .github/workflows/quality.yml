@@ -136,6 +136,7 @@ jobs:
           bash -n support/bambodia-mcp-main-domain-private-developer-routes.sh
           bash -n support/bambodia-mcp-chatgpt-loopback-qa.sh
           bash -n support/bambodia-mcp-release-gates-readonly.sh
+          bash -n support/bambodia-mcp-private-overlay-freshness-readonly.sh
           bash -n support/bambodia-mcp-chatgpt-ci-loopback.sh
           python3 -m py_compile support/bambodia-mcp-chatgpt-loopback-client.py
           python3 - <<'PY'
