@@ -401,14 +401,61 @@ try {
               throw new Error(device.name+' article headline wraps prematurely or overflows '+JSON.stringify(titleMetrics));
 
             const speed=player.locator('[data-blog-player-rate]');
+            const enterFullscreen=player.locator('[data-blog-player-fullscreen]');
+            const ghostStyle=await player.evaluate(root=>{
+              const speed=root.querySelector('[data-blog-player-rate]');
+              const fullscreen=root.querySelector('[data-blog-player-fullscreen]');
+              const exit=root.querySelector('[data-blog-player-exit-fullscreen]');
+              return {
+                speedBackground:getComputedStyle(speed).backgroundColor,
+                fullscreenBackground:getComputedStyle(fullscreen).backgroundColor,
+                exitBackground:getComputedStyle(exit).backgroundColor,
+                fullscreenText:fullscreen.textContent.trim(),
+                exitText:exit.textContent.trim(),
+                svgCount:fullscreen.querySelectorAll('svg').length,
+              };
+            });
+            if([ghostStyle.speedBackground,ghostStyle.fullscreenBackground,
+                ghostStyle.exitBackground].some(color=>color!=='rgba(0, 0, 0, 0)') ||
+               ghostStyle.fullscreenText!=='' || ghostStyle.exitText!=='' ||
+               ghostStyle.svgCount!==2)
+              throw new Error(device.name+' ghost speed/fullscreen controls not icon-only '+JSON.stringify(ghostStyle));
             await speed.click();
             const rate=await articleVideo.evaluate(video=>video.playbackRate);
             if(Math.abs(rate-1.25)>.01)throw new Error(device.name+' playback speed control did not work');
-            await player.locator('[data-blog-player-mute]').click();
-            if(!(await articleVideo.evaluate(video=>video.muted)))
-              throw new Error(device.name+' mute button did not work');
 
-            const enterFullscreen=player.locator('[data-blog-player-fullscreen]');
+            const trigger=player.locator('[data-blog-player-volume-trigger]');
+            const popover=player.locator('[data-blog-player-volume-popover]');
+            if(await popover.isVisible())throw new Error(device.name+' volume popup open before interaction');
+            await trigger.click();
+            if(!(await popover.isVisible()) ||
+                await trigger.getAttribute('aria-expanded')!=='true')
+              throw new Error(device.name+' volume popover did not open');
+            const volumeInput=popover.locator('[data-blog-player-volume]');
+            const volumeMetrics=await volumeInput.evaluate(input=>{
+              const box=input.getBoundingClientRect();
+              return {height:box.height,width:box.width,writingMode:getComputedStyle(input).writingMode,
+                orientation:input.getAttribute('aria-orientation')};
+            });
+            if(volumeMetrics.height<=volumeMetrics.width*3 ||
+               volumeMetrics.writingMode!=='vertical-lr' ||
+               volumeMetrics.orientation!=='vertical')
+              throw new Error(device.name+' volume slider not vertical '+JSON.stringify(volumeMetrics));
+            await volumeInput.evaluate(input=>{
+              input.value='0.3';
+              input.dispatchEvent(new Event('input',{bubbles:true}));
+            });
+            const gain=await articleVideo.evaluate(video=>video.volume);
+            if(Math.abs(gain-.3)>.051)throw new Error(device.name+' volume slider did not adjust playback');
+            await popover.locator('[data-blog-player-mute]').click();
+            if(!(await articleVideo.evaluate(video=>video.muted)))
+              throw new Error(device.name+' mute action did not work');
+            await popover.locator('[data-blog-player-mute]').press('Escape');
+            if(await popover.isVisible() ||
+               await trigger.getAttribute('aria-expanded')!=='false')
+              throw new Error(device.name+' Escape did not close volume popup');
+            checks+=5;
+
             const exitFullscreen=player.locator('[data-blog-player-exit-fullscreen]');
             if(await enterFullscreen.getAttribute('aria-label')!=='Enter full screen' ||
                await enterFullscreen.getAttribute('aria-pressed')!=='false' ||

@@ -130,6 +130,7 @@ jobs:
           python3 -m py_compile support/blog-premium-video-player-aapanel.py
           python3 -m py_compile support/reconcile-live-ui-aapanel-readonly.py
           python3 -m py_compile support/blog-fullscreen-controls-aapanel.py
+          python3 -m py_compile support/blog-vertical-volume-ghost-controls-aapanel.py
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
@@ -138,7 +139,7 @@ jobs:
       - name: Compile production frontend
         run: npm run build
       - name: Retain isolated homepage Vite build for guarded aaPanel acceptance
-        if: github.event_name == 'pull_request' && (github.event.pull_request.head.ref == 'feat/home-discovery-responsive-grids-20261112' || github.event.pull_request.head.ref == 'fix/home-freelancer-avatar-link-20261112' || github.event.pull_request.head.ref == 'fix/blog-video-youtube-featured-20261113' || github.event.pull_request.head.ref == 'feat/blog-premium-native-video-player-20261113' || github.event.pull_request.head.ref == 'feat/premium-player-fullscreen-controls-20261113')
+        if: github.event_name == 'pull_request' && (github.event.pull_request.head.ref == 'feat/home-discovery-responsive-grids-20261112' || github.event.pull_request.head.ref == 'fix/home-freelancer-avatar-link-20261112' || github.event.pull_request.head.ref == 'fix/blog-video-youtube-featured-20261113' || github.event.pull_request.head.ref == 'feat/blog-premium-native-video-player-20261113' || github.event.pull_request.head.ref == 'feat/premium-player-fullscreen-controls-20261113' || github.event.pull_request.head.ref == 'feat/blog-player-ghost-controls-vertical-volume-20261113')
         uses: actions/upload-artifact@v4
         with:
           name: Bambodia-Home-Discovery-Vite
