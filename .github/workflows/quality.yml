@@ -134,6 +134,33 @@ jobs:
           bash -n support/bambodia-mcp-main-domain-private-runtime-acceptance.sh
           bash -n support/bambodia-mcp-main-domain-physical-oauth-qa.sh
           bash -n support/bambodia-mcp-main-domain-private-developer-routes.sh
+          bash -n support/bambodia-mcp-chatgpt-loopback-qa.sh
+          bash -n support/bambodia-mcp-chatgpt-ci-loopback.sh
+          python3 -m py_compile support/bambodia-mcp-chatgpt-loopback-client.py
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          client = Path("support/bambodia-mcp-chatgpt-loopback-client.py").read_text()
+          ast.parse(client)
+          assert 'class NoRedirect(HTTPRedirectHandler)' in client
+          assert 'http://127.0.0.1:' in client
+          assert 'CHATGPT_LOOPBACK_INDEPENDENT_HTTP_OAUTH_ACCEPTANCE=PASS' in client
+          runner = Path("support/bambodia-mcp-chatgpt-loopback-qa.sh").read_text()
+          assert len(runner.split("<<'PY'\n")) == 4
+          for section in runner.split("<<'PY'\n")[1:]:
+              ast.parse(section.split("\nPY\n", 1)[0])
+          assert 'CLIENT_BLOB=' in runner
+          assert '"BAMBODIA_MCP_ENABLED=true" "BAMBODIA_MCP_WRITES_ENABLED=true"' in runner
+          assert '"DB_CONNECTION=sqlite" "DB_DATABASE=$HTTP_DB"' in runner
+          assert '"127.0.0.1:$PORT"' in runner
+          assert "EXTERNAL_CHATGPT_ACCOUNT_LINKING=NOT_ATTEMPTED" in runner
+          ci_runner = Path("support/bambodia-mcp-chatgpt-ci-loopback.sh").read_text()
+          assert len(ci_runner.split("<<'PY'\n")) == 2
+          ast.parse(ci_runner.split("<<'PY'\n")[1].split("\nPY\n", 1)[0])
+          assert "GITHUB_ACTIONS" in ci_runner
+          assert "storage/app/installed.lock" in ci_runner
+          print("CHATGPT_INDEPENDENT_LOOPBACK_QA_STATIC_GUARDS=PASS")
+          PY
           python3 - <<'PY'
           import ast
           from pathlib import Path
@@ -258,6 +285,11 @@ jobs:
           test -s storage/oauth-public.key
           chmod 600 storage/oauth-private.key storage/oauth-public.key
           echo "CI_ONLY_PASSPORT_KEYS=GENERATED"
+      - name: Independent ChatGPT-style HTTP OAuth acceptance (localhost only)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feature/bambodia-mcp-main-domain-20261112'
+        env:
+          APP_ENV: testing
+        run: bash support/bambodia-mcp-chatgpt-ci-loopback.sh --ci-only
       - name: Test routes and workflows
         env:
           APP_ENV: testing
