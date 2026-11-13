@@ -158,18 +158,7 @@
         @foreach($recentPosts as $post)
           <article class="blog-post-card home-blog-card">
             <a class="blog-card-media" href="{{ $post->publicUrl() }}" aria-label="Read {{ $post->title }}">
-              @if($post->featured_type === 'image' && $post->featuredMedia && str_starts_with($post->featuredMedia->mime_type,'image/'))
-                <img src="{{ $post->featuredMedia->previewUrl() }}" alt="{{ $post->featuredMedia->alt_text ?: $post->title }}" loading="lazy" decoding="async">
-              @elseif($post->featured_type === 'youtube' && preg_match('~^https://www\.youtube\.com/watch\?v=([A-Za-z0-9_-]{11})$~D',(string)$post->featured_url,$video))
-                <span class="blog-card-placeholder blog-card-youtube"><x-icon name="play-circle" size="29"/><span>Video article</span></span>
-                <img class="blog-card-youtube-thumbnail" src="{{ 'https://i.ytimg.com/vi/'.$video[1].'/hqdefault.jpg' }}" alt="" loading="lazy" referrerpolicy="no-referrer">
-              @elseif($post->featured_type === 'video')
-                <span class="blog-card-placeholder"><x-icon name="play-circle" size="32"/><span>Video article</span></span>
-              @elseif($post->featured_type === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/D',(string)$post->featured_color))
-                <span class="blog-card-color" style="background-color:{{ $post->featured_color }}" role="img" aria-label="Featured color"></span>
-              @else
-                <span class="blog-card-placeholder"><x-icon name="file-text" size="34"/><span>Blog article</span></span>
-              @endif
+              <x-blog-card-featured-media :post="$post" />
             </a>
             <div class="blog-card-content">
               @if($post->category)
