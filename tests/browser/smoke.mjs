@@ -318,6 +318,37 @@ try {
         if(!(await blogCards.first().getByRole('link',{name:/Browser QA Blog Article 01/}).count()) ||
            !(await blogCards.first().locator('.blog-card-media img').count()))
           throw new Error(device.name+' homepage blog card media missing');
+        // Both upload-backed video and external YouTube featured posts must
+        // have real media sources/thumbnail layers, not the old text-only tile.
+        const uploaded=blogCards.filter({hasText:'Browser QA Blog Article 03'}).first();
+        const youtubeCard=blogCards.filter({hasText:'Browser QA Blog Article 04'}).first();
+        const nativeVideo=uploaded.locator('video[data-blog-video-poster]');
+        const youtubeThumbnail=youtubeCard.locator('img[data-blog-youtube-thumbnail]');
+        if(await nativeVideo.count()!==1 ||
+           await uploaded.locator('.blog-card-play-overlay').count()!==1 ||
+           await youtubeThumbnail.count()!==1 ||
+           await youtubeCard.locator('.blog-card-play-overlay').count()!==1)
+          throw new Error(device.name+' premium video/YouTube blog media stages missing');
+        const uploadedSource=await nativeVideo.locator('source').getAttribute('src');
+        const youtubeSource=await youtubeThumbnail.getAttribute('src');
+        if(!uploadedSource?.match(/\\/media\\/[0-9]{9}.*#t=0\\.1$/) ||
+           youtubeSource!=='https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg' ||
+           await blog.locator('.blog-card-media iframe').count()!==0 ||
+           await blog.getByText('Video article').count()!==0)
+          throw new Error(device.name+' blog media URL, third-party or fallback regression');
+        const uploadedFrame=await nativeVideo.evaluate(video=>({
+          paused:video.paused,
+          fit:getComputedStyle(video).objectFit,
+          overlay:!!video.closest('.blog-card-media')?.querySelector('.blog-card-media-backdrop'),
+        }));
+        if(!uploadedFrame.paused || uploadedFrame.fit!=='cover' || !uploadedFrame.overlay)
+          throw new Error(device.name+' video preview must remain paused with premium fallback');
+        const blogIndex=await page.request.get('/blog');
+        const blogIndexHtml=await blogIndex.text();
+        if(!blogIndex.ok() || !blogIndexHtml.includes('data-blog-video-poster') ||
+           !blogIndexHtml.includes('data-blog-youtube-thumbnail'))
+          throw new Error(device.name+' full Blog index does not share featured media presentation');
+        checks+=7;
         const blogMetrics=await blogTrack.evaluate(track=>{
           const cards=[...track.querySelectorAll('.home-blog-card')];
           const rect=track.getBoundingClientRect();
