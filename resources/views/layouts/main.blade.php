@@ -9,6 +9,7 @@
   @vite(['resources/css/app.css','resources/js/app.js'])
   @include('layouts.partials.site-typography')
   <link rel="stylesheet" href="{{ asset('css/header-flag-scroll-top.css') }}?v=1">
+  <link rel="stylesheet" href="{{ asset('css/footer-two-tone-themes.css') }}?v=1">
   {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
   <link rel="stylesheet" href="{{ asset('css/creator-badge-tooltip-viewport.css') }}?v=1">
   <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>
@@ -183,7 +184,8 @@
       @if($footerPolicies->has('terms'))<a href="{{ $footerPolicies->get('terms')->publicUrl() }}">Terms of Service</a>@endif
     </div>
   </div>
-  <div class="container footer-bottom"><span class="footer-copyright">© {{ date('Y') }} {{ \App\Models\SiteSetting::setting('identity.name') }} · All Rights Reserved.</span>
+  <div class="footer-bottom-band">
+    <div class="container footer-bottom"><span class="footer-copyright">© {{ date('Y') }} {{ \App\Models\SiteSetting::setting('identity.name') }} · All Rights Reserved.</span>
     <div class="footer-actions">
       <div class="footer-social" aria-label="Social media">
         @foreach(\App\Models\SiteSocialLink::query()->where('is_active',true)->orderBy('sort_order')->orderBy('id')->get() as $social)
@@ -194,6 +196,7 @@
         @endforeach
       </div>
     </div>
+  </div>
   </div>
 </footer>
 <button type="button" class="back-to-top" data-back-to-top aria-label="Back to top" title="Back to top">
