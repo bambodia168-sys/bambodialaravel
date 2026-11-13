@@ -154,7 +154,7 @@ jobs:
           for required in (
               "AUDIT-MYSQL-METADATA-READ-ONLY",
               "SOURCE_COMMIT=", "SOURCE_BLOB=", "git hash-object",
-              "MCP_PRIVATE_ROOT_OTHER_READ",
+              "MCP_PRIVATE_ROOT_", "OTHER_READ",
               "MCP_PRIVATE_ACLS_AND_SERVING_RULES=NOT_VERIFIED",
               "MCP_DB_METADATA_CLIENT_INTEGRITY=PASS",
               "env -i", "MCP_RELEASE_GATE=BLOCKED",
