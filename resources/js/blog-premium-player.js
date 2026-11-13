@@ -29,9 +29,14 @@ export function initBlogPremiumPlayers() {
         const rate = root.querySelector('[data-blog-player-rate]');
         const pip = root.querySelector('[data-blog-player-pip]');
         const fullscreen = root.querySelector('[data-blog-player-fullscreen]');
+        const exitFullscreen = root.querySelector('[data-blog-player-exit-fullscreen]');
+        const expandIcon = root.querySelector('[data-blog-player-expand-icon]');
+        const collapseIcon = root.querySelector('[data-blog-player-collapse-icon]');
+        const fullscreenLabel = root.querySelector('[data-blog-player-fullscreen-label]');
         const status = root.querySelector('[data-blog-player-status]');
         if (![video, hud, center, playIcon, pauseIcon, seek, time, muteButton,
-            volumeIcon, mutedIcon, volume, rate, fullscreen, status].every(Boolean) ||
+            volumeIcon, mutedIcon, volume, rate, fullscreen, exitFullscreen,
+            expandIcon, collapseIcon, fullscreenLabel, status].every(Boolean) ||
             playButtons.length !== 2) return;
 
         const duration = () => Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
@@ -114,28 +119,59 @@ export function initBlogPremiumPlayers() {
             });
         }
 
+        // Two intentional surfaces: a compact labeled entry button in the HUD
+        // and a clearly visible top-right exit button during fullscreen. A native
+        // iOS video-fullscreen fallback keeps Safari's own exit controls.
         const updateFullscreen = () => {
-            fullscreen.setAttribute('aria-label',
-                document.fullscreenElement === root ? 'Exit fullscreen' : 'Enter fullscreen');
+            const active = document.fullscreenElement === root;
+            const exitHadFocus = document.activeElement === exitFullscreen;
+            root.classList.toggle('is-fullscreen', active);
+            root.dataset.fullscreen = active ? 'true' : 'false';
+            fullscreen.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');
+            fullscreen.setAttribute('title', active ? 'Exit full screen' : 'Full screen');
+            fullscreen.setAttribute('aria-pressed', String(active));
+            fullscreenLabel.textContent = active ? 'Exit full screen' : 'Full screen';
+            expandIcon.hidden = active;
+            collapseIcon.hidden = !active;
+            exitFullscreen.hidden = !active;
+            // Escape may exit fullscreen without clicking a button. Never strand
+            // keyboard focus on an action that becomes hidden.
+            if (!active && exitHadFocus) fullscreen.focus({ preventScroll: true });
         };
         if (typeof root.requestFullscreen === 'function') {
-            fullscreen.addEventListener('click', async () => {
+            const toggleFullscreen = async () => {
                 try {
                     if (document.fullscreenElement === root) {
                         await document.exitFullscreen();
                     } else {
                         await root.requestFullscreen();
                     }
+                    setStatus('');
                 } catch (_) {
-                    setStatus('Fullscreen is not available on this device.');
+                    setStatus('Full screen is unavailable on this device.');
                 }
-            });
+                updateFullscreen();
+                if (document.fullscreenElement === root) {
+                    exitFullscreen.focus({ preventScroll: true });
+                } else {
+                    fullscreen.focus({ preventScroll: true });
+                }
+            };
+            fullscreen.addEventListener('click', toggleFullscreen);
+            exitFullscreen.addEventListener('click', toggleFullscreen);
             document.addEventListener('fullscreenchange', updateFullscreen);
         } else if (typeof video.webkitEnterFullscreen === 'function') {
-            fullscreen.addEventListener('click', () => video.webkitEnterFullscreen());
+            fullscreen.addEventListener('click', () => {
+                try {
+                    video.webkitEnterFullscreen();
+                } catch (_) {
+                    setStatus('Full screen is unavailable on this device.');
+                }
+            });
         } else {
             fullscreen.hidden = true;
         }
+        updateFullscreen();
 
         root.addEventListener('keydown', (event) => {
             if (event.target !== root && event.target !== video) return;
