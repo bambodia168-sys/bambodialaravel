@@ -147,6 +147,7 @@ jobs:
           bash -n support/bambodia-mcp-production-topology-readonly-20261113.sh
           bash -n support/bambodia-mcp-private-media-permissions-readonly-20261113.sh
           python3 -m py_compile support/bambodia-mcp-private-file-review-local-20261113.py
+          python3 -m py_compile support/bambodia-mcp-private-access-impact-readonly-20261114.py
           python3 -m py_compile support/bambodia-mcp-offsite-backup-approval-preflight-20261113.py
           python3 -m py_compile support/bambodia-mcp-isolated-restore-preflight-20261113.py
           python3 -m py_compile support/bambodia-mcp-restored-manifest-reconcile-20261113.py
@@ -154,6 +155,12 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           local=Path("support/bambodia-mcp-private-file-review-local-20261113.py").read_text()
+          impact=Path("support/bambodia-mcp-private-access-impact-readonly-20261114.py").read_text()
+          assert "MCP_SINGLE_FILE_MODE_PROPOSAL" in impact
+          assert "MCP_PRIVATE_FILE_PERMISSIONS=UNCHANGED" in impact
+          assert "MCP_PERMISSION_CHANGE=NOT_AUTHORIZED" in impact
+          assert "REPORT_PATH_NOT_APPROVED" in impact
+          assert "O_NOFOLLOW" in impact
           backup=Path("support/bambodia-mcp-offsite-backup-approval-preflight-20261113.py").read_text()
           assert "LOCAL_OPERATOR_REVIEW_ONLY_NOT_APPROVED_NOT_EXECUTABLE" in local
           assert "MCP_PRIVATE_REMEDIATION=NOT_PERFORMED" in local
@@ -173,7 +180,7 @@ jobs:
           assert "MCP_RESTORE_HOST_NETWORK_ISOLATION=NOT_VERIFIED" in isolated
           assert "TARGET_OUTSIDE_PRIVATE_RESTORE_AREA" in isolated
           assert "MCP_PRODUCTION_RELEASE" in backup
-          for code in (local,backup,isolated,reconciliation):
+          for code in (local,impact,backup,isolated,reconciliation):
               for dangerous in ("subprocess.", "os.system(", "mysqldump --", "restic backup",
                                 "os.chown(", "os.remove(", "os.rename(", "chmod -R"):
                   assert dangerous not in code, "preflight must not execute recovery or production mutations"
