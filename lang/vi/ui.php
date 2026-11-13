@@ -18,6 +18,8 @@ return [
     'marketplace' => 'Sàn giao dịch',
     'for_users' => 'Người dùng',
     'compliance' => 'Tuân thủ',
+    'footer_legal_policies' => 'Pháp lý & Chính sách',
+    'footer_email_support' => 'Hỗ trợ qua email',
     'footer_marketplace_projects' => 'Dự án',
     'footer_marketplace_products' => 'Sản phẩm',
     'footer_marketplace_freelance' => 'Làm việc tự do',
