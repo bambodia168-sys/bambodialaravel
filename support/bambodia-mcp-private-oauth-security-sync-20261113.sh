@@ -54,9 +54,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Only these THREE immutable GitHub source files are permitted.
+# All SIX immutable, previously HTTP-accepted OAuth security source files are required.
 # No application data or private server files are uploaded to GitHub.
 for entry in \
+ "bootstrap/app.php|48b931f09aa0c21cc05705396a06272f85b2be8d|bootstrap.php" \
+ "app/Http/Middleware/RequireMcpOAuthResource.php|ae8922d4a1a82a5dabf11df4877d5aab8fb8093d|resource.php" \
+ "app/Http/Middleware/EnsureMcpOAuthConsentAdmin.php|641e625f4a12765a3e8da54916235ccb7b337835|consent.php" \
  "config/mcp.php|215d9b15714e0a6b687191bdab44af54ace10450|config.php" \
  "app/Http/Controllers/Api/BambodiaOAuthRegisterController.php|290f3d66998315235c9c6350e3b878d458344331|register.php" \
  "tests/Feature/BambodiaMcpOAuthTest.php|725a067ce74802cec15169eab87beab051c7e3ca|oauth-test.php"
@@ -71,7 +74,7 @@ do
   fail GITHUB_SECURITY_BLOB_MISMATCH
  "$PHP" -l "$TMP/$filename" >/dev/null || fail SECURITY_SOURCE_PHP_LINT
 done
-echo "GITHUB_PINNED_OAUTH_SECURITY_FILES=3_VERIFIED"
+echo "GITHUB_PINNED_OAUTH_SECURITY_FILES=6_VERIFIED"
 
 # A dry run validates all private/current-live hashes, archived nine critical
 # snapshots, 11 preserved frontend inputs, 23 Vite build hashes and preimages.
@@ -98,6 +101,15 @@ protected = {
  "resources/views/developer/index.blade.php",
 }
 source_paths = {
+ "bootstrap/app.php": ("bootstrap.php",
+     "48b931f09aa0c21cc05705396a06272f85b2be8d",
+     {"c8c1b587659260508cdcc6b30c90a2ffca21e562"}),
+ "app/Http/Middleware/RequireMcpOAuthResource.php": ("resource.php",
+     "ae8922d4a1a82a5dabf11df4877d5aab8fb8093d",
+     {"8be5e72d7e25e21176fb6364273741af2d1104f6"}),
+ "app/Http/Middleware/EnsureMcpOAuthConsentAdmin.php": ("consent.php",
+     "641e625f4a12765a3e8da54916235ccb7b337835",
+     {"ABSENT"}),
  "config/mcp.php": ("config.php",
      "215d9b15714e0a6b687191bdab44af54ace10450",
      {"c6b917eec7d1573c13f3335d1ed811a212850afa"}),
@@ -192,7 +204,12 @@ print("MCP_PROTECTED_MCP_MERGE_SNAPSHOTS=9_UNCHANGED")
 states = []
 for rel, (filename, target_blob, approved_old) in source_paths.items():
  target = new / "source" / rel
- current_blob = blob(safe_file(target))
+ if target.is_symlink():
+  blocked("OAUTH_PRIVATE_SOURCE_SYMLINK")
+ if target.exists():
+  current_blob = blob(safe_file(target))
+ else:
+  current_blob = "ABSENT"
  if blob(safe_file(downloads / filename)) != target_blob:
   blocked("PINNED_GITHUB_SECURITY_SOURCE_DRIFT")
  if current_blob != target_blob and current_blob not in approved_old:
@@ -214,7 +231,7 @@ if states[0] == "CURRENT":
  sys.exit(0)
 if report.exists() or report.is_symlink() or snapshot.exists() or snapshot.is_symlink():
  blocked("PREEXISTING_SECURITY_REPORT_OR_SNAPSHOTS")
-print("MCP_PRIVATE_OAUTH_PREIMAGES=3_APPROVED")
+print("MCP_PRIVATE_OAUTH_PREIMAGES=6_APPROVED")
 if mode == "inspect":
  print("MCP_PRIVATE_OAUTH_SYNC_PREFLIGHT=PASS")
  print("PRODUCTION_SOURCE_DATABASE_NGINX=UNCHANGED")
@@ -226,7 +243,11 @@ if mode != "prepare":
 snapshot.mkdir(mode=0o700)
 originals = {}
 for rel in source_paths:
- originals[rel] = safe_file(new / "source" / rel)
+ candidate = new / "source" / rel
+ originals[rel] = safe_file(candidate) if candidate.exists() else None
+ # Absent middleware has no bytes to back up; existence is recorded in report.
+ if originals[rel] is None:
+  continue
  path = snapshot / rel
  path.parent.mkdir(parents=True, exist_ok=True)
  path.write_bytes(originals[rel])
@@ -265,7 +286,11 @@ try:
   blocked("VITE_CHANGED_DURING_SECURITY_SYNC")
 except BaseException:
  for rel in reversed(written):
-  replace_private(new / "source" / rel, originals[rel])
+  target = new / "source" / rel
+  if originals[rel] is None:
+   target.unlink()
+  else:
+   replace_private(target, originals[rel])
  raise
 
 result = {
@@ -273,7 +298,7 @@ result = {
  "source_git_commit": "396614486e3b7e50a28cd42932af6b4aa6536cfd",
  "private_workspace": str(new),
  "source_files": {
-  rel: {"previous_git_blob": blob(originals[rel]), "approved_git_blob": pin}
+  rel: {"previous_git_blob": blob(originals[rel]) if originals[rel] is not None else "ABSENT", "approved_git_blob": pin}
   for rel, (_, pin, _) in source_paths.items()
  },
  "preserved_live_frontend_paths": len(changed | added),
@@ -297,7 +322,7 @@ finally:
  if os.path.exists(tmp):
   os.unlink(tmp)
 print("MCP_PRIVATE_OAUTH_SECURITY_SYNC=PASS")
-print("MCP_PRIVATE_OAUTH_SECURITY_SOURCE_FILES=3")
+print("MCP_PRIVATE_OAUTH_SECURITY_SOURCE_FILES=6")
 print("MCP_PRIVATE_OAUTH_SYNC_REPORT=" + str(report))
 print("MCP_PRIVATE_CANDIDATE_DEPLOYABLE=NO")
 print("MCP_PRIVATE_OAUTH_INDEPENDENT_RUNTIME_QA=PENDING")
@@ -308,13 +333,16 @@ echo "========== VERIFY PREPARED PRIVATE CANDIDATE =========="
 python3 "$TMP/verify.py" "$LIVE" "$OLD" "$NEW" "$TMP" inspect
 echo "========== APPROVAL: PRIVATE CANDIDATE ONLY =========="
 [[ -c /dev/tty ]] || fail OPERATOR_TTY_REQUIRED
-printf 'Type SYNC-MCP-PRIVATE-OAUTH-ONLY to update 3 files inside the new private copy: ' > /dev/tty
+printf 'Type SYNC-MCP-PRIVATE-OAUTH-ONLY to update 6 files inside the new private copy: ' > /dev/tty
 IFS= read -r APPROVAL < /dev/tty
 [[ "$APPROVAL" == "SYNC-MCP-PRIVATE-OAUTH-ONLY" ]] || fail OPERATOR_DECLINED
 unset APPROVAL
 
 python3 "$TMP/verify.py" "$LIVE" "$OLD" "$NEW" "$TMP" prepare
 for rel in \
+ "bootstrap/app.php" \
+ "app/Http/Middleware/RequireMcpOAuthResource.php" \
+ "app/Http/Middleware/EnsureMcpOAuthConsentAdmin.php" \
  "config/mcp.php" \
  "app/Http/Controllers/Api/BambodiaOAuthRegisterController.php" \
  "tests/Feature/BambodiaMcpOAuthTest.php"; do
