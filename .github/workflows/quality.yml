@@ -137,6 +137,27 @@ jobs:
           bash -n support/bambodia-mcp-chatgpt-loopback-qa.sh
           bash -n support/bambodia-mcp-release-gates-readonly.sh
           bash -n support/bambodia-mcp-private-overlay-freshness-readonly.sh
+          bash -n support/bambodia-mcp-private-overlay-refresh-20261113.sh
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          path = Path("support/bambodia-mcp-private-overlay-refresh-20261113.sh")
+          content = path.read_text()
+          parts = content.split("<<'PY'\n")
+          assert len(parts) == 2, "Expected one private-only Python validation block"
+          ast.parse(parts[1].split("\nPY\n", 1)[0])
+          for guard in (
+              "allowed_changed = {", "allowed_new = {",
+              "MCP_PRIVATE_REFRESH_DRIFT_COUNTS",
+              "MCP_PROTECTED_MCP_SNAPSHOTS=9_UNCHANGED",
+              "REFRESH-MCP-PRIVATE-OVERLAY",
+              "VITE_LIVE_ASSET_HASH_CHANGED_DURING_COPY",
+              "MCP_PRIVATE_REFRESH_IS_DEPLOYABLE=NO",
+              "PRODUCTION_SOURCE_DATABASE_NGINX_KEYS=UNCHANGED",
+          ):
+              assert guard in content, "Missing private refresh guard " + guard
+          print("MCP_PRIVATE_OVERLAY_REFRESH_STATIC_GUARDS=PASS")
+          PY
           bash -n support/bambodia-mcp-chatgpt-ci-loopback.sh
           python3 -m py_compile support/bambodia-mcp-chatgpt-loopback-client.py
           python3 - <<'PY'
