@@ -120,6 +120,7 @@ jobs:
           bash -n support/builder-terms-readable-aapanel-upgrade.sh
           bash -n support/marketplace-readiness-audit-aapanel-upgrade.sh
           bash -n support/preview-content-review-aapanel-upgrade.sh
+          bash -n support/header-flag-scroll-top-aapanel-upgrade.sh
           bash -n support/bambodia-mcp-main-domain-readiness.sh
           bash -n support/bambodia-mcp-main-domain-install-target.sh
           bash -n support/bambodia-mcp-main-domain-isolated-lock.sh
@@ -202,6 +203,14 @@ jobs:
           sed -n "/^python3 - .*<<'PY'$/,/^PY$/p" support/bambodia-mcp-main-domain-resolve-private-critical.sh |
             sed '1d;$d' |
             python3 -c 'import ast, sys; src = sys.stdin.read(); assert len(src) > 5000; ast.parse(src); print("MCP_EMBEDDED_PYTHON_SYNTAX=PASS")'
+      - name: Check guarded homepage installer syntax
+        run: |
+          python3 -m py_compile support/home-discovery-aapanel-upgrade.py
+          python3 -m py_compile support/home-freelancer-avatar-aapanel-upgrade.py
+          python3 -m py_compile support/remove-trailing-action-arrows-aapanel.py
+          python3 -m py_compile support/blog-featured-video-aapanel.py
+          python3 -m py_compile support/blog-premium-video-player-aapanel.py
+          python3 -m py_compile support/reconcile-live-ui-aapanel-readonly.py
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
@@ -209,6 +218,14 @@ jobs:
         run: npm install --ignore-scripts
       - name: Compile production frontend
         run: npm run build
+      - name: Retain isolated homepage Vite build for guarded aaPanel acceptance
+        if: github.event_name == 'pull_request' && (github.event.pull_request.head.ref == 'feat/home-discovery-responsive-grids-20261112' || github.event.pull_request.head.ref == 'fix/home-freelancer-avatar-link-20261112' || github.event.pull_request.head.ref == 'fix/blog-video-youtube-featured-20261113' || github.event.pull_request.head.ref == 'feat/blog-premium-native-video-player-20261113')
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bambodia-Home-Discovery-Vite
+          path: public/build/
+          if-no-files-found: error
+          retention-days: 7
       - name: Lint compiled Blade templates
         run: |
           php artisan view:cache
