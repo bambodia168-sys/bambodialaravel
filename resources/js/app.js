@@ -1680,3 +1680,54 @@ document.addEventListener('click', event => {
         }
     }
 });
+
+
+// Blog card video posters: seek to an actual frame without autoplay.
+// Keep the media-link destination actionable, and never create third-party
+// YouTube frames in the public carousel or blog index.
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-blog-youtube-thumbnail]').forEach((image) => {
+        const fallback = () => { image.hidden = true; };
+        image.addEventListener('error', fallback, { once: true });
+        if (image.complete && image.naturalWidth === 0) fallback();
+    });
+
+    const videos = [...document.querySelectorAll('video[data-blog-video-poster]')];
+    const prime = (video) => {
+        if (video.dataset.posterRequested === 'true') return;
+        video.dataset.posterRequested = 'true';
+        const ready = () => {
+            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+                video.classList.add('is-ready');
+            }
+        };
+        video.addEventListener('loadeddata', ready);
+        video.addEventListener('seeked', ready);
+        video.addEventListener('loadedmetadata', () => {
+            const duration = video.duration;
+            if (Number.isFinite(duration) && duration > 0.15) {
+                try {
+                    video.currentTime = Math.min(0.2, duration / 2);
+                } catch (_) {
+                    // No seek support: leave the branded fallback visible.
+                }
+            }
+            ready();
+        }, { once: true });
+        video.preload = 'metadata';
+        video.load();
+    };
+
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                observer.unobserve(entry.target);
+                prime(entry.target);
+            });
+        }, { rootMargin: '350px 0px' });
+        videos.forEach(video => observer.observe(video));
+    } else {
+        videos.forEach(prime);
+    }
+});
