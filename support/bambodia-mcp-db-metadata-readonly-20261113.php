@@ -61,7 +61,7 @@ try {
     }
     // Identifiers, passwords, hostnames and DSNs are NEVER printed.
     $dsn = 'mysql:host='.$host.';port='.$port.';dbname='.$database.';charset=utf8mb4';
-    $pdo = new PDO($dsn, $user, $get('DB_PASSWORD'), [
+    $pdo = new PDO($dsn, $user, (string) ($_ENV['DB_PASSWORD'] ?? ''), [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_TIMEOUT => 5,
         PDO::ATTR_PERSISTENT => false,
