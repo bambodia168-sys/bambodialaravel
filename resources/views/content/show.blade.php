@@ -10,9 +10,8 @@
       @if($entry->type === 'post')
         @if(in_array($entry->featured_type, ['image', 'video'], true) && $entry->featuredMedia)
           @if($entry->featured_type === 'video' && str_starts_with($entry->featuredMedia->mime_type, 'video/'))
-            <figure class="post-featured-figure blog-article-cover">
-              <video class="post-public-video" controls preload="metadata" playsinline
-                src="{{ $entry->featuredMedia->previewUrl() }}" aria-label="{{ $entry->featuredMedia->alt_text }}"></video>
+            <figure class="post-featured-figure blog-article-cover blog-video-cover">
+              <x-blog-premium-native-video :media="$entry->featuredMedia" :title="$entry->title" />
             </figure>
           @elseif($entry->featured_type === 'image' && str_starts_with($entry->featuredMedia->mime_type, 'image/'))
             <figure class="post-featured-figure blog-article-cover">
