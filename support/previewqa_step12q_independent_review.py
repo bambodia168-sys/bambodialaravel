@@ -119,14 +119,14 @@ def review(design: Mapping[str, Any]) -> DesignReview:
     require(isinstance(ingress, Mapping), "EXACT_INGRESS_DESIGN_REQUIRED")
     require(_get(design, "ingress", "hostname") == CANONICAL_HOST, "CANONICAL_HOST_REQUIRED")
     require(_get(design, "ingress", "service") == "unix:" + MOUNTED_SOCKET, "PRIVATE_UNIX_ORIGIN_REQUIRED")
-    require(_get(design, "ingress", "httpHostHeader") == CANONICAL_HOST, "PRESERVE_CANONICAL_HOST")
-    require(_get(design, "ingress", "access", "required") is True, "CLOUDFLARED_ACCESS_REQUIRED")
+    require(_get(design, "ingress", "originRequest", "httpHostHeader") == CANONICAL_HOST, "PRESERVE_CANONICAL_HOST")
+    require(_get(design, "ingress", "originRequest", "access", "required") is True, "CLOUDFLARED_ACCESS_REQUIRED")
     require(_get(design, "ingress", "catch_all_service") == "http_status:404", "DENY_ALL_CATCH_ALL_REQUIRED")
     require(_get(design, "ingress", "path_restricted_access_rules") is False,
             "PATH_SCOPED_ACCESS_RULES_FORBIDDEN")
     require(_get(design, "ingress", "other_hostname_routes") == [], "OTHER_HOSTNAME_ROUTES_FORBIDDEN")
-    team = _get(design, "ingress", "access", "teamName")
-    aud = _get(design, "ingress", "access", "audTag")
+    team = _get(design, "ingress", "originRequest", "access", "teamName")
+    aud = _get(design, "ingress", "originRequest", "access", "audTag")
     require(isinstance(team, str) and team.strip() != "" and
             "<" not in team and ">" not in team, "EXPLICIT_TEAM_NAME_REQUIRED")
     require(isinstance(aud, list) and len(aud) == 1 and
@@ -144,6 +144,12 @@ def review(design: Mapping[str, Any]) -> DesignReview:
         require(_get(design, "jwt", prop) is True, "JWT_CHECK_MISSING_" + prop.upper())
     require(_get(design, "jwt", "key_source") == "rotating_cloudflare_jwks",
             "REMOTE_ROTATING_JWKS_REQUIRED")
+    require(isinstance(team, str) and
+            _get(design, "jwt", "jwks_url") ==
+            f"https://{team}.cloudflareaccess.com/cdn-cgi/access/certs",
+            "JWT_JWKS_ENDPOINT_MISMATCH")
+    for control in ("validate_kid_against_jwks", "refresh_keys_on_rotation"):
+        require(_get(design, "jwt", control) is True, "JWT_CONTROL_MISSING_" + control.upper())
     require(_get(design, "jwt", "hardcoded_public_cert") is False,
             "HARDCODED_CERTIFICATE_FORBIDDEN")
     require(_get(design, "jwt", "trust_header_only") is False,
