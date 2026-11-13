@@ -141,6 +141,30 @@ jobs:
           bash -n support/bambodia-mcp-private-oauth-security-sync-20261113.sh
           bash -n support/bambodia-mcp-refreshed-candidate-http-qa-20261113.sh
           bash -n support/bambodia-mcp-refreshed-frontend-drift-readonly-20261113.sh
+          bash -n support/bambodia-mcp-two-blade-private-rebase-20261113.sh
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          s=Path("support/bambodia-mcp-two-blade-private-rebase-20261113.sh").read_text()
+          parts=s.split("<<'PY'\n")
+          assert len(parts)==2, "One embedded rebase validator expected"
+          ast.parse(parts[1].split("\nPY\n",1)[0])
+          for guard in (
+              "resources/views/home.blade.php",
+              "resources/views/layouts/main.blade.php",
+              "MCP_TWO_BLADE_OTHER_FRONTEND=9_UNCHANGED",
+              "MCP_TWO_BLADE_OAUTH_SOURCES=6_VERIFIED",
+              "MCP_TWO_BLADE_PROTECTED_LIVE=9_UNCHANGED",
+              "MCP_TWO_BLADE_VITE=23_UNCHANGED",
+              "CATCHUP-TWO-BLADE-PRIVATE-ONLY",
+              "MCP_TWO_BLADE_FILES_COPIED=2",
+              "MCP_TWO_BLADE_PRIOR_CANDIDATE=UNCHANGED",
+              "MCP_TWO_BLADE_CANDIDATE_DEPLOYABLE=NO",
+              "PRODUCTION_SOURCE_DATABASE_NGINX_KEYS=UNCHANGED",
+          ):
+              assert guard in s, "Missing private two-Blade rebase guard "+guard
+          print("MCP_PRIVATE_TWO_BLADE_REBASE_STATIC_GUARDS=PASS")
+          PY
           python3 - <<'PY'
           import ast
           from pathlib import Path
