@@ -23,7 +23,7 @@ class BlogPremiumNativePlayerTest extends TestCase
         ]);
     }
 
-    private function post(User $author, string $title, array $attributes): ContentEntry
+    private function createPost(User $author, string $title, array $attributes): ContentEntry
     {
         return ContentEntry::query()->create(array_merge([
             'type' => 'post',
@@ -56,7 +56,7 @@ class BlogPremiumNativePlayerTest extends TestCase
             'review_status' => 'approved',
         ]);
         $title = 'From code changes to dependable releases';
-        $post = $this->post($author, $title, [
+        $post = $this->createPost($author, $title, [
             'featured_type' => 'video', 'featured_media_id' => $asset->id,
         ]);
 
@@ -87,7 +87,7 @@ class BlogPremiumNativePlayerTest extends TestCase
 
     public function test_youtube_player_remains_existing_iframe_without_native_player(): void
     {
-        $post = $this->post($this->author(), 'YouTube tutorial', [
+        $post = $this->createPost($this->author(), 'YouTube tutorial', [
             'featured_type' => 'youtube',
             'featured_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         ]);
@@ -100,7 +100,7 @@ class BlogPremiumNativePlayerTest extends TestCase
 
     public function test_non_video_article_does_not_load_native_player_controls(): void
     {
-        $post = $this->post($this->author(), 'Regular article', [
+        $post = $this->createPost($this->author(), 'Regular article', [
             'featured_type' => 'color', 'featured_color' => '#163f7a',
         ]);
 
