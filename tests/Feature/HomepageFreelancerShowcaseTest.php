@@ -52,8 +52,8 @@ class HomepageFreelancerShowcaseTest extends TestCase
 
         $response=$this->get('/')->assertOk()
             ->assertSee('id="bambodia-freelancers"',false)
-            ->assertSee('id="freelancer-section-title">Freelancer</h2>',false)
-            ->assertSee('View all freelancers')
+            ->assertSee('id="freelancer-section-title">Freelancers</h2>',false)
+            ->assertSee('Browse creator profiles')
             ->assertSee('Experienced Public Freelancer')
             ->assertSee('New Public Freelancer')
             ->assertDontSee('Private Freelancer')
@@ -78,7 +78,7 @@ class HomepageFreelancerShowcaseTest extends TestCase
         $this->profile('Hidden Freelancer',false);
         $this->get('/')->assertOk()
             ->assertSee('Freelancer profiles are coming soon.')
-            ->assertSee('Browse the freelancer directory')
+            ->assertSee('Browse creator profiles')
             ->assertDontSee('Hidden Freelancer')
             ->assertDontSee('marketplace-freelancer-card')
             ->assertDontSee('marketplace-category-track');
