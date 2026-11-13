@@ -343,6 +343,13 @@ try {
         }));
         if(!uploadedFrame.paused || uploadedFrame.fit!=='cover' || !uploadedFrame.overlay)
           throw new Error(device.name+' video preview must remain paused with premium fallback');
+        if(device.viewport.width>=720){
+          await nativeVideo.scrollIntoViewIfNeeded();
+          await page.waitForFunction(()=>{
+            const video=document.querySelector('.home-blog-card video[data-blog-video-poster]');
+            return video && video.classList.contains('is-ready') && video.readyState>=2;
+          },null,{timeout:7000});
+        }
         const blogIndex=await page.request.get(new URL('/blog',page.url()).toString());
         const blogIndexHtml=await blogIndex.text();
         if(!blogIndex.ok() || !blogIndexHtml.includes('data-blog-video-poster') ||
