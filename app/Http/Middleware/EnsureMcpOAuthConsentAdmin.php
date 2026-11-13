@@ -28,9 +28,16 @@ final class EnsureMcpOAuthConsentAdmin
         }
 
         $owner = $request->user('web');
-        if (! $owner instanceof User
-            || $owner->role !== 'super_admin'
-            || $owner->account_status !== 'active') {
+        // A session may retain a user model loaded before an administrator
+        // was demoted or suspended. Never trust a cached role at consent:
+        // re-read the authoritative database state on every approval.
+        $stillAllowed = $owner instanceof User
+            && $owner->exists
+            && User::query()->whereKey($owner->getKey())
+                ->where('role', 'super_admin')
+                ->where('account_status', 'active')
+                ->exists();
+        if (! $stillAllowed) {
             return response()->json([
                 'message' => 'Administrator authorization is no longer allowed.',
             ], 403)->header('Cache-Control', 'no-store');
