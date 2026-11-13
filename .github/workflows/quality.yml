@@ -290,6 +290,14 @@ jobs:
         env:
           APP_ENV: testing
         run: bash support/bambodia-mcp-chatgpt-ci-loopback.sh --ci-only
+      - name: Verify revoked administrator cannot approve OAuth consent
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+        run: php artisan test --filter=test_demotion_between_oauth_consent_page_and_approval_is_denied
       - name: Test routes and workflows
         env:
           APP_ENV: testing
