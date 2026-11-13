@@ -9,6 +9,7 @@
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
   @include('layouts.partials.site-typography')
+  <link rel="stylesheet" href="{{ asset('css/header-flag-scroll-top.css') }}?v=1">
   {{-- Page-specific styles; no changes to public website layouts. --}}
   @stack('workspace-head')
   {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
@@ -264,7 +265,7 @@
       <div class="workspace-top-actions">
         <a class="icon-button workspace-home-link" href="{{ route('home') }}" title="Home" aria-label="Home"><x-icon name="home" size="19"/></a>
         <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle light or dark mode"><x-icon name="moon" size="19"/></button>
-        <x-language-menu/>
+        <x-language-menu class="header-flag-only"/>
         <details class="workspace-account-menu">
           <summary class="workspace-profile" aria-label="Account menu" title="{{ $user->name }}">
             <x-icon name="user" size="19"/>
