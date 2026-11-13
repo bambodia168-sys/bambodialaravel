@@ -56,6 +56,8 @@ jobs:
           bash tests/security/previewqa-step12l-socket-lifecycle-readonly-smoke.sh
           bash -n support/previewqa-step12m-disposable-socket-rebind-20261113.sh
           bash tests/security/previewqa-step12m-mock-socket-rebind-smoke.sh
+          bash -n support/previewqa-step12m-failed-probe-readonly-audit-20261113.sh
+          bash tests/security/previewqa-step12m-failure-readonly-audit-smoke.sh
           bash tests/security/previewqa-step12e-lua-repair-smoke.sh
           bash tests/security/previewqa-step12c-offline-group-smoke.sh
           bash -n support/workspace-upgrade.sh
