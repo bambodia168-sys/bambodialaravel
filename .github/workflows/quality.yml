@@ -148,6 +148,7 @@ jobs:
           bash -n support/bambodia-mcp-private-media-permissions-readonly-20261113.sh
           python3 -m py_compile support/bambodia-mcp-private-file-review-local-20261113.py
           python3 -m py_compile support/bambodia-mcp-offsite-backup-approval-preflight-20261113.py
+          python3 -m py_compile support/bambodia-mcp-isolated-restore-preflight-20261113.py
           python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_recovery_preflight.py' -v
           python3 - <<'PY'
           from pathlib import Path
@@ -161,8 +162,13 @@ jobs:
           assert "restic_password_file" in backup
           assert "MCP_RECOVERY_BACKUP_CREATED" in backup
           assert "MCP_RECOVERY_ISOLATED_RESTORE" in backup
+          isolated=Path("support/bambodia-mcp-isolated-restore-preflight-20261113.py").read_text()
+          assert "MCP_RESTORE_ACCEPTANCE=BLOCKED_PENDING_INDEPENDENT_EVIDENCE" in isolated
+          assert "MCP_RESTORE_ACTUAL_DATABASE_IDENTITY=NOT_VERIFIED" in isolated
+          assert "MCP_RESTORE_HOST_NETWORK_ISOLATION=NOT_VERIFIED" in isolated
+          assert "TARGET_OUTSIDE_PRIVATE_RESTORE_AREA" in isolated
           assert "MCP_PRODUCTION_RELEASE" in backup
-          for code in (local,backup):
+          for code in (local,backup,isolated):
               for dangerous in ("subprocess.", "os.system(", "mysqldump --", "restic backup",
                                 "os.chown(", "os.remove(", "os.rename(", "chmod -R"):
                   assert dangerous not in code, "preflight must not execute recovery or production mutations"
