@@ -46,6 +46,8 @@ jobs:
           bash tests/security/previewqa-step12g-host-guard-install-smoke.sh
           bash -n support/previewqa-step12h-independent-host-guard-audit-20261113.sh
           bash tests/security/previewqa-step12h-host-guard-independent-smoke.sh
+          bash -n support/previewqa-step12i-cloudflare-access-readiness-readonly-20261113.sh
+          bash tests/security/previewqa-step12i-access-first-readiness-smoke.sh
           bash tests/security/previewqa-step12e-lua-repair-smoke.sh
           bash tests/security/previewqa-step12c-offline-group-smoke.sh
           bash -n support/workspace-upgrade.sh
