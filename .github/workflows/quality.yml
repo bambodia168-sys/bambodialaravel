@@ -131,6 +131,16 @@ jobs:
           bash -n support/bambodia-mcp-main-domain-resolve-private-layout-review.sh
           bash -n support/bambodia-mcp-main-domain-resolve-private-critical.sh
           bash -n support/bambodia-mcp-main-domain-private-runtime-acceptance.sh
+          bash -n support/bambodia-mcp-main-domain-physical-oauth-qa.sh
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          src = Path('support/bambodia-mcp-main-domain-physical-oauth-qa.sh').read_text()
+          chunks = src.split("<<'PY'\n")
+          assert len(chunks) == 2, "Expected one isolated Python verification"
+          ast.parse(chunks[1].split("\nPY\n", 1)[0])
+          print("MCP_PHYSICAL_OAUTH_QA_PYTHON_SYNTAX=PASS")
+          PY
           python3 - <<'PY'
           import ast
           from pathlib import Path
