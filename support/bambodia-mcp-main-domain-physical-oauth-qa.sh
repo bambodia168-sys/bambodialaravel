@@ -35,8 +35,35 @@ r=json.loads(p.read_text())
 assert r.get("private_overlay_only") is True
 assert r.get("production_activation") is False
 assert r.get("production_deployment") is False
+# The primary reconciliation remains immutable. An independently verified
+# supplement records the minimal three-route developer addendum.
+extra=o/"review/mcp-private-developer-routes.json"
+assert extra.is_file() and not extra.is_symlink()
+x=json.loads(extra.read_text())
+addition=(
+ b"        Route::get('/developer/mcp-connection', [\\App\\Http\\Controllers\\Developer\\McpConnectionCenterController::class, 'index'])\n"
+ b"            ->name('developer.mcp.index');\n"
+ b"        Route::get('/developer/oauth-connections', [\\App\\Http\\Controllers\\Developer\\OAuthConnectionController::class, 'index'])\n"
+ b"            ->name('developer.oauth.index');\n"
+ b"        Route::delete('/developer/oauth-connections/{token}', [\\App\\Http\\Controllers\\Developer\\OAuthConnectionController::class, 'destroy'])\n"
+ b"            ->name('developer.oauth.revoke')->middleware('throttle:8,1');\n"
+)
+route=o/"source/routes/web.php"
+assert route.is_file() and not route.is_symlink()
+data=route.read_bytes()
+def sha(b): return hashlib.sha256(b).hexdigest()
+assert x.get("private_overlay_only") is True
+assert x.get("production_activation") is False
+assert x.get("production_deployment") is False
+assert x.get("inserted_developer_routes")==3
+assert x.get("all_other_route_bytes_preserved") is True
+assert x.get("base_route_sha256")==r.get("route_sha256")
+assert x.get("addition_sha256")==sha(addition)
+assert x.get("route_sha256")==sha(data)
+assert data.count(addition)==1
+assert sha(data.replace(addition,b"",1))==r.get("route_sha256")
+assert (l/"routes/web.php").read_bytes()==(o/"review/live-critical/routes/web.php").read_bytes()
 for name,field in [
- ("routes/web.php","route_sha256"),
  ("app/Http/Controllers/Api/BambodiaMcpController.php","controller_sha256"),
  ("app/Support/Mcp/BambodiaTools.php","draft_tools_sha256")]:
  source=o/"source"/name
@@ -44,6 +71,7 @@ for name,field in [
  snap=o/"review/live-critical"/name
  if not source.is_file() or source.is_symlink() or hashlib.sha256(source.read_bytes()).hexdigest()!=r.get(field) or not live.is_file() or live.is_symlink() or not snap.is_file() or live.read_bytes()!=snap.read_bytes():
   raise SystemExit("MCP_OAUTH_QA_BLOCKED=SOURCE_DRIFT_"+field)
+print("MCP_PRIVATE_DEVELOPER_ROUTE_SUPPLEMENT=VERIFIED")
 layout="resources/views/layouts/workspace.blade.php"
 assert hashlib.sha256((o/"source"/layout).read_bytes()).hexdigest()=="01154b97c1418441ddf0fcf60e50e81bbf5208a9265ae428550c2c7a2749beda"
 assert (l/layout).read_bytes()==(o/"review/live-critical"/layout).read_bytes()
