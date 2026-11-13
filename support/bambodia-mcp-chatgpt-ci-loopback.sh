@@ -10,6 +10,7 @@ fi
 [[ "$PWD" == "$(git rev-parse --show-toplevel)" ]] || exit 72
 [[ -f artisan && -s vendor/autoload.php && -s storage/oauth-private.key && -s storage/oauth-public.key ]] || exit 72
 [[ ! -e storage/app/installed.lock ]] || exit 72
+fail(){ echo "CHATGPT_CI_LOOPBACK_BLOCKED=$*" >&2; exit 1; }
 for cmd in php python3 curl openssl git; do command -v "$cmd" >/dev/null; done
 PHP="$(command -v php)"
 CLIENT_SOURCE="$PWD/support/bambodia-mcp-chatgpt-loopback-client.py"
@@ -24,12 +25,19 @@ cleanup(){
    kill "$SERVER_PID" 2>/dev/null || true
    wait "$SERVER_PID" 2>/dev/null || true
  fi
+ if [[ -f storage/app/installed.lock && ! -L storage/app/installed.lock ]]; then
+  rm -f -- storage/app/installed.lock
+ fi
  if [[ "$QA" == "$RUNNER_TEMP"/bambodia-chatgpt-ci.* && -d "$QA" && ! -L "$QA" ]]; then
    rm -rf --one-file-system -- "$QA"
  fi
 }
 trap cleanup EXIT
 KEY="base64:$(openssl rand -base64 32)"
+mkdir -p storage/app
+[[ ! -e storage/app/installed.lock && ! -L storage/app/installed.lock ]] || fail INSTALLED_MARKER_ALREADY_PRESENT
+touch storage/app/installed.lock
+chmod 600 storage/app/installed.lock
 echo "CHATGPT_CI_HOST=DISPOSABLE_GITHUB_ACTIONS"
 echo "========== CREATE ISOLATED SQLITE DATABASE FOR REAL LOOPBACK HTTP =========="
 HTTP_DB="$QA/storage/chatgpt-loopback.sqlite"
