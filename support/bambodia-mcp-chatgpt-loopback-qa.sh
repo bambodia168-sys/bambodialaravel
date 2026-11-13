@@ -466,12 +466,77 @@ if permission:
 badfn = re.search(r"Call to undefined (?:function|method)\s+([a-zA-Z_\\][a-zA-Z_0-9\\:]{0,90})", unescaped)
 if badfn:
     print("QA_HTTP_UNDEFINED_CALL=" + badfn.group(1).replace("\\", "."))
-# Only a relative code path, never the server root or user-provided file.
+# Identify the ORIGINAL exception site from Laravel's exception header.
+# HandleExceptions.php:267 is the framework's error-to-exception adapter,
+# not necessarily the code that emitted the warning.
+allowed = r"(?:app|routes|bootstrap|config|lang|public|vendor)/[A-Za-z0-9_./-]{1,160}"
+site = re.search(
+    r"\bat\s+" + re.escape(str(qa)) + r"/(" + allowed + r"):(\d{1,6})\b",
+    unescaped,
+)
+if site:
+    print("QA_HTTP_THROW_SITE=" + site.group(1) + ":" + site.group(2))
+else:
+    print("QA_HTTP_THROW_SITE=NOT_FOUND")
+
+# Restrict diagnostics to fixed categories. Do not print the message text:
+# it may contain query values, bearer tokens or sensitive application data.
+categories = [
+    ("UNDEFINED_ARRAY_KEY", r"Undefined array key"),
+    ("UNDEFINED_VARIABLE", r"Undefined variable"),
+    ("UNDEFINED_PROPERTY", r"Undefined property"),
+    ("NULL_PROPERTY_ACCESS", r"Attempt to read property"),
+    ("ARRAY_OFFSET", r"Trying to access array offset"),
+    ("UNDEFINED_CALL", r"Call to undefined (?:function|method)"),
+    ("MISSING_REQUIRE", r"Failed opening required|Failed to open stream"),
+    ("MISSING_FILE", r"No such file or directory"),
+    ("PERMISSION", r"Permission denied|Read-only file system"),
+    ("DEPRECATED", r"\bDeprecated\b|\bdeprecation\b"),
+    ("TYPE", r"TypeError|must be of type"),
+]
+kind = next((name for name, expr in categories
+             if re.search(expr, unescaped, re.IGNORECASE)), "OTHER")
+print("QA_HTTP_ERROR_KIND=" + kind)
+
+# Show the first application frame, if any, rather than a generic vendor
+# bootstrap frame. Use only paths INSIDE the disposable QA tree.
 stack = "\n".join(lines[-1200:])
-code = re.search(re.escape(str(qa)) + r"/((?:app|routes|bootstrap|config|vendor)/[a-zA-Z0-9_./-]{1,160})\((\d{1,6})\)", stack)
-if code:
-    print("QA_HTTP_STACK_LOCATION=" + code.group(1) + ":" + code.group(2))
+app_frame = re.search(
+    r"#\d+\s+" + re.escape(str(qa)) +
+    r"/((?:app|routes|bootstrap|config|lang|public)/[A-Za-z0-9_./-]{1,160})"
+    r"\((\d{1,6})\)",
+    stack,
+)
+if app_frame:
+    print("QA_HTTP_FIRST_APP_FRAME=" +
+          app_frame.group(1) + ":" + app_frame.group(2))
+else:
+    print("QA_HTTP_FIRST_APP_FRAME=NOT_FOUND")
+
+# A framework/vendor throw site can still locate a dependency mismatch.
+# Prefer the origin from the exception header, never a handler-only frame.
+if not site:
+    vendor_frame = re.search(
+        r"#\d+\s+" + re.escape(str(qa)) +
+        r"/(vendor/[A-Za-z0-9_./-]{1,160})\((\d{1,6})\)",
+        stack,
+    )
+    if vendor_frame:
+        print("QA_HTTP_VENDOR_FRAME=" +
+              vendor_frame.group(1) + ":" + vendor_frame.group(2))
 PY
+# Secondary probes stay on the same private 127.0.0.1 server.
+# Discard bodies and emit only HTTP status numbers.
+for probe in "NESTED|/.well-known/oauth-protected-resource/mcp" "LOGIN|/login"; do
+  probe_name="${probe%%|*}"
+  probe_path="${probe#*|}"
+  probe_status="$(curl -s --max-time 8 -o /dev/null -w '%{http_code}' \
+    -H 'Host: bambodia.com' \
+    -H 'Accept: application/json, text/html, text/event-stream' \
+    "http://127.0.0.1:$PORT$probe_path" || true)"
+  [[ "$probe_status" =~ ^[0-9]{3}$ ]] || probe_status=UNREACHABLE
+  echo "QA_HTTP_ROUTE_PROBE_${probe_name}=$probe_status"
+done
  fail CHATGPT_LOOPBACK_HTTP_ACCEPTANCE_FAILED
 fi
 echo "QA_COPY_AND_EPHEMERAL_KEYS=REMOVED_AT_EXIT"
