@@ -178,6 +178,18 @@ foreach ([
     ]);
 }
 
+// A private test-only video, linked to a published article so the public
+// preview route is readable without exposing unrelated private media.
+$blogVideoPath = 'marketplace/previews/'.$admin->id.'/qa-blog-video.webm';
+\\Illuminate\\Support\\Facades\\Storage::disk('local')->put($blogVideoPath, "test-only-video-not-a-real-decoder-fixture");
+$blogVideo = \\App\\Models\\MediaAsset::query()->create([
+    'user_id'=>$admin->id,'original_name'=>'qa-blog-video.webm',
+    'storage_path'=>$blogVideoPath,'mime_type'=>'video/webm','bytes'=>40,
+    'width'=>0,'height'=>0,'alt_text'=>'Browser QA video cover',
+    'rights_basis'=>'owned','rights_holder'=>'Browser QA Admin',
+    'review_status'=>'approved','reviewed_by'=>$admin->id,'reviewed_at'=>now(),
+]);
+
 // Newest ten posts are browsable; the eleventh oldest and a draft stay hidden.
 foreach(range(1,11) as $i) {
     \App\Models\ContentEntry::query()->create([
@@ -188,9 +200,10 @@ foreach(range(1,11) as $i) {
         'category'=>$i % 2 ? 'Technology' : 'Business',
         'status'=>'published',
         'published_at'=>now()->subHours($i),
-        'featured_type'=>$i===1?'image':($i===2?'color':'none'),
-        'featured_media_id'=>$i===1?$cover->id:null,
+        'featured_type'=>$i===1?'image':($i===2?'color':($i===3?'video':($i===4?'youtube':'none'))),
+        'featured_media_id'=>$i===1?$cover->id:($i===3?$blogVideo->id:null),
         'featured_color'=>$i===2?'#155e75':null,
+        'featured_url'=>$i===4?'https://www.youtube.com/watch?v=dQw4w9WgXcQ':null,
     ]);
 }
 \App\Models\ContentEntry::query()->create([
