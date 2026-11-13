@@ -319,11 +319,23 @@ final class BambodiaMcpOAuthTest extends TestCase
         $authToken = session('authToken');
         $actor->forceFill(['role' => 'customer'])->save();
 
-        $this->post(route('passport.authorizations.approve'), [
+        $approvalRoutes = collect(\Illuminate\Support\Facades\Route::getRoutes()->getRoutes())
+            ->filter(fn ($r) => $r->uri() === 'oauth/authorize'
+                && in_array('POST', $r->methods(), true))->values();
+        $this->assertCount(1, $approvalRoutes, 'Unexpected Passport POST consent route count.');
+        $this->assertContains('mcp.oauth.consent',
+            $approvalRoutes->first()->gatherMiddleware(),
+            'The actual Passport POST route is missing the post-session administrator guard.');
+
+        $approvalResponse = $this->post(route('passport.authorizations.approve'), [
             'client_id' => $client,
             'state' => $state,
             'auth_token' => $authToken,
-        ])->assertForbidden();
+        ]);
+        $destination = (string) (parse_url((string) $approvalResponse->headers->get('Location'),
+            PHP_URL_PATH) ?? '');
+        $this->assertSame(403, $approvalResponse->status(),
+            'Demoted admin was redirected to path '.$destination.' instead of being forbidden.');
         $this->assertDatabaseCount('oauth_auth_codes', 0);
         $this->assertDatabaseCount('oauth_access_tokens', 0);
     }
