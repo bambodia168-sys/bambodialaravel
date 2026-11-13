@@ -135,7 +135,8 @@ def parse_html(body: bytes) -> Forms:
 
 
 def redirect_query(status: int, location: str) -> dict[str, str]:
-    require(status in (302, 303) and location, "OAUTH_MISSING_CALLBACK_REDIRECT")
+    require(status in (302, 303), "OAUTH_NO_CALLBACK_HTTP_" + str(status))
+    require(bool(location), "OAUTH_CALLBACK_LOCATION_ABSENT")
     uri = urlsplit(html.unescape(location))
     require(uri.scheme == "https" and uri.netloc == "chatgpt.com"
             and uri.path == "/connector/oauth/qa-callback",
