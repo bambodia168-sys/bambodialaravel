@@ -13,8 +13,8 @@ for cmd in gh git python3 sha256sum stat; do
  command -v "$cmd" >/dev/null || fail "REQUIRED_COMMAND_MISSING"
 done
 REPO="bambodia168-sys/bambodialaravel"
-SOURCE_COMMIT="a00e1e21b299421d3b07b4a1a1be0c774462b7b6"
-SOURCE_BLOB="3dade3bc924f9627d4000ef7ed2485b1b01f7894"
+SOURCE_COMMIT="7cf67d5999495468fc398fedc99845c0d1f4702b"
+SOURCE_BLOB="b056a5616f52da5725dac18bc1415b65025ddaca"
 APP=/www/wwwroot/bambodia-staging-qa
 VHOST=/www/server/panel/vhost/nginx/bambodia.com.conf
 PHP=/www/server/php/85/bin/php
