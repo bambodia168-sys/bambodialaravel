@@ -110,7 +110,11 @@ class Loopback:
         try:
             result = json.loads(body)
         except (ValueError, UnicodeDecodeError):
-            raise RuntimeError("CHATGPT_LOOPBACK_BLOCKED=INVALID_JSON_RESPONSE") from None
+            safe_path = path.split("?", 1)[0].strip("/").replace("/", "_")[:64]
+            raise RuntimeError(
+                "CHATGPT_LOOPBACK_BLOCKED=INVALID_JSON_RESPONSE_" +
+                str(status) + "_" + safe_path
+            ) from None
         require(isinstance(result, dict), "INVALID_JSON_SHAPE")
         return status, location, result
 
