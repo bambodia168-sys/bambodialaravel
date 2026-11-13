@@ -22,10 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureRole::class,
             'api.token' => AuthenticateApiToken::class,
             'mcp.auth' => \App\Http\Middleware\AuthenticateMcpToken::class,
-            'mcp.oauth.consent' => \App\Http\Middleware\EnsureMcpOAuthConsentAdmin::class,
             'capability' => EnsureCapability::class,
         ]);
-        $middleware->web(append: [SetLocale::class, EnsureActiveAccount::class]);
+        $middleware->web(append: [SetLocale::class, EnsureActiveAccount::class,
+            \App\Http\Middleware\EnsureMcpOAuthConsentAdmin::class]);
         $middleware->append(\App\Http\Middleware\RequireMcpOAuthResource::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
