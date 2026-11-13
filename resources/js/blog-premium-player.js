@@ -23,6 +23,9 @@ export function initBlogPremiumPlayers() {
         const seek = root.querySelector('[data-blog-player-seek]');
         const time = root.querySelector('[data-blog-player-time]');
         const muteButton = root.querySelector('[data-blog-player-mute]');
+        const volumeWrap = root.querySelector('[data-blog-player-volume-wrap]');
+        const volumeTrigger = root.querySelector('[data-blog-player-volume-trigger]');
+        const volumePopover = root.querySelector('[data-blog-player-volume-popover]');
         const volumeIcon = root.querySelector('[data-blog-player-volume-icon]');
         const mutedIcon = root.querySelector('[data-blog-player-muted-icon]');
         const volume = root.querySelector('[data-blog-player-volume]');
@@ -32,11 +35,11 @@ export function initBlogPremiumPlayers() {
         const exitFullscreen = root.querySelector('[data-blog-player-exit-fullscreen]');
         const expandIcon = root.querySelector('[data-blog-player-expand-icon]');
         const collapseIcon = root.querySelector('[data-blog-player-collapse-icon]');
-        const fullscreenLabel = root.querySelector('[data-blog-player-fullscreen-label]');
         const status = root.querySelector('[data-blog-player-status]');
         if (![video, hud, center, playIcon, pauseIcon, seek, time, muteButton,
-            volumeIcon, mutedIcon, volume, rate, fullscreen, exitFullscreen,
-            expandIcon, collapseIcon, fullscreenLabel, status].every(Boolean) ||
+            volumeWrap, volumeTrigger, volumePopover, volumeIcon, mutedIcon,
+            volume, rate, fullscreen, exitFullscreen, expandIcon, collapseIcon,
+            status].every(Boolean) ||
             playButtons.length !== 2) return;
 
         const duration = () => Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
@@ -93,6 +96,30 @@ export function initBlogPremiumPlayers() {
         seek.addEventListener('input', () => {
             if (duration()) video.currentTime = (Number(seek.value) / 100) * duration();
         });
+        // The speaker opens a vertical volume adjustment. The mute button stays
+        // available inside the popover, and keyboard M continues to toggle mute.
+        const setVolumeOpen = (open, returnFocus = false) => {
+            volumePopover.hidden = !open;
+            volumeTrigger.setAttribute('aria-expanded', String(open));
+            if (returnFocus) volumeTrigger.focus({ preventScroll: true });
+        };
+        volumeTrigger.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const open = volumePopover.hidden;
+            setVolumeOpen(open);
+            if (open) volume.focus({ preventScroll: true });
+        });
+        volumeWrap.addEventListener('click', (event) => event.stopPropagation());
+        document.addEventListener('click', (event) => {
+            if (!volumeWrap.contains(event.target)) setVolumeOpen(false);
+        });
+        volumeWrap.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !volumePopover.hidden) {
+                event.preventDefault();
+                event.stopPropagation();
+                setVolumeOpen(false, true);
+            }
+        });
         muteButton.addEventListener('click', () => { video.muted = !video.muted; });
         volume.addEventListener('input', () => {
             video.volume = Number(volume.value);
@@ -130,10 +157,10 @@ export function initBlogPremiumPlayers() {
             fullscreen.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');
             fullscreen.setAttribute('title', active ? 'Exit full screen' : 'Full screen');
             fullscreen.setAttribute('aria-pressed', String(active));
-            fullscreenLabel.textContent = active ? 'Exit full screen' : 'Full screen';
             expandIcon.hidden = active;
             collapseIcon.hidden = !active;
             exitFullscreen.hidden = !active;
+            if (active) setVolumeOpen(false);
             // Escape may exit fullscreen without clicking a button. Never strand
             // keyboard focus on an action that becomes hidden.
             if (!active && exitHadFocus) fullscreen.focus({ preventScroll: true });
