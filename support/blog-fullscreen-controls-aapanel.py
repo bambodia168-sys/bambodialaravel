@@ -24,7 +24,9 @@ SOURCE_BASELINES = {
 }
 PREVIOUS_PINNED = {
     "resources/views/content/show.blade.php": "0c54251c06204657bb24c6bed3ef47f63dd1c033",
-    "resources/js/app.js": "2c576988a5dca57a0065c01fa1db424f0e42d3d7",
+    # This file is unchanged by the fullscreen patch. Pin the reconciled
+    # GitHub main blob, which was verified on aaPanel by PR #51's audit.
+    "resources/js/app.js": "31a039632ce8020572569f176da5e4fa2e8f27b8",
     "resources/views/home.blade.php": "6b002ecdbaf917f320d6cfe6a6617dfbfb7206af",
     "resources/views/content/blog.blade.php": "11c58c4c305341533051af1a160b469bbb1d3a21",
     "resources/views/components/blog-card-featured-media.blade.php": "55ce6de3fdc4d8d49989583d41381d91373f284d",
