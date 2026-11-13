@@ -131,6 +131,7 @@ jobs:
           python3 -m py_compile support/reconcile-live-ui-aapanel-readonly.py
           python3 -m py_compile support/blog-fullscreen-controls-aapanel.py
           python3 -m py_compile support/blog-vertical-volume-ghost-controls-aapanel.py
+          python3 -m py_compile support/footer-two-tone-aapanel.py
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
