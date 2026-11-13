@@ -18,6 +18,8 @@ return [
     'marketplace' => '交易市场',
     'for_users' => '用户中心',
     'compliance' => '合规',
+    'footer_legal_policies' => '法律与政策',
+    'footer_email_support' => '邮件支持',
     'footer_marketplace_projects' => '项目',
     'footer_marketplace_products' => '产品',
     'footer_marketplace_freelance' => '自由职业',
