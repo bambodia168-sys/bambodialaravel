@@ -175,3 +175,32 @@ The next operator check is `support/bambodia-mcp-production-backup-readiness-rea
 **No inventory result can establish restore safety.** Before release, the authorized administrator and independent reviewer must separately complete and retain offline evidence for (1) an approved, consistent and access-controlled live database + private-media backup, including encryption and off-host copy; (2) restoration into an isolated database / media clone with no public DNS, SMTP/webhook notifications or production OAuth keys; (3) actual record-count/UUID, user role and ownership, product/order/license, blog/job, customer-media checksum and file-permission reconciliation; (4) Laravel migration and Passport table reversibility / safe feature-switch rollback including token revocation; and (5) an end-to-end isolated app code/asset restore from a known-good release artifact. Check domain-to-root mapping and current live code drift again before any release decision. Never copy raw production data or secrets into GitHub or paste them into chat. Production feature flags stay `BAMBODIA_MCP_ENABLED=false` and `BAMBODIA_MCP_WRITES_ENABLED=false` until a separately approved release and then read-only activation.
 
 Status: **Read-only backup inventory tool PREPARED; real backup/restoration and rollback NOT PERFORMED; production cutover BLOCKED.**
+
+
+## Physical aaPanel backup inventory completed — operator observations (2026-11-13)
+
+The operator ran the SHA-verified read-only inspector at `b409973b2e75474cee48247e6ecd53ab896ec540` after all **five** CI workflows had passed. The live app/vhost/Composer identity checks passed. Results are metadata-only, not file content inspection or backup validation:
+
+| Question | Observed result | Interpretation |
+| --- | --- | --- |
+| Expected aaPanel database backup directory | Present; 1 potential archive; most recent 34.0 days ago | **Coverage unproven**. A filename extension and mtime do not establish valid MySQL content, correct database, or an appropriate recovery point |
+| Expected aaPanel website backup directory | Present; 0 potential archives | **No site backup evidenced in that location**; other paths or off-site backups not scanned |
+| `storage/app/public` | Present; 3 files | Metadata only, unknown if all live assets |
+| `storage/app/private` | Present; 12 files | Metadata only; private data deliberately unread |
+| `public/uploads` and `public/media` | Not found in those exact locations | Not proof of missing media; actual storage drivers and disks not reviewed |
+| Production `.env` permissions | No world read/write bits | Basic permission check only; ownership and actual secret lifecycle not established |
+| Free filesystem space | 51.18 GiB on production/root filesystem | Capacity for a full encrypted recovery set **not established**, as actual DB/media volumes and off-host retention are unknown |
+| Archive total | `0.0 GiB` rounded | Not an exact-byte value; **must not** interpret as an empty archive or usable backup |
+| Production MySQL, customer data, secrets | Not accessed | No database/media/permissions reconciliation possible from this inventory |
+
+The operator confirmed `BACKUP_READINESS_AUDIT=READ_ONLY_COMPLETED`, `ISOLATED_BACKUP_RESTORE=NOT_PERFORMED`, `ENCRYPTED_OFFSITE_BACKUP=NOT_VERIFIED`, `APPLICATION_SCHEMA_AND_CODE_ROLLBACK_REHEARSAL=NOT_PERFORMED`, `MCP_PRODUCTION_RELEASE_GATE=BLOCKED`, and `PRODUCTION_SOURCE_DATABASE_SECRETS_NGINX=UNCHANGED_BY_AUDIT`. Source and database were unchanged, and external ChatGPT OAuth linking not attempted.
+
+**Independent recovery acceptance, required before any release**:
+
+1. **Authorized scope:** inventory actual production MySQL database(s), object/media storage disks and user uploads, current installer lock, deployed Vite/assets, nginx vhost/TLS and deployed code source. Record owner-approved recovery point objective (RPO), recovery time objective (RTO) and retention/legal constraints without publishing sensitive identifiers or credentials.
+2. **Consistent fresh backup:** use the production owner's approved, encrypted and access-controlled database snapshot method plus a coherent private/public media snapshot. Ensure DB log/PITR configuration where applicable and capture source/artifact hashes. Store at least one protected off-server recovery copy and avoid writing cleartext dumps under a public docroot or into GitHub. The single 34-day-old potential file is **not** a substitute.
+3. **Independent isolated restore:** on a newly allocated private database/host disconnected from production routes and outbound email/webhooks, restore the approved artifact. Generate new disposable application keys and **do not import/activate production OAuth signing/private keys or live integrations**. Verify migrations, account ownership and roles, license/order state, active media and checksum coverage, and reported row counts. Restrict access, securely destroy test copies after acceptance according to authorized policy.
+4. **Rollback rehearsal:** test reverting code/build assets to a pinned pre-release artifact and restoring app DB/media together, including schema/PASSPORT OAuth migration constraints, token revocation and disabled MCP/write switches. Compare rollback time against the approved RTO. Record evidence and reviewers, not raw personal data or credentials.
+5. **Release control:** obtain independent security and operations approval **after** restored data, Nginx/PHP-FPM authorization routing and physical device testing pass. PR #46 remains **DRAFT, unmerged**, no production deployment, no MCP activation, and no external ChatGPT linking.
+
+**Decision: RECOVERY GATE BLOCKED.** This inventory neither confirms complete backups nor authorizes backup creation or restoration.
