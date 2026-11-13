@@ -7,7 +7,7 @@ umask 077
  echo "Usage: --isolated-loopback-qa /root/verified-client.py" >&2; exit 64;
 }
 CLIENT_SOURCE="$2"
-CLIENT_BLOB="0b04f2c5c65f7a30637acbc5b98c3397c38315d4"
+CLIENT_BLOB="3e6e5c4b93db47e0429424930856c4fb69779519"
 [[ "$CLIENT_SOURCE" == /root/* && -f "$CLIENT_SOURCE" && ! -L "$CLIENT_SOURCE" ]] || {
  echo "MCP_CHATGPT_QA_BLOCKED=CLIENT_PATH_UNSAFE" >&2; exit 1;
 }
