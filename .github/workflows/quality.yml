@@ -142,6 +142,58 @@ jobs:
           bash -n support/bambodia-mcp-refreshed-candidate-http-qa-20261113.sh
           bash -n support/bambodia-mcp-refreshed-frontend-drift-readonly-20261113.sh
           bash -n support/bambodia-mcp-two-blade-private-rebase-20261113.sh
+          bash -n support/bambodia-mcp-two-blade-candidate-http-qa-20261113.sh
+          python3 - <<'PY'
+          import ast
+          import subprocess
+          import sys
+          import tempfile
+          from pathlib import Path
+
+          file=Path("support/bambodia-mcp-two-blade-candidate-http-qa-20261113.sh")
+          script=file.read_text()
+          parts=script.split("<<'PY'\n")
+          assert len(parts)==3, "Require exactly two pinned Python validation/adapter blocks"
+          for part in parts[1:]:
+              ast.parse(part.split("\nPY\n",1)[0])
+
+          for expected in (
+              "NEW=/root/Bambodia-MCP-Overlay-TwoBlade.9ZqCTvhp",
+              "PRIOR=/root/Bambodia-MCP-Overlay-Refresh.hZDR51NJ",
+              "TWO_BLADE_CANDIDATE_PROVENANCE=PASS",
+              "TWO_BLADE_NEWER_TEMPLATES=2_OF_2_VERIFIED",
+              "TWO_BLADE_PRIOR_TEMPLATES=2_SNAPSHOT_PRESERVED",
+              "REFRESHED_CANDIDATE_OAUTH_SOURCE=6_OF_6_VERIFIED",
+              "REFRESHED_CANDIDATE_FRONTEND=11_OF_11_MATCH_LIVE",
+              "REFRESHED_CANDIDATE_CRITICAL_SNAPSHOTS=9_UNCHANGED",
+              "REFRESHED_CANDIDATE_VITE=23_OF_23_VERIFIED",
+              "REFRESHED_CANDIDATE_PUBLIC_HTTP_SMOKE=PASS",
+              "TWO_BLADE_CANDIDATE_INDEPENDENT_HTTP_OAUTH=PASS",
+              "MCP_PRODUCTION_ACTIVATION=NOT_STARTED",
+          ):
+              assert expected in script, "Missing two-Blade private HTTP guard: " + expected
+
+          with tempfile.TemporaryDirectory() as tmp:
+              original=Path(tmp)/"original.sh"
+              adapted=Path(tmp)/"adapted.sh"
+              original.write_text(
+                  Path("support/bambodia-mcp-chatgpt-loopback-qa.sh").read_text()
+              )
+              adapter=parts[2].split("\nPY\n",1)[0]
+              result=subprocess.run(
+                  [sys.executable,"-c",adapter,str(original),str(adapted)],
+                  capture_output=True,text=True
+              )
+              assert result.returncode==0,result.stderr[:300]
+              source=adapted.read_text()
+              assert "qa_patch_php" not in source
+              assert "QA_SOURCE_RELEASE" not in source
+              assert "OVERLAY=/root/Bambodia-MCP-Overlay-TwoBlade.9ZqCTvhp" in source
+              assert "REFRESHED_CANDIDATE_PUBLIC_HTTP_SMOKE=PASS" in source
+              syntax=subprocess.run(["bash","-n",str(adapted)],capture_output=True,text=True)
+              assert syntax.returncode==0,syntax.stderr[:300]
+          print("MCP_TWO_BLADE_PRIVATE_HTTP_QA_SYNTHESIS=PASS")
+          PY
           python3 - <<'PY'
           import ast
           from pathlib import Path
