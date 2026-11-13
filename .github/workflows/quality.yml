@@ -143,6 +143,32 @@ jobs:
           bash -n support/bambodia-mcp-refreshed-frontend-drift-readonly-20261113.sh
           bash -n support/bambodia-mcp-two-blade-private-rebase-20261113.sh
           bash -n support/bambodia-mcp-two-blade-candidate-http-qa-20261113.sh
+          bash -n support/bambodia-mcp-production-backup-readiness-readonly-20261113.sh
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          source=Path("support/bambodia-mcp-production-backup-readiness-readonly-20261113.sh").read_text()
+          parts=source.split("<<'PY'\n")
+          assert len(parts)==2, "Exactly one embedded backup-metadata inspector required"
+          ast.parse(parts[1].split("\nPY\n",1)[0])
+          for label in (
+              "BACKUP_AAPANEL_DATABASE",
+              "BACKUP_AAPANEL_SITE",
+              "MEDIA_STORAGE_APP_PRIVATE",
+              "MEDIA_STORAGE_APP_PUBLIC",
+              "PRODUCTION_ENV_OTHER_READ_WRITE",
+              "DATABASE_MEDIA_CONSISTENT_BACKUP",
+              "ISOLATED_BACKUP_RESTORE",
+              "APPLICATION_SCHEMA_AND_CODE_ROLLBACK_REHEARSAL",
+              "BACKUP_READINESS_AUDIT",
+              "MCP_PRODUCTION_RELEASE_GATE",
+              "PRODUCTION_SOURCE_DATABASE_SECRETS_NGINX",
+          ):
+              assert label in source, "Missing backup metadata gate: "+label
+          assert "open(" not in source and "subprocess" not in source
+          assert "os.walk(" in source and "followlinks=False" in source
+          print("MCP_BACKUP_READINESS_AUDIT_STATIC_GUARDS=PASS")
+          PY
           python3 - <<'PY'
           import ast
           import subprocess
