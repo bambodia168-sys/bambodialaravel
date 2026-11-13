@@ -149,8 +149,15 @@
 <main class="site-main">@yield('content')</main>
 @php
   $footerPolicies = \App\Models\Policy::query()->where('status', 'published')
-      ->whereIn('category', ['cookies', 'gdpr', 'privacy', 'terms'])
+      ->whereIn('category', ['cookies', 'gdpr', 'privacy'])
       ->orderByDesc('updated_at')->get()->unique('category')->keyBy('category');
+  // Several published documents share the "terms" category. Select the actual
+  // Terms of Service by canonical slug, not an unrelated recently edited policy.
+  $footerTermsOfService = \App\Models\Policy::query()
+      ->where('status', 'published')
+      ->where('category', 'terms')
+      ->where('slug', 'terms-of-service')
+      ->orderByDesc('published_at')->orderByDesc('id')->first();
   $aboutPage = \App\Models\ContentEntry::query()->where('status', 'published')
       ->where('type', 'page')->where('slug', 'about')->latest()->first();
 @endphp
@@ -182,7 +189,7 @@
       @if($footerPolicies->has('cookies'))<a href="{{ $footerPolicies->get('cookies')->publicUrl() }}">Cookie Policy</a>@endif
       @if($footerPolicies->has('gdpr'))<a href="{{ $footerPolicies->get('gdpr')->publicUrl() }}">GDPR Policy</a>@endif
       @if($footerPolicies->has('privacy'))<a href="{{ $footerPolicies->get('privacy')->publicUrl() }}">Privacy Policy</a>@endif
-      @if($footerPolicies->has('terms'))<a href="{{ $footerPolicies->get('terms')->publicUrl() }}">Terms of Service</a>@endif
+      @if($footerTermsOfService)<a href="{{ $footerTermsOfService->publicUrl() }}">Terms of Service</a>@endif
     </div>
   </div>
   <div class="footer-bottom-band">
