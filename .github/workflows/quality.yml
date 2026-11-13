@@ -145,6 +145,37 @@ jobs:
           bash -n support/bambodia-mcp-two-blade-candidate-http-qa-20261113.sh
           bash -n support/bambodia-mcp-production-backup-readiness-readonly-20261113.sh
           bash -n support/bambodia-mcp-production-topology-readonly-20261113.sh
+          bash -n support/bambodia-mcp-db-metadata-operator-20261113.sh
+          php -l support/bambodia-mcp-db-metadata-readonly-20261113.php
+          python3 - <<'PY'
+          from pathlib import Path
+          operator=Path("support/bambodia-mcp-db-metadata-operator-20261113.sh").read_text()
+          client=Path("support/bambodia-mcp-db-metadata-readonly-20261113.php").read_text()
+          for required in (
+              "AUDIT-MYSQL-METADATA-READ-ONLY",
+              "SOURCE_COMMIT=", "SOURCE_BLOB=", "git hash-object",
+              "MCP_PRIVATE_ROOT_OTHER_READ",
+              "MCP_PRIVATE_ACLS_AND_SERVING_RULES=NOT_VERIFIED",
+              "MCP_DB_METADATA_CLIENT_INTEGRITY=PASS",
+              "env -i", "MCP_RELEASE_GATE=BLOCKED",
+          ):
+              assert required in operator, "missing operator security guard: "+required
+          for required in (
+              "information_schema.TABLES", "SELECT DATABASE()",
+              "MCP_DB_IDENTITY", "MCP_DB_BASE_TABLES",
+              "MCP_DB_INNODB_TABLES", "MCP_DB_MYISAM_TABLES",
+              "MCP_DB_BINARY_LOGGING", "MCP_DB_METADATA_AUDIT",
+              "MCP_PRODUCTION_RELEASE", "MCP_DB_CUSTOMER_RECORDS",
+              "mcp_fail('READ_ONLY_CONNECT_OR_METADATA_QUERY_FAILED')",
+          ):
+              assert required in client, "missing client read-only assertion: "+required
+          for forbidden in ("PDO::exec(", "->exec(", "SELECT * FROM users",
+                            "artisan", "mysqldump", "mariadb-dump",
+                            "INSERT INTO", "UPDATE users SET",
+                            "DELETE FROM", "DROP TABLE", "ALTER TABLE"):
+              assert forbidden not in client, "unexpected non-metadata operation: "+forbidden
+          print("MCP_DB_METADATA_OPERATOR_STATIC_GUARDS=PASS")
+          PY
           python3 - <<'PY'
           import ast
           from pathlib import Path
