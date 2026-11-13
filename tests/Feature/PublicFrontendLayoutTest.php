@@ -249,6 +249,9 @@ class PublicFrontendLayoutTest extends TestCase
         $this->assertStringContainsString('class="brand-logo-dark"', $footer);
         $this->assertStringNotContainsString('class="brand-mark"', $footer);
         $this->assertStringContainsString('class="footer-copyright"', $footer);
+        $this->assertStringContainsString('class="footer-bottom-band"', $footer);
+        $this->assertSame(1, substr_count($footer, 'class="footer-bottom-band"'));
+        $this->assertStringContainsString('css/footer-two-tone-themes.css', $html);
         $this->assertStringContainsString('© '.date('Y').' Bambodia', $footer);
         $socialContents = explode('</div>', explode('<div class="footer-social"', $footer, 2)[1], 2)[0];
         $this->assertSame(2, substr_count($socialContents, '<a '));
