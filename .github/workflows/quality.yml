@@ -150,6 +150,8 @@ jobs:
           assert "QA_EARLY_EXCEPTION_CLASSIFIER=DISPOSABLE_COPY_ONLY" in runner
           assert "QA_HTTP_EARLY_EXCEPTION_CLASS=" in runner
           assert "QA_HTTP_HEADER_MUTATION_" in runner
+          assert 'http_php -d variables_order=EGPCS -S "127.0.0.1:$PORT"' in runner
+          assert 'QA_HTTP_VARIABLES_ORDER=EGPCS_DISPOSABLE_HTTP_ONLY' in runner
           for section in runner.split("<<'PY'\n")[1:]:
               ast.parse(section.split("\nPY\n", 1)[0])
           assert 'CLIENT_BLOB=' in runner
