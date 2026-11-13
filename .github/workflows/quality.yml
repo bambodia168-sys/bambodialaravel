@@ -134,6 +134,7 @@ jobs:
           python3 -m py_compile support/footer-two-tone-aapanel.py
           python3 -m py_compile support/footer-aurora-aapanel.py
           python3 -m py_compile support/home-hero-aurora-aapanel.py
+          python3 -m py_compile support/freelance-terminology-aapanel.py
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
