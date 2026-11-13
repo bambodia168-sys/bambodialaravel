@@ -99,5 +99,47 @@ class BackupApprovalTests(unittest.TestCase):
         self.assertFalse(approval.validate_approval(config))
 
 
+restore = load_module(
+    "bambodia_restore_preflight",
+    "support/bambodia-mcp-isolated-restore-preflight-20261113.py",
+)
+
+
+class IsolatedRestoreSafetyTests(unittest.TestCase):
+    def setUp(self):
+        self.safe = {
+            "APP_ENV": "testing", "APP_DEBUG": "false",
+            "APP_URL": "http://127.0.0.1:8094",
+            "MAIL_MAILER": "array", "QUEUE_CONNECTION": "null",
+            "BROADCAST_CONNECTION": "log", "CACHE_STORE": "array",
+            "SESSION_DRIVER": "array",
+            "BAMBODIA_MCP_ENABLED": "false",
+            "BAMBODIA_MCP_WRITES_ENABLED": "false",
+            "DB_CONNECTION": "mysql",
+        }
+
+    def test_explicit_offline_flags_accepted(self):
+        self.assertTrue(all(restore.check_offline_flags(self.safe).values()))
+
+    def test_smtp_or_live_queue_fail_closed(self):
+        for k, v in (("MAIL_MAILER", "smtp"), ("QUEUE_CONNECTION", "database")):
+            data = dict(self.safe, **{k: v})
+            self.assertFalse(all(restore.check_offline_flags(data).values()))
+
+    def test_oauth_or_public_url_fail_closed(self):
+        for k, v in (("BAMBODIA_MCP_ENABLED", "true"),
+                     ("BAMBODIA_MCP_WRITES_ENABLED", "true"),
+                     ("APP_URL", "https://bambodia.com")):
+            data = dict(self.safe, **{k: v})
+            self.assertFalse(all(restore.check_offline_flags(data).values()))
+
+    def test_missing_flags_fail_closed(self):
+        self.assertFalse(all(restore.check_offline_flags({}).values()))
+
+    def test_wrong_restore_location_blocked(self):
+        with self.assertRaises(restore.Blocked):
+            restore.isolated_root(Path("/www/wwwroot/bambodia-staging-qa"))
+
+
 if __name__ == "__main__":
     unittest.main()
