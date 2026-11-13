@@ -17,7 +17,7 @@
        Kept separate from the video controls for mouse, touch and keyboard access. --}}
   <button type="button" class="blog-player-fullscreen-exit" data-blog-player-exit-fullscreen
           aria-label="Exit full screen" title="Exit full screen" hidden>
-    <x-icon name="minimize" size="18"/>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v6H3M3 9l7-7M15 21v-6h6m0 0-7 7"/></svg>
     <span>Exit full screen</span>
   </button>
 
@@ -56,7 +56,7 @@
               data-blog-player-fullscreen aria-label="Enter full screen"
               title="Full screen" aria-keyshortcuts="F" aria-pressed="false">
         <span data-blog-player-expand-icon><x-icon name="maximize" size="19"/></span>
-        <span data-blog-player-collapse-icon hidden><x-icon name="minimize" size="19"/></span>
+        <span data-blog-player-collapse-icon hidden><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v6H3M3 9l7-7M15 21v-6h6m0 0-7 7"/></svg></span>
         <span class="blog-player-fullscreen-label" data-blog-player-fullscreen-label>Full screen</span>
       </button>
     </div>
