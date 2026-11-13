@@ -22,7 +22,7 @@
        preview endpoint; the browser seeks a short first frame, never autoplays it. --}}
   <span class="blog-card-media-backdrop" aria-hidden="true"><x-icon name="film" size="38"/></span>
   <video class="blog-card-video-thumbnail" data-blog-video-poster
-         muted playsinline preload="metadata" tabindex="-1" aria-hidden="true">
+         muted playsinline preload="none" tabindex="-1" aria-hidden="true">
     <source src="{{ $featuredMedia->previewUrl() }}#t=0.1" type="{{ $featuredMedia->mime_type }}">
   </video>
   <span class="blog-card-play-overlay" aria-hidden="true"><x-icon name="play" size="25"/></span>
