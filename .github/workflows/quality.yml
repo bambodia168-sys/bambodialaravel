@@ -50,6 +50,8 @@ jobs:
           bash tests/security/previewqa-step12i-access-first-readiness-smoke.sh
           bash -n support/previewqa-step12j-connector-isolation-readonly-20261113.sh
           bash tests/security/previewqa-step12j-connector-isolation-readonly-smoke.sh
+          bash -n support/previewqa-step12k-dynamic-user-unix-socket-probe-20261113.sh
+          bash tests/security/previewqa-step12k-dynamic-user-unix-probe-smoke.sh
           bash tests/security/previewqa-step12e-lua-repair-smoke.sh
           bash tests/security/previewqa-step12c-offline-group-smoke.sh
           bash -n support/workspace-upgrade.sh
