@@ -343,7 +343,7 @@ try {
         }));
         if(!uploadedFrame.paused || uploadedFrame.fit!=='cover' || !uploadedFrame.overlay)
           throw new Error(device.name+' video preview must remain paused with premium fallback');
-        const blogIndex=await page.request.get('/blog');
+        const blogIndex=await page.request.get(new URL('/blog',page.url()).toString());
         const blogIndexHtml=await blogIndex.text();
         if(!blogIndex.ok() || !blogIndexHtml.includes('data-blog-video-poster') ||
            !blogIndexHtml.includes('data-blog-youtube-thumbnail'))
