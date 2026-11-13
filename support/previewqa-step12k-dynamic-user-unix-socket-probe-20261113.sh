@@ -111,6 +111,20 @@ fi
 if runuser -u "$INGRESS" -- test -r "$APP/.env"; then
   fail QA_ingress_can_read_Laravel_secrets
 fi
+runuser -u "$WORKER" -- "$PHP" -r '
+$p=$argv[1];require $p."/vendor/autoload.php";
+$app=require $p."/bootstrap/app.php";
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$db=\Illuminate\Support\Facades\DB::selectOne("SELECT DATABASE() AS db");
+if (config("app.env")!=="testing" || config("app.debug")!==false ||
+    config("preview_visibility.enabled")!==false ||
+    config("app.url")!=="http://127.0.0.1:18097" ||
+    $db->db!=="bambodia_previewrestore_20261112" ||
+    \App\Models\User::count()!==6 ||
+    \Illuminate\Support\Facades\DB::table("preview_visibility_actions")->count()!==0) exit(2);
+echo "PINNED_SYNTHETIC_QA_AND_PREVIEW_WRITES_OFF=PASS\n";
+' "$APP" || fail synthetic_QA_database_or_preview_flag_changed
+
 for account in www nobody; do
   if getent passwd "$account" >/dev/null; then
     runuser -u "$account" -- /usr/bin/python3 -c 'import socket' ||
@@ -194,6 +208,7 @@ if ! OUTPUT="$(systemd-run --system --quiet --wait --collect --pipe \
   -p 'NoNewPrivileges=yes' -p 'PrivateTmp=yes' \
   -p 'ProtectSystem=strict' -p 'ProtectHome=yes' \
   -p 'CapabilityBoundingSet=' -p 'Restart=no' \
+  -p 'RuntimeMaxSec=25s' -p 'TimeoutStartSec=20s' \
   /usr/bin/python3 -c '
 import os,socket,sys
 target="/run/bambodia-previewqa-socketprobe-20261113/http.sock"
@@ -230,12 +245,12 @@ printf '%s\n' "$OUTPUT" | grep -Fxq 'TRANSIENT_LARAVEL_ENV_AND_FPM_ORIGINAL_SOCK
 printf '%s\n' "$OUTPUT" | grep -Fxq 'TRANSIENT_MOUNTED_QA_HTTP_SOCKET_GET_UP=HTTP_200' ||
   fail missing_bound_socket_get_200
 printf '%s\n' "$OUTPUT" | grep -E '^TRANSIENT_'
-PROBE_STARTED=no
 
 [[ ! -e "$PROBE_DIR" && ! -L "$PROBE_DIR" ]] ||
   fail transient_runtime_directory_not_cleaned
 [[ "$(systemctl show "$PROBE_UNIT" -p LoadState --value 2>/dev/null || true)" == not-found ]] ||
   fail transient_unit_not_collected
+PROBE_STARTED=no
 systemctl is-active --quiet bambodia-previewqa-http.service ||
   fail private_QA_HTTP_service_changed_during_probe
 systemctl is-active --quiet bambodia-previewqa-fpm.service ||
