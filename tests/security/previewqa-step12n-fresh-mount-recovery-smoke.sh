@@ -5,7 +5,7 @@ set +x
 umask 077
 cd "$(dirname "$0")/../.."
 SRC='support/previewqa-step12n-fresh-mount-recovery-20261113.sh'
-OLD='support/previewqa-step12m-disposable-socket-rebind-20261113.sh'
+OLD='support/previewqa-step12m-v2-disposable-socket-rebind-20261113.sh'
 test -f "$SRC"
 test -f "$OLD"
 test "$(grep -Fc "echo 'STEP12N_FRESH_MOUNT_RECOVERY_PREFLIGHT=PASS'" "$SRC")" -eq 1
