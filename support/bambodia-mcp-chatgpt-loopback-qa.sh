@@ -123,6 +123,16 @@ cleanup() {
 trap cleanup EXIT
 cp -a --reflink=auto -- "$SOURCE/." "$QA/"
 [[ -f "$QA/artisan" && -f "$QA/vendor/autoload.php" ]] || fail QA_COPY_INCOMPLETE
+# Public index.php is fail-closed until installed.lock exists.
+# Create that flag only inside the disposable QA clone, never in SOURCE/LIVE.
+mkdir -p "$QA/storage/app"
+if [[ ! -e "$QA/storage/app/installed.lock" && ! -L "$QA/storage/app/installed.lock" ]]; then
+ touch "$QA/storage/app/installed.lock"
+ chmod 600 "$QA/storage/app/installed.lock"
+fi
+[[ -f "$QA/storage/app/installed.lock" && ! -L "$QA/storage/app/installed.lock" ]] ||
+ fail QA_INSTALL_MARKER_UNSAFE
+echo "QA_HTTP_INSTALLED_MARKER=DISPOSABLE_COPY_ONLY"
 for path in "$QA/.env" "$QA/.env.testing" "$QA/storage/oauth-private.key" "$QA/storage/oauth-public.key"; do
  [[ ! -e "$path" && ! -L "$path" ]] || fail QA_COPY_HAS_UNEXPECTED_SECRETS
 done
