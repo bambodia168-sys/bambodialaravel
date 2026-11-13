@@ -80,10 +80,10 @@
   <div class="marketplace-section-heading">
     <div>
       <span class="eyebrow">Discover independent talent</span>
-      <h2 id="freelancer-section-title">Freelancer</h2>
+      <h2 id="freelancer-section-title">Freelancers</h2>
       <p>Meet professionals with public portfolios and explore their approved work.</p>
     </div>
-    <a class="btn subtle" href="{{ route('creators.index') }}">View all freelancers</a>
+    <a class="btn subtle" href="{{ route('creators.index') }}">Browse creator profiles</a>
   </div>
   @if($freelancers->isNotEmpty())
     <div class="marketplace-freelancer-grid" aria-label="Public freelancer profiles">
@@ -111,7 +111,7 @@
       <x-icon name="users" size="30"/>
       <strong>Freelancer profiles are coming soon.</strong>
       <p>Public portfolios will appear here when freelancers choose to publish them.</p>
-      <a class="btn subtle compact" href="{{ route('creators.index') }}">Browse the freelancer directory</a>
+      <a class="btn subtle compact" href="{{ route('creators.index') }}">Browse creator profiles</a>
     </div>
   @endif
 </section>

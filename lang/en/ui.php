@@ -21,6 +21,7 @@ return [
     'find_products' => 'Find Products',
     'find_projects' => 'Find Projects',
     'find_freelancers' => 'Find Freelancers',
+    'find_freelance_offers' => 'Find Freelance Offers',
     'find_services' => 'Find Services',
     'language' => 'Language',
     'welcome_back' => 'Welcome back',

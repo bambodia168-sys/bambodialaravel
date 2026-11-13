@@ -21,6 +21,7 @@ return [
     'find_products' => '商品を探す',
     'find_projects' => 'プロジェクトを探す',
     'find_freelancers' => '人材を探す',
+    'find_freelance_offers' => 'フリーランスのサービスを探す',
     'find_services' => 'サービスを探す',
     'language' => '言語',
     'welcome_back' => 'おかえりなさい',

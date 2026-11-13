@@ -21,6 +21,7 @@ return [
     'find_products' => 'Tìm sản phẩm',
     'find_projects' => 'Tìm dự án',
     'find_freelancers' => 'Tìm freelancer',
+    'find_freelance_offers' => 'Tìm dịch vụ freelance',
     'find_services' => 'Tìm dịch vụ',
     'language' => 'Ngôn ngữ',
     'welcome_back' => 'Chào mừng trở lại',

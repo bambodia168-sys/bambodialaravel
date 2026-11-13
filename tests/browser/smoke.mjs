@@ -217,8 +217,16 @@ try {
         const freelancerCards=page.locator('.marketplace-freelancer-grid .marketplace-freelancer-card');
         if(await freelancerCards.count()!==4)
           throw new Error(device.name+' expected 4 public freelancer cards');
-        if(!(await page.getByRole('heading',{name:'Freelancer',exact:true}).isVisible()))
+        if(!(await page.getByRole('heading',{name:'Freelancers',exact:true}).isVisible()))
           throw new Error(device.name+' freelancer heading missing');
+        const creatorDirectory=page.locator('.marketplace-freelancer-section a[href*="/creators"]')
+          .filter({hasText:'Browse creator profiles'}).first();
+        if(!(await creatorDirectory.isVisible()))
+          throw new Error(device.name+' freelancer showcase directory label or target mismatch');
+        const freelanceFooter=page.locator('.site-footer a[href*="/search?type=freelance"]')
+          .filter({hasText:'Find Freelance Offers'}).first();
+        if(!(await freelanceFooter.count()))
+          throw new Error(device.name+' freelance offers footer must link to listings, not people');
         if(await page.locator('#marketplace-category-track').count())
           throw new Error(device.name+' retired category slider is still rendered');
         if(await page.getByText('Browser QA Private Freelancer').count())
