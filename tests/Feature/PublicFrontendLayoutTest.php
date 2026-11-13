@@ -7,6 +7,7 @@ use App\Models\LicenseDefinition;
 use App\Models\MarketplaceListing;
 use App\Models\MediaAsset;
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -68,6 +69,43 @@ class PublicFrontendLayoutTest extends TestCase
             $attributes['license_terms']='Independent original license terms.';
         }
         return MarketplaceListing::query()->create($attributes);
+    }
+
+    public function test_homepage_freelancer_avatar_uses_uploaded_public_profile_image_and_creator_link(): void
+    {
+        Storage::fake('public');
+        $creator=$this->creator();
+        $path='profile-avatars/qa-creator.png';
+        Storage::disk('public')->put($path, 'test-image-contents');
+        UserProfile::query()->create([
+            'user_id'=>$creator->id,
+            'avatar_path'=>$path,
+        ]);
+
+        $response=$this->get('/')->assertOk()
+            ->assertSee('class="marketplace-freelancer-avatar" href="'.route('creators.show',$creator->public_id).'"', false)
+            ->assertSee('src="'.Storage::disk('public')->url($path).'"', false)
+            ->assertSee('alt="'.$creator->name.' profile photo"', false)
+            ->assertSee('View '.$creator->name.' creator profile')
+            ->assertDontSee('Public profile')
+            ->assertDontSee('View portfolio')
+            ->assertDontSee('marketplace-freelancer-visibility', false);
+
+        $this->assertSame(1, substr_count($response->getContent(), 'class="marketplace-freelancer-avatar"'));
+        $this->get(route('creators.show',$creator->public_id))->assertOk()
+            ->assertSee(Storage::disk('public')->url($path));
+    }
+
+    public function test_homepage_freelancer_avatar_falls_back_to_initial_without_uploaded_image(): void
+    {
+        $creator=$this->creator();
+        $response=$this->get('/')->assertOk();
+        $html=$response->getContent();
+        $this->assertStringContainsString('class="marketplace-freelancer-avatar" href="'.route('creators.show',$creator->public_id).'"', $html);
+        $this->assertStringContainsString('aria-hidden="true">O</span>', $html);
+        $this->assertStringNotContainsString('Public profile</span>', $html);
+        $this->assertStringNotContainsString('View portfolio', $html);
+        $this->assertStringNotContainsString($creator->name.' profile photo', $html);
     }
 
     public function test_homepage_type_directory_links_to_real_published_results(): void
@@ -219,7 +257,10 @@ class PublicFrontendLayoutTest extends TestCase
         $this->assertStringContainsString('class="back-to-top"', $html);
         $this->assertStringContainsString('data-back-to-top', $html);
         $this->assertStringContainsString('aria-label="Back to top"', $html);
-        $this->assertStringContainsString('<span class="back-to-top-label">Back to Top</span>', $html);
+        $backToTopMarkup = explode('</button>', explode('data-back-to-top', $html, 2)[1], 2)[0];
+        $this->assertStringContainsString('<svg', $backToTopMarkup);
+        $this->assertStringNotContainsString('back-to-top-label', $backToTopMarkup);
+        $this->assertStringContainsString('header-flag-only', $header);
         $this->assertStringNotContainsString('nav-marketplace-links', $header);
     }
 }

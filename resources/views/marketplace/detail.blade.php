@@ -63,7 +63,7 @@
             <a class="btn subtle" href="{{ route('login') }}"><x-icon name="bookmark" size="16"/> Sign in to save</a>
           @endauth
         </div>
-        <a class="premium-action-link" href="{{ route('marketplace.search',['type'=>$kind]) }}">More {{ $kindTitle }} listings <x-icon name="chevron-right" size="15"/></a>
+        <a class="premium-action-link" href="{{ route('marketplace.search',['type'=>$kind]) }}">More {{ $kindTitle }} listings</a>
       </div>
 
 
@@ -102,7 +102,7 @@
           <div class="panel-head">
             <div><span class="eyebrow">Published terms</span><h2>Product license</h2></div>
             @if($listing->licenseDefinition)
-              <a class="btn subtle compact" href="{{ $listing->licenseDefinition->publicUrl() }}">Read full license <x-icon name="chevron-right" size="15"/></a>
+              <a class="btn subtle compact" href="{{ $listing->licenseDefinition->publicUrl() }}">Read full license</a>
             @endif
           </div>
           <div class="listing-body premium-description">
@@ -196,11 +196,11 @@
               @if($listing->licenseDefinition)
                 <a class="btn primary premium-full-action" data-detail-license-terms
                    href="{{ $listing->licenseDefinition->publicUrl() }}">
-                  <x-icon name="file-check" size="17"/> View license details <x-icon name="arrow-up-right" size="16"/>
+                  <x-icon name="file-check" size="17"/> View license details
                 </a>
               @endif
               @auth
-                <a class="premium-offer-secondary-link" href="{{ route('account.downloads') }}">My entitled downloads <x-icon name="arrow-up-right" size="15"/></a>
+                <a class="premium-offer-secondary-link" href="{{ route('account.downloads') }}">My entitled downloads</a>
               @endauth
             </div>
             <p class="premium-offer-footnote"><x-icon name="lock" size="15"/> Direct checkout is not enabled. Download access requires an existing verified entitlement.</p>
@@ -234,17 +234,17 @@
                 @auth
                   @if(in_array(auth()->user()->role,['customer','subscriber'],true) && (int)auth()->id() !== (int)$listing->user_id)
                     <button type="button" class="btn primary premium-full-action" data-modal-open="request-service"><x-icon name="message" size="17"/> {{ $inquiryTitle }}</button>
-                    <a class="premium-offer-secondary-link" href="{{ route('account.inquiries') }}">My conversations <x-icon name="arrow-up-right" size="15"/></a>
+                    <a class="premium-offer-secondary-link" href="{{ route('account.inquiries') }}">My conversations</a>
                   @elseif((int)auth()->id() === (int)$listing->user_id)
-                    <a class="btn subtle premium-full-action" href="{{ route('studio.inquiries') }}">Manage inquiries <x-icon name="arrow-up-right" size="16"/></a>
+                    <a class="btn subtle premium-full-action" href="{{ route('studio.inquiries') }}">Manage inquiries</a>
                   @else
                     <p class="premium-offer-footnote">Private inquiries are available to eligible client accounts.</p>
                   @endif
                 @else
-                  <a class="btn primary premium-full-action" href="{{ route('login') }}"><x-icon name="log-in" size="17"/> Sign in to contact <x-icon name="arrow-up-right" size="16"/></a>
+                  <a class="btn primary premium-full-action" href="{{ route('login') }}"><x-icon name="log-in" size="17"/> Sign in to contact</a>
                 @endauth
               @else
-                <a class="btn subtle premium-full-action" href="{{ route('marketplace.search',['type'=>$kind]) }}">Explore {{ $kindTitle }} listings <x-icon name="arrow-up-right" size="16"/></a>
+                <a class="btn subtle premium-full-action" href="{{ route('marketplace.search',['type'=>$kind]) }}">Explore {{ $kindTitle }} listings</a>
               @endif
             </div>
             @if($layoutSample)
@@ -286,7 +286,7 @@
           @endif
           @if($listing->creator?->isCreator())
             <a class="btn subtle premium-full-action" href="{{ route('creators.show',$listing->creator->public_id) }}">
-              <x-icon name="user-round" size="16"/> View creator profile <x-icon name="arrow-up-right" size="15"/>
+              <x-icon name="user-round" size="16"/> View creator profile
             </a>
           @endif
         </div>

@@ -25,6 +25,19 @@ $creator=\App\Models\User::query()->create([
     'is_public'=>true,
 ]);
 
+// Verify homepage cards use the same uploaded profile image as the creator page.
+// This image comes from a tracked, non-sensitive test fixture, not a real user.
+$avatarFixture=file_get_contents(public_path('images/bambodia-logo.webp'));
+if($avatarFixture===false){
+    throw new \RuntimeException('Browser QA avatar fixture unavailable');
+}
+\Illuminate\Support\Facades\Storage::disk('public')
+    ->put('profile-avatars/browser-qa-creator.webp',$avatarFixture);
+\App\Models\UserProfile::query()->create([
+    'user_id'=>$creator->id,
+    'avatar_path'=>'profile-avatars/browser-qa-creator.webp',
+]);
+
 // Three additional public freelancers and one private profile for browser acceptance.
 foreach (['Browser QA Designer','Browser QA Developer','Browser QA Writer','Browser QA Private Freelancer'] as $name) {
     $person=\App\Models\User::query()->create([
@@ -165,6 +178,21 @@ foreach ([
     ]);
 }
 
+// A private test-only video, linked to a published article so the public
+// preview route is readable without exposing unrelated private media.
+$blogVideoPath = 'marketplace/previews/'.$admin->id.'/qa-blog-video.webm';
+// Valid 16x16 VP8/WebM fixture generated offline; no ffmpeg required in CI.
+$videoFrame = base64_decode('GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAH8EU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHWTbuMU6uEElTDZ1OsggEjTbuMU6uEHFO7a1OsggHm7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsCrXsYMPQkBNgIxMYXZmNjEuNy4xMDNXQYxMYXZmNjEuNy4xMDNEiYhAj0AAAAAAABZUrmvIrgEAAAAAAAA/14EBc8WIDN/kM8wlagacgQAitZyDdW5kiIEAhoVWX1ZQOIOBASPjg4Q7msoA4JCwgRC6gRCagQJVsIRVuYEBElTDZ/tzc59jwIBnyJlFo4dFTkNPREVSRIeMTGF2ZjYxLjcuMTAzc3PWY8CLY8WIDN/kM8wlagZnyKFFo4dFTkNPREVSRIeUTGF2YzYxLjE5LjEwMSBsaWJ2cHhnyKFFo4hEVVJBVElPTkSHkzAwOjAwOjAxLjAwMDAwMDAwMAAfQ7Z1vueBAKO5gQAAgPACAJ0BKhAAEAAARwiFhYiFhIgCAgJ1qgP4A/gCDU0YAP75Ns//cG+yLn/rRf/YzH7Rn+N4HFO7a5G7j7OBALeK94EB8YIBo/CBAw==', true);
+if ($videoFrame === false) throw new RuntimeException('Browser video fixture corrupt.');
+\Illuminate\Support\Facades\Storage::disk('local')->put($blogVideoPath, $videoFrame);
+$blogVideo = \App\Models\MediaAsset::query()->create([
+    'user_id'=>$admin->id,'original_name'=>'qa-blog-video.webm',
+    'storage_path'=>$blogVideoPath,'mime_type'=>'video/webm','bytes'=>strlen($videoFrame),
+    'width'=>0,'height'=>0,'alt_text'=>'Browser QA video cover',
+    'rights_basis'=>'owned','rights_holder'=>'Browser QA Admin',
+    'review_status'=>'approved','reviewed_by'=>$admin->id,'reviewed_at'=>now(),
+]);
+
 // Newest ten posts are browsable; the eleventh oldest and a draft stay hidden.
 foreach(range(1,11) as $i) {
     \App\Models\ContentEntry::query()->create([
@@ -175,9 +203,10 @@ foreach(range(1,11) as $i) {
         'category'=>$i % 2 ? 'Technology' : 'Business',
         'status'=>'published',
         'published_at'=>now()->subHours($i),
-        'featured_type'=>$i===1?'image':($i===2?'color':'none'),
-        'featured_media_id'=>$i===1?$cover->id:null,
+        'featured_type'=>$i===1?'image':($i===2?'color':($i===3?'video':($i===4?'youtube':'none'))),
+        'featured_media_id'=>$i===1?$cover->id:($i===3?$blogVideo->id:null),
         'featured_color'=>$i===2?'#155e75':null,
+        'featured_url'=>$i===4?'https://www.youtube.com/watch?v=dQw4w9WgXcQ':null,
     ]);
 }
 \App\Models\ContentEntry::query()->create([

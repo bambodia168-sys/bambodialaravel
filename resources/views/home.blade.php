@@ -36,7 +36,7 @@
   <div class="marketplace-section-heading">
     <div><span class="eyebrow">Explore Bambodia</span><h2 id="browse-by-type-heading">Find the work that fits</h2>
       <p>Browse real, approved marketplace listings by type.</p></div>
-    <a class="btn subtle compact" href="{{ route('marketplace.search') }}">Explore all listings <x-icon name="chevron-right" size="16"/></a>
+    <a class="btn subtle compact" href="{{ route('marketplace.search') }}">Explore all listings</a>
   </div>
   <div class="marketplace-type-directory-grid">
     @foreach([
@@ -51,7 +51,6 @@
         <small>{{ $directory['intro'] }}</small>
         <span class="marketplace-directory-footer">
           <span>{{ number_format((int)($listingTotals[$directory['type']] ?? 0)) }} approved</span>
-          <x-icon name="chevron-right" size="17"/>
         </span>
       </a>
     @endforeach
@@ -84,22 +83,25 @@
       <h2 id="freelancer-section-title">Freelancer</h2>
       <p>Meet professionals with public portfolios and explore their approved work.</p>
     </div>
-    <a class="btn subtle" href="{{ route('creators.index') }}">View all freelancers <x-icon name="arrow-up-right" size="17"/></a>
+    <a class="btn subtle" href="{{ route('creators.index') }}">View all freelancers</a>
   </div>
   @if($freelancers->isNotEmpty())
     <div class="marketplace-freelancer-grid" aria-label="Public freelancer profiles">
       @foreach($freelancers as $freelancer)
         <article class="marketplace-freelancer-card">
           <div class="marketplace-freelancer-card-heading">
-            <span class="marketplace-freelancer-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($freelancer->name,0,1)) }}</span>
-            <span class="marketplace-freelancer-visibility"><x-icon name="user-round" size="14"/> Public profile</span>
+            <a class="marketplace-freelancer-avatar" href="{{ route('creators.show',$freelancer->public_id) }}" aria-label="View {{ $freelancer->name }} creator profile">
+              @if($freelancer->userProfile?->avatar_path)
+                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($freelancer->userProfile->avatar_path) }}" alt="{{ $freelancer->name }} profile photo" loading="lazy" decoding="async" width="112" height="112">
+              @else
+                <span aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($freelancer->name,0,1)) }}</span>
+              @endif
+            </a>
           </div>
           <h3><a href="{{ route('creators.show',$freelancer->public_id) }}">{{ $freelancer->name }}</a></h3>
           <p class="marketplace-freelancer-headline">{{ $freelancer->creatorProfile->headline }}</p>
-          <p class="marketplace-freelancer-bio">{{ \Illuminate\Support\Str::limit($freelancer->creatorProfile->biography,135) }}</p>
           <div class="marketplace-freelancer-card-footer">
             <span><x-icon name="briefcase" size="15"/> {{ number_format($freelancer->public_listings_count) }} approved {{ \Illuminate\Support\Str::plural('listing',$freelancer->public_listings_count) }}</span>
-            <a href="{{ route('creators.show',$freelancer->public_id) }}">View portfolio <x-icon name="arrow-up-right" size="16"/></a>
           </div>
         </article>
       @endforeach
@@ -118,7 +120,7 @@
 <section id="bambodia-jobs" class="container marketplace-section bambodia-jobs-section" aria-labelledby="bambodia-jobs-title">
   <div class="marketplace-section-heading">
     <div><span class="eyebrow">Work opportunities</span><h2 id="bambodia-jobs-title">Latest approved jobs</h2><p>Explore approved client opportunities and find work that fits your skills.</p></div>
-    <a class="btn subtle" href="{{ route('jobs') }}">Explore all jobs <x-icon name="arrow-up-right" size="17"/></a>
+    <a class="btn subtle" href="{{ route('jobs') }}">Explore all jobs</a>
   </div>
   @if($recentJobs->isNotEmpty())
     <div class="bambodia-job-list" aria-label="Latest approved job opportunities">
@@ -139,7 +141,7 @@
       <p>Explore news, ideas and practical guides from Bambodia.</p>
     </div>
     <div class="home-blog-heading-actions">
-      <a class="btn subtle" href="{{ route('blog') }}">View all posts <x-icon name="arrow-up-right" size="16"/></a>
+      <a class="btn subtle" href="{{ route('blog') }}">View all posts</a>
       @if($recentPosts->isNotEmpty())
         <div class="home-blog-controls" aria-label="Blog slider navigation">
           <button type="button" class="home-blog-arrow" data-home-blog-prev aria-label="Previous blog posts" disabled><x-icon name="chevron-left" size="19"/></button>
@@ -156,18 +158,7 @@
         @foreach($recentPosts as $post)
           <article class="blog-post-card home-blog-card">
             <a class="blog-card-media" href="{{ $post->publicUrl() }}" aria-label="Read {{ $post->title }}">
-              @if($post->featured_type === 'image' && $post->featuredMedia && str_starts_with($post->featuredMedia->mime_type,'image/'))
-                <img src="{{ $post->featuredMedia->previewUrl() }}" alt="{{ $post->featuredMedia->alt_text ?: $post->title }}" loading="lazy" decoding="async">
-              @elseif($post->featured_type === 'youtube' && preg_match('~^https://www\.youtube\.com/watch\?v=([A-Za-z0-9_-]{11})$~D',(string)$post->featured_url,$video))
-                <span class="blog-card-placeholder blog-card-youtube"><x-icon name="play-circle" size="29"/><span>Video article</span></span>
-                <img class="blog-card-youtube-thumbnail" src="{{ 'https://i.ytimg.com/vi/'.$video[1].'/hqdefault.jpg' }}" alt="" loading="lazy" referrerpolicy="no-referrer">
-              @elseif($post->featured_type === 'video')
-                <span class="blog-card-placeholder"><x-icon name="play-circle" size="32"/><span>Video article</span></span>
-              @elseif($post->featured_type === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/D',(string)$post->featured_color))
-                <span class="blog-card-color" style="background-color:{{ $post->featured_color }}" role="img" aria-label="Featured color"></span>
-              @else
-                <span class="blog-card-placeholder"><x-icon name="file-text" size="34"/><span>Blog article</span></span>
-              @endif
+              <x-blog-card-featured-media :post="$post" />
             </a>
             <div class="blog-card-content">
               @if($post->category)
@@ -179,7 +170,7 @@
               @if($post->excerpt)<p class="blog-card-excerpt">{{ \Illuminate\Support\Str::limit($post->excerpt,108) }}</p>@endif
               <div class="blog-card-bottom">
                 <time datetime="{{ $post->published_at->toDateString() }}">{{ $post->published_at->format('d M Y') }}</time>
-                <a href="{{ $post->publicUrl() }}" class="blog-card-read">Read <x-icon name="arrow-up-right" size="15"/></a>
+                <a href="{{ $post->publicUrl() }}" class="blog-card-read">Read</a>
               </div>
             </div>
           </article>

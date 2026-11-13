@@ -10,9 +10,9 @@
     @endif
     <span class="page-number">{{ $paginator->currentPage() }} / {{ $paginator->lastPage() }}</span>
     @if($paginator->hasMorePages())
-      <a class="btn subtle" href="{{ $paginator->nextPageUrl() }}">Next <x-icon name="chevron-right" size="16"/></a>
+      <a class="btn subtle" href="{{ $paginator->nextPageUrl() }}">Next</a>
     @else
-      <span class="btn subtle disabled">Next <x-icon name="chevron-right" size="16"/></span>
+      <span class="btn subtle disabled">Next</span>
     @endif
     <form method="get" class="go-form">
       @foreach(request()->except($paginator->getPageName()) as $key => $value)
