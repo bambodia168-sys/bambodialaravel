@@ -130,6 +130,17 @@ jobs:
           bash -n support/bambodia-mcp-main-domain-live-overlay.sh
           bash -n support/bambodia-mcp-main-domain-resolve-private-layout-review.sh
           bash -n support/bambodia-mcp-main-domain-resolve-private-critical.sh
+          bash -n support/bambodia-mcp-main-domain-private-runtime-acceptance.sh
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          source = Path('support/bambodia-mcp-main-domain-private-runtime-acceptance.sh').read_text()
+          sections = source.split("<<'PY'\n")[1:]
+          assert len(sections) == 2, "Expected two embedded Python checks"
+          for section in sections:
+              ast.parse(section.split("\nPY\n", 1)[0])
+          print("MCP_PRIVATE_RUNTIME_EMBEDDED_PYTHON=PASS")
+          PY
           # The private-only MCP script contains Python in a Bash heredoc.
           # Validate both languages; never run the private server workflow in CI.
           sed -n "/^python3 - .*<<'PY'$/,/^PY$/p" support/bambodia-mcp-main-domain-resolve-private-critical.sh |
