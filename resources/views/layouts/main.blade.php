@@ -172,13 +172,13 @@
     <div><h3>{{ __('ui.marketplace') }}</h3>@if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))<a href="{{ url('/search?type=project') }}">{{ __('ui.footer_marketplace_projects') }}</a><a href="{{ url('/search?type=product') }}">{{ __('ui.footer_marketplace_products') }}</a><a href="{{ url('/search?type=freelance') }}">{{ __('ui.footer_marketplace_freelance') }}</a><a href="{{ url('/search?type=service') }}">{{ __('ui.footer_marketplace_services') }}</a>@endif @if(Route::has('jobs'))<a href="{{ route('jobs') }}">{{ __('ui.footer_marketplace_jobs') }}</a>@endif</div>
     <div><h3>{{ __('ui.for_users') }}</h3>@auth<a href="{{ url('/account?='.auth()->user()->public_id) }}">Client Account</a>@else @if(\App\Models\FeatureFlag::isEnabled('registration'))<a href="{{ route('register') }}">Client Account</a>@endif @endauth
       @if(auth()->check() && auth()->user()->isCreator())<a href="{{ url('/studio?='.auth()->user()->public_id) }}">Creator Account</a>@else @if(\App\Models\FeatureFlag::isEnabled('registration'))<a href="{{ route('register') }}">Creator Account</a>@endif @endif
-      @if(Route::has('policy-center'))<a href="{{ route('policy-center') }}">Policy Center</a>@endif
       @if(Route::has('support'))<a href="{{ route('support') }}">Support Center</a>@endif
       @if(\App\Models\SiteSetting::setting('site.support_email')!=='')
-        <a href="mailto:{{ \App\Models\SiteSetting::setting('site.support_email') }}">Email support</a>
+        <a href="mailto:{{ \App\Models\SiteSetting::setting('site.support_email') }}">{{ __('ui.footer_email_support') }}</a>
       @endif
     </div>
-    <div><h3>{{ __('ui.compliance') }}</h3>
+    <div><h3>{{ __('ui.footer_legal_policies') }}</h3>
+      @if(Route::has('policy-center'))<a href="{{ route('policy-center') }}">Policy Center</a>@endif
       @if($footerPolicies->has('cookies'))<a href="{{ $footerPolicies->get('cookies')->publicUrl() }}">Cookie Policy</a>@endif
       @if($footerPolicies->has('gdpr'))<a href="{{ $footerPolicies->get('gdpr')->publicUrl() }}">GDPR Policy</a>@endif
       @if($footerPolicies->has('privacy'))<a href="{{ $footerPolicies->get('privacy')->publicUrl() }}">Privacy Policy</a>@endif

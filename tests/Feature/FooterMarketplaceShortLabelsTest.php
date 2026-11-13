@@ -76,12 +76,12 @@ final class FooterMarketplaceShortLabelsTest extends TestCase
         }
     }
 
-    public function test_user_compliance_hero_and_footer_design_stay_untouched(): void
+    public function test_user_legal_hero_and_footer_design_stay_untouched(): void
     {
         $layout = $this->source('resources/views/layouts/main.blade.php');
 
         self::assertStringContainsString("<h3>{{ __('ui.for_users') }}</h3>", $layout);
-        self::assertStringContainsString("<h3>{{ __('ui.compliance') }}</h3>", $layout);
+        self::assertStringContainsString("<h3>{{ __('ui.footer_legal_policies') }}</h3>", $layout);
         self::assertStringContainsString("route('policy-center')", $layout);
         self::assertStringContainsString("route('support')", $layout);
         self::assertStringContainsString("footer-bottom-band", $layout);

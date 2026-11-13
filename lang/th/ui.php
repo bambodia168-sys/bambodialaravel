@@ -18,6 +18,8 @@ return [
     'marketplace' => 'ตลาดกลาง',
     'for_users' => 'สำหรับผู้ใช้',
     'compliance' => 'การปฏิบัติตามข้อกำหนด',
+    'footer_legal_policies' => 'กฎหมายและนโยบาย',
+    'footer_email_support' => 'ฝ่ายสนับสนุนทางอีเมล',
     'footer_marketplace_projects' => 'โครงการ',
     'footer_marketplace_products' => 'สินค้า',
     'footer_marketplace_freelance' => 'งานฟรีแลนซ์',

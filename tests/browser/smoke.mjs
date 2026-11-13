@@ -828,6 +828,31 @@ try {
           getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
         if(footerColumns!==(device.viewport.width>1020?4:2))
           throw new Error(device.name+' responsive footer grid has '+footerColumns+' columns');
+        // The Policy Center is a legal resource, not a user-account tool.
+        const footerOrganization=await page.locator('.footer-columns').evaluate(el=>{
+          const sections=[...el.children];
+          const users=sections[2],legal=sections[3];
+          return {
+            usersHeading:users?.querySelector('h3')?.textContent.trim(),
+            legalHeading:legal?.querySelector('h3')?.textContent.trim(),
+            usersHasPolicy:!!users?.querySelector('a[href*="/policy-center"]'),
+            usersHasSupport:!!users?.querySelector('a[href*="/support-center"]'),
+            legalPolicyLink:legal?.querySelector('a[href*="/policy-center"]')?.getAttribute('href'),
+            legalPolicyCount:legal?.querySelectorAll('a[href*="/policy-center"]').length||0,
+            emailLabels:[...users?.querySelectorAll('a[href^="mailto:"]')||[]]
+              .map(a=>a.textContent.trim())
+          };
+        });
+        if(footerOrganization.usersHeading!=='For Users' ||
+           footerOrganization.legalHeading!=='Legal & Policies' ||
+           footerOrganization.usersHasPolicy ||
+           !footerOrganization.usersHasSupport ||
+           footerOrganization.legalPolicyCount!==1 ||
+           !footerOrganization.legalPolicyLink?.includes('/policy-center') ||
+           footerOrganization.emailLabels.some(x=>x!=='Email Support'))
+          throw new Error(device.name+' footer legal/user grouping mismatch '+
+            JSON.stringify(footerOrganization));
+
 
         const footerLayout=await page.evaluate(()=>{
           const footer=document.querySelector('.site-footer');

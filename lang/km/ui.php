@@ -18,6 +18,8 @@ return [
     'marketplace' => 'ទីផ្សារ',
     'for_users' => 'សម្រាប់អ្នកប្រើប្រាស់',
     'compliance' => 'ការអនុលោម',
+    'footer_legal_policies' => 'ច្បាប់ និងគោលការណ៍',
+    'footer_email_support' => 'ជំនួយតាមអ៊ីមែល',
     'footer_marketplace_projects' => 'គម្រោង',
     'footer_marketplace_products' => 'ផលិតផល',
     'footer_marketplace_freelance' => 'ការងារឯករាជ្យ',
