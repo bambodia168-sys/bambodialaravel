@@ -120,14 +120,21 @@ COMPOSER_ENTRY=/usr/bin/composer
 ' "$COMPOSER_ENTRY" || fail COMPOSER_ENTRY_IS_NOT_PHP
 mkdir -m 700 -p "$QA/.composer-home" "$QA/.composer-cache"
 echo "========== VERIFY COMPOSER ON PHP 8.5 =========="
-COMPOSER_VERSION="$(qa_php -d "include_path=/usr/share/php:." \
- "$COMPOSER_ENTRY" --version --no-ansi)" ||
+# Debian's Composer prints "Composer 2.x", while newer builds print
+# "Composer version 2.x". Require a legitimate version line rather than
+# assuming one exact spelling; ignore only PHP deprecation warnings.
+COMPOSER_VERSION_OUTPUT="$(qa_php -d "include_path=/usr/share/php:." \
+ -d "error_reporting=8191" "$COMPOSER_ENTRY" --version --no-ansi 2>&1)" ||
  fail COMPOSER_PHP85_BOOT_FAILED
-[[ "$COMPOSER_VERSION" == "Composer version "* ]] ||
- fail COMPOSER_VERSION_NOT_EXECUTED
-echo "$COMPOSER_VERSION"
+COMPOSER_VERSION="$(printf '%s\n' "$COMPOSER_VERSION_OUTPUT" |
+ grep -m1 -E '^Composer( version)? [0-9]+\.[0-9]+(\.[0-9]+)?([[:space:]]|$)' || true)"
+if [[ -z "$COMPOSER_VERSION" ]]; then
+ printf '%s\n' "$COMPOSER_VERSION_OUTPUT" >&2
+ fail COMPOSER_VERSION_NOT_DETECTED
+fi
+printf 'COMPOSER_VERIFIED_VERSION=%s\n' "$COMPOSER_VERSION"
 echo "COMPOSER_INTERPRETER=VERIFIED_PHP85_ENTRYPOINT"
-qa_php -d "include_path=/usr/share/php:." \
+qa_php -d "include_path=/usr/share/php:." -d "error_reporting=8191" \
  "$COMPOSER_ENTRY" install \
  --no-scripts --no-plugins \
  --prefer-dist --no-interaction --no-progress
