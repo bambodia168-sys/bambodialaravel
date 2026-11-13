@@ -127,14 +127,57 @@ if (legacy.count(b"Route::post('/mcp'") != 1 or legacy_route not in legacy or
         b"Route::post('/oauth/register'" not in release):
     fail("ROUTE_AUTHENTICATION_OR_DISCOVERY_UNEXPECTED")
 
-# Restoring the live side of the single conflicting block must reproduce the
-# entire LIVE file byte-for-byte. This proves all unrelated live routes survive.
-if prefix + legacy + suffix != safe_file(live / route):
+# A git three-way merge may also include nonconflicting whitespace edits
+# outside the conflict. Such a reconstruction is not byte-identical to LIVE
+# and MUST NOT be used to overwrite the live-first private source.
+# Extract only the pinned, reviewed MCP release block, then replace precisely
+# the existing legacy MCP route in the exact live route snapshot.
+live_route = safe_file(review / "live-critical" / route)
+main_route = safe_file(review / "base" / route)
+new_mcp_block = release.strip(b"\n")
+old_mcp_block = (
+    b"// Stateless, admin-token-authenticated MCP endpoint. A browser session is never sufficient\n"
+    b"// for access. Only this bearer-token route is exempt from the web CSRF middleware.\n"
+    b"Route::post('/mcp', [\\App\\Http\\Controllers\\Api\\BambodiaMcpController::class, 'handle'])\n"
+    b"    ->middleware(['api.token:mcp.read', 'throttle:30,1'])\n"
+    b"    ->withoutMiddleware([\\Illuminate\\Foundation\\Http\\Middleware\\PreventRequestForgery::class])\n"
+    b"    ->name('mcp');"
+)
+# Confirm the conflict is specifically the legacy route and the new OAuth
+# routes. Do not proceed if either side has additional hidden route edits.
+if (old_mcp_block not in legacy or
+        legacy.strip(b"\n") != old_mcp_block or
+        not new_mcp_block.startswith(b"// Native main-domain MCP routes; registered outside locale cloning.") or
+        new_mcp_block not in staged[route] or
+        staged[route].count(new_mcp_block) != 1 or
+        old_mcp_block in staged[route]):
+    fail("MCP_CONFLICT_SIDES_NOT_EXACT_EXPECTED_BLOCKS")
+if (live_route.count(old_mcp_block) != 1 or
+        live_route.count(b"Route::post('/mcp'") != 1 or
+        old_mcp_block in main_route or
+        new_mcp_block in live_route or
+        b"Mcp::oauthRoutes(registration: false)" in live_route or
+        b"oauth-protected-resource" in live_route):
+    fail("LIVE_LEGACY_ROUTE_NOT_UNIQUELY_IDENTIFIED")
+if (live_route.index(old_mcp_block) <
+        live_route.index(b"$unprefixedWebRoutes = Route::getRoutes()->getRoutes();")):
+    fail("LEGACY_ROUTE_POSITION_NOT_AFTER_LOCALE_CLONING")
+if live_route.count(b"$unprefixedWebRoutes = Route::getRoutes()->getRoutes();") != 1:
+    fail("LIVE_LOCALE_CLONING_ANCHOR_CHANGED")
+
+merged = live_route.replace(old_mcp_block, new_mcp_block, 1)
+# The reverse substitution is an exact byte-for-byte restoration of LIVE.
+# This is stricter than relying on a git-generated conflict prefix/suffix:
+# every byte outside the single existing MCP block is identical.
+if merged.replace(new_mcp_block, old_mcp_block, 1) != live_route:
     fail("UNRELATED_LIVE_ROUTE_BYTES_NOT_PRESERVED")
-merged = prefix + release + suffix
 if (merged.count(b"Route::post('/mcp'") != 1 or
         merged.count(b"->middleware(['mcp.auth', 'throttle:30,1'])") != 1 or
-        any(marker in merged for marker in markers)):
+        merged.count(b"Mcp::oauthRoutes(registration: false)") != 1 or
+        any(marker in merged for marker in markers) or
+        b"api.token:mcp.read" in merged or
+        b"/.well-known/oauth-protected-resource/mcp" not in merged or
+        b"Route::post('/oauth/register'" not in merged):
     fail("RESOLVED_ROUTE_INVARIANT_FAILED")
 
 # These were live-first exceptions, not unreviewed replacements. Verify the
@@ -163,7 +206,7 @@ if (b"config('mcp.production_enabled', false)" not in c or
     fail("MCP_CONTROLLER_OR_OWNERSHIP_GATE_MISSING")
 
 # A live-only routing edit is possible. Apply only the resolved route file in
-# the private workspace after proving all original live bytes are preserved.
+# the private workspace after proving that every non-MCP live byte survives.
 existing_route = safe_file(source / route)
 if existing_route not in (staged[route], merged):
     fail("PRIVATE_ROUTE_CHANGED_OUTSIDE_THIS_RECONCILIATION")
@@ -196,7 +239,7 @@ for rel in (route, controller, tools):
 report = {
     "route_conflicts_resolved": 1,
     "workspace_layout": "LIVE_BYTES_PRESERVED_WITH_PAGE_STYLESHEET_HOOK",
-    "routes": "LIVE_NON_MCP_BYTES_EXACTLY_PRESERVED",
+    "routes": "EXACT_LEGACY_MCP_BLOCK_REPLACED; ALL_OTHER_LIVE_BYTES_PRESERVED",
     "controller": "EXACT_PINNED_MCP_RELEASE_WITH_OAUTH_AND_WRITE_GATES",
     "draft_tools": "EXACT_PINNED_MCP_RELEASE_WITH_OWNERSHIP_ENFORCEMENT",
     "source_files_changed": int(merged != staged[route]),
@@ -229,6 +272,7 @@ print("CONFLICT_BLOCKS_RESOLVED=1")
 print("CONTROLLER_RECONCILIATION=VERIFIED_EXACT_PINNED_RELEASE")
 print("DRAFT_OWNERSHIP_ENFORCEMENT=VERIFIED")
 print("LIVE_ROUTE_NON_MCP_BYTES=PRESERVED")
+print("ROUTE_MERGE_STRATEGY=EXACT_LIVE_BLOCK_REPLACEMENT")
 print("MCP_PRIVATE_LAYOUT=VERIFIED")
 print("MCP_PRIVATE_RECONCILIATION_REPORT=" + str(dest))
 print("PRIVATE_PHP_SYNTAX=PASS")
