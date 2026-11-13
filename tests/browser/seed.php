@@ -181,10 +181,13 @@ foreach ([
 // A private test-only video, linked to a published article so the public
 // preview route is readable without exposing unrelated private media.
 $blogVideoPath = 'marketplace/previews/'.$admin->id.'/qa-blog-video.webm';
-\Illuminate\Support\Facades\Storage::disk('local')->put($blogVideoPath, "test-only-video-not-a-real-decoder-fixture");
+// Valid 16x16 VP8/WebM fixture generated offline; no ffmpeg required in CI.
+$videoFrame = base64_decode('GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAH8EU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHWTbuMU6uEElTDZ1OsggEjTbuMU6uEHFO7a1OsggHm7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsCrXsYMPQkBNgIxMYXZmNjEuNy4xMDNXQYxMYXZmNjEuNy4xMDNEiYhAj0AAAAAAABZUrmvIrgEAAAAAAAA/14EBc8WIDN/kM8wlagacgQAitZyDdW5kiIEAhoVWX1ZQOIOBASPjg4Q7msoA4JCwgRC6gRCagQJVsIRVuYEBElTDZ/tzc59jwIBnyJlFo4dFTkNPREVSRIeMTGF2ZjYxLjcuMTAzc3PWY8CLY8WIDN/kM8wlagZnyKFFo4dFTkNPREVSRIeUTGF2YzYxLjE5LjEwMSBsaWJ2cHhnyKFFo4hEVVJBVElPTkSHkzAwOjAwOjAxLjAwMDAwMDAwMAAfQ7Z1vueBAKO5gQAAgPACAJ0BKhAAEAAARwiFhYiFhIgCAgJ1qgP4A/gCDU0YAP75Ns//cG+yLn/rRf/YzH7Rn+N4HFO7a5G7j7OBALeK94EB8YIBo/CBAw==', true);
+if ($videoFrame === false) throw new RuntimeException('Browser video fixture corrupt.');
+\Illuminate\Support\Facades\Storage::disk('local')->put($blogVideoPath, $videoFrame);
 $blogVideo = \App\Models\MediaAsset::query()->create([
     'user_id'=>$admin->id,'original_name'=>'qa-blog-video.webm',
-    'storage_path'=>$blogVideoPath,'mime_type'=>'video/webm','bytes'=>40,
+    'storage_path'=>$blogVideoPath,'mime_type'=>'video/webm','bytes'=>strlen($videoFrame),
     'width'=>0,'height'=>0,'alt_text'=>'Browser QA video cover',
     'rights_basis'=>'owned','rights_holder'=>'Browser QA Admin',
     'review_status'=>'approved','reviewed_by'=>$admin->id,'reviewed_at'=>now(),
