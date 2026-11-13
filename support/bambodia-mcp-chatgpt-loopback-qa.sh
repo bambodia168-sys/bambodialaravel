@@ -418,6 +418,57 @@ if not log.is_file() or log.is_symlink():
 
 raw = log.read_bytes()[-1_500_000:]
 lines = raw.decode("utf-8", "replace").splitlines()
+
+# The final logged ErrorException can be secondary during response flushing.
+# Summarize first and final errors without exposing exception messages.
+error_lines = [
+    item for item in lines
+    if any(tag in item for tag in (
+        "testing.ERROR:", "local.ERROR:", "PHP Fatal error:",
+        "Uncaught ", "PHP Warning:", "PHP Deprecated:"
+    ))
+]
+print("QA_HTTP_ERROR_ENTRY_COUNT=" + str(len(error_lines)))
+def safe_origin(item):
+    origin = re.search(
+        r"\bat\s+" + re.escape(str(qa)) +
+        r"/((?:app|routes|bootstrap|config|lang|public|vendor)/"
+        r"[a-zA-Z0-9_./-]{1,160}):(\d{1,6})\b",
+        item
+    )
+    if origin:
+        return origin.group(1) + ":" + origin.group(2)
+    return "NOT_FOUND"
+def safe_kind(item):
+    rules = (
+        ("OUTPUT_HANDLER", r"ob_end_flush\(\)|user output handler"),
+        ("HEADERS_ALREADY_SENT", r"Cannot modify header information|headers already sent"),
+        ("UNDEFINED_ARRAY_KEY", r"Undefined array key"),
+        ("UNDEFINED_VARIABLE", r"Undefined variable"),
+        ("NULL_PROPERTY", r"Attempt to read property"),
+        ("FILE_MISSING", r"Failed opening required|No such file or directory"),
+        ("DEPRECATED", r"\bdeprecated\b|\bdeprecation\b"),
+        ("PHP_WARNING", r"PHP Warning:"),
+        ("SQL", r"SQLSTATE\["),
+    )
+    return next((label for label, pattern in rules
+                 if re.search(pattern, item, re.IGNORECASE)), "OTHER")
+def safe_class(item):
+    classes = (
+        "ErrorException", "QueryException", "PDOException", "TypeError",
+        "RuntimeException", "LogicException", "ParseError", "Error"
+    )
+    return next((c for c in classes if c in item), "OTHER")
+for slot, index in (
+    ("FIRST", 0), ("SECOND", 1), ("THIRD", 2),
+    ("LAST", len(error_lines) - 1),
+):
+    if index < 0 or index >= len(error_lines):
+        continue
+    entry = error_lines[index]
+    print("QA_HTTP_ERROR_CHAIN_" + slot + "=" +
+          "class:" + safe_class(entry) + "|kind:" + safe_kind(entry) +
+          "|origin:" + safe_origin(entry))
 candidate = next((
     line for line in reversed(lines)
     if ("testing.ERROR:" in line or "local.ERROR:" in line
