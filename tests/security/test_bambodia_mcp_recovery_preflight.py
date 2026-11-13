@@ -8,6 +8,7 @@ from pathlib import Path
 import stat
 import tempfile
 import unittest
+import stat
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -187,6 +188,61 @@ class RecoveryManifestTests(unittest.TestCase):
         unapproved["database_table_counts"] = {"users": 7}
         with self.assertRaises(manifest.Blocked):
             manifest.validate(unapproved)
+
+
+access_impact = load_module(
+    "bambodia_access_impact",
+    "support/bambodia-mcp-private-access-impact-readonly-20261114.py",
+)
+
+
+class PrivateAccessImpactTests(unittest.TestCase):
+    def setUp(self):
+        from types import SimpleNamespace
+        self.ns = SimpleNamespace
+        # Directory chain: traversable by the two sample nonroot users.
+        self.directories = [
+            self.ns(st_mode=stat.S_IFDIR | 0o755,st_uid=0,st_gid=0)
+        ]
+
+    def test_www_owner_retains_access_other_is_denied(self):
+        target=self.ns(st_mode=stat.S_IFREG | 0o644,st_uid=1001,st_gid=1001)
+        current=0o644
+        proposed=current & ~stat.S_IROTH
+        self.assertTrue(access_impact.path_accessible(
+            self.directories,target,proposed,1001,{1001}))
+        self.assertFalse(access_impact.path_accessible(
+            self.directories,target,proposed,65534,{65534}))
+        self.assertEqual(
+            "CONDITIONALLY_VIABLE_REQUIRES_OWNER_APPROVAL",
+            access_impact.verdict(True,False,"ABSENT_IN_XATTR_LIST"))
+
+    def test_www_not_owner_or_group_would_be_blocked(self):
+        target=self.ns(st_mode=stat.S_IFREG | 0o644,st_uid=0,st_gid=0)
+        current=0o644
+        proposed=current & ~stat.S_IROTH
+        self.assertTrue(access_impact.path_accessible(
+            self.directories,target,current,1001,{1001}))
+        self.assertFalse(access_impact.path_accessible(
+            self.directories,target,proposed,1001,{1001}))
+        self.assertEqual(
+            "BLOCKED_WWW_WOULD_LOSE_READ",
+            access_impact.verdict(False,False,"ABSENT_IN_XATTR_LIST"))
+
+    def test_directory_traversal_must_remain_authorized(self):
+        target=self.ns(st_mode=stat.S_IFREG | 0o640,st_uid=1001,st_gid=1001)
+        chain=[self.ns(st_mode=stat.S_IFDIR | 0o700,st_uid=0,st_gid=0)]
+        self.assertFalse(access_impact.path_accessible(chain,target,0o640,1001,{1001}))
+
+    def test_acl_uncertainty_never_approves_proposal(self):
+        self.assertEqual(
+            "BLOCKED_ACL_OR_XATTR_UNCERTAINTY",
+            access_impact.verdict(True,False,"NOT_VERIFIED"))
+
+    def test_nobody_ownership_blocks_remediation(self):
+        self.assertEqual(
+            "BLOCKED_NOBODY_REMAINS_READABLE",
+            access_impact.verdict(True,True,"ABSENT_IN_XATTR_LIST"))
 
 
 if __name__ == "__main__":
