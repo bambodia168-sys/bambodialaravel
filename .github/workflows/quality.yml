@@ -129,6 +129,7 @@ jobs:
           bash -n support/bambodia-mcp-main-domain-live-drift-review.sh
           bash -n support/bambodia-mcp-main-domain-live-overlay.sh
           bash -n support/bambodia-mcp-main-domain-resolve-private-layout-review.sh
+          bash -n support/bambodia-mcp-main-domain-resolve-private-critical.sh
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
