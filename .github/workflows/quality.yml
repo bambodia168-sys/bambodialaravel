@@ -68,6 +68,9 @@ jobs:
           python3 -m unittest discover -s tests/security -p 'test_previewqa_step12p_failclosed_lifecycle.py' -v
           python3 -m py_compile support/previewqa_step12q_independent_review.py tests/security/test_previewqa_step12q_independent_review.py
           python3 -m unittest discover -s tests/security -p 'test_previewqa_step12q_independent_review.py' -v
+          python3 -m py_compile support/previewqa_step12r_review_fixture_audit.py tests/security/test_previewqa_step12r_review_fixtures.py tests/security/test_previewqa_step12r_recovery_fault_matrix.py
+          python3 -m unittest discover -s tests/security -p 'test_previewqa_step12r_*.py' -v
+          node --test tests/security/previewqa-step12r-jwt-crypto.test.mjs
           bash tests/security/previewqa-step12e-lua-repair-smoke.sh
           bash tests/security/previewqa-step12c-offline-group-smoke.sh
           bash -n support/workspace-upgrade.sh
