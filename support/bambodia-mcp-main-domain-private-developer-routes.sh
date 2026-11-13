@@ -74,10 +74,8 @@ if old.count(anchor)!=1:fail("DEVELOPER_DOCS_ANCHOR_NOT_UNIQUE")
 if old.count(addition)>1:fail("DEVELOPER_ROUTES_DUPLICATE")
 if old.count(b"Route::middleware('role:super_admin')->group(function (): void {")<1:fail("ADMIN_GROUP_MISSING")
 section=old[:old.index(anchor)]
-if section.rfind(b"Route::middleware('role:super_admin')->group(function (): void {") < section.rfind(b"Route::middleware('auth')->group(function (): void {"):
- # The super-admin guard must be nested inside the relevant auth group.
- pass
-else:fail("ADMIN_ROLE_GROUP_NOT_NESTED")
+if section.rfind(b"Route::middleware('role:super_admin')->group(function (): void {") <= section.rfind(b"Route::middleware('auth')->group(function (): void {"):
+ fail("ADMIN_ROLE_GROUP_NOT_NESTED")
 for marker in (b"Route::get('/developer/mcp-connection'",b"Route::get('/developer/oauth-connections'",b"Route::delete('/developer/oauth-connections/"):
  if old.count(marker)!=(1 if addition in old else 0):fail("UNEXPECTED_EXISTING_DEVELOPER_ROUTE")
 if addition in old:
