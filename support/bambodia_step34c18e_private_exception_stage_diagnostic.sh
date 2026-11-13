@@ -51,6 +51,19 @@ if s.count(capture)!=1 or s.count('REVOKE-PRIVATE-OAUTH-ACCESS-BEARER-ROLLBACK')
 print('STEP34C18E_STAGE_INSTRUMENTATION_POINTS=VERIFIED')
 PY
 
+echo '========== COMPILE DIAGNOSTIC PYTHON BLOCKS WITHOUT EXECUTING =========='
+python3 - "$0" <<'PY'
+import pathlib,re,sys
+source=pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')
+needle="<<"+"'PY'"
+parts=re.findall(re.escape(needle)+r"\n(.*?)\nPY(?=\n|$)",source,flags=re.S)
+if len(parts)!=4:
+ raise SystemExit('STEP34C18E_BLOCKED=EXPECTED_FOUR_PYTHON_HEREDOCS')
+for i,block in enumerate(parts):
+ compile(block,'step34c18e_heredoc_'+str(i),'exec')
+print('STEP34C18E_EMBEDDED_PYTHON_SYNTAX=PASS')
+PY
+
 echo '========== RUN ORIGINAL ACCEPTED READ-ONLY SAFETY GATES =========='
 bash "$ORIG" --check
 echo 'STEP34C18E_READ_ONLY_PREFLIGHT=PASS'
