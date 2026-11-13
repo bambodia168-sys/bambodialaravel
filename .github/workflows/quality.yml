@@ -138,6 +138,27 @@ jobs:
           bash -n support/bambodia-mcp-release-gates-readonly.sh
           bash -n support/bambodia-mcp-private-overlay-freshness-readonly.sh
           bash -n support/bambodia-mcp-private-overlay-refresh-20261113.sh
+          bash -n support/bambodia-mcp-private-oauth-security-sync-20261113.sh
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          script = Path("support/bambodia-mcp-private-oauth-security-sync-20261113.sh").read_text()
+          parts = script.split("<<'PY'\n")
+          assert len(parts) == 2, "Exactly one private OAuth sync Python program required"
+          ast.parse(parts[1].split("\nPY\n", 1)[0])
+          for required in (
+              "SOURCE_REF=396614486e3b7e50a28cd42932af6b4aa6536cfd",
+              "MCP_PRIVATE_FRONTEND_AND_23_VITE_ASSETS=PRESERVED",
+              "MCP_PROTECTED_MCP_MERGE_SNAPSHOTS=9_UNCHANGED",
+              "SYNC-MCP-PRIVATE-OAUTH-ONLY",
+              "PRIVATE_SECURITY_POSTWRITE_HASH_FAILED",
+              "MCP_PRIVATE_OAUTH_SECURITY_SYNC=PASS",
+              "MCP_PRIVATE_CANDIDATE_DEPLOYABLE=NO",
+              "PRODUCTION_SOURCE_DATABASE_NGINX_KEYS=UNCHANGED",
+          ):
+              assert required in script, "Missing OAuth private sync guard: " + required
+          print("MCP_PRIVATE_OAUTH_SYNC_STATIC_GUARDS=PASS")
+          PY
           python3 - <<'PY'
           import ast
           from pathlib import Path
