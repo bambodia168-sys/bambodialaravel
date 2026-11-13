@@ -146,7 +146,7 @@ jobs:
           assert 'http://127.0.0.1:' in client
           assert 'CHATGPT_LOOPBACK_INDEPENDENT_HTTP_OAUTH_ACCEPTANCE=PASS' in client
           runner = Path("support/bambodia-mcp-chatgpt-loopback-qa.sh").read_text()
-          assert len(runner.split("<<'PY'\n")) == 5
+          assert len(runner.split("<<'PY'\n")) == 6
           for section in runner.split("<<'PY'\n")[1:]:
               ast.parse(section.split("\nPY\n", 1)[0])
           assert 'CLIENT_BLOB=' in runner
@@ -159,6 +159,10 @@ jobs:
           assert 'DISPOSABLE_QA_ROUTE_CACHE=REFRESHED' in runner
           assert 'CACHE_PATH="$QA/bootstrap/cache"' in runner
           assert 'CHATGPT_METADATA_DIAGNOSTIC=ROOT' in client
+          assert "QA_HTTP_EXCEPTION_DIAGNOSTIC=FOUND" in runner
+          assert "QA_HTTP_EXCEPTION_FINGERPRINT=" in runner
+          assert "QA_HTTP_SQLITE_MISSING_TABLE=" in runner
+          assert "APP_DEBUG stays false" in runner
           ci_runner = Path("support/bambodia-mcp-chatgpt-ci-loopback.sh").read_text()
           assert len(ci_runner.split("<<'PY'\n")) == 2
           ast.parse(ci_runner.split("<<'PY'\n")[1].split("\nPY\n", 1)[0])
