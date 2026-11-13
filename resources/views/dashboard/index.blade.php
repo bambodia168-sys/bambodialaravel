@@ -48,7 +48,7 @@
           <strong>{{ $isStaff ? $item->subject : $item->title }}</strong>
           <small>{{ $isStaff ? 'Support ticket' : ucfirst($item->type).' listing' }} · {{ ucfirst(str_replace('_',' ',$item->status)) }}</small>
         </span>
-        <span class="workspace-overview-row-action">Open <x-icon name="chevron-right" size="16"/></span>
+        <span class="workspace-overview-row-action">Open</span>
       </a>
     @empty
       <p class="workspace-overview-empty">No items currently require review in this queue.</p>

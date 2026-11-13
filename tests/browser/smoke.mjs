@@ -146,13 +146,30 @@ try {
               throw new Error(device.name+' '+theme+' '+name+' insufficient contrast ratio '+value.toFixed(2));
           }
         }
-        // The compact phone homepage renders only two previews; remaining
-        // approved types stay available through the category/search pages.
+        // UI action convention: never add decorative arrows after button labels.
+        const decoratedActions=[
+          '.marketplace-freelancer-section .marketplace-section-heading .btn svg',
+          '#bambodia-jobs .marketplace-section-heading .btn svg',
+          '.home-blog-heading-actions > .btn svg',
+          '.blog-card-read svg',
+          '.bambodia-job-button svg',
+          '.marketplace-home-feed .marketplace-card-live-preview svg',
+          '.nav-category-explore svg',
+        ];
+        for(const selector of decoratedActions){
+          if(await page.locator(selector).count())
+            throw new Error(device.name+' has trailing action arrow '+selector);
+        }
+        // The arrow-only slider controls must remain functional.
+        if(!(await page.locator('[data-home-blog-next] svg').count()))
+          throw new Error(device.name+' blog navigation control lost its arrow');
+        // All eight approved homepage previews remain visible at every viewport.
+        // Small-screen discovery uses two columns without hiding item types.
         const service=page.getByText('Browser QA Published Service').first();
-        if(!(await service.count()) || (device.viewport.width>550 && !(await service.isVisible())))
+        if(!(await service.count()) || !(await service.isVisible()))
           throw new Error(device.name+' homepage missing approved listing');
         // Shared listing cards: clickable artwork/title, two-line text and
-        // four / two / one responsive columns without clipped or hidden links.
+        // four / three / two responsive columns without clipped or hidden links.
         const cards=await page.locator('.marketplace-home-feed .marketplace-card').count();
         if(cards<1 || cards>8)
           throw new Error(device.name+' homepage must show at most eight balanced cards; saw '+cards);
@@ -168,6 +185,9 @@ try {
           const titleStyle=getComputedStyle(title);
           return {
             columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+            visibleCards:[...grid.querySelectorAll('.marketplace-card')]
+              .filter(item=>getComputedStyle(item).display!=='none').length,
+            cardRight:card.getBoundingClientRect().right,
             titleClamp:titleStyle.webkitLineClamp,
             fullTitleWidth:Math.abs(title.getBoundingClientRect().width
               - card.querySelector('h3').getBoundingClientRect().width)<2,
@@ -179,8 +199,9 @@ try {
             viewDetails:!!card.querySelector('.marketplace-card-actions a'),
           };
         });
-        const expectedColumns=device.viewport.width>=1200?4:device.viewport.width>550?2:1;
+        const expectedColumns=device.viewport.width>=1200?4:device.viewport.width>700?3:2;
         if(cardMetrics.missing || cardMetrics.columns!==expectedColumns
+          || cardMetrics.visibleCards!==cards || cardMetrics.cardRight>device.viewport.width+3
           || cardMetrics.titleClamp!=='2' || !cardMetrics.fullTitleWidth
           || !cardMetrics.sameDestination || cardMetrics.hasSummary || !cardMetrics.hasCreator
           || !cardMetrics.priceSymbol || cardMetrics.hasUnsupportedRatings || cardMetrics.viewDetails)
@@ -193,7 +214,7 @@ try {
         const previewHref=await featuredProduct.locator('.marketplace-card-live-preview').getAttribute('href');
         if(previewHref!=='https://example.com/original-browser-product-preview')
           throw new Error(device.name+' product demo link must be creator-provided, not invented');
-        // Opted-in public freelancers only; responsive cards and real portfolio links.
+        // Opted-in public freelancers only; clickable avatars and no redundant CTAs.
         const freelancerCards=page.locator('.marketplace-freelancer-grid .marketplace-freelancer-card');
         if(await freelancerCards.count()!==4)
           throw new Error(device.name+' expected 4 public freelancer cards');
@@ -207,15 +228,56 @@ try {
           columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
           items:[...grid.children].map(card=>({
             href:card.querySelector('h3 a')?.getAttribute('href'),
-            footer:card.querySelector('.marketplace-freelancer-card-footer a')?.getAttribute('href'),
+            avatarHref:card.querySelector('a.marketplace-freelancer-avatar')?.getAttribute('href'),
+            avatarTag:card.querySelector('.marketplace-freelancer-avatar')?.tagName,
+            portfolioCta:!!card.querySelector('.marketplace-freelancer-card-footer a'),
+            publicProfileLabel:card.textContent.includes('Public profile'),
             right:card.getBoundingClientRect().right,
+            avatarWidth:card.querySelector('.marketplace-freelancer-avatar')?.getBoundingClientRect().width,
+            avatarOffset:(()=>{
+              const avatar=card.querySelector('.marketplace-freelancer-avatar')?.getBoundingClientRect();
+              const rect=card.getBoundingClientRect();
+              return avatar?Math.abs((avatar.left+avatar.right)/2-(rect.left+rect.right)/2):999;
+            })(),
+            hasBiography:!!card.querySelector('.marketplace-freelancer-bio'),
           })),
         }));
-        const freelancerColumns=device.viewport.width>=1200?4:device.viewport.width>=680?2:1;
+        const freelancerColumns=device.viewport.width>=1400?5:device.viewport.width>=1100?4:device.viewport.width>=700?3:2;
         if(freelancerGeometry.columns!==freelancerColumns ||
            freelancerGeometry.items.some(c=>!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(c.href??'') ||
-             c.href!==c.footer || c.right>device.viewport.width+3))
+             c.href!==c.avatarHref || c.avatarTag!=='A' ||
+             c.portfolioCta || c.publicProfileLabel ||
+             c.right>device.viewport.width+3 ||
+             c.avatarWidth<(device.viewport.width<700?90:110) ||
+             c.avatarOffset>2 || c.hasBiography))
           throw new Error(device.name+' freelancer grid regression '+JSON.stringify(freelancerGeometry));
+        const avatarCard=freelancerCards.filter({hasText:'Browser QA Creator'}).first();
+        if(await avatarCard.count()!==1)
+          throw new Error(device.name+' missing uploaded-avatar test creator');
+        const uploadedAvatar=avatarCard.locator('a.marketplace-freelancer-avatar img');
+        if(await uploadedAvatar.count()!==1)
+          throw new Error(device.name+' uploaded creator avatar was replaced by an initial');
+        const avatarRender=await uploadedAvatar.evaluate(img=>({
+          complete:img.complete,
+          naturalWidth:img.naturalWidth,
+          src:img.getAttribute('src')||'',
+          alt:img.getAttribute('alt')||'',
+          objectFit:getComputedStyle(img).objectFit,
+          objectPosition:getComputedStyle(img).objectPosition,
+          paddingTop:parseFloat(getComputedStyle(img).paddingTop),
+          paddingBottom:parseFloat(getComputedStyle(img).paddingBottom),
+        }));
+        if(!avatarRender.complete || avatarRender.naturalWidth<1 ||
+           !avatarRender.src.includes('/storage/profile-avatars/browser-qa-creator.webp') ||
+           avatarRender.alt!=='Browser QA Creator profile photo' ||
+           avatarRender.objectFit!=='cover' ||
+           avatarRender.objectPosition!=='50% 15%' ||
+           avatarRender.paddingTop!==0 || avatarRender.paddingBottom!==0)
+          throw new Error(device.name+' uploaded creator avatar did not load '+JSON.stringify(avatarRender));
+        const target=await avatarCard.locator('a.marketplace-freelancer-avatar').getAttribute('href');
+        const profileResponse=await page.request.get(target);
+        if(!profileResponse.ok() || !(await profileResponse.text()).includes('Browser QA Creator'))
+          throw new Error(device.name+' uploaded avatar links to an inaccessible creator profile');
         const firstFreelancer=freelancerCards.first();
         if(!(await firstFreelancer.getByText(/approved listings?/).count()))
           throw new Error(device.name+' approved listing count missing');
@@ -256,6 +318,123 @@ try {
         if(!(await blogCards.first().getByRole('link',{name:/Browser QA Blog Article 01/}).count()) ||
            !(await blogCards.first().locator('.blog-card-media img').count()))
           throw new Error(device.name+' homepage blog card media missing');
+        // Both upload-backed video and external YouTube featured posts must
+        // have real media sources/thumbnail layers, not the old text-only tile.
+        const uploaded=blogCards.filter({hasText:'Browser QA Blog Article 03'}).first();
+        const youtubeCard=blogCards.filter({hasText:'Browser QA Blog Article 04'}).first();
+        const nativeVideo=uploaded.locator('video[data-blog-video-poster]');
+        const youtubeThumbnail=youtubeCard.locator('img[data-blog-youtube-thumbnail]');
+        if(await nativeVideo.count()!==1 ||
+           await uploaded.locator('.blog-card-play-overlay').count()!==1 ||
+           await youtubeThumbnail.count()!==1 ||
+           await youtubeCard.locator('.blog-card-play-overlay').count()!==1)
+          throw new Error(device.name+' premium video/YouTube blog media stages missing');
+        const uploadedSource=await nativeVideo.locator('source').getAttribute('src');
+        const youtubeSource=await youtubeThumbnail.getAttribute('src');
+        if(!uploadedSource?.includes('/media/') || !uploadedSource.endsWith('#t=0.1') ||
+           youtubeSource!=='https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg' ||
+           await blog.locator('.blog-card-media iframe').count()!==0 ||
+           await blog.getByText('Video article').count()!==0)
+          throw new Error(device.name+' blog media URL, third-party or fallback regression');
+        const uploadedFrame=await nativeVideo.evaluate(video=>({
+          paused:video.paused,
+          fit:getComputedStyle(video).objectFit,
+          overlay:!!video.closest('.blog-card-media')?.querySelector('.blog-card-media-backdrop'),
+        }));
+        if(!uploadedFrame.paused || uploadedFrame.fit!=='cover' || !uploadedFrame.overlay)
+          throw new Error(device.name+' video preview must remain paused with premium fallback');
+        if(device.viewport.width>=720){
+          await nativeVideo.scrollIntoViewIfNeeded();
+          await page.waitForFunction(()=>{
+            const video=document.querySelector('.home-blog-card video[data-blog-video-poster]');
+            return video && video.classList.contains('is-ready') && video.readyState>=2;
+          },null,{timeout:7000});
+        }
+        const blogIndex=await page.request.get(new URL('/blog',page.url()).toString());
+        const blogIndexHtml=await blogIndex.text();
+        if(!blogIndex.ok() || !blogIndexHtml.includes('data-blog-video-poster') ||
+           !blogIndexHtml.includes('data-blog-youtube-thumbnail'))
+          throw new Error(device.name+' full Blog index does not share featured media presentation');
+        checks+=7;
+        // Single uploaded-video articles: custom controls must actually work,
+        // still offer a native fallback, and never change YouTube article embeds.
+        if(device.name==='desktop' || device.name==='iphone-emulation'){
+          const uploadedHref=await uploaded.locator('a.blog-card-media').getAttribute('href');
+          const youtubeHref=await youtubeCard.locator('a.blog-card-media').getAttribute('href');
+          const article=await context.newPage();
+          try {
+            const opened=await article.goto(new URL(uploadedHref,origin).toString(),
+              {waitUntil:'networkidle',timeout:30000});
+            if(!opened || opened.status()!==200)
+              throw new Error(device.name+' video article unavailable');
+            const player=article.locator('[data-blog-premium-player]');
+            const articleVideo=player.locator('video[data-blog-player-video]');
+            await article.waitForFunction(()=>
+              document.querySelector('[data-blog-premium-player]')?.dataset.initialized==='true',
+              null,{timeout:8000});
+            const videoState=await player.evaluate(root=>{
+              const video=root.querySelector('video');
+              return {
+                nativeControls:video.controls,paused:video.paused,autoplay:video.autoplay,
+                stageWidth:root.getBoundingClientRect().width,
+                rootWidth:document.documentElement.clientWidth,
+                controlButtons:root.querySelectorAll('.blog-player-controls button').length,
+                fullWidth:getComputedStyle(root).aspectRatio,
+              };
+            });
+            if(videoState.nativeControls || !videoState.paused || videoState.autoplay ||
+               videoState.controlButtons<4 || videoState.stageWidth>videoState.rootWidth+3 ||
+               await player.locator('[data-blog-player-hud]').isHidden())
+              throw new Error(device.name+' native player enhancement invalid '+JSON.stringify(videoState));
+            const title=article.locator('.blog-article-content h1');
+            const titleMetrics=await title.evaluate(heading=>{
+              heading.textContent='From code changes to dependable releases';
+              const style=getComputedStyle(heading),rect=heading.getBoundingClientRect();
+              return {height:rect.height,line:parseFloat(style.lineHeight),width:rect.width,
+                scrollWidth:heading.scrollWidth,wordBreak:style.wordBreak,
+                pageWidth:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth};
+            });
+            if(titleMetrics.scrollWidth>titleMetrics.width+2 ||
+               titleMetrics.pageWidth>titleMetrics.viewport+5 ||
+               (device.name==='desktop' && titleMetrics.height>titleMetrics.line*1.35) ||
+               titleMetrics.wordBreak!=='normal')
+              throw new Error(device.name+' article headline wraps prematurely or overflows '+JSON.stringify(titleMetrics));
+
+            const speed=player.locator('[data-blog-player-rate]');
+            await speed.click();
+            const rate=await articleVideo.evaluate(video=>video.playbackRate);
+            if(Math.abs(rate-1.25)>.01)throw new Error(device.name+' playback speed control did not work');
+            await player.locator('[data-blog-player-mute]').click();
+            if(!(await articleVideo.evaluate(video=>video.muted)))
+              throw new Error(device.name+' mute button did not work');
+
+            if(device.name==='desktop'){
+              await articleVideo.evaluate(video=>{video.muted=true;});
+              await player.locator('[data-blog-player-center]').click();
+              await article.waitForFunction(()=>{
+                const video=document.querySelector('video[data-blog-player-video]');
+                return !!video && (video.currentTime>0 || video.ended);
+              },null,{timeout:7000});
+              await articleVideo.evaluate(video=>video.pause());
+              if(!(await articleVideo.evaluate(video=>video.paused)))
+                throw new Error('Video cannot be paused from accessible controls');
+            }
+            checks+=8;
+
+            const yPage=await article.goto(new URL(youtubeHref,origin).toString(),
+              {waitUntil:'networkidle',timeout:30000});
+            if(!yPage || yPage.status()!==200 ||
+               await article.locator('iframe.post-public-youtube').count()!==1 ||
+               await article.locator('[data-blog-premium-player]').count())
+              throw new Error(device.name+' YouTube player was unexpectedly redesigned');
+            const frameUrl=await article.locator('iframe.post-public-youtube').getAttribute('src');
+            if(!frameUrl.startsWith('https://www.youtube-nocookie.com/embed/'))
+              throw new Error(device.name+' YouTube embed URL changed');
+            checks+=2;
+          } finally {
+            await article.close();
+          }
+        }
         const blogMetrics=await blogTrack.evaluate(track=>{
           const cards=[...track.querySelectorAll('.home-blog-card')];
           const rect=track.getBoundingClientRect();
@@ -436,8 +615,14 @@ try {
         // Categories own the four marketplace types; language is in the header.
         if(await page.locator('.nav-marketplace-links').count())
           throw new Error(device.name+' duplicate marketplace type links remain in the header');
-        if(!(await page.locator('.site-header .nav-language-menu summary .locale-flag').isVisible()))
+        const headerLanguage=page.locator('.site-header .nav-language-menu');
+        if(!(await headerLanguage.locator('summary .locale-flag').isVisible()))
           throw new Error(device.name+' active language flag missing in header');
+        const selectedLanguageLabel=await headerLanguage.locator('summary').getAttribute('aria-label');
+        if(!selectedLanguageLabel?.includes('Language:'))
+          throw new Error(device.name+' language flag lost its accessible selected-language name');
+        if(await headerLanguage.locator('.language-options form button[name="locale"]').count()!==8)
+          throw new Error(device.name+' existing language options were changed');
         if(!(await page.locator('.site-nav .nav-category-menu summary svg').isVisible()))
           throw new Error(device.name+' category grid icon is not visible');
 
@@ -492,8 +677,8 @@ try {
             throw new Error(device.name+' mobile search was not submitted');
           await page.goto(origin+'/',{waitUntil:'networkidle'});
         }else if(geometry.mobileSearch?.visible || !geometry.desktopSearch?.visible
-                || !geometry.languageName?.visible){
-          throw new Error(device.name+' desktop search/language visibility is wrong '+JSON.stringify(geometry));
+                || geometry.languageName?.visible){
+          throw new Error(device.name+' desktop search/flag-only visibility is wrong '+JSON.stringify(geometry));
         }
 
         await page.locator('.nav-category-menu summary').click();
@@ -581,20 +766,18 @@ try {
         });
         await backToTop.waitFor({state:'visible',timeout:3000});
         const floatBounds=await backToTop.boundingBox();
-        const verticalLabel=await backToTop.locator('.back-to-top-label').evaluate(el=>{
-          const style=getComputedStyle(el);
-          const bounds=el.getBoundingClientRect();
-          return {text:el.textContent.trim(),writingMode:style.writingMode,
-            transform:style.transform,width:bounds.width,height:bounds.height,
-            children:el.children.length};
-        });
-        if(!floatBounds || floatBounds.height<=floatBounds.width*1.7 ||
-           verticalLabel.text!=='Back to Top' ||
-           verticalLabel.writingMode!=='vertical-rl' ||
-           verticalLabel.transform==='none' ||
-           verticalLabel.height<=verticalLabel.width*2 ||
-           verticalLabel.children!==0)
-          throw new Error(device.name+' Back to Top text must be truly vertical, not multi-line '+JSON.stringify({floatBounds,verticalLabel}));
+        const arrowOnly={
+          svg:await backToTop.locator('svg').count(),
+          text:await backToTop.innerText(),
+          label:await backToTop.getAttribute('aria-label'),
+          title:await backToTop.getAttribute('title'),
+        };
+        if(!floatBounds || floatBounds.width<40 || floatBounds.width>64 ||
+           floatBounds.height<40 || floatBounds.height>64 ||
+           arrowOnly.svg!==1 || arrowOnly.text.trim()!=='' ||
+           arrowOnly.label!=='Back to top' || arrowOnly.title!=='Back to top' ||
+           await backToTop.locator('.back-to-top-label').count()!==0)
+          throw new Error(device.name+' Back to Top must be one compact, accessible SVG arrow '+JSON.stringify({floatBounds,arrowOnly}));
         const socialBounds=await footer.boundingBox();
         if(floatBounds && socialBounds && socialBounds.y<device.viewport.height &&
            floatBounds.y+floatBounds.height>socialBounds.y-4)
@@ -914,6 +1097,13 @@ try {
         throw new Error('Account workspace did not use shared premium shell');
       if(!(await page.locator('.workspace-menu-search input').isVisible()))
         throw new Error('Account header search is missing');
+      const accountLanguage=page.locator('.workspace-top-actions > .language-menu');
+      if(!(await accountLanguage.locator('summary .locale-flag').isVisible()) ||
+         await accountLanguage.locator('summary .language-current').isVisible())
+        throw new Error('Account header must display only the selected language flag');
+      if(!(await accountLanguage.locator('summary').getAttribute('aria-label'))?.includes('Language:') ||
+         await accountLanguage.locator('.language-options form button[name="locale"]').count()!==8)
+        throw new Error('Account language dropdown options or accessibility changed');
       await page.locator('[data-workspace-toggle]').click();
       if(!(await page.locator('body.workspace-collapsed').count()))
         throw new Error('Desktop sidebar did not collapse to icons');
@@ -1043,9 +1233,9 @@ try {
       if(!(await admin.getByRole('heading',{name:'Regular License'}).isVisible())
         || !(await admin.getByRole('heading',{name:'Extended License'}).isVisible()))
         throw new Error('Builder Studio license guidance missing');
-      const actions=admin.locator('.studio-choice-link svg');
-      if(await actions.count()!==5)
-        throw new Error('Builder Studio listing cards missing correct navigation icons');
+      const actions=admin.locator('.studio-choice-link');
+      if(await actions.count()!==5 || await actions.locator('svg').count()!==0)
+        throw new Error('Builder Studio choice links must have labels without trailing arrow icons');
       checks+=8;
       for(const kind of ['product','project','service','freelance','job']){
         const response=await admin.goto(origin+'/en/builder?type='+kind,{waitUntil:'networkidle'});

@@ -68,7 +68,7 @@
           <span class="support-article-category">{{ \App\Support\SupportKnowledge::CATEGORIES[$article->category] ?? ucfirst($article->category) }}</span>
           <strong>{{ $article->title }}</strong>
           <p class="support-article-excerpt">{{ $article->excerpt }}</p>
-          <span class="support-article-open">Read article <x-icon name="chevron-right" size="16"/></span>
+          <span class="support-article-open">Read article</span>
         </a>
       @empty
         <div class="support-empty-state">

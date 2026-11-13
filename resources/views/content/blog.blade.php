@@ -41,20 +41,7 @@
       @forelse($posts as $post)
         <article class="blog-post-card">
           <a class="blog-card-media" href="{{ $post->publicUrl() }}" aria-label="Read {{ $post->title }}">
-            @if($post->featured_type === 'image' && $post->featuredMedia && str_starts_with($post->featuredMedia->mime_type, 'image/'))
-              <img src="{{ $post->featuredMedia->previewUrl() }}" alt="{{ $post->featuredMedia->alt_text }}" loading="lazy">
-            @elseif($post->featured_type === 'video' && $post->featuredMedia && str_starts_with($post->featuredMedia->mime_type, 'video/'))
-              <video src="{{ $post->featuredMedia->previewUrl() }}" preload="metadata" muted playsinline aria-label="{{ $post->featuredMedia->alt_text }}"></video>
-              <span class="blog-card-video-badge"><x-icon name="play-circle" size="16"/> Video</span>
-            @elseif($post->featured_type === 'youtube' && preg_match('~^https://www\.youtube\.com/watch\?v=([A-Za-z0-9_-]{11})$~D', (string) $post->featured_url, $video))
-              <span class="blog-card-placeholder blog-card-youtube"><x-icon name="youtube" size="37"/><span>YouTube video</span></span>
-              <img class="blog-card-youtube-thumbnail" src="{{ 'https://i.ytimg.com/vi/'.$video[1].'/hqdefault.jpg' }}" alt="" loading="lazy" referrerpolicy="no-referrer">
-              <span class="blog-card-video-badge"><x-icon name="play-circle" size="16"/> YouTube</span>
-            @elseif($post->featured_type === 'color' && preg_match('/^#[0-9a-fA-F]{6}$/D', (string) $post->featured_color))
-              <span class="blog-card-color" style="background-color:{{ $post->featured_color }}" role="img" aria-label="Featured color"></span>
-            @else
-              <span class="blog-card-placeholder"><x-icon name="file-text" size="35"/><span>Article</span></span>
-            @endif
+            <x-blog-card-featured-media :post="$post" />
           </a>
           <div class="blog-card-content">
             @if($post->category)
@@ -66,7 +53,7 @@
             @if($post->excerpt)<p class="blog-card-excerpt">{{ \Illuminate\Support\Str::limit($post->excerpt, 120) }}</p>@endif
             <div class="blog-card-bottom">
               <time datetime="{{ $post->published_at?->toDateString() }}">{{ $post->published_at?->format('d M Y') ?? 'Published' }}</time>
-              <a href="{{ $post->publicUrl() }}" class="blog-card-read">Read <x-icon name="arrow-up-right" size="16"/></a>
+              <a href="{{ $post->publicUrl() }}" class="blog-card-read">Read</a>
             </div>
           </div>
         </article>

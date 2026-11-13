@@ -55,6 +55,7 @@ jobs:
         run: |
           php artisan migrate --force --no-interaction
           php tests/browser/seed.php
+          php artisan storage:link
           touch storage/app/installed.lock
       - name: Verify desktop, tablet and mobile-emulated workflows
         env:
