@@ -469,6 +469,30 @@ for slot, index in (
     print("QA_HTTP_ERROR_CHAIN_" + slot + "=" +
           "class:" + safe_class(entry) + "|kind:" + safe_kind(entry) +
           "|origin:" + safe_origin(entry))
+    # "headers already sent" reports TWO sites:
+    # 1) origin of output (e.g. Response.php's ob_end_flush()),
+    # 2) the later forbidden header mutation (e.g. SessionUtils.php).
+    # The earlier safe_origin() intentionally captured only the first one.
+    # Only emit QA-root-relative trusted code path + line; never the message.
+    decoded = entry.replace(chr(92) * 2, chr(92))
+    relative = (
+        r"((?:app|routes|bootstrap|config|lang|public|vendor)/"
+        r"[A-Za-z0-9_./-]{1,160}):(\d{1,6})"
+    )
+    output_site = re.search(
+        r"output started at\s+" + re.escape(str(qa)) + r"/" + relative,
+        decoded, re.IGNORECASE
+    )
+    mutation_site = re.search(
+        r"\)\s+(?:at|in)\s+" + re.escape(str(qa)) + r"/" + relative,
+        decoded, re.IGNORECASE
+    )
+    print("QA_HTTP_OUTPUT_START_" + slot + "=" +
+          (output_site.group(1) + ":" + output_site.group(2)
+           if output_site else "NOT_FOUND"))
+    print("QA_HTTP_HEADER_MUTATION_" + slot + "=" +
+          (mutation_site.group(1) + ":" + mutation_site.group(2)
+           if mutation_site else "NOT_FOUND"))
 candidate = next((
     line for line in reversed(lines)
     if ("testing.ERROR:" in line or "local.ERROR:" in line
