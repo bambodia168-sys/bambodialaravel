@@ -125,6 +125,7 @@ jobs:
           python3 -m py_compile support/home-discovery-aapanel-upgrade.py
           python3 -m py_compile support/home-freelancer-avatar-aapanel-upgrade.py
           python3 -m py_compile support/remove-trailing-action-arrows-aapanel.py
+          python3 -m py_compile support/blog-featured-video-aapanel.py
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
