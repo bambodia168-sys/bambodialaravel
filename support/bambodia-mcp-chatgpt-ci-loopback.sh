@@ -17,6 +17,7 @@ CLIENT_SOURCE="$PWD/support/bambodia-mcp-chatgpt-loopback-client.py"
 python3 -m py_compile "$CLIENT_SOURCE"
 QA="$(mktemp -d "$RUNNER_TEMP/bambodia-chatgpt-ci.XXXXXXXX")"
 chmod 700 "$QA"
+mkdir -p "$QA/storage" storage/framework/sessions storage/framework/views storage/framework/cache/data
 SERVER_PID=""
 cleanup(){
  if [[ -n "$SERVER_PID" ]]; then
@@ -111,7 +112,7 @@ with socket.socket() as s:
 PY
 )"
 [[ "$PORT" =~ ^[0-9]+$ && "$PORT" -ge 1024 ]] || fail QA_LOCAL_PORT_INVALID
-http_php -S "127.0.0.1:$PORT" -t "$QA/public" "$QA/public/index.php" \
+http_php -S "127.0.0.1:$PORT" -t "$PWD/public" "$PWD/public/index.php" \
  > "$QA/chatgpt-loopback-http.log" 2>&1 &
 SERVER_PID=$!
 READY=0
