@@ -19,7 +19,7 @@ grep -Fq 'systemctl start bambodia-previewqa-http.service' "$SRC"
 grep -Fq 'QA_FPM=UNCHANGED' "$SRC"
 grep -Fq 'ACCEPTED=yes' "$SRC"
 grep -Fq 'fail shared_www_accessible_private_http_socket' "$SRC"
-grep -Fq 'fail missing_host_not_rejected' "$SRC"
+grep -Fq 'missing_host_not_rejected:' "$SRC"
 grep -Fq 'UNRECOGNIZED_LOCALHOST_IP_AND_PORT_QUALIFIED_HOSTS=HTTP_421' "$SRC"
 if grep -Fq 'systemctl restart nginx' "$SRC"; then
   echo 'BLOCKED=shared_nginx_restart_detected' >&2; exit 2
