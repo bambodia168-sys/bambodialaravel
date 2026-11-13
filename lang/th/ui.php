@@ -21,6 +21,7 @@ return [
     'find_products' => 'ค้นหาสินค้า',
     'find_projects' => 'ค้นหาโครงการ',
     'find_freelancers' => 'ค้นหาฟรีแลนซ์',
+    'find_freelance_offers' => 'ค้นหาบริการฟรีแลนซ์',
     'find_services' => 'ค้นหาบริการ',
     'language' => 'ภาษา',
     'welcome_back' => 'ยินดีต้อนรับกลับ',
