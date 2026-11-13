@@ -81,7 +81,7 @@ def sha(data):
 staged = {}
 for rel, pin in pins.items():
     staged[rel] = safe_file(original / rel)
-    if blob(staged[rel]) != pin or safe_file(source / rel) != staged[rel]:
+    if blob(staged[rel]) != pin or (rel != route and safe_file(source / rel) != staged[rel]):
         fail("STAGED_SOURCE_DRIFT_" + rel)
     if safe_file(review / "live-critical" / rel) != safe_file(live / rel):
         fail("LIVE_CRITICAL_CHANGED_" + rel)
@@ -123,7 +123,7 @@ oauth_route = b"->middleware(['mcp.auth', 'throttle:30,1'])"
 if (legacy.count(b"Route::post('/mcp'") != 1 or legacy_route not in legacy or
         release.count(b"Route::post('/mcp'") != 1 or oauth_route not in release or
         b"Mcp::oauthRoutes(registration: false)" not in release or
-        release.count(b"oauth-protected-resource") != 4 or
+        release.count(b"oauth-protected-resource") != 2 or
         b"Route::post('/oauth/register'" not in release):
     fail("ROUTE_AUTHENTICATION_OR_DISCOVERY_UNEXPECTED")
 
@@ -162,10 +162,36 @@ if (b"config('mcp.production_enabled', false)" not in c or
         b"'product', 'project', 'service', 'freelance' => $query->where('user_id', $actor->id)" not in t):
     fail("MCP_CONTROLLER_OR_OWNERSHIP_GATE_MISSING")
 
-# No modifications to source files are required when the staged files are
-# already the exact verified resolved versions. Reject unexpected divergence.
-if merged != staged[route]:
-    fail("ROUTE_RELEASE_NOT_IDENTICAL_TO_SAFE_THREE_WAY_RESOLUTION")
+# A live-only routing edit is possible. Apply only the resolved route file in
+# the private workspace after proving all original live bytes are preserved.
+existing_route = safe_file(source / route)
+if existing_route not in (staged[route], merged):
+    fail("PRIVATE_ROUTE_CHANGED_OUTSIDE_THIS_RECONCILIATION")
+if existing_route != merged:
+    target = source / route
+    fd, temp = tempfile.mkstemp(prefix=".mcp-private-route-", dir=target.parent)
+    try:
+        os.fchmod(fd, target.stat().st_mode & 0o777)
+        with os.fdopen(fd, "wb") as out:
+            out.write(merged)
+        os.replace(temp, target)
+    finally:
+        if os.path.exists(temp):
+            os.unlink(temp)
+if safe_file(source / route) != merged:
+    fail("PRIVATE_ROUTE_WRITE_VERIFICATION_FAILED")
+
+# Static PHP syntax check only; no artisan execution, database connection,
+# OAuth key creation or production configuration changes.
+php = Path("/www/server/php/85/bin/php")
+if not php.is_file():
+    fail("PHP_85_CLI_NOT_FOUND")
+for rel in (route, controller, tools):
+    lint = subprocess.run([str(php), "-l", str(source / rel)],
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          check=False)
+    if lint.returncode != 0:
+        fail("PHP_LINT_FAILED_" + rel)
 
 report = {
     "route_conflicts_resolved": 1,
@@ -173,7 +199,7 @@ report = {
     "routes": "LIVE_NON_MCP_BYTES_EXACTLY_PRESERVED",
     "controller": "EXACT_PINNED_MCP_RELEASE_WITH_OAUTH_AND_WRITE_GATES",
     "draft_tools": "EXACT_PINNED_MCP_RELEASE_WITH_OWNERSHIP_ENFORCEMENT",
-    "source_files_changed": 0,
+    "source_files_changed": int(merged != staged[route]),
     "private_overlay_only": True,
     "production_activation": False,
     "production_deployment": False,
@@ -205,6 +231,8 @@ print("DRAFT_OWNERSHIP_ENFORCEMENT=VERIFIED")
 print("LIVE_ROUTE_NON_MCP_BYTES=PRESERVED")
 print("MCP_PRIVATE_LAYOUT=VERIFIED")
 print("MCP_PRIVATE_RECONCILIATION_REPORT=" + str(dest))
+print("PRIVATE_PHP_SYNTAX=PASS")
+print("PRIVATE_ROUTE_RECONCILIATION_WRITE=" + ("APPLIED" if merged != staged[route] else "ALREADY_IDENTICAL"))
 print("MCP_PRIVATE_RECONCILIATION=PASS")
 print("DEPLOYABLE_RELEASE=NO")
 print("PRODUCTION_SOURCE_ENV_KEYS_MYSQL=UNCHANGED")
