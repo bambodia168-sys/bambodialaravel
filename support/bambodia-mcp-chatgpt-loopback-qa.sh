@@ -29,7 +29,7 @@ VHOST=/www/server/panel/vhost/nginx/bambodia.com.conf
 PHP=/www/server/php/85/bin/php
 fail() { echo "MCP_OAUTH_QA_BLOCKED=$*" >&2; exit 1; }
 [[ "$(id -u)" == 0 ]] || fail ROOT_REQUIRED
-for cmd in python3 git sha256sum stat cp du df awk openssl composer curl; do command -v "$cmd" >/dev/null || fail "MISSING_$cmd"; done
+for cmd in python3 git sha256sum stat cp du df awk openssl composer curl gh; do command -v "$cmd" >/dev/null || fail "MISSING_$cmd"; done
 [[ -x "$PHP" ]] || fail PHP85_MISSING
 [[ -d "$OVERLAY" && ! -L "$OVERLAY" && "$(stat -c '%u:%a' "$OVERLAY")" == "0:700" ]] || fail OVERLAY_UNSAFE
 [[ -d "$SOURCE" && ! -L "$SOURCE" && -f "$SOURCE/artisan" && -f "$SOURCE/vendor/autoload.php" ]] || fail PRIVATE_SOURCE_MISSING
@@ -123,6 +123,46 @@ cleanup() {
 trap cleanup EXIT
 cp -a --reflink=auto -- "$SOURCE/." "$QA/"
 [[ -f "$QA/artisan" && -f "$QA/vendor/autoload.php" ]] || fail QA_COPY_INCOMPLETE
+# The on-disk private overlay is an immutable, previously reviewed baseline.
+# Add the GitHub-reviewed session-aware consent fix only in the TEMP QA COPY.
+# No file beneath SOURCE, LIVE or Nginx is ever replaced.
+QA_SOURCE_RELEASE="139c057cec0a9fa1fda6383d375a8bb93514ef25"
+REPO="bambodia168-sys/bambodialaravel"
+qa_patch_php() {
+ local rel="$1" old="$2" expected="$3" destination="$QA/$1"
+ if [[ "$old" == "absent" ]]; then
+  [[ ! -e "$destination" && ! -L "$destination" ]] || fail "QA_PATCH_UNEXPECTED_EXISTING_$rel"
+ else
+  [[ -f "$destination" && ! -L "$destination" ]] || fail "QA_PATCH_UNSAFE_TARGET_$rel"
+  [[ "$(git hash-object "$destination")" == "$old" ]] || fail "QA_PATCH_BASE_MISMATCH_$rel"
+ fi
+ local temporary
+ temporary="$(mktemp "$QA/.mcp-reviewed-php.XXXXXXXX")"
+ gh api -H "Accept: application/vnd.github.raw+json" \
+  "repos/$REPO/contents/$rel?ref=$QA_SOURCE_RELEASE" > "$temporary" ||
+  fail "QA_PATCH_GITHUB_FETCH_FAILED_$rel"
+ [[ "$(git hash-object "$temporary")" == "$expected" ]] ||
+  fail "QA_PATCH_GITHUB_HASH_MISMATCH_$rel"
+ "$PHP" -l "$temporary" >/dev/null || fail "QA_PATCH_PHP_LINT_FAILED_$rel"
+ chmod 600 "$temporary"
+ mv -f -- "$temporary" "$destination"
+ [[ "$(git hash-object "$destination")" == "$expected" ]] ||
+  fail "QA_PATCH_INSTALL_FAILED_$rel"
+}
+echo "========== APPLY VERIFIED CONSENT FIX TO DISPOSABLE QA ONLY =========="
+qa_patch_php "bootstrap/app.php" \
+ "c8c1b587659260508cdcc6b30c90a2ffca21e562" \
+ "48b931f09aa0c21cc05705396a06272f85b2be8d"
+qa_patch_php "app/Http/Middleware/RequireMcpOAuthResource.php" \
+ "8be5e72d7e25e21176fb6364273741af2d1104f6" \
+ "ae8922d4a1a82a5dabf11df4877d5aab8fb8093d"
+qa_patch_php "app/Http/Middleware/EnsureMcpOAuthConsentAdmin.php" \
+ "absent" \
+ "641e625f4a12765a3e8da54916235ccb7b337835"
+qa_patch_php "tests/Feature/BambodiaMcpOAuthTest.php" \
+ "2c67651511f99eee3d6e3b1c3bad2364860912ad" \
+ "4a370bd74785584a609cb98254621968ad91512a"
+echo "QA_CONSENT_FIX=VERIFIED_ONLY_IN_DISPOSABLE_COPY"
 # Public index.php is fail-closed until installed.lock exists.
 # Create that flag only inside the disposable QA clone, never in SOURCE/LIVE.
 mkdir -p "$QA/storage/app"
