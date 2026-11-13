@@ -393,15 +393,87 @@ done
 echo "CHATGPT_LOOPBACK_HTTP=BOUND_TO_127_0_0_1"
 
 echo "========== INDEPENDENT CHATGPT-STYLE HTTP OAUTH ACCEPTANCE =========="
-env -i "PATH=$PATH" "HOME=$QA" \
+if env -i "PATH=$PATH" "HOME=$QA" \
  "BAMBODIA_LOOPBACK_PORT=$PORT" \
  "BAMBODIA_QA_ADMIN_EMAIL=$BAMBODIA_QA_ADMIN_EMAIL" \
  "BAMBODIA_QA_ADMIN_PASSWORD=$BAMBODIA_QA_ADMIN_PASSWORD" \
  "BAMBODIA_QA_FOREIGN_ID=$BAMBODIA_QA_FOREIGN_ID" \
- python3 -I "$CLIENT_SOURCE" ||
- fail CHATGPT_LOOPBACK_HTTP_ACCEPTANCE_FAILED
+ python3 -I "$CLIENT_SOURCE"; then
+ echo "CHATGPT_LOOPBACK_INDEPENDENT_ACCEPTANCE=PASS"
+else
+ # APP_DEBUG stays false. Read only the private disposable server log and
+ # expose allowlisted diagnostic classes/location, never exception payload,
+ # request bodies, user credentials, cookies, bearer values or DB content.
+ python3 - "$QA/chatgpt-loopback-http.log" "$QA" <<'PY'
+import hashlib
+from pathlib import Path
+import re
+import sys
 
-echo "CHATGPT_LOOPBACK_INDEPENDENT_ACCEPTANCE=PASS"
+log = Path(sys.argv[1])
+qa = Path(sys.argv[2])
+if not log.is_file() or log.is_symlink():
+    print("QA_HTTP_EXCEPTION_DIAGNOSTIC=LOG_MISSING")
+    sys.exit(0)
+
+raw = log.read_bytes()[-1_500_000:]
+lines = raw.decode("utf-8", "replace").splitlines()
+candidate = next((
+    line for line in reversed(lines)
+    if ("testing.ERROR:" in line or "local.ERROR:" in line
+        or "PHP Fatal error:" in line or "Uncaught " in line)
+), None)
+if candidate is None:
+    print("QA_HTTP_EXCEPTION_DIAGNOSTIC=NO_ERROR_ENTRY")
+    print("QA_HTTP_LOG_FINGERPRINT=" + hashlib.sha256(raw).hexdigest()[:16])
+    sys.exit(0)
+
+# Never print the exception message verbatim. It can include sensitive SQL
+# bindings, arbitrary headers or session data. Only fixed-structure fields
+# and code/path identifiers are emitted.
+print("QA_HTTP_EXCEPTION_DIAGNOSTIC=FOUND")
+print("QA_HTTP_EXCEPTION_FINGERPRINT=" +
+      hashlib.sha256(candidate.encode()).hexdigest()[:16])
+classes = [
+    "Illuminate\\Database\\QueryException",
+    "PDOException",
+    "Illuminate\\Database\\Eloquent\\ModelNotFoundException",
+    "Illuminate\\Routing\\Exceptions\\UrlGenerationException",
+    "Symfony\\Component\\Routing\\Exception\\RouteNotFoundException",
+    "Illuminate\\Session\\TokenMismatchException",
+    "Illuminate\\Encryption\\MissingAppKeyException",
+    "Illuminate\\Encryption\\DecryptException",
+    "Illuminate\\Filesystem\\FileNotFoundException",
+    "Illuminate\\View\\ViewException",
+    "ErrorException",
+    "TypeError",
+    "ParseError",
+    "Error",
+]
+# JSON-escaped PHP class names contain double backslashes.
+unescaped = candidate.replace("\\\\", "\\")
+detected = next((v for v in classes if v in unescaped), "OTHER")
+print("QA_HTTP_EXCEPTION_CLASS=" + detected.replace("\\", "."))
+state = re.search(r"SQLSTATE\[([0-9A-Z]{3,8})\]", unescaped)
+if state:
+    print("QA_HTTP_SQLSTATE=" + state.group(1))
+table = re.search(r"no such table:\s*([a-zA-Z_][a-zA-Z_0-9]{0,79})", unescaped)
+if table:
+    print("QA_HTTP_SQLITE_MISSING_TABLE=" + table.group(1))
+permission = re.search(r"(Permission denied|Read-only file system|No space left on device)", unescaped, re.I)
+if permission:
+    print("QA_HTTP_FILESYSTEM_ERROR=YES")
+badfn = re.search(r"Call to undefined (?:function|method)\s+([a-zA-Z_\\][a-zA-Z_0-9\\:]{0,90})", unescaped)
+if badfn:
+    print("QA_HTTP_UNDEFINED_CALL=" + badfn.group(1).replace("\\", "."))
+# Only a relative code path, never the server root or user-provided file.
+stack = "\n".join(lines[-1200:])
+code = re.search(re.escape(str(qa)) + r"/((?:app|routes|bootstrap|config|vendor)/[a-zA-Z0-9_./-]{1,160})\((\d{1,6})\)", stack)
+if code:
+    print("QA_HTTP_STACK_LOCATION=" + code.group(1) + ":" + code.group(2))
+PY
+ fail CHATGPT_LOOPBACK_HTTP_ACCEPTANCE_FAILED
+fi
 echo "QA_COPY_AND_EPHEMERAL_KEYS=REMOVED_AT_EXIT"
 echo "PRODUCTION_SOURCE_DATABASE_KEYS_NGINX=UNCHANGED"
 echo "MCP_PRODUCTION_ACTIVATION=NOT_STARTED"
