@@ -18,6 +18,8 @@ return [
     'marketplace' => 'Marketplace',
     'for_users' => 'For Users',
     'compliance' => 'Compliance',
+    'footer_legal_policies' => 'Legal & Policies',
+    'footer_email_support' => 'Email Support',
     'footer_marketplace_projects' => 'Projects',
     'footer_marketplace_products' => 'Products',
     'footer_marketplace_freelance' => 'Freelance',
