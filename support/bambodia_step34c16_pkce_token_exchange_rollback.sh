@@ -80,6 +80,22 @@ test "$(sha256sum "$VENDOR" | awk '{print $1}')" = "$VENDOR_SHA" ||
 test "$(sha256sum "$PRIOR" | awk '{print $1}')" = "$PRIOR_SHA" ||
  fail PINNED_PRIOR_CONSENT_TEST_CHANGED
 bash "$VENDOR" --audit
+echo '========== STATIC SYNTAX CHECK EMBEDDED PKCE TOKEN PROBE =========='
+python3 - "$0" "$PHP" <<'PY'
+import pathlib,subprocess,sys
+path,php=sys.argv[1:]
+source=pathlib.Path(path).read_text(encoding='utf-8')
+if source.count("code=r'''")!=1:
+ raise SystemExit('STEP34C16_BLOCKED=EMBEDDED_PHP_SOURCE_LOCATOR_INVALID')
+code=source.split("code=r'''",1)[1].split("\n'''",1)[0]
+if not code or len(code)>128000:
+ raise SystemExit('STEP34C16_BLOCKED=EMBEDDED_PHP_SOURCE_EMPTY_OR_LONG')
+proc=subprocess.run([php,'-l'],input=b'<?php\n'+code.encode('utf-8'),
+ stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,check=False,timeout=20)
+if proc.returncode!=0:
+ raise SystemExit('STEP34C16_BLOCKED=EMBEDDED_PHP_SYNTAX_INVALID')
+print('STEP34C16_EMBEDDED_PHP_SYNTAX=PASS')
+PY
 PRIOR_CODE="/root/bambodia_step34c15_pkce_code_approval_rollback.sh"
 PRIOR_CODE_SHA="4015de7712f250a05db53d0210761615baf44be2aea631b9501df69394f4f351"
 test -f "$PRIOR_CODE" && test ! -L "$PRIOR_CODE" &&
@@ -401,8 +417,8 @@ prefixes=(
  "ISSUED_ACCESS_AND_REFRESH_ROWS=",
  "RAW_ACCESS_REFRESH_TOKENS_AND_CODE_PRINTED=",
  "REDIRECT_FOLLOWED_OR_CODE_PRINTED=",
- "DISPOSABLE_QA_ADMIN_CLIENT_AND_AUTH_CODE=",
- "PRIVATE_PKCE_CONSENT_APPROVAL_AND_CODE_ISSUANCE=",
+ "DISPOSABLE_QA_ADMIN_CLIENT_CODE_AND_TOKENS=",
+ "PRIVATE_PKCE_S256_TOKEN_EXCHANGE_AND_RSA_VERIFICATION=",
  "NETWORK_LISTENER_OR_PUBLIC_ISSUER=")
 if len(p.stdout)>32768 or any(len(s)>130 or not s.startswith(prefixes)
                                 for s in lines):
