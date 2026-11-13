@@ -1,3 +1,7 @@
+import { initBlogPremiumPlayers } from './blog-premium-player.js';
+
+document.addEventListener('DOMContentLoaded', initBlogPremiumPlayers);
+
 const root = document.documentElement;
 
 function syncTheme() {
