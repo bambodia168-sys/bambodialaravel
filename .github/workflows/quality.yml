@@ -141,10 +141,12 @@ jobs:
           ast.parse(chunks[1].split("\nPY\n", 1)[0])
           print("MCP_PHYSICAL_OAUTH_QA_PYTHON_SYNTAX=PASS")
           for required in (
-              'COMPOSER_SCRIPT="$(command -v composer)"',
-              'qa_php "$COMPOSER_SCRIPT" --version --no-ansi',
-              'qa_php "$COMPOSER_SCRIPT" install',
-              "COMPOSER_INTERPRETER=PINNED_PHP85",
+              'COMPOSER_ENTRY=/usr/bin/composer',
+              'fail COMPOSER_ENTRY_IS_NOT_PHP',
+              'COMPOSER_VERSION="$(qa_php -d "include_path=/usr/share/php:."',
+              '"$COMPOSER_ENTRY" --version --no-ansi)',
+              '"$COMPOSER_ENTRY" install',
+              "COMPOSER_INTERPRETER=VERIFIED_PHP85_ENTRYPOINT",
               'qa_php "$QA/vendor/bin/phpunit" --colors=never --filter=BambodiaMcp',
               "QA_PHPUNIT_FROM_LOCKED_DEV_DEPENDENCIES=PASS",
               "QA_LOCK_CHANGED_DURING_DEV_INSTALL",
@@ -152,8 +154,11 @@ jobs:
           ):
               assert required in src, "Missing guarded disposable PHPUnit workflow: " + required
           assert "qa_php artisan test" not in src
-          assert "\n  composer install" not in src, "Composer must run via pinned PHP"
+          assert 'command -v composer' not in src, "A shell wrapper is unsafe for PHP"
+          assert "exec /usr/bin/php83" in src, "Document the blocked PHP 8.3 wrapper"
           assert ' "$PHP" "$@"' in src, "The PHP CLI must be pinned"
+          assert '[[ "$COMPOSER_VERSION" == "Composer version "* ]]' in src
+          assert '--no-scripts --no-plugins' in src
           assert '"COMPOSER_HOME=$QA/.composer-home"' in src
           assert '"COMPOSER_CACHE_DIR=$QA/.composer-cache"' in src
           assert "--no-scripts --no-plugins" in src
