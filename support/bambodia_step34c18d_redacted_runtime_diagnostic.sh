@@ -39,6 +39,18 @@ if any(s.count(k)!=n for k,n in need.items()):
 print('ORIGINAL_RUNTIME_CAPTURE_CONTRACT=VERIFIED')
 PY
 
+echo '========== STATIC LINT ALL EMBEDDED PYTHON WITHOUT RUNNING THEM =========='
+python3 - "$0" <<'PY'
+import pathlib,re,sys
+source=pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')
+blocks=re.findall(r"<<'PY'\n(.*?)\nPY(?=\n|$)",source,flags=re.S)
+if len(blocks)!=4:
+ raise SystemExit('STEP34C18D_BLOCKED=UNEXPECTED_EMBEDDED_PYTHON_COUNT')
+for i,block in enumerate(blocks):
+ compile(block,'step34c18d_heredoc_'+str(i),'exec')
+print('STEP34C18D_EMBEDDED_PYTHON_SYNTAX=PASS')
+PY
+
 echo '========== RUN PINNED READ-ONLY SAFETY GATES =========='
 bash "$ORIG" --check
 echo 'STEP34C18D_READ_ONLY_PREFLIGHT=PASS'
