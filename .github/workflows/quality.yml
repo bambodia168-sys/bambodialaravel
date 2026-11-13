@@ -126,6 +126,7 @@ jobs:
           bash -n support/bambodia-mcp-main-domain-isolated-vendor.sh
           bash -n support/bambodia-mcp-main-domain-isolated-source-bundle.sh
           bash -n support/bambodia-mcp-main-domain-reuse-live-assets.sh
+          bash -n support/bambodia-mcp-main-domain-live-drift-review.sh
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
