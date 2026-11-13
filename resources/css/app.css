@@ -249,6 +249,9 @@ svg{flex-shrink:0}
 .marketplace-section-heading{display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;gap:18px;margin-bottom:22px}
 .marketplace-section-heading h2{font-size:clamp(22px,2vw,28px);line-height:1.3;margin:4px 0 6px;letter-spacing:normal}
 .marketplace-section-heading p{color:var(--muted);margin:2px 0 0}
+/* Only the homepage discovery feed uses responsive 2/3/4 columns.
+   The search, related-product, and account card grids retain their own layouts. */
+.marketplace-card-grid.marketplace-home-feed{grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(10px,1.2vw,16px)}
 .marketplace-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:stretch}
 .marketplace-card,.creator-directory-card,.marketplace-job-card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;min-width:0;transition:transform .2s ease,border-color .2s ease}
 .marketplace-card:hover,.creator-directory-card:hover,.marketplace-job-card:hover{border-color:var(--accent);transform:translateY(-2px)}
@@ -283,26 +286,38 @@ svg{flex-shrink:0}
 .hero-quick-actions a:hover{border-color:var(--accent);color:var(--accent)}
 .hero-links small{display:inline-block;margin-left:5px;font-size:11px;opacity:.7}
 /* Homepage freelancer showcase: public profiles, no unverified ratings. */
-.marketplace-freelancer-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;align-items:stretch}
-.marketplace-freelancer-card{display:flex;flex-direction:column;min-width:0;min-height:270px;padding:20px 18px 16px;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:var(--shadow);transition:transform .18s,border-color .18s,box-shadow .18s}
+.marketplace-freelancer-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(10px,1.2vw,15px);align-items:stretch}
+.marketplace-freelancer-card{display:flex;flex-direction:column;min-width:0;min-height:255px;padding:20px 14px 16px;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:var(--shadow);transition:transform .18s,border-color .18s,box-shadow .18s}
 .marketplace-freelancer-card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 12px 30px rgba(10,27,53,.1)}
-.marketplace-freelancer-card-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:17px}
-.marketplace-freelancer-avatar{display:grid;place-items:center;flex:0 0 49px;width:49px;height:49px;border-radius:15px;background:color-mix(in srgb,var(--accent) 13%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line));color:var(--accent);font-weight:800;font-size:21px}
-.marketplace-freelancer-visibility{display:inline-flex;align-items:center;gap:5px;min-width:0;color:var(--muted);font-size:11px;font-weight:700}
-.marketplace-freelancer-card h3{margin:0 0 6px;font-size:17px;line-height:1.35;overflow-wrap:anywhere}
+.marketplace-freelancer-card-heading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;margin-bottom:13px}
+.marketplace-freelancer-avatar{display:grid;place-items:center;flex:0 0 112px;width:112px;height:112px;border-radius:26px;background:color-mix(in srgb,var(--accent) 13%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line));color:var(--accent);font-weight:800;font-size:42px;line-height:1;text-decoration:none;overflow:hidden;transition:box-shadow .2s ease,transform .2s ease}
+/* Head-and-shoulders framing: fill the avatar and bias the crop upward so
+   the top of the hair stays visible on tall portrait photos. */
+.marketplace-freelancer-avatar img{display:block;width:100%;height:100%;box-sizing:border-box;padding:0;object-fit:cover;object-position:50% 15%;background:var(--surface);aspect-ratio:1}
+.marketplace-freelancer-avatar:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(10,27,53,.13)}
+.marketplace-freelancer-avatar:focus-visible{outline:3px solid var(--secondary);outline-offset:4px}
+.marketplace-freelancer-card h3{margin:0 0 6px;font-size:17px;line-height:1.35;overflow-wrap:anywhere;text-align:center}
 .marketplace-freelancer-card h3 a{color:var(--text)}
 .marketplace-freelancer-card h3 a:hover{color:var(--accent)}
-.marketplace-freelancer-card h3 a:focus-visible,.marketplace-freelancer-card-footer a:focus-visible{outline:3px solid var(--secondary);outline-offset:3px;border-radius:3px}
-.marketplace-freelancer-headline{margin:0 0 11px;color:var(--accent);font-size:12px;font-weight:750;line-height:1.5;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;min-height:3em}
-.marketplace-freelancer-bio{margin:0 0 17px;color:var(--muted);font-size:12px;line-height:1.65;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden;overflow-wrap:anywhere}
-.marketplace-freelancer-card-footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--line);padding-top:13px;margin-top:auto}
-.marketplace-freelancer-card-footer span,.marketplace-freelancer-card-footer a{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:750}
+.marketplace-freelancer-card h3 a:focus-visible{outline:3px solid var(--secondary);outline-offset:3px;border-radius:3px}
+.marketplace-freelancer-headline{margin:0 0 11px;text-align:center;color:var(--accent);font-size:12px;font-weight:750;line-height:1.5;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;min-height:3em}
+.marketplace-freelancer-card-footer{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--line);padding-top:13px;margin-top:auto}
+.marketplace-freelancer-card-footer span{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:750}
 .marketplace-freelancer-card-footer span{color:var(--muted)}
-.marketplace-freelancer-card-footer a{color:var(--accent)}
 .marketplace-freelancer-empty .btn{margin-top:8px}
-@media(max-width:1199px){.marketplace-freelancer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:679px){.marketplace-freelancer-grid{grid-template-columns:minmax(0,1fr)}.marketplace-freelancer-card{min-height:235px}.marketplace-freelancer-section .marketplace-section-heading{align-items:flex-start;gap:12px}.marketplace-freelancer-section .marketplace-section-heading>.btn{align-self:flex-start}}
-@media(prefers-reduced-motion:reduce){.marketplace-freelancer-card{transition:none}}
+@media(max-width:1399px){.marketplace-freelancer-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:1099px){.marketplace-freelancer-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:699px){
+  .marketplace-freelancer-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .marketplace-freelancer-card{min-height:240px;padding:15px 10px 12px}
+  .marketplace-freelancer-avatar{width:92px;height:92px;flex-basis:92px;border-radius:24px;font-size:36px}
+  .marketplace-freelancer-card h3{font-size:14px}
+  .marketplace-freelancer-headline{font-size:11px}
+  .marketplace-freelancer-card-footer{gap:8px;padding-top:10px}
+  .marketplace-freelancer-card-footer span{font-size:10px}
+}
+@media(max-width:679px){.marketplace-freelancer-section .marketplace-section-heading{align-items:flex-start;gap:12px}.marketplace-freelancer-section .marketplace-section-heading>.btn{align-self:flex-start}}
+@media(prefers-reduced-motion:reduce){.marketplace-freelancer-card,.marketplace-freelancer-avatar{transition:none}.marketplace-freelancer-avatar:hover{transform:none}}
 .marketplace-jobs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .marketplace-job-card{padding:23px;gap:13px}
 .marketplace-job-card h3{font-size:18px;line-height:1.4;margin:0;letter-spacing:normal}
@@ -380,12 +395,13 @@ svg{flex-shrink:0}
 .account-activity-row p{margin:4px 0;font-size:12px;color:var(--muted)}
 .account-activity-row small{font-size:11px;color:var(--muted)}
 .account-activity-row form{flex-shrink:0}
-@media(max-width:1199px){.marketplace-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.marketplace-home-feed .marketplace-card:nth-child(n+5){display:none}}
+@media(max-width:1199px){.marketplace-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.marketplace-card-grid.marketplace-home-feed{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:980px){
   .marketplace-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:700px){
   .marketplace-section{margin-top:29px;margin-bottom:34px}
+  .marketplace-card-grid.marketplace-home-feed{grid-template-columns:repeat(2,minmax(0,1fr))}
   .marketplace-jobs-grid,.creator-directory-grid{grid-template-columns:minmax(0,1fr)}
   .marketplace-card-art{aspect-ratio:16/10}
   .marketplace-filter-form{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -398,7 +414,15 @@ svg{flex-shrink:0}
 }
 @media(max-width:550px){
   .marketplace-card-grid{grid-template-columns:minmax(0,1fr)}
-  .marketplace-home-feed .marketplace-card:nth-child(n+3){display:none}
+  .marketplace-card-grid.marketplace-home-feed{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .marketplace-home-feed .marketplace-card-body{padding:12px 10px;gap:7px}
+  .marketplace-home-feed .marketplace-card h3{font-size:14px}
+  .marketplace-home-feed .marketplace-card-type{left:8px;top:8px;padding:4px 7px;font-size:9px}
+  .marketplace-home-feed .marketplace-card .marketplace-card-featured{right:8px;top:33px;padding:4px 6px;font-size:9px}
+  .marketplace-home-feed .marketplace-card-category{font-size:10px}
+  .marketplace-home-feed .marketplace-card-creator{font-size:11px}
+  .marketplace-home-feed .marketplace-card .marketplace-card-price{font-size:16px}
+  .marketplace-home-feed .marketplace-card .marketplace-card-live-preview{min-height:30px;padding:6px 8px;font-size:10px;white-space:normal}
 }
 @media(max-width:440px){
   .creator-public-heading{align-items:flex-start;gap:11px}
@@ -2098,12 +2122,24 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .blog-post-card{min-width:0;display:flex;flex-direction:column;overflow:hidden;border-radius:15px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
 .blog-card-media{position:relative;display:grid;place-items:center;aspect-ratio:16/10;overflow:hidden;background:var(--surface-2);border-bottom:1px solid var(--line)}
 .blog-card-media img,.blog-card-media video{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain}
-.blog-card-video-badge{position:absolute;bottom:10px;right:10px;display:inline-flex;align-items:center;gap:4px;border-radius:9px;padding:5px 8px;font-size:.74rem;font-weight:750;color:#fff;background:rgba(12,21,38,.8)}
+/* Blog featured videos and YouTube thumbnails share one responsive, premium media stage.
+   The backdrop remains visible if a private video cannot provide a frame or
+   a third-party YouTube thumbnail is unavailable. No autoplay or iframe in cards. */
+.blog-card-media{isolation:isolate}
+.blog-card-media-backdrop{position:absolute;inset:0;z-index:0;display:grid;place-items:center;width:100%;height:100%;color:#d7e7f7;background:radial-gradient(ellipse at 72% 12%,#355e88 0%,transparent 54%),linear-gradient(145deg,#192e4d 0%,#14243e 60%,#0e2037 100%)}
+.blog-card-media-backdrop svg{opacity:.34}
+.blog-card-media .blog-card-youtube-backdrop{color:#ffe0e0;background:radial-gradient(ellipse at 75% 8%,#9d4348 0%,transparent 52%),linear-gradient(145deg,#3c1e33 0%,#1a2540 100%)}
+.blog-card-media .blog-card-video-thumbnail,.blog-card-media .blog-card-youtube-thumbnail{position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;object-position:center;background:transparent}
+.blog-card-media .blog-card-video-thumbnail{opacity:0;pointer-events:none;transition:opacity .2s ease}
+.blog-card-media .blog-card-video-thumbnail.is-ready{opacity:1}
+.blog-card-media .blog-card-youtube-thumbnail[hidden]{display:none!important}
+.blog-card-play-overlay{position:absolute;z-index:2;left:50%;top:50%;display:grid;place-items:center;width:56px;height:56px;border:1px solid rgba(255,255,255,.8);border-radius:50%;color:#fff;background:rgba(12,23,43,.7);box-shadow:0 8px 26px rgba(0,0,0,.24);backdrop-filter:blur(9px);transform:translate(-50%,-50%);transition:background .2s ease,box-shadow .2s ease}
+.blog-card-play-overlay svg{margin-left:3px}
+.blog-card-media:hover .blog-card-play-overlay,.blog-card-media:focus-visible .blog-card-play-overlay{background:rgba(204,66,18,.95);box-shadow:0 10px 28px rgba(0,0,0,.33)}
+.blog-card-video-badge{position:absolute;z-index:3;bottom:10px;right:10px;display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.24);border-radius:8px;padding:5px 9px;font-size:.72rem;letter-spacing:.02em;font-weight:800;color:#fff;background:rgba(12,21,38,.78);backdrop-filter:blur(8px)}
 .blog-card-placeholder,.blog-card-color{display:flex;flex-direction:column;gap:7px;justify-content:center;align-items:center;width:100%;height:100%;color:var(--muted);font-size:.8rem}
 .blog-card-placeholder svg{color:var(--accent)}
-.blog-card-youtube{background:linear-gradient(135deg,#27151e,#482e3b);color:#fff}
-.blog-card-youtube svg{color:#ff6b6b}
-.blog-card-media .blog-card-youtube-thumbnail{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+@media(prefers-reduced-motion:reduce){.blog-card-media .blog-card-video-thumbnail,.blog-card-play-overlay{transition:none}}
 .blog-card-content{display:flex;flex-direction:column;gap:11px;padding:16px;flex:1;min-width:0}
 .blog-card-category{text-transform:uppercase;letter-spacing:.07em;font-size:.69rem;font-weight:850;color:var(--accent);width:fit-content}
 .blog-post-card h2{font-size:clamp(.93rem,1.15vw,1.07rem);line-height:1.42;margin:0;letter-spacing:normal;overflow-wrap:anywhere}
@@ -2219,6 +2255,85 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   .blog-comment-form-footer .btn{width:100%;justify-content:center}
 }
 
+
+/* Single-post title: fill the available reading column before wrapping naturally.
+   Keep all text, including long non-Latin titles, readable at phone widths. */
+.blog-article-content h1{
+  max-width:100%;margin:0 0 18px;
+  font-size:clamp(1.65rem,2.3vw,2.2rem);line-height:1.23;letter-spacing:-.028em;
+  text-wrap:wrap;word-break:normal;overflow-wrap:break-word;hyphens:none;
+}
+@media(max-width:580px){
+  .blog-article-content h1{font-size:clamp(1.48rem,5.8vw,1.78rem);line-height:1.26;letter-spacing:-.02em}
+}
+
+/* Premium single-post native video player. Image, color and YouTube media are
+   deliberately unaffected, including the existing responsive YouTube iframe. */
+.blog-article-main>.blog-article-cover.blog-video-cover{background:#080f1b}
+.blog-premium-player{position:relative;isolation:isolate;overflow:hidden;width:100%;aspect-ratio:16/9;max-width:100%;color:#fff;background:#050c19;font-family:inherit}
+.blog-article-main .blog-video-cover .blog-premium-player .post-public-video{
+  position:absolute;inset:0;display:block;width:100%;height:100%;max-height:none;
+  margin:0;border:0;border-radius:0;background:#050c19;object-fit:contain;
+}
+.blog-premium-player [hidden]{display:none!important}
+.blog-player-top{position:absolute;z-index:2;top:0;left:0;right:0;padding:15px 18px;
+  background:linear-gradient(180deg,rgba(4,12,28,.62),transparent);pointer-events:none}
+.blog-player-brand{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid rgba(255,255,255,.23);
+  background:rgba(14,25,47,.42);backdrop-filter:blur(12px);border-radius:9px;
+  font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.blog-player-center{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);
+  display:grid;place-items:center;width:74px;height:74px;padding:0;border-radius:50%;
+  border:1px solid rgba(255,255,255,.65);background:rgba(9,21,40,.78);
+  color:#fff;box-shadow:0 18px 42px rgba(0,0,0,.45);backdrop-filter:blur(12px);
+  cursor:pointer;transition:transform .18s ease,background .18s ease}
+.blog-player-center svg{margin-left:4px}
+.blog-player-center:hover{background:rgba(204,62,14,.95);transform:translate(-50%,-50%) scale(1.06)}
+.blog-player-hud{position:absolute;z-index:5;left:0;right:0;bottom:0;
+  padding:30px clamp(12px,2vw,23px) 12px;
+  background:linear-gradient(0deg,rgba(0,6,19,.92) 0%,rgba(0,9,28,.62) 65%,transparent 100%)}
+.blog-player-progress{display:flex;align-items:center;min-height:20px;margin:0 0 5px}
+.blog-player-progress input{appearance:none;-webkit-appearance:none;display:block;width:100%;height:6px;margin:0;border:0;
+  border-radius:999px;background:linear-gradient(90deg,#f05422 var(--blog-played,0%),rgba(255,255,255,.43) var(--blog-played,0%));
+  cursor:pointer}
+.blog-player-progress input::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border:2px solid #fff;
+  border-radius:50%;background:#f05422;box-shadow:0 2px 8px #0007}
+.blog-player-progress input::-moz-range-thumb{width:12px;height:12px;border:2px solid #fff;border-radius:50%;background:#f05422}
+.blog-player-controls{display:flex;align-items:center;gap:clamp(5px,1.1vw,12px);min-width:0}
+.blog-player-icon-btn{flex:none;display:grid;place-items:center;width:36px;height:36px;border:1px solid transparent;
+  border-radius:9px;background:transparent;color:#fff;cursor:pointer}
+.blog-player-icon-btn:hover,.blog-player-rate:hover{background:rgba(255,255,255,.16)}
+.blog-player-time{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:.79rem;color:#f0f5ff;font-weight:650;line-height:1}
+.blog-player-control-spacer{flex:1}
+.blog-player-volume{-webkit-appearance:none;appearance:none;display:block;flex:0 0 70px;width:70px;height:4px;
+  margin:0 4px 0 0;border:0;border-radius:5px;cursor:pointer;background:rgba(255,255,255,.52)}
+.blog-player-volume::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff}
+.blog-player-volume::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:#fff}
+.blog-player-rate{flex:none;min-width:43px;height:35px;padding:0 6px;color:#fff;background:transparent;border:1px solid rgba(255,255,255,.25);
+  border-radius:8px;font:inherit;font-weight:800;font-size:.76rem;cursor:pointer}
+.blog-player-center:focus-visible,.blog-player-icon-btn:focus-visible,.blog-player-rate:focus-visible,
+.blog-player-progress input:focus-visible,.blog-player-volume:focus-visible,.blog-premium-player:focus-visible{
+  outline:3px solid #ffb088;outline-offset:2px}
+.blog-player-status{position:absolute;left:14px;top:52px;z-index:6;max-width:calc(100% - 28px);
+  color:#fff;font-size:.82rem;line-height:1.4;font-weight:750;text-shadow:0 1px 4px #000}
+.blog-premium-player:fullscreen{height:100dvh;max-height:none;aspect-ratio:auto;background:#000}
+.blog-premium-player:fullscreen .blog-player-hud{padding-bottom:max(15px,env(safe-area-inset-bottom))}
+@media(max-width:680px){
+  .blog-player-top{padding:9px}
+  .blog-player-brand{font-size:.64rem;padding:5px 7px}
+  .blog-player-hud{padding:17px 9px 7px}
+  .blog-player-progress{min-height:15px;margin-bottom:0}
+  .blog-player-controls{gap:3px}
+  .blog-player-icon-btn{width:31px;height:32px}
+  .blog-player-time{font-size:.69rem}
+  .blog-player-rate{min-width:35px;height:30px;font-size:.68rem}
+  .blog-player-volume,.blog-player-pip{display:none!important}
+  .blog-player-center{width:53px;height:53px}
+  .blog-player-center svg{width:24px;height:24px}
+}
+@media(prefers-reduced-motion:reduce){
+  .blog-player-center{transition:none}
+  .blog-player-center:hover{transform:translate(-50%,-50%)}
+}
 
 /* Public header and footer: one-row mobile navigation; category menu owns marketplace type links.
    Scope to site-body, preserving the administrator and account workspace language controls. */

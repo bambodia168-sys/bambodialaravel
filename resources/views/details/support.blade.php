@@ -30,7 +30,7 @@
               @if($canManageResources && ! $resource->is_enabled)<span class="premium-offer-status">Not published</span>@endif
             </div>
             <a href="{{ $resource->url }}" target="_blank" rel="noopener noreferrer external" class="detail-resource-link">
-              <strong>{{ $resource->title }}</strong><x-icon name="external-link" size="16"/>
+              <strong>{{ $resource->title }}</strong>
             </a>
             @if($resource->description)<p>{{ $resource->description }}</p>@endif
             @if($canManageResources)

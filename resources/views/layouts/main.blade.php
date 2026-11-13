@@ -8,6 +8,7 @@
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
   @include('layouts.partials.site-typography')
+  <link rel="stylesheet" href="{{ asset('css/header-flag-scroll-top.css') }}?v=1">
   {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
   <link rel="stylesheet" href="{{ asset('css/creator-badge-tooltip-viewport.css') }}?v=1">
   <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>
@@ -51,7 +52,6 @@
               <a class="nav-category-heading" href="{{ route('marketplace.search',['type'=>$categoryType]) }}">
                 <x-icon :name="$categoryIcons[$categoryType]" size="18"/>
                 <span>{{ $categoryLabel }}</span>
-                <x-icon name="chevron-right" size="15"/>
               </a>
               @if($categoryGroups->has($categoryType))
               @foreach($categoryGroups->get($categoryType) as $category)
@@ -65,7 +65,7 @@
             </section>
           @endforeach
         </nav>
-        <a class="nav-category-explore" href="{{ route('marketplace.search') }}">Explore all listings <x-icon name="chevron-right" size="16"/></a>
+        <a class="nav-category-explore" href="{{ route('marketplace.search') }}">Explore all listings</a>
       </div>
     </details>
     @endif
@@ -94,7 +94,7 @@
     </details>
     @endif
     <div class="nav-actions">
-      <x-language-menu class="nav-language-menu"/>
+      <x-language-menu class="nav-language-menu header-flag-only"/>
       @auth
       <details class="dropdown profile-dropdown">
         <summary class="profile-trigger" aria-label="Profile menu"><x-icon name="user" size="19"/></summary>
@@ -197,8 +197,7 @@
   </div>
 </footer>
 <button type="button" class="back-to-top" data-back-to-top aria-label="Back to top" title="Back to top">
-  <x-icon name="arrow-up" size="19"/>
-  <span class="back-to-top-label">Back to Top</span>
+  <x-icon name="arrow-up" size="22"/>
 </button>
 </body>
 </html>

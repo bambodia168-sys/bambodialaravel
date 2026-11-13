@@ -29,7 +29,7 @@
             <a class="btn subtle" href="{{ route('login') }}">Sign in to save this job</a>
           @endauth
         </div>
-        <a class="premium-action-link" href="{{ route('jobs') }}">Browse more opportunities <x-icon name="chevron-right" size="15"/></a>
+        <a class="premium-action-link" href="{{ route('jobs') }}">Browse more opportunities</a>
       </div>
 
       @if($screenshots->isNotEmpty())
@@ -124,18 +124,18 @@
               @auth
                 @if(auth()->user()->role==='freelancer')
                   <a class="btn primary premium-full-action" href="{{ $applied ? route('jobs.applied') : '#apply' }}">
-                    {{ $applied?'View my proposal':'Apply to this job' }} <x-icon name="arrow-up-right" size="16"/>
+                    {{ $applied?'View my proposal':'Apply to this job' }}
                   </a>
                 @elseif((int)auth()->id()===(int)$job->client_id)
-                  <a class="btn primary premium-full-action" href="{{ route('jobs.proposals',$job) }}">Review applications <x-icon name="arrow-up-right" size="16"/></a>
+                  <a class="btn primary premium-full-action" href="{{ route('jobs.proposals',$job) }}">Review applications</a>
                 @else
-                  <a class="btn subtle premium-full-action" href="{{ route('jobs') }}">Explore jobs <x-icon name="arrow-up-right" size="16"/></a>
+                  <a class="btn subtle premium-full-action" href="{{ route('jobs') }}">Explore jobs</a>
                 @endif
               @else
-                <a class="btn primary premium-full-action" href="{{ route('login') }}">Sign in to apply <x-icon name="arrow-up-right" size="16"/></a>
+                <a class="btn primary premium-full-action" href="{{ route('login') }}">Sign in to apply</a>
               @endauth
             @else
-              <a class="btn subtle premium-full-action" href="{{ route('jobs') }}">Browse job opportunities <x-icon name="arrow-up-right" size="16"/></a>
+              <a class="btn subtle premium-full-action" href="{{ route('jobs') }}">Browse job opportunities</a>
             @endif
           </div>
           <p class="premium-offer-footnote"><x-icon name="info" size="15"/> {{ $layoutSample ? 'Preview only — applications are not available.' : 'Applications do not constitute a contract or payment.' }}</p>

@@ -46,7 +46,7 @@
           <a class="workspace-overview-row" href="{{ url('/builder?='.$listing->public_id) }}">
             <span class="workspace-overview-row-main"><strong>{{ $listing->title }}</strong>
             <small>{{ ucfirst($listing->type) }} · {{ ucfirst($listing->status) }}</small></span>
-            <span class="workspace-overview-row-action">Manage <x-icon name="chevron-right" size="15"/></span>
+            <span class="workspace-overview-row-action">Manage</span>
           </a>
         @empty<p class="workspace-overview-empty">Your submitted listings will appear here.</p>
         @endforelse
@@ -61,7 +61,7 @@
           <a class="workspace-overview-row" href="{{ route('inquiries.show',$inquiry) }}">
             <span class="workspace-overview-row-main"><strong>{{ $inquiry->subject }}</strong>
             <small>Open inquiry · {{ $inquiry->updated_at->format('d M Y') }}</small></span>
-            <span class="workspace-overview-row-action">Reply <x-icon name="chevron-right" size="15"/></span>
+            <span class="workspace-overview-row-action">Reply</span>
           </a>
         @empty<p class="workspace-overview-empty">No client inquiries are currently open.</p>
         @endforelse
