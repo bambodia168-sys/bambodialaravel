@@ -180,6 +180,24 @@ done
 echo "REFRESHED_CANDIDATE_QA_SOURCE=UNPATCHED_PRIVATE_CLONE"
 '''
 src=src[:src.index(a)]+replacement+src[src.index(b):]
+# Verify the current public frontend can render using the disposable DB.
+# Only localhost is contacted; redirects are not followed.
+smoke_anchor='echo "CHATGPT_LOOPBACK_HTTP=BOUND_TO_127_0_0_1"\n'
+smoke='''echo "========== REFRESHED PUBLIC FRONTEND HTTP SMOKE =========="
+for item in "HOME|/" "BLOG|/blog" "JOBS|/jobs"; do
+  label="${item%%|*}"
+  endpoint="${item#*|}"
+  code="$(curl --silent --max-time 10 -H 'Host: bambodia.com' \\
+    --output /dev/null --write-out '%{http_code}' \\
+    "http://127.0.0.1:$PORT$endpoint" 2>/dev/null || true)"
+  [[ "$code" == "200" ]] || fail "REFRESHED_PUBLIC_HTTP_${label}_NOT_200"
+  echo "REFRESHED_PUBLIC_HTTP_${label}=200"
+done
+echo "REFRESHED_CANDIDATE_PUBLIC_HTTP_SMOKE=PASS"
+'''
+if src.count(smoke_anchor)!=1:
+ raise SystemExit("MCP_REFRESHED_HTTP_QA_BLOCKED=SMOKE_INJECTION_ANCHOR_DRIFT")
+src=src.replace(smoke_anchor,smoke_anchor+smoke,1)
 if "qa_patch_php" in src or "QA_SOURCE_RELEASE" in src:
  raise SystemExit("MCP_REFRESHED_HTTP_QA_BLOCKED=HOT_PATCH_STILL_PRESENT")
 output.write_text(src,encoding="utf-8")
