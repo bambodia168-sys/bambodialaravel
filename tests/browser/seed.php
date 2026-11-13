@@ -181,8 +181,8 @@ foreach ([
 // A private test-only video, linked to a published article so the public
 // preview route is readable without exposing unrelated private media.
 $blogVideoPath = 'marketplace/previews/'.$admin->id.'/qa-blog-video.webm';
-\\Illuminate\\Support\\Facades\\Storage::disk('local')->put($blogVideoPath, "test-only-video-not-a-real-decoder-fixture");
-$blogVideo = \\App\\Models\\MediaAsset::query()->create([
+\Illuminate\Support\Facades\Storage::disk('local')->put($blogVideoPath, "test-only-video-not-a-real-decoder-fixture");
+$blogVideo = \App\Models\MediaAsset::query()->create([
     'user_id'=>$admin->id,'original_name'=>'qa-blog-video.webm',
     'storage_path'=>$blogVideoPath,'mime_type'=>'video/webm','bytes'=>40,
     'width'=>0,'height'=>0,'alt_text'=>'Browser QA video cover',
