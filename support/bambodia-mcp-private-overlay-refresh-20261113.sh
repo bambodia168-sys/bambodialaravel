@@ -199,8 +199,10 @@ if mode == "inspect":
     sys.exit(0)
 if mode != "prepare" or new is None:
     stop("INVALID_MODE")
-if not new.is_dir() or new.is_symlink() or (new / "source").exists():
-    stop("DESTINATION_NOT_EMPTY_OR_UNSAFE")
+if (not new.is_dir() or new.is_symlink()
+    or not (new / "source").is_dir() or (new / "source").is_symlink()
+    or not (new / "review").is_dir() or (new / "review").is_symlink()):
+    stop("COPIED_PRIVATE_DESTINATION_UNSAFE")
 
 # The source tree is copied first (by the outer shell) into a new, root-private
 # directory. No original overlay or production file is ever changed.
