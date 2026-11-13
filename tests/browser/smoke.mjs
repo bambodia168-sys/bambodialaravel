@@ -223,10 +223,26 @@ try {
           .filter({hasText:'Browse creator profiles'}).first();
         if(!(await creatorDirectory.isVisible()))
           throw new Error(device.name+' freelancer showcase directory label or target mismatch');
-        const freelanceFooter=page.locator('.site-footer a[href*="/search?type=freelance"]')
-          .filter({hasText:'Find Freelance Offers'}).first();
-        if(!(await freelanceFooter.count()))
-          throw new Error(device.name+' freelance offers footer must link to listings, not people');
+        // Marketplace footer is concise, accessible and destination-safe.
+        // Changing copy must never retarget listing filters or jobs.
+        const marketplaceFooterLinks=await page.locator('.footer-columns > div:nth-child(2) a')
+          .evaluateAll(anchors=>anchors.map(anchor=>({
+            label:anchor.textContent.trim(),
+            href:anchor.getAttribute('href')||''
+          })));
+        const expectedMarketplaceFooter=[
+          ['Projects','type=project'],
+          ['Products','type=product'],
+          ['Freelance','type=freelance'],
+          ['Services','type=service'],
+          ['Jobs','/jobs']
+        ];
+        if(marketplaceFooterLinks.length!==expectedMarketplaceFooter.length ||
+           marketplaceFooterLinks.some((link,i)=>
+             link.label!==expectedMarketplaceFooter[i][0] ||
+             !link.href.includes(expectedMarketplaceFooter[i][1])))
+          throw new Error(device.name+' marketplace footer category links mismatch '+
+            JSON.stringify(marketplaceFooterLinks));
         if(await page.locator('#marketplace-category-track').count())
           throw new Error(device.name+' retired category slider is still rendered');
         if(await page.getByText('Browser QA Private Freelancer').count())
