@@ -18,6 +18,8 @@ return [
     'marketplace' => 'Marktplatz',
     'for_users' => 'Für Nutzer',
     'compliance' => 'Compliance',
+    'footer_legal_policies' => 'Rechtliches & Richtlinien',
+    'footer_email_support' => 'E-Mail-Support',
     'footer_marketplace_projects' => 'Projekte',
     'footer_marketplace_products' => 'Produkte',
     'footer_marketplace_freelance' => 'Freelance',
