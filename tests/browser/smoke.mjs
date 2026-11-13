@@ -457,7 +457,6 @@ try {
             checks+=5;
 
             const exitFullscreen=player.locator('[data-blog-player-exit-fullscreen]');
-            const exitFullscreen=player.locator('[data-blog-player-exit-fullscreen]');
             if(await enterFullscreen.getAttribute('aria-label')!=='Enter full screen' ||
                await enterFullscreen.getAttribute('aria-pressed')!=='false' ||
                await exitFullscreen.isVisible() ||
