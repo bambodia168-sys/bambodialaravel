@@ -141,7 +141,10 @@ jobs:
           ast.parse(chunks[1].split("\nPY\n", 1)[0])
           print("MCP_PHYSICAL_OAUTH_QA_PYTHON_SYNTAX=PASS")
           for required in (
-              "composer install --no-scripts --no-plugins",
+              'COMPOSER_SCRIPT="$(command -v composer)"',
+              'qa_php "$COMPOSER_SCRIPT" --version --no-ansi',
+              'qa_php "$COMPOSER_SCRIPT" install',
+              "COMPOSER_INTERPRETER=PINNED_PHP85",
               'qa_php "$QA/vendor/bin/phpunit" --colors=never --filter=BambodiaMcp',
               "QA_PHPUNIT_FROM_LOCKED_DEV_DEPENDENCIES=PASS",
               "QA_LOCK_CHANGED_DURING_DEV_INSTALL",
@@ -149,6 +152,11 @@ jobs:
           ):
               assert required in src, "Missing guarded disposable PHPUnit workflow: " + required
           assert "qa_php artisan test" not in src
+          assert "\n  composer install" not in src, "Composer must run via pinned PHP"
+          assert ' "$PHP" "$@"' in src, "The PHP CLI must be pinned"
+          assert '"COMPOSER_HOME=$QA/.composer-home"' in src
+          assert '"COMPOSER_CACHE_DIR=$QA/.composer-cache"' in src
+          assert "--no-scripts --no-plugins" in src
           print("MCP_DISPOSABLE_DEV_TEST_RUNNER_GUARD=PASS")
           PY
           python3 - <<'PY'
