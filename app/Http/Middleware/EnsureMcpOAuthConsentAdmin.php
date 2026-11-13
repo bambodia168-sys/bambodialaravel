@@ -9,16 +9,18 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Validate final Passport consent AFTER the "web" middleware started the
- * browser session. Global middleware runs before StartSession and cannot
- * reliably resolve the admin's session on an actual HTTP POST.
+ * Validate final Passport consent inside the "web" middleware group, after
+ * StartSession. Passport may register its approval route after routes/web.php,
+ * so attaching middleware directly to a named route is not reliable.
  */
 final class EnsureMcpOAuthConsentAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // This group also handles unrelated web pages; keep their behavior
+        // unchanged and enforce the consent check only on the exact POST.
         if (! $request->isMethod('POST') || ! $request->is('oauth/authorize')) {
-            abort(404);
+            return $next($request);
         }
 
         if (! config('mcp.production_enabled', false)
