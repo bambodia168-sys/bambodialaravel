@@ -858,6 +858,11 @@ try {
           const footer=document.querySelector('footer.site-footer');
           const band=footer.querySelector('.footer-bottom-band');
           const link=footer.querySelector('.footer-columns a:not(.brand)');
+          // Freeze the decorative link-color transition only while sampling
+          // computed theme colors; otherwise the immediate dark snapshot may
+          // observe the first frame of a 160ms light-to-dark transition.
+          const previousTransition=link.style.transition;
+          link.style.transition='none';
           const snapshot=(theme)=>{
             root.dataset.theme=theme;
             return {
@@ -870,7 +875,10 @@ try {
             };
           };
           try{return {light:snapshot('light'),dark:snapshot('dark')};}
-          finally{root.dataset.theme=initial;}
+          finally{
+            root.dataset.theme=initial;
+            link.style.transition=previousTransition;
+          }
         });
         if(footerPalette.light.main!=='rgb(241, 245, 251)' ||
            footerPalette.light.bottom!=='rgb(230, 237, 247)' ||
