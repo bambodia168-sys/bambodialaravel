@@ -254,9 +254,9 @@ try:
  for rel, (filename, expected, _) in source_paths.items():
   path = new / "source" / rel
   replace_private(path, safe_file(downloads / filename))
+  written.append(rel)
   if blob(safe_file(path)) != expected:
    blocked("PRIVATE_SECURITY_POSTWRITE_HASH_FAILED")
-  written.append(rel)
  # Frontend assets must still match the latest reviewed live release.
  for rel in changed | added:
   if digest(new / "source" / rel) != evidence["source_sha256"][rel]:
