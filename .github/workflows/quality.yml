@@ -144,6 +144,29 @@ jobs:
           bash -n support/bambodia-mcp-two-blade-private-rebase-20261113.sh
           bash -n support/bambodia-mcp-two-blade-candidate-http-qa-20261113.sh
           bash -n support/bambodia-mcp-production-backup-readiness-readonly-20261113.sh
+          bash -n support/bambodia-mcp-production-topology-readonly-20261113.sh
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          source = Path("support/bambodia-mcp-production-topology-readonly-20261113.sh").read_text()
+          blocks = source.split("python3 - \"$APP\" <<'PY'\n")
+          assert len(blocks) == 2, "one fixed embedded inspector expected"
+          ast.parse(blocks[1].split("\nPY\n", 1)[0])
+          for required in (
+              "MCP_TOPOLOGY_LIVE_IDENTITY=PASS",
+              "MCP_ENV_FILE", "MCP_DB_ENV_DRIVER", "MCP_DB_NAME_SET",
+              "MCP_PRIVATE_MEDIA", "MCP_PUBLIC_MEDIA",
+              "MCP_CONFIG_CACHE", "MCP_EFFECTIVE_DB_CONNECTION",
+              "MCP_ENCRYPTED_OFFSITE_BACKUP", "MCP_TOPOLOGY_AUDIT",
+              "MCP_PRODUCTION_RELEASE", "O_NOFOLLOW", "followlinks=False",
+          ):
+              assert required in source, "missing read-only guard: " + required
+          for forbidden in ("DB_PASSWORD", "subprocess", "os.system(",
+                            "mysqldump", "mysql -", "artisan migrate",
+                            "chmod -R", "rm -rf"):
+              assert forbidden not in source, "unsafe operation: " + forbidden
+          print("MCP_TOPOLOGY_AUDIT_STATIC_GUARDS=PASS")
+          PY
           python3 - <<'PY'
           import ast
           from pathlib import Path
