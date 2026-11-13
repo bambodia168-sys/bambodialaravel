@@ -65,9 +65,11 @@ def fictional_architecture():
         "ingress": {
             "hostname": CANONICAL_HOST,
             "service": "unix:" + MOUNTED_SOCKET,
-            "httpHostHeader": CANONICAL_HOST,
-            "access": {"required": True,
-                       "teamName": SYNTHETIC_TEAM, "audTag": [SYNTHETIC_AUD]},
+            "originRequest": {
+                "httpHostHeader": CANONICAL_HOST,
+                "access": {"required": True,
+                           "teamName": SYNTHETIC_TEAM, "audTag": [SYNTHETIC_AUD]},
+            },
             "catch_all_service": "http_status:404",
             "path_restricted_access_rules": False,
             "other_hostname_routes": [],
@@ -80,6 +82,9 @@ def fictional_architecture():
             "reject_missing_token": True, "reject_kid_unknown": True,
             "fail_closed_when_jwks_unavailable": True,
             "key_source": "rotating_cloudflare_jwks",
+            "jwks_url": f"https://{SYNTHETIC_TEAM}.cloudflareaccess.com/cdn-cgi/access/certs",
+            "validate_kid_against_jwks": True,
+            "refresh_keys_on_rotation": True,
             "hardcoded_public_cert": False, "trust_header_only": False,
             "issuer": f"https://{SYNTHETIC_TEAM}.cloudflareaccess.com",
             "audience": SYNTHETIC_AUD,
@@ -169,7 +174,7 @@ class IndependentDesignReview(unittest.TestCase):
         cases = [
             (("ingress", "hostname"), "*.bambodia.com", "CANONICAL_HOST_REQUIRED"),
             (("ingress", "service"), "http://localhost:8888", "PRIVATE_UNIX_ORIGIN_REQUIRED"),
-            (("ingress", "httpHostHeader"), "localhost", "PRESERVE_CANONICAL_HOST"),
+            (("ingress.originRequest", "httpHostHeader"), "localhost", "PRESERVE_CANONICAL_HOST"),
             (("ingress", "catch_all_service"), "hello_world", "DENY_ALL_CATCH_ALL_REQUIRED"),
             (("ingress", "path_restricted_access_rules"), True, "PATH_SCOPED_ACCESS_RULES_FORBIDDEN"),
             (("ingress", "other_hostname_routes"), ["anything"], "OTHER_HOSTNAME_ROUTES_FORBIDDEN"),
@@ -184,6 +189,9 @@ class IndependentDesignReview(unittest.TestCase):
             (("jwt", "fail_closed_when_jwks_unavailable"), False,
              "JWT_CHECK_MISSING_FAIL_CLOSED_WHEN_JWKS_UNAVAILABLE"),
             (("jwt", "key_source"), "embedded_key", "REMOTE_ROTATING_JWKS_REQUIRED"),
+            (("jwt", "jwks_url"), "https://attacker.invalid/jwks.json", "JWT_JWKS_ENDPOINT_MISMATCH"),
+            (("jwt", "validate_kid_against_jwks"), False, "JWT_CONTROL_MISSING_VALIDATE_KID_AGAINST_JWKS"),
+            (("jwt", "refresh_keys_on_rotation"), False, "JWT_CONTROL_MISSING_REFRESH_KEYS_ON_ROTATION"),
             (("jwt", "hardcoded_public_cert"), True, "HARDCODED_CERTIFICATE_FORBIDDEN"),
             (("jwt", "trust_header_only"), True, "UNSIGNED_HEADER_TRUST_FORBIDDEN"),
             (("jwt", "issuer"), "https://wrong.cloudflareaccess.com", "JWT_TEAM_ISSUER_MISMATCH"),
@@ -192,19 +200,29 @@ class IndependentDesignReview(unittest.TestCase):
         for (section, key), value, expected in cases:
             with self.subTest(section=section, key=key):
                 proposal = fictional_architecture()
-                proposal[section][key] = value
+                target = proposal["ingress"]["originRequest"] if section == "ingress.originRequest" else proposal[section]
+                target[key] = value
                 self.assertIn(expected, review(proposal).blockers)
+
+    def test_wrong_originrequest_scope_cannot_silently_disable_access(self):
+        proposal = fictional_architecture()
+        protected = proposal["ingress"].pop("originRequest")
+        proposal["ingress"]["access"] = protected["access"]
+        proposal["ingress"]["httpHostHeader"] = protected["httpHostHeader"]
+        issues = review(proposal).blockers
+        self.assertIn("CLOUDFLARED_ACCESS_REQUIRED", issues)
+        self.assertIn("PRESERVE_CANONICAL_HOST", issues)
 
     def test_missing_required_cloudflared_token_validation(self):
         for value in (False, None, "true"):
             proposal = fictional_architecture()
-            proposal["ingress"]["access"]["required"] = value
+            proposal["ingress"]["originRequest"]["access"]["required"] = value
             self.assertIn("CLOUDFLARED_ACCESS_REQUIRED", review(proposal).blockers)
 
     def test_missing_or_multiple_audience_tags_fails(self):
         for bad in ([], ["a", "b"], ["<AUD>"], None):
             proposal = fictional_architecture()
-            proposal["ingress"]["access"]["audTag"] = bad
+            proposal["ingress"]["originRequest"]["access"]["audTag"] = bad
             self.assertIn("EXACT_ONE_APP_AUDIENCE_REQUIRED", review(proposal).blockers)
 
     def test_no_real_token_or_policy_attestation_possible_here(self):
