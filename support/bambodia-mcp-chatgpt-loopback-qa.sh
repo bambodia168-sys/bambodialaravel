@@ -7,7 +7,7 @@ umask 077
  echo "Usage: --isolated-loopback-qa /root/verified-client.py" >&2; exit 64;
 }
 CLIENT_SOURCE="$2"
-CLIENT_BLOB="3e6e5c4b93db47e0429424930856c4fb69779519"
+CLIENT_BLOB="5ed0d6255b064929f0848d7776b4a80090dbffd3"
 [[ "$CLIENT_SOURCE" == /root/* && -f "$CLIENT_SOURCE" && ! -L "$CLIENT_SOURCE" ]] || {
  echo "MCP_CHATGPT_QA_BLOCKED=CLIENT_PATH_UNSAFE" >&2; exit 1;
 }
@@ -282,6 +282,45 @@ http_php artisan migrate --force --no-interaction --no-ansi \
  > "$QA/chatgpt-http-migrate.log" 2>&1 ||
  fail ISOLATED_HTTP_MIGRATION_FAILED
 echo "CHATGPT_HTTP_DATABASE=DISPOSABLE_SQLITE_MIGRATED"
+
+echo "========== VERIFY QA ROUTE CACHE AND OAUTH DISCOVERY ROUTES =========="
+CACHE_PATH="$QA/bootstrap/cache"
+[[ -d "$CACHE_PATH" && ! -L "$CACHE_PATH" && "$(realpath "$CACHE_PATH")" == "$CACHE_PATH" ]] ||
+ fail QA_BOOTSTRAP_CACHE_DIRECTORY_UNSAFE
+for route_cache in "$CACHE_PATH"/routes-*.php "$CACHE_PATH"/routes.php; do
+ [[ ! -e "$route_cache" && ! -L "$route_cache" ]] && continue
+ [[ -f "$route_cache" && ! -L "$route_cache" ]] || fail QA_ROUTE_CACHE_ENTRY_UNSAFE
+ echo "QA_PREEXISTING_ROUTE_CACHE=FOUND_IN_DISPOSABLE_COPY"
+done
+# The reviewed private overlay may retain a cached route table from before
+# the OAuth protected-resource routes were merged. Clear ONLY inside $QA.
+http_php artisan route:clear --no-interaction --no-ansi \
+ > "$QA/chatgpt-http-route-clear.log" 2>&1 ||
+ fail DISPOSABLE_ROUTE_CLEAR_FAILED
+http_php artisan route:list --json --no-ansi \
+ > "$QA/chatgpt-http-routes.json" 2>&1 ||
+ fail DISPOSABLE_ROUTE_LIST_FAILED
+python3 - "$QA/chatgpt-http-routes.json" <<'PY'
+import json,sys
+try:
+ routes=json.load(open(sys.argv[1],encoding="utf-8"))
+ if not isinstance(routes,list): raise ValueError("unexpected route table")
+ for route_path in (".well-known/oauth-protected-resource",
+                    ".well-known/oauth-protected-resource/mcp"):
+  matches=[route for route in routes
+           if route.get("uri")==route_path and
+           "GET" in str(route.get("method","")).split("|")]
+  if len(matches)!=1:
+   print("QA_ROUTE_TABLE_DIAGNOSTIC="+route_path.replace("/","_")+
+         "|get_routes="+str(len(matches)))
+   raise ValueError("missing or ambiguous resource discovery route")
+  print("QA_RESOURCE_ROUTE_VERIFIED="+route_path.replace("/","_"))
+except (ValueError,TypeError,KeyError) as exc:
+ print("MCP_OAUTH_QA_BLOCKED=DISPOSABLE_RESOURCE_ROUTE_TABLE_MISMATCH",
+       file=sys.stderr)
+ sys.exit(1)
+PY
+echo "DISPOSABLE_QA_ROUTE_CACHE=REFRESHED"
 
 BAMBODIA_QA_ADMIN_EMAIL="mcp-qa-$(openssl rand -hex 12)@example.test"
 BAMBODIA_QA_ADMIN_PASSWORD="$(openssl rand -hex 24)"
