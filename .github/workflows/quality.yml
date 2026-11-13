@@ -62,6 +62,8 @@ jobs:
           bash tests/security/previewqa-step12m-v2-socket-parity-smoke.sh
           bash -n support/previewqa-step12n-fresh-mount-recovery-20261113.sh
           bash tests/security/previewqa-step12n-fresh-mount-recovery-smoke.sh
+          bash -n support/previewqa-step12o-post-recovery-independent-readonly-audit-20261113.sh
+          bash tests/security/previewqa-step12o-post-recovery-readonly-smoke.sh
           bash tests/security/previewqa-step12e-lua-repair-smoke.sh
           bash tests/security/previewqa-step12c-offline-group-smoke.sh
           bash -n support/workspace-upgrade.sh
