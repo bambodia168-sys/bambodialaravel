@@ -48,7 +48,7 @@ ANCHOR='        server_name preview-qa.bambodia.com localhost 127.0.0.1;'
 echo '========== STEP 12G — PRIVATE ORIGIN HOST RESTRICTION PREFLIGHT =========='
 [[ "$(id -u)" == 0 ]] || fail root_required
 for bin in stat systemctl git grep find wc awk sed mktemp install runuser \
-  getent curl id readlink; do
+  getent curl id readlink cmp; do
   command -v "$bin" >/dev/null || fail "missing_command:$bin"
 done
 [[ -x "$NGINX" && "$(readlink -f "$NGINX")" == /www/server/nginx/sbin/nginx ]] ||
@@ -145,6 +145,19 @@ for path in \
 done
 [[ ! -e "$BACKUP" && ! -L "$BACKUP" ]] ||
   fail one_time_recovery_backup_path_not_free
+runuser -u "$WORKER" -- "$PHP" -r '
+$p=$argv[1];require $p."/vendor/autoload.php";
+$app=require $p."/bootstrap/app.php";
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$db=\Illuminate\Support\Facades\DB::selectOne("SELECT DATABASE() AS db");
+if (config("app.env")!=="testing" || config("app.debug")!==false ||
+    config("preview_visibility.enabled")!==false ||
+    config("app.url")!=="http://127.0.0.1:18097" ||
+    $db->db!=="bambodia_previewrestore_20261112" ||
+    \App\Models\User::count()!==6 ||
+    \Illuminate\Support\Facades\DB::table("preview_visibility_actions")->count()!==0) exit(2);
+echo "SYNTHETIC_QA_DATABASE_AND_WITHDRAWAL_WRITES_OFF=PASS\n";
+' "$APP" || fail synthetic_QA_database_or_flag_changed
 echo 'DEDICATED_QA_HTTP_FPM_AND_BOUNDARIES=PASS'
 
 echo '========== OBSERVE CURRENT UNRECOGNIZED HOST RESPONSE =========='
