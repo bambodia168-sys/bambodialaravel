@@ -130,6 +130,11 @@ jobs:
           bash -n support/bambodia-mcp-main-domain-live-overlay.sh
           bash -n support/bambodia-mcp-main-domain-resolve-private-layout-review.sh
           bash -n support/bambodia-mcp-main-domain-resolve-private-critical.sh
+          # The private-only MCP script contains Python in a Bash heredoc.
+          # Validate both languages; never run the private server workflow in CI.
+          sed -n "/^python3 - .*<<'PY'$/,/^PY$/p" support/bambodia-mcp-main-domain-resolve-private-critical.sh |
+            sed '1d;$d' |
+            python3 -c 'import ast, sys; src = sys.stdin.read(); assert len(src) > 5000; ast.parse(src); print("MCP_EMBEDDED_PYTHON_SYNTAX=PASS")'
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
