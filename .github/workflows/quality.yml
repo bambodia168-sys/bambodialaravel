@@ -155,7 +155,7 @@ jobs:
               assert required in src, "Missing guarded disposable PHPUnit workflow: " + required
           assert "qa_php artisan test" not in src
           assert 'command -v composer' not in src, "A shell wrapper is unsafe for PHP"
-          assert "exec /usr/bin/php83" in src, "Document the blocked PHP 8.3 wrapper"
+          assert "execs /usr/bin/php83" in src, "Document the blocked PHP 8.3 wrapper"
           assert ' "$PHP" "$@"' in src, "The PHP CLI must be pinned"
           assert '[[ "$COMPOSER_VERSION" == "Composer version "* ]]' in src
           assert '--no-scripts --no-plugins' in src
