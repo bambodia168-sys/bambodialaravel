@@ -129,6 +129,7 @@ jobs:
           python3 -m py_compile support/blog-featured-video-aapanel.py
           python3 -m py_compile support/blog-premium-video-player-aapanel.py
           python3 -m py_compile support/reconcile-live-ui-aapanel-readonly.py
+          python3 -m py_compile support/blog-fullscreen-controls-aapanel.py
       - name: Check PHP syntax
         run: |
           find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
