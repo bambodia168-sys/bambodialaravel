@@ -365,12 +365,12 @@ LAUNCHED=yes
 echo '========== DISPOSABLE SYNTHETIC SOCKET REBIND OBSERVATION =========='
 /usr/bin/python3 -B "$TMP/driver.py" "$TMP" ||
   fail synthetic_socket_rebind_rehearsal_failed
-LAUNCHED=no
 
 [[ "$(systemctl show "$TRANSIENT" -p LoadState --value 2>/dev/null || true)" == not-found ]] ||
   fail mock_transient_unit_remaining_after_test
 [[ ! -e "$TRANSIENT_DIR" && ! -L "$TRANSIENT_DIR" ]] ||
   fail mock_transient_runtime_remaining_after_test
+LAUNCHED=no
 systemctl is-active --quiet bambodia-previewqa-http.service ||
   fail QA_HTTP_service_changed
 systemctl is-active --quiet bambodia-previewqa-fpm.service ||
