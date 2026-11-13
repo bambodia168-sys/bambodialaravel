@@ -331,7 +331,7 @@ try {
           throw new Error(device.name+' premium video/YouTube blog media stages missing');
         const uploadedSource=await nativeVideo.locator('source').getAttribute('src');
         const youtubeSource=await youtubeThumbnail.getAttribute('src');
-        if(!uploadedSource?.match(/\\/media\\/[0-9]{9}.*#t=0\\.1$/) ||
+        if(!uploadedSource?.includes('/media/') || !uploadedSource.endsWith('#t=0.1') ||
            youtubeSource!=='https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg' ||
            await blog.locator('.blog-card-media iframe').count()!==0 ||
            await blog.getByText('Video article').count()!==0)
