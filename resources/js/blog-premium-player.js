@@ -124,6 +124,7 @@ export function initBlogPremiumPlayers() {
         // iOS video-fullscreen fallback keeps Safari's own exit controls.
         const updateFullscreen = () => {
             const active = document.fullscreenElement === root;
+            const exitHadFocus = document.activeElement === exitFullscreen;
             root.classList.toggle('is-fullscreen', active);
             root.dataset.fullscreen = active ? 'true' : 'false';
             fullscreen.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');
@@ -133,6 +134,9 @@ export function initBlogPremiumPlayers() {
             expandIcon.hidden = active;
             collapseIcon.hidden = !active;
             exitFullscreen.hidden = !active;
+            // Escape may exit fullscreen without clicking a button. Never strand
+            // keyboard focus on an action that becomes hidden.
+            if (!active && exitHadFocus) fullscreen.focus({ preventScroll: true });
         };
         if (typeof root.requestFullscreen === 'function') {
             const toggleFullscreen = async () => {
@@ -147,6 +151,11 @@ export function initBlogPremiumPlayers() {
                     setStatus('Full screen is unavailable on this device.');
                 }
                 updateFullscreen();
+                if (document.fullscreenElement === root) {
+                    exitFullscreen.focus({ preventScroll: true });
+                } else {
+                    fullscreen.focus({ preventScroll: true });
+                }
             };
             fullscreen.addEventListener('click', toggleFullscreen);
             exitFullscreen.addEventListener('click', toggleFullscreen);
