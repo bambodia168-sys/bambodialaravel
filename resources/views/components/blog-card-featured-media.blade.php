@@ -20,7 +20,7 @@
 @elseif($isVideo)
   {{-- A private uploaded video is only requested via the existing access-controlled
        preview endpoint; the browser seeks a short first frame, never autoplays it. --}}
-  <span class="blog-card-media-backdrop" aria-hidden="true"><x-icon name="film" size="38"/></span>
+  <span class="blog-card-media-backdrop" aria-hidden="true"><x-icon name="video" size="38"/></span>
   <video class="blog-card-video-thumbnail" data-blog-video-poster
          muted playsinline preload="none" tabindex="-1" aria-hidden="true">
     <source src="{{ $featuredMedia->previewUrl() }}#t=0.1" type="{{ $featuredMedia->mime_type }}">
@@ -30,7 +30,7 @@
 @elseif($youtubeId)
   {{-- Only the thumbnail is loaded in cards. The YouTube player stays on the
        destination article and no third-party iframe is loaded in the feed. --}}
-  <span class="blog-card-media-backdrop blog-card-youtube-backdrop" aria-hidden="true"><x-icon name="youtube" size="42"/></span>
+  <span class="blog-card-media-backdrop blog-card-youtube-backdrop" aria-hidden="true"><x-icon name="video" size="42"/></span>
   <img class="blog-card-youtube-thumbnail" data-blog-youtube-thumbnail
        src="{{ 'https://i.ytimg.com/vi/'.$youtubeId.'/hqdefault.jpg' }}"
        alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
