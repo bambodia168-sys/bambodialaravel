@@ -83,7 +83,10 @@ qa_php() {
   "BAMBODIA_MCP_ENABLED=false" "BAMBODIA_MCP_WRITES_ENABLED=false" \
   "DB_CONNECTION=sqlite" "DB_DATABASE=:memory:" "DB_URL=" \
   "CACHE_STORE=array" "SESSION_DRIVER=array" "QUEUE_CONNECTION=sync" \
-  "MAIL_MAILER=array" "LOG_CHANNEL=stderr" "$PHP" "$@"
+  "MAIL_MAILER=array" "LOG_CHANNEL=stderr" \
+  "COMPOSER_HOME=$QA/.composer-home" "COMPOSER_CACHE_DIR=$QA/.composer-cache" \
+  "COMPOSER_ALLOW_SUPERUSER=1" "COMPOSER_NO_INTERACTION=1" \
+  "$PHP" "$@"
 }
 echo "========== VERIFY QA DATABASE IS SQLITE MEMORY =========="
 qa_php -r '
@@ -100,12 +103,21 @@ if (config("database.default")!=="sqlite" ||
 echo "SQLITE_IN_MEMORY_AND_DISABLED_MCP=PASS\n";
 '
 echo "========== INSTALL PINNED DEV TEST DEPENDENCIES IN QA COPY =========="
-# The private production vendor deliberately excludes dev packages. Laravel's
-# artisan test command is therefore absent. Restore the lockfile-pinned dev
-# packages only inside the disposable QA copy, with scripts and plugins off.
-# A completely cleared environment avoids production credentials/configuration.
+# Source includes a production-only vendor/ tree. The locked PHPUnit tools
+# must be installed in the disposable copy, never in the live or private source.
+# Invoke Composer EXPLICITLY through the same verified PHP 8.5 binary that
+# runs Laravel. The server's plain "composer" command defaults to PHP 8.3.
+COMPOSER_SCRIPT="$(command -v composer)"
+[[ -f "$COMPOSER_SCRIPT" && -r "$COMPOSER_SCRIPT" ]] ||
+  fail COMPOSER_PHP_ENTRYPOINT_MISSING
 mkdir -m 700 -p "$QA/.composer-home" "$QA/.composer-cache"
-env -i "PATH=$PATH" "HOME=$QA" "APP_ENV=testing" "APP_DEBUG=false"  "APP_URL=https://bambodia.com" "APP_KEY=$KEY"  "DB_CONNECTION=sqlite" "DB_DATABASE=:memory:" "DB_URL="  "CACHE_STORE=array" "SESSION_DRIVER=array" "QUEUE_CONNECTION=sync"  "MAIL_MAILER=array" "LOG_CHANNEL=stderr"  "COMPOSER_HOME=$QA/.composer-home"  "COMPOSER_CACHE_DIR=$QA/.composer-cache"  "COMPOSER_ALLOW_SUPERUSER=1" "COMPOSER_NO_INTERACTION=1"  composer install --no-scripts --no-plugins  --prefer-dist --no-interaction --no-progress
+echo "========== VERIFY COMPOSER ON PHP 8.5 =========="
+qa_php "$COMPOSER_SCRIPT" --version --no-ansi ||
+  fail COMPOSER_CANNOT_RUN_UNDER_PHP85
+echo "COMPOSER_INTERPRETER=PINNED_PHP85"
+qa_php "$COMPOSER_SCRIPT" install \
+  --no-scripts --no-plugins \
+  --prefer-dist --no-interaction --no-progress
 [[ "$(sha256sum "$QA/composer.lock" | cut -d' ' -f1)" == "4dd3f77f0758b741fb8372e38a94edceb486a42b5bfedcd1f6d41feb601c2ce8" ]] || fail QA_LOCK_CHANGED_DURING_DEV_INSTALL
 [[ "$(git hash-object "$QA/composer.json")" == "fc687c2f0f82e034af38b6183b0c58502a0c7948" ]] || fail QA_MANIFEST_CHANGED_DURING_DEV_INSTALL
 [[ -f "$QA/vendor/bin/phpunit" && -f "$QA/vendor/phpunit/phpunit/phpunit" ]] || fail QA_PHPUNIT_DEPENDENCIES_MISSING
