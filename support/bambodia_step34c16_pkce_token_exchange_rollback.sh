@@ -85,9 +85,10 @@ python3 - "$0" "$PHP" <<'PY'
 import pathlib,subprocess,sys
 path,php=sys.argv[1:]
 source=pathlib.Path(path).read_text(encoding='utf-8')
-if source.count("code=r'''")!=1:
+marker="code=r"+"'"*3
+if source.count(marker)!=1:
  raise SystemExit('STEP34C16_BLOCKED=EMBEDDED_PHP_SOURCE_LOCATOR_INVALID')
-code=source.split("code=r'''",1)[1].split("\n'''",1)[0]
+code=source.split(marker,1)[1].split("\n"+"'"*3,1)[0]
 if not code or len(code)>128000:
  raise SystemExit('STEP34C16_BLOCKED=EMBEDDED_PHP_SOURCE_EMPTY_OR_LONG')
 proc=subprocess.run([php,'-l'],input=b'<?php\n'+code.encode('utf-8'),
