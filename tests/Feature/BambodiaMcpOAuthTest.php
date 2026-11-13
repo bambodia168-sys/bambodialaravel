@@ -20,6 +20,11 @@ final class BambodiaMcpOAuthTest extends TestCase
         config()->set('app.url', 'https://bambodia.com');
         config()->set('mcp.production_enabled', true);
         config()->set('mcp.production_writes_enabled', true);
+        // The fake ChatGPT callback must be allowlisted explicitly in QA;
+        // production defaults to NO eligible redirect URIs.
+        config()->set('mcp.exact_redirect_uris', [
+            'https://chatgpt.com/connector/oauth/qa-callback',
+        ]);
     }
 
     private function user(string $role = 'super_admin'): User
@@ -243,6 +248,45 @@ final class BambodiaMcpOAuthTest extends TestCase
             'redirect_uris' => ['https://untrusted.example/steal'],
         ])->assertStatus(400)->assertJsonPath('error', 'invalid_redirect_uri');
         $this->assertDatabaseCount('oauth_clients', 1);
+    }
+
+    public function test_registration_fails_closed_without_exact_callback_approval(): void
+    {
+        $endpoint = '/oauth/register';
+        $valid = ['client_name' => 'Exact URI QA',
+            'redirect_uris' => ['https://chatgpt.com/connector/oauth/qa-callback']];
+        config()->set('mcp.exact_redirect_uris', []);
+        $this->postJson($endpoint, $valid)->assertStatus(400)
+            ->assertJsonPath('error', 'invalid_redirect_uri');
+        config()->set('mcp.exact_redirect_uris', [
+            'https://chatgpt.com/connector/oauth/qa-callback',
+        ]);
+        foreach ([
+            'https://chatgpt.com/connector/oauth/another-callback',
+            'https://chatgpt.com/connector/oauth/qa-callback?next=/redirect',
+            'https://chatgpt.com/connector_platform_oauth_redirect',
+            'https://chatgpt.com.evil.example/connector/oauth/qa-callback',
+        ] as $unapproved) {
+            $this->postJson($endpoint, [
+                'client_name' => 'Rejected Redirect',
+                'redirect_uris' => [$unapproved],
+            ])->assertStatus(400)->assertJsonPath('error', 'invalid_redirect_uri');
+        }
+        $this->assertDatabaseCount('oauth_clients', 0);
+    }
+
+    public function test_read_only_release_does_not_register_write_scopes(): void
+    {
+        config()->set('mcp.production_writes_enabled', false);
+        $registration = $this->postJson('/oauth/register', [
+            'client_name' => 'Read Only QA',
+            'redirect_uris' => ['https://chatgpt.com/connector/oauth/qa-callback'],
+        ])->assertCreated();
+        $client = Passport::client()->newQuery()
+            ->findOrFail($registration->json('client_id'));
+        $this->assertContains('mcp:use', $client->scopes);
+        $this->assertNotContains('mcp.write', $client->scopes);
+        $this->assertContains('offline_access', $client->scopes);
     }
 
     public function test_legacy_read_only_token_remains_usable_without_write_permissions(): void
