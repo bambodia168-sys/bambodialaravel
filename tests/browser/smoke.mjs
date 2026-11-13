@@ -440,7 +440,7 @@ try {
                  expanded.height<expanded.viewportHeight-3 ||
                  !expanded.brand ||
                  await enterFullscreen.getAttribute('aria-pressed')!=='true' ||
-                 await enterFullscreen.locator('[data-blog-player-collapse-icon]').isHidden())
+                 await enterFullscreen.locator('[data-blog-player-collapse-icon]').evaluate(el=>el.hasAttribute('hidden')))
                 throw new Error('Premium full screen layout or exit state invalid '+JSON.stringify(expanded));
               await exitFullscreen.click();
               await article.waitForFunction(() => document.fullscreenElement===null &&
