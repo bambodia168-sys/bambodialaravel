@@ -408,6 +408,50 @@ try {
             if(!(await articleVideo.evaluate(video=>video.muted)))
               throw new Error(device.name+' mute button did not work');
 
+            const enterFullscreen=player.locator('[data-blog-player-fullscreen]');
+            const exitFullscreen=player.locator('[data-blog-player-exit-fullscreen]');
+            if(await enterFullscreen.getAttribute('aria-label')!=='Enter full screen' ||
+               await enterFullscreen.getAttribute('aria-pressed')!=='false' ||
+               await exitFullscreen.isVisible() ||
+               await enterFullscreen.locator('[data-blog-player-expand-icon]').isHidden())
+              throw new Error(device.name+' premium fullscreen entry initial state invalid');
+            if(device.name==='desktop'){
+              await enterFullscreen.click();
+              await article.waitForFunction(()=>
+                document.fullscreenElement?.hasAttribute('data-blog-premium-player'),
+                null,{timeout:7000});
+              const expanded=await player.evaluate(root=>{
+                const button=root.querySelector('[data-blog-player-exit-fullscreen]');
+                const rect=root.getBoundingClientRect();
+                return {
+                  width:rect.width,height:rect.height,
+                  viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,
+                  exitVisible:button.getBoundingClientRect().width>0 &&
+                    getComputedStyle(button).visibility==='visible',
+                  state:root.dataset.fullscreen,
+                  brand:!!root.querySelector('.blog-player-brand'),
+                  label:button.getAttribute('aria-label'),
+                };
+              });
+              if(!expanded.exitVisible || expanded.state!=='true' ||
+                 expanded.label!=='Exit full screen' ||
+                 expanded.width<expanded.viewportWidth-3 ||
+                 expanded.height<expanded.viewportHeight-3 ||
+                 !expanded.brand ||
+                 await enterFullscreen.getAttribute('aria-pressed')!=='true' ||
+                 await enterFullscreen.locator('[data-blog-player-collapse-icon]').isHidden())
+                throw new Error('Premium full screen layout or exit state invalid '+JSON.stringify(expanded));
+              await exitFullscreen.click();
+              await article.waitForFunction(() => document.fullscreenElement===null &&
+                document.querySelector('[data-blog-premium-player]')?.dataset.fullscreen==='false',
+                null,{timeout:7000});
+              if(await exitFullscreen.isVisible() ||
+                 await enterFullscreen.getAttribute('aria-label')!=='Enter full screen' ||
+                 await enterFullscreen.getAttribute('aria-pressed')!=='false' ||
+                 await enterFullscreen.isHidden())
+                throw new Error('Premium full screen button failed to restore its state');
+              checks+=7;
+            }
             if(device.name==='desktop'){
               await articleVideo.evaluate(video=>{video.muted=true;});
               await player.locator('[data-blog-player-center]').click();
