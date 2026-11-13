@@ -586,16 +586,21 @@ Route::middleware('throttle:10,1')->group(function (): void {
 
     \Laravel\Mcp\Facades\Mcp::oauthRoutes(registration: false);
 
-    // Attach the final authorization gate to Passport's real approval route,
-    // AFTER its "web" StartSession middleware has resolved the login. Do not
-    // try to read the browser guard from global middleware pre-session.
-    $consentRoute = Route::getRoutes()->getByName('passport.authorizations.approve');
-    if (! $consentRoute
-        || $consentRoute->uri() !== 'oauth/authorize'
-        || ! in_array('POST', $consentRoute->methods(), true)) {
-        throw new \LogicException('The reviewed Passport OAuth consent route was not registered.');
+    // Attach the guard to the EXACT registered POST route, not merely the
+    // Passport route-name lookup: a name map can refer to a different route
+    // object after vendor route registration. Tests assert the actual route.
+    // The normal "web" StartSession middleware runs before this route guard.
+    $consentRoutes = array_values(array_filter(
+        Route::getRoutes()->getRoutes(),
+        static fn (\Illuminate\Routing\Route $route): bool =>
+            $route->uri() === 'oauth/authorize'
+            && in_array('POST', $route->methods(), true)
+    ));
+    if (count($consentRoutes) !== 1
+        || $consentRoutes[0]->getName() !== 'passport.authorizations.approve') {
+        throw new \LogicException('Expected precisely one named Passport OAuth consent POST route.');
     }
-    $consentRoute->middleware('mcp.oauth.consent');
+    $consentRoutes[0]->middleware('mcp.oauth.consent');
 
     Route::post('/oauth/register',
         \App\Http\Controllers\Api\BambodiaOAuthRegisterController::class)
