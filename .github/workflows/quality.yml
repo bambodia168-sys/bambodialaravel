@@ -139,6 +139,31 @@ jobs:
           bash -n support/bambodia-mcp-private-overlay-freshness-readonly.sh
           bash -n support/bambodia-mcp-private-overlay-refresh-20261113.sh
           bash -n support/bambodia-mcp-private-oauth-security-sync-20261113.sh
+          bash -n support/bambodia-mcp-refreshed-candidate-http-qa-20261113.sh
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          source = Path("support/bambodia-mcp-refreshed-candidate-http-qa-20261113.sh").read_text()
+          sections = source.split("<<'PY'\n")
+          assert len(sections) == 3, "Two embedded Python review/adapter programs required"
+          for section in sections[1:]:
+              ast.parse(section.split("\nPY\n",1)[0])
+          for guard in (
+              "REFRESHED_CANDIDATE_OAUTH_SOURCE=6_OF_6_VERIFIED",
+              "REFRESHED_CANDIDATE_FRONTEND=11_OF_11_MATCH_LIVE",
+              "REFRESHED_CANDIDATE_CRITICAL_SNAPSHOTS=9_UNCHANGED",
+              "REFRESHED_CANDIDATE_VITE=23_OF_23_VERIFIED",
+              "19e4bae5a5b3ef33cb1baabbd011270d4c49a693",
+              "QA_SOURCE_RELEASE",
+              "qa_patch_php",
+              "REFRESHED_CANDIDATE_QA_SOURCE=UNPATCHED_PRIVATE_CLONE",
+              "CHATGPT_LOOPBACK_INDEPENDENT_ACCEPTANCE=PASS",
+              "PHYSICAL_PHP85_MCP_OAUTH_TESTS=PASS",
+              "MCP_PRODUCTION_ACTIVATION=NOT_STARTED",
+          ):
+              assert guard in source, "Missing refreshed-candidate QA safety guard: " + guard
+          print("MCP_REFRESHED_PRIVATE_HTTP_QA_STATIC_GUARDS=PASS")
+          PY
           python3 - <<'PY'
           import ast
           from pathlib import Path
