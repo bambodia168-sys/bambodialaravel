@@ -31,15 +31,10 @@ final class RequireMcpOAuthResource
         }
 
         if ($approval) {
-            // Consent is not permission to keep authorizing after demotion or
-            // suspension between page render and the final POST.
-            $owner = $request->user('web');
-            if (! $owner instanceof \App\Models\User || $owner->role !== 'super_admin'
-                || $owner->account_status !== 'active') {
-                return response()->json(['message' => 'Administrator authorization is no longer allowed.'], 403)
-                    ->header('Cache-Control', 'no-store');
-            }
-
+            // Do not resolve the web guard here: this is GLOBAL middleware
+            // and it executes before StartSession on real HTTP requests.
+            // EnsureMcpOAuthConsentAdmin checks role/status on Passport's
+            // POST authorization route AFTER the browser session is loaded.
             return $next($request);
         }
 
