@@ -18,6 +18,8 @@ return [
     'marketplace' => 'マーケット',
     'for_users' => 'ユーザー向け',
     'compliance' => 'コンプライアンス',
+    'footer_legal_policies' => '法務・ポリシー',
+    'footer_email_support' => 'メールサポート',
     'footer_marketplace_projects' => 'プロジェクト',
     'footer_marketplace_products' => '製品',
     'footer_marketplace_freelance' => 'フリーランス',
