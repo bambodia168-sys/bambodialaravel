@@ -146,7 +146,10 @@ jobs:
           assert 'http://127.0.0.1:' in client
           assert 'CHATGPT_LOOPBACK_INDEPENDENT_HTTP_OAUTH_ACCEPTANCE=PASS' in client
           runner = Path("support/bambodia-mcp-chatgpt-loopback-qa.sh").read_text()
-          assert len(runner.split("<<'PY'\n")) == 6
+          assert len(runner.split("<<'PY'\n")) == 7
+          assert "QA_EARLY_EXCEPTION_CLASSIFIER=DISPOSABLE_COPY_ONLY" in runner
+          assert "QA_HTTP_EARLY_EXCEPTION_CLASS=" in runner
+          assert "QA_HTTP_HEADER_MUTATION_" in runner
           for section in runner.split("<<'PY'\n")[1:]:
               ast.parse(section.split("\nPY\n", 1)[0])
           assert 'CLIENT_BLOB=' in runner
