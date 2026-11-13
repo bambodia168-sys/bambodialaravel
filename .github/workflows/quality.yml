@@ -34,6 +34,45 @@ jobs:
           mkdir -p database
       - name: Validate installed-site upgrade shell syntax
         run: |
+          bash -n support/previewqa-step12c-private-http-install-20261112.sh
+          bash -n support/previewqa-step12c-failure-readonly-diagnostics-20261112.sh
+          bash -n support/previewqa-step12d-nginx-lua-runtime-readonly-20261112.sh
+          bash -n support/previewqa-step12e-private-nginx-lua-recovery-20261112.sh
+          bash -n support/previewqa-step12f-local-ingress-audit-20261112.sh
+          bash tests/security/previewqa-step12f-unix-socket-mode-smoke.sh
+          bash -n support/previewqa-step12g-origin-host-guard-preflight-20261113.sh
+          bash tests/security/previewqa-step12g-host-guard-smoke.sh
+          bash -n support/previewqa-step12g-origin-host-guard-install-20261113.sh
+          bash tests/security/previewqa-step12g-host-guard-install-smoke.sh
+          bash -n support/previewqa-step12h-independent-host-guard-audit-20261113.sh
+          bash tests/security/previewqa-step12h-host-guard-independent-smoke.sh
+          bash -n support/previewqa-step12i-cloudflare-access-readiness-readonly-20261113.sh
+          bash tests/security/previewqa-step12i-access-first-readiness-smoke.sh
+          bash -n support/previewqa-step12j-connector-isolation-readonly-20261113.sh
+          bash tests/security/previewqa-step12j-connector-isolation-readonly-smoke.sh
+          bash -n support/previewqa-step12k-dynamic-user-unix-socket-probe-20261113.sh
+          bash tests/security/previewqa-step12k-dynamic-user-unix-probe-smoke.sh
+          bash -n support/previewqa-step12l-unix-socket-lifecycle-readonly-20261113.sh
+          bash tests/security/previewqa-step12l-socket-lifecycle-readonly-smoke.sh
+          bash -n support/previewqa-step12m-disposable-socket-rebind-20261113.sh
+          bash tests/security/previewqa-step12m-mock-socket-rebind-smoke.sh
+          bash -n support/previewqa-step12m-failed-probe-readonly-audit-20261113.sh
+          bash tests/security/previewqa-step12m-failure-readonly-audit-smoke.sh
+          bash -n support/previewqa-step12m-v2-disposable-socket-rebind-20261113.sh
+          bash tests/security/previewqa-step12m-v2-socket-parity-smoke.sh
+          bash -n support/previewqa-step12n-fresh-mount-recovery-20261113.sh
+          bash tests/security/previewqa-step12n-fresh-mount-recovery-smoke.sh
+          bash -n support/previewqa-step12o-post-recovery-independent-readonly-audit-20261113.sh
+          bash tests/security/previewqa-step12o-post-recovery-readonly-smoke.sh
+          python3 -m py_compile support/previewqa_step12p_failclosed_lifecycle.py tests/security/test_previewqa_step12p_failclosed_lifecycle.py
+          python3 -m unittest discover -s tests/security -p 'test_previewqa_step12p_failclosed_lifecycle.py' -v
+          python3 -m py_compile support/previewqa_step12q_independent_review.py tests/security/test_previewqa_step12q_independent_review.py
+          python3 -m unittest discover -s tests/security -p 'test_previewqa_step12q_independent_review.py' -v
+          python3 -m py_compile support/previewqa_step12r_review_fixture_audit.py tests/security/test_previewqa_step12r_review_fixtures.py tests/security/test_previewqa_step12r_recovery_fault_matrix.py
+          python3 -m unittest discover -s tests/security -p 'test_previewqa_step12r_*.py' -v
+          node --test tests/security/previewqa-step12r-jwt-crypto.test.mjs
+          bash tests/security/previewqa-step12e-lua-repair-smoke.sh
+          bash tests/security/previewqa-step12c-offline-group-smoke.sh
           bash -n support/workspace-upgrade.sh
           bash -n support/frontend-navigation-upgrade.sh
           bash -n support/typography-upgrade.sh
