@@ -2122,12 +2122,24 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
 .blog-post-card{min-width:0;display:flex;flex-direction:column;overflow:hidden;border-radius:15px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
 .blog-card-media{position:relative;display:grid;place-items:center;aspect-ratio:16/10;overflow:hidden;background:var(--surface-2);border-bottom:1px solid var(--line)}
 .blog-card-media img,.blog-card-media video{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain}
-.blog-card-video-badge{position:absolute;bottom:10px;right:10px;display:inline-flex;align-items:center;gap:4px;border-radius:9px;padding:5px 8px;font-size:.74rem;font-weight:750;color:#fff;background:rgba(12,21,38,.8)}
+/* Blog featured videos and YouTube thumbnails share one responsive, premium media stage.
+   The backdrop remains visible if a private video cannot provide a frame or
+   a third-party YouTube thumbnail is unavailable. No autoplay or iframe in cards. */
+.blog-card-media{isolation:isolate}
+.blog-card-media-backdrop{position:absolute;inset:0;z-index:0;display:grid;place-items:center;width:100%;height:100%;color:#d7e7f7;background:radial-gradient(ellipse at 72% 12%,#355e88 0%,transparent 54%),linear-gradient(145deg,#192e4d 0%,#14243e 60%,#0e2037 100%)}
+.blog-card-media-backdrop svg{opacity:.34}
+.blog-card-media .blog-card-youtube-backdrop{color:#ffe0e0;background:radial-gradient(ellipse at 75% 8%,#9d4348 0%,transparent 52%),linear-gradient(145deg,#3c1e33 0%,#1a2540 100%)}
+.blog-card-media .blog-card-video-thumbnail,.blog-card-media .blog-card-youtube-thumbnail{position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;object-position:center;background:transparent}
+.blog-card-media .blog-card-video-thumbnail{opacity:0;pointer-events:none;transition:opacity .2s ease}
+.blog-card-media .blog-card-video-thumbnail.is-ready{opacity:1}
+.blog-card-media .blog-card-youtube-thumbnail[hidden]{display:none!important}
+.blog-card-play-overlay{position:absolute;z-index:2;left:50%;top:50%;display:grid;place-items:center;width:56px;height:56px;border:1px solid rgba(255,255,255,.8);border-radius:50%;color:#fff;background:rgba(12,23,43,.7);box-shadow:0 8px 26px rgba(0,0,0,.24);backdrop-filter:blur(9px);transform:translate(-50%,-50%);transition:background .2s ease,box-shadow .2s ease}
+.blog-card-play-overlay svg{margin-left:3px}
+.blog-card-media:hover .blog-card-play-overlay,.blog-card-media:focus-visible .blog-card-play-overlay{background:rgba(204,66,18,.95);box-shadow:0 10px 28px rgba(0,0,0,.33)}
+.blog-card-video-badge{position:absolute;z-index:3;bottom:10px;right:10px;display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.24);border-radius:8px;padding:5px 9px;font-size:.72rem;letter-spacing:.02em;font-weight:800;color:#fff;background:rgba(12,21,38,.78);backdrop-filter:blur(8px)}
 .blog-card-placeholder,.blog-card-color{display:flex;flex-direction:column;gap:7px;justify-content:center;align-items:center;width:100%;height:100%;color:var(--muted);font-size:.8rem}
 .blog-card-placeholder svg{color:var(--accent)}
-.blog-card-youtube{background:linear-gradient(135deg,#27151e,#482e3b);color:#fff}
-.blog-card-youtube svg{color:#ff6b6b}
-.blog-card-media .blog-card-youtube-thumbnail{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+@media(prefers-reduced-motion:reduce){.blog-card-media .blog-card-video-thumbnail,.blog-card-play-overlay{transition:none}}
 .blog-card-content{display:flex;flex-direction:column;gap:11px;padding:16px;flex:1;min-width:0}
 .blog-card-category{text-transform:uppercase;letter-spacing:.07em;font-size:.69rem;font-weight:850;color:var(--accent);width:fit-content}
 .blog-post-card h2{font-size:clamp(.93rem,1.15vw,1.07rem);line-height:1.42;margin:0;letter-spacing:normal;overflow-wrap:anywhere}
