@@ -52,6 +52,7 @@ http_php() {
  env -i "PATH=$PATH" "HOME=$QA" "APP_ENV=testing" "APP_DEBUG=false" \
   "APP_URL=https://bambodia.com" "APP_KEY=$KEY" \
   "BAMBODIA_MCP_ENABLED=true" "BAMBODIA_MCP_WRITES_ENABLED=true" \
+  "BAMBODIA_MCP_ALLOWED_CALLBACK_URIS=https://chatgpt.com/connector/oauth/qa-callback" \
   "DB_CONNECTION=sqlite" "DB_DATABASE=$HTTP_DB" "DB_URL=" \
   "CACHE_STORE=array" "SESSION_DRIVER=file" \
   "SESSION_SECURE_COOKIE=false" "QUEUE_CONNECTION=sync" \
@@ -77,6 +78,7 @@ BAMBODIA_QA_FOREIGN_ID="$(env \
  "APP_URL=https://bambodia.com" "APP_KEY=$KEY" \
  "DB_CONNECTION=sqlite" "DB_DATABASE=$HTTP_DB" "DB_URL=" \
  "BAMBODIA_MCP_ENABLED=true" "BAMBODIA_MCP_WRITES_ENABLED=true" \
+ "BAMBODIA_MCP_ALLOWED_CALLBACK_URIS=https://chatgpt.com/connector/oauth/qa-callback" \
  "CACHE_STORE=array" "SESSION_DRIVER=file" "QUEUE_CONNECTION=sync" \
  "MAIL_MAILER=array" "LOG_CHANNEL=stderr" "BCRYPT_ROUNDS=4" \
  "BAMBODIA_QA_ADMIN_EMAIL=$BAMBODIA_QA_ADMIN_EMAIL" \
