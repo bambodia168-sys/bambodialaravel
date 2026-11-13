@@ -39,8 +39,8 @@ try {
         throw new Error(device.name+' '+path+' body font must use 14px platform token, saw '+typeSize);
       checks++;
       if(path==='/'){
-        // The ambient hero is the only new homepage layer: background adapts to
-        // theme, retains the original container geometry and has no slide controls.
+        // The static Aurora hero preserves the original content geometry,
+        // responds to both themes, and does not introduce animation or controls.
         const hero=page.locator('.marketplace-hero-scene');
         if(await hero.count()!==1 ||
            await hero.locator('.marketplace-home-hero').count()!==1 ||
@@ -70,9 +70,9 @@ try {
               scrollWidth:document.documentElement.scrollWidth,
             };
           },theme);
-          if(!result.image.includes('radial-gradient') ||
+          if((result.image.match(/radial-gradient/g)||[]).length!==3 ||
              !result.grid.includes('linear-gradient') ||
-             result.animation!=='bambodia-hero-ambient-drift' ||
+             result.animation!=='none' ||
              Math.abs(result.left)>1 ||
              Math.abs(result.right-result.rootWidth)>4 ||
              result.scrollWidth>result.rootWidth+5 ||
@@ -80,10 +80,9 @@ try {
             throw new Error(device.name+' '+theme+' ambient hero regression '+JSON.stringify(result));
           heroResults.push(result);
         }
-        if(heroResults[0].base===heroResults[1].base ||
-           !heroResults[0].base.includes('246, 249, 255') ||
-           !heroResults[1].base.includes('12, 24, 43'))
-          throw new Error(device.name+' hero background does not respond to theme');
+        if(heroResults[0].base!=='rgb(246, 248, 252)' ||
+           heroResults[1].base!=='rgb(7, 22, 43)')
+          throw new Error(device.name+' static Aurora theme palette regression '+JSON.stringify(heroResults));
         await page.emulateMedia({reducedMotion:'reduce'});
         const still=await hero.evaluate(element=>getComputedStyle(element,'::before').animationName);
         if(still!=='none')throw new Error(device.name+' hero animation ignores reduced motion');
