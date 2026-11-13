@@ -57,8 +57,8 @@ import pathlib,re,sys
 source=pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')
 needle="<<"+"'PY'"
 parts=re.findall(re.escape(needle)+r"\n(.*?)\nPY(?=\n|$)",source,flags=re.S)
-if len(parts)!=4:
- raise SystemExit('STEP34C18E_BLOCKED=EXPECTED_FOUR_PYTHON_HEREDOCS')
+if len(parts)!=5:
+ raise SystemExit('STEP34C18E_BLOCKED=EXPECTED_FIVE_PYTHON_HEREDOCS')
 for i,block in enumerate(parts):
  compile(block,'step34c18e_heredoc_'+str(i),'exec')
 print('STEP34C18E_EMBEDDED_PYTHON_SYNTAX=PASS')
@@ -212,6 +212,21 @@ PY
 
 chmod 700 "$TMP"
 bash -n "$TMP"
+echo '========== LINT INSTRUMENTED PHP BEFORE ANY QA TRANSACTION =========='
+python3 - "$TMP" "/www/server/php/85/bin/php" <<'PY'
+import pathlib,subprocess,sys
+script,php=sys.argv[1:]
+text=pathlib.Path(script).read_text(encoding='utf-8')
+start="code=r"+"'"*3
+if text.count(start)!=1:
+ raise SystemExit('STEP34C18E_BLOCKED=INSTRUMENTED_PHP_LOCATOR_INVALID')
+body=text.split(start,1)[1].split("\n"+"'"*3,1)[0]
+proc=subprocess.run([php,'-l'],input=b'<?php\n'+body.encode('utf-8'),
+ stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=25,check=False)
+if proc.returncode!=0:
+ raise SystemExit('STEP34C18E_BLOCKED=INSTRUMENTED_PHP_SYNTAX_INVALID')
+print('STEP34C18E_INSTRUMENTED_PHP_SYNTAX=PASS')
+PY
 
 echo '========== EXECUTE ONE DISPOSABLE PRIVATE DIAGNOSTIC =========='
 if bash "$TMP" --exercise > "$LOG" 2>&1; then
