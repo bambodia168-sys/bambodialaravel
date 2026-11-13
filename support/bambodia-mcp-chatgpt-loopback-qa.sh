@@ -126,7 +126,7 @@ cp -a --reflink=auto -- "$SOURCE/." "$QA/"
 # The on-disk private overlay is an immutable, previously reviewed baseline.
 # Add the GitHub-reviewed session-aware consent fix only in the TEMP QA COPY.
 # No file beneath SOURCE, LIVE or Nginx is ever replaced.
-QA_SOURCE_RELEASE="139c057cec0a9fa1fda6383d375a8bb93514ef25"
+QA_SOURCE_RELEASE="902368e2bf0ab3bd12b6d5403af3ccb77f621a3a"
 REPO="bambodia168-sys/bambodialaravel"
 qa_patch_php() {
  local rel="$1" old="$2" expected="$3" destination="$QA/$1"
@@ -161,7 +161,16 @@ qa_patch_php "app/Http/Middleware/EnsureMcpOAuthConsentAdmin.php" \
  "641e625f4a12765a3e8da54916235ccb7b337835"
 qa_patch_php "tests/Feature/BambodiaMcpOAuthTest.php" \
  "2c67651511f99eee3d6e3b1c3bad2364860912ad" \
- "4a370bd74785584a609cb98254621968ad91512a"
+ "725a067ce74802cec15169eab87beab051c7e3ca"
+# The reviewed exact-callback DCR and scope gate also apply in physical QA.
+# Patch only temporary files with immutable GitHub blob checks.
+qa_patch_php "config/mcp.php" \
+ "c6b917eec7d1573c13f3335d1ed811a212850afa" \
+ "215d9b15714e0a6b687191bdab44af54ace10450"
+qa_patch_php "app/Http/Controllers/Api/BambodiaOAuthRegisterController.php" \
+ "2bb0f836dd9cc1668ca545686f901d5d651d6508" \
+ "290f3d66998315235c9c6350e3b878d458344331"
+echo "QA_EXACT_CALLBACK_AND_SCOPE_GATE=DISPOSABLE_COPY_ONLY"
 echo "QA_CONSENT_FIX=VERIFIED_ONLY_IN_DISPOSABLE_COPY"
 # Public index.php is fail-closed until installed.lock exists.
 # Create that flag only inside the disposable QA clone, never in SOURCE/LIVE.
@@ -306,6 +315,7 @@ http_php() {
  env -i "PATH=$PATH" "HOME=$QA" "APP_ENV=testing" "APP_DEBUG=false" \
   "APP_URL=https://bambodia.com" "APP_KEY=$KEY" \
   "BAMBODIA_MCP_ENABLED=true" "BAMBODIA_MCP_WRITES_ENABLED=true" \
+  "BAMBODIA_MCP_ALLOWED_CALLBACK_URIS=https://chatgpt.com/connector/oauth/qa-callback" \
   "DB_CONNECTION=sqlite" "DB_DATABASE=$HTTP_DB" "DB_URL=" \
   "CACHE_STORE=array" "SESSION_DRIVER=file" \
   "SESSION_SECURE_COOKIE=false" "QUEUE_CONNECTION=sync" \
@@ -371,6 +381,7 @@ BAMBODIA_QA_FOREIGN_ID="$(env \
  "APP_URL=https://bambodia.com" "APP_KEY=$KEY" \
  "DB_CONNECTION=sqlite" "DB_DATABASE=$HTTP_DB" "DB_URL=" \
  "BAMBODIA_MCP_ENABLED=true" "BAMBODIA_MCP_WRITES_ENABLED=true" \
+ "BAMBODIA_MCP_ALLOWED_CALLBACK_URIS=https://chatgpt.com/connector/oauth/qa-callback" \
  "CACHE_STORE=array" "SESSION_DRIVER=file" "QUEUE_CONNECTION=sync" \
  "MAIL_MAILER=array" "LOG_CHANNEL=stderr" "BCRYPT_ROUNDS=4" \
  "BAMBODIA_QA_ADMIN_EMAIL=$BAMBODIA_QA_ADMIN_EMAIL" \
