@@ -143,8 +143,11 @@ jobs:
           for required in (
               'COMPOSER_ENTRY=/usr/bin/composer',
               'fail COMPOSER_ENTRY_IS_NOT_PHP',
-              'COMPOSER_VERSION="$(qa_php -d "include_path=/usr/share/php:."',
-              '"$COMPOSER_ENTRY" --version --no-ansi)',
+              'COMPOSER_VERSION_OUTPUT="$(qa_php -d "include_path=/usr/share/php:."',
+              '"$COMPOSER_ENTRY" --version --no-ansi 2>&1)',
+              'COMPOSER_VERSION="$(printf',
+              "COMPOSER_VERIFIED_VERSION=%s",
+              "fail COMPOSER_VERSION_NOT_DETECTED",
               '"$COMPOSER_ENTRY" install',
               "COMPOSER_INTERPRETER=VERIFIED_PHP85_ENTRYPOINT",
               'qa_php "$QA/vendor/bin/phpunit" --colors=never --filter=BambodiaMcp',
@@ -157,7 +160,8 @@ jobs:
           assert 'command -v composer' not in src, "A shell wrapper is unsafe for PHP"
           assert "execs /usr/bin/php83" in src, "Document the blocked PHP 8.3 wrapper"
           assert ' "$PHP" "$@"' in src, "The PHP CLI must be pinned"
-          assert '[[ "$COMPOSER_VERSION" == "Composer version "* ]]' in src
+          assert "grep -m1 -E" in src and "Composer( version)?" in src
+          assert "error_reporting=8191" in src
           assert '--no-scripts --no-plugins' in src
           assert '"COMPOSER_HOME=$QA/.composer-home"' in src
           assert '"COMPOSER_CACHE_DIR=$QA/.composer-cache"' in src
