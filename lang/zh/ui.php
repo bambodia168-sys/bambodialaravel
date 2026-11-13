@@ -21,6 +21,7 @@ return [
     'find_products' => '寻找产品',
     'find_projects' => '寻找项目',
     'find_freelancers' => '寻找自由职业者',
+    'find_freelance_offers' => '查找自由职业服务',
     'find_services' => '寻找服务',
     'language' => '语言',
     'welcome_back' => '欢迎回来',
