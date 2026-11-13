@@ -254,12 +254,39 @@ def run() -> None:
     require(bool(email and password and foreign_id.isdecimal()), "QA_FIXTURE_NOT_CONFIGURED")
 
     status, _loc, root = client.json("GET", "/.well-known/oauth-protected-resource")
-    require(status == 200 and root.get("resource") == RESOURCE
-            and root.get("authorization_servers") == [ISSUER],
-            "ROOT_RESOURCE_METADATA_WRONG")
+    if not (status == 200 and root.get("resource") == RESOURCE
+            and root.get("authorization_servers") == [ISSUER]):
+        # Emit only allowlisted, boolean metadata diagnostics. The response
+        # may be an untrusted page/error and must not expose cookies, tokens,
+        # session data, or arbitrary body fields to the terminal.
+        known = (
+            "resource", "authorization_servers", "scopes_supported",
+            "authorization_endpoint", "token_endpoint", "error",
+            "message", "status",
+        )
+        present = ",".join(key for key in known if key in root)
+        print(
+            "CHATGPT_METADATA_DIAGNOSTIC=ROOT"
+            + "|http=" + str(status)
+            + "|resource_present=" + str("resource" in root)
+            + "|resource_exact=" + str(root.get("resource") == RESOURCE)
+            + "|issuers_present=" + str("authorization_servers" in root)
+            + "|issuers_exact=" + str(root.get("authorization_servers") == [ISSUER])
+            + "|known_keys=" + (present or "none"),
+            flush=True,
+        )
+        require(False, "ROOT_RESOURCE_METADATA_WRONG")
     status, _loc, sub = client.json("GET", "/.well-known/oauth-protected-resource/mcp")
-    require(status == 200 and sub.get("resource") == RESOURCE,
-            "NESTED_RESOURCE_METADATA_WRONG")
+    if not (status == 200 and sub.get("resource") == RESOURCE):
+        print(
+            "CHATGPT_METADATA_DIAGNOSTIC=NESTED"
+            + "|http=" + str(status)
+            + "|resource_present=" + str("resource" in sub)
+            + "|resource_exact=" + str(sub.get("resource") == RESOURCE)
+            + "|issuers_exact=" + str(sub.get("authorization_servers") == [ISSUER]),
+            flush=True,
+        )
+        require(False, "NESTED_RESOURCE_METADATA_WRONG")
     status, _loc, auth_server = client.json("GET", "/.well-known/oauth-authorization-server")
     require(status == 200 and "authorization_endpoint" in auth_server
             and "token_endpoint" in auth_server, "AUTH_SERVER_METADATA_MISSING")
