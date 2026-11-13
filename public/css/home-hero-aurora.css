@@ -1,0 +1,69 @@
+/* Bambodia homepage — refined Subtle Aurora hero, light and dark.
+   CSS-only layered surfaces; the existing hero content, search and geometry
+   remain unchanged. Scoped to .marketplace-hero-scene on the public layout. */
+
+:root:not([data-theme="dark"]) .site-body .marketplace-hero-scene {
+  --home-hero-base: #f6f8fc;
+  --home-hero-left: rgba(212, 224, 243, .55);
+  --home-hero-right: rgba(165, 230, 223, .30);
+  --home-hero-center: rgba(255, 255, 255, .55);
+  --home-hero-grid: rgba(30, 60, 110, .045);
+  --home-hero-seam: rgba(30, 60, 110, .085);
+}
+
+:root[data-theme="dark"] .site-body .marketplace-hero-scene {
+  --home-hero-base: #07162b;
+  --home-hero-left: rgba(71, 98, 180, .16);
+  --home-hero-right: rgba(12, 177, 160, .24);
+  --home-hero-center: rgba(48, 76, 124, .075);
+  --home-hero-grid: rgba(255, 255, 255, .035);
+  --home-hero-seam: rgba(175, 211, 255, .09);
+}
+
+.site-body .marketplace-hero-scene {
+  background-color: var(--home-hero-base);
+  box-shadow: inset 0 -1px 0 var(--home-hero-seam);
+}
+
+/* Balanced focal glow, deliberately static: no continuous motion or imagery. */
+.site-body .marketplace-hero-scene::before {
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 61% 92% at 4% 9%, var(--home-hero-left) 0%, transparent 82%),
+    radial-gradient(ellipse 48% 74% at 95% 82%, var(--home-hero-right) 0%, transparent 78%),
+    radial-gradient(ellipse 40% 60% at 54% 31%, var(--home-hero-center) 0%, transparent 78%);
+  animation: none;
+  transform: none;
+  will-change: auto;
+}
+
+/* Lower-contrast grid gently fades before the next section. */
+.site-body .marketplace-hero-scene::after {
+  background-image:
+    linear-gradient(to right, var(--home-hero-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--home-hero-grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.60), rgba(0,0,0,.22) 69%, transparent 100%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.60), rgba(0,0,0,.22) 69%, transparent 100%);
+}
+
+/* Keep the existing search bar; refine only its depth. */
+:root:not([data-theme="dark"]) .site-body .marketplace-hero-scene .hero-search {
+  box-shadow: 0 16px 42px rgba(24, 50, 90, .085);
+}
+:root[data-theme="dark"] .site-body .marketplace-hero-scene .hero-search {
+  box-shadow: 0 16px 42px rgba(0, 7, 20, .24);
+}
+
+@media (max-width: 719px) {
+  .site-body .marketplace-hero-scene::after {
+    background-size: 40px 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-body .marketplace-hero-scene::before {
+    animation: none;
+    transform: none;
+  }
+}

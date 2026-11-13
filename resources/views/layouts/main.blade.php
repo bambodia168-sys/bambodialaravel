@@ -10,6 +10,7 @@
   @include('layouts.partials.site-typography')
   <link rel="stylesheet" href="{{ asset('css/header-flag-scroll-top.css') }}?v=1">
   <link rel="stylesheet" href="{{ asset('css/footer-two-tone-themes.css') }}?v=2">
+  <link rel="stylesheet" href="{{ asset('css/home-hero-aurora.css') }}?v=1">
   {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
   <link rel="stylesheet" href="{{ asset('css/creator-badge-tooltip-viewport.css') }}?v=1">
   <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>
