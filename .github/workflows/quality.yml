@@ -140,6 +140,28 @@ jobs:
           bash -n support/bambodia-mcp-private-overlay-refresh-20261113.sh
           bash -n support/bambodia-mcp-private-oauth-security-sync-20261113.sh
           bash -n support/bambodia-mcp-refreshed-candidate-http-qa-20261113.sh
+          bash -n support/bambodia-mcp-refreshed-frontend-drift-readonly-20261113.sh
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          source=Path("support/bambodia-mcp-refreshed-frontend-drift-readonly-20261113.sh").read_text()
+          parts=source.split("<<'PY'\n")
+          assert len(parts)==2, "Exactly one embedded drift diagnostic required"
+          ast.parse(parts[1].split("\nPY\n",1)[0])
+          for guard in (
+              "MCP_FRONTEND_DRIFT_PATH=",
+              "MCP_FRONTEND_BASELINE_MATCH_LIVE=",
+              "MCP_FRONTEND_BASELINE_MATCH_PRIVATE=",
+              "MCP_VITE_LIVE_BASELINE_MATCH=",
+              "MCP_VITE_PRIVATE_BASELINE_MATCH=",
+              "MCP_FRONTEND_DRIFT_DIAGNOSIS=",
+              "MCP_FRONTEND_DRIFT_AUDIT=READ_ONLY_COMPLETE",
+              "REFRESHED_CANDIDATE_HTTP_QA_GATE=BLOCKED",
+              "PRODUCTION_SOURCE_DATABASE_NGINX_KEYS=UNCHANGED",
+          ):
+              assert guard in source, "Missing drift audit invariant: " + guard
+          print("MCP_FRONTEND_DRIFT_AUDIT_STATIC_GUARDS=PASS")
+          PY
           python3 - <<'PY'
           import ast
           from pathlib import Path
