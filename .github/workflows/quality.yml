@@ -132,6 +132,25 @@ jobs:
           bash -n support/bambodia-mcp-main-domain-resolve-private-critical.sh
           bash -n support/bambodia-mcp-main-domain-private-runtime-acceptance.sh
           bash -n support/bambodia-mcp-main-domain-physical-oauth-qa.sh
+          bash -n support/bambodia-mcp-main-domain-private-developer-routes.sh
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          root = Path('support')
+          script = (root / 'bambodia-mcp-main-domain-private-developer-routes.sh').read_text()
+          parts = script.split("<<'PY'\n")
+          assert len(parts) == 2
+          ast.parse(parts[1].split("\nPY\n", 1)[0])
+          assert "all_other_route_bytes_preserved" in script
+          assert "PRIVATE_ROUTE_NON_DEVELOPER_BYTES=PRESERVED_EXACTLY" in script
+          for name in ("developer.mcp.index", "developer.oauth.index", "developer.oauth.revoke"):
+              assert name in script
+              assert name in (root / 'bambodia-mcp-main-domain-private-runtime-acceptance.sh').read_text()
+          assert "MCP_PRIVATE_DEVELOPER_ROUTE_SUPPLEMENT=VERIFIED" in (
+              root / 'bambodia-mcp-main-domain-physical-oauth-qa.sh').read_text()
+          assert "mcp-private-developer-routes.json" in script
+          print("MCP_PRIVATE_OAUTH_DEVELOPER_ROUTE_GUARDS=PASS")
+          PY
           python3 - <<'PY'
           import ast
           from pathlib import Path
