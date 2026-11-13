@@ -323,9 +323,13 @@ final class BambodiaMcpOAuthTest extends TestCase
             ->filter(fn ($r) => $r->uri() === 'oauth/authorize'
                 && in_array('POST', $r->methods(), true))->values();
         $this->assertCount(1, $approvalRoutes, 'Unexpected Passport POST consent route count.');
-        $this->assertContains('mcp.oauth.consent',
-            $approvalRoutes->first()->gatherMiddleware(),
-            'The actual Passport POST route is missing the post-session administrator guard.');
+        $this->assertContains('web', $approvalRoutes->first()->gatherMiddleware(),
+            'Passport approval must use the authenticated session web middleware.');
+        $this->assertContains(
+            \App\Http\Middleware\EnsureMcpOAuthConsentAdmin::class,
+            app('router')->getMiddlewareGroups()['web'] ?? [],
+            'The web group must check the administrator role after StartSession.'
+        );
 
         $approvalResponse = $this->post(route('passport.authorizations.approve'), [
             'client_id' => $client,
