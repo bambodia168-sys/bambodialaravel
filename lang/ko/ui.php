@@ -18,6 +18,8 @@ return [
     'marketplace' => '마켓플레이스',
     'for_users' => '사용자',
     'compliance' => '규정 준수',
+    'footer_legal_policies' => '법률 및 정책',
+    'footer_email_support' => '이메일 지원',
     'footer_marketplace_projects' => '프로젝트',
     'footer_marketplace_products' => '상품',
     'footer_marketplace_freelance' => '프리랜스',
