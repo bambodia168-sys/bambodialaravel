@@ -414,7 +414,15 @@ with socket.socket() as s:
 PY
 )"
 [[ "$PORT" =~ ^[0-9]+$ && "$PORT" -ge 1024 ]] || fail QA_LOCAL_PORT_INVALID
-http_php -S "127.0.0.1:$PORT" -t "$QA/public" "$QA/public/index.php" \
+# With some PHP CLI-server ini configurations (variables_order=GPCS),
+# inherited APP_KEY is visible through getenv() but not through $_ENV or
+# $_SERVER in HTTP requests. Laravel's immutable dotenv repository reads
+# those superglobals. Enable environment population ONLY in the disposable
+# built-in HTTP server, without modifying system php.ini or PHP-FPM.
+[[ "$(http_php -d variables_order=EGPCS -r 'echo ini_get("variables_order");')" == "EGPCS" ]] ||
+ fail QA_HTTP_VARIABLES_ORDER_OVERRIDE_FAILED
+echo "QA_HTTP_VARIABLES_ORDER=EGPCS_DISPOSABLE_HTTP_ONLY"
+http_php -d variables_order=EGPCS -S "127.0.0.1:$PORT" -t "$QA/public" "$QA/public/index.php" \
  > "$QA/chatgpt-loopback-http.log" 2>&1 &
 SERVER_PID=$!
 READY=0
