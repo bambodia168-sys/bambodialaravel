@@ -129,6 +129,8 @@ def guard(head):
             blocked("Live Vite manifest missing " + item)
     if live_manifest["resources/css/app.css"]["file"] != "assets/app-CasJoX4P.css":
         blocked("Previously installed blog CSS asset changed")
+    if live_manifest["resources/js/app.js"]["file"] != "assets/app-veW36Ie6.js":
+        blocked("Previously installed blog JavaScript asset changed")
     for rel in manifest_assets(live_manifest):
         safe_file(APP / "public/build" / rel)
     print("LIVE_VITE_MANIFEST=VERIFIED")
@@ -300,7 +302,7 @@ def main():
     manifest_sha = guard(head)
     if mode == "--check":
         print("DEPLOYMENT=NOT_PERFORMED")
-        print("RESULT=READY_FOR_BLOG_VIDEO_YOUTUBE_RELEASE")
+        print("RESULT=READY_FOR_BLOG_PREMIUM_NATIVE_VIDEO_PLAYER")
         return
     with tempfile.TemporaryDirectory(prefix="bambodia-blog-player-", dir="/root") as folder:
         source, bundle, assets = prepare(head, sys.argv[3], Path(folder))
