@@ -13,6 +13,14 @@
     <span class="blog-player-brand"><x-icon name="video" size="16"/> Video</span>
   </div>
 
+  {{-- Fullscreen gets a prominent, clearly labeled exit in the top-right corner.
+       Kept separate from the video controls for mouse, touch and keyboard access. --}}
+  <button type="button" class="blog-player-fullscreen-exit" data-blog-player-exit-fullscreen
+          aria-label="Exit full screen" title="Exit full screen" hidden>
+    <x-icon name="minimize" size="18"/>
+    <span>Exit full screen</span>
+  </button>
+
   <button type="button" class="blog-player-center" data-blog-player-toggle data-blog-player-center
           aria-label="Play video" hidden>
     <x-icon name="play" size="34"/>
@@ -44,9 +52,12 @@
               aria-label="Picture in picture" title="Picture in picture" hidden>
         <x-icon name="picture-in-picture" size="20"/>
       </button>
-      <button type="button" class="blog-player-icon-btn" data-blog-player-fullscreen
-              aria-label="Enter fullscreen" title="Fullscreen">
-        <x-icon name="maximize" size="20"/>
+      <button type="button" class="blog-player-icon-btn blog-player-fullscreen-btn"
+              data-blog-player-fullscreen aria-label="Enter full screen"
+              title="Full screen" aria-keyshortcuts="F" aria-pressed="false">
+        <span data-blog-player-expand-icon><x-icon name="maximize" size="19"/></span>
+        <span data-blog-player-collapse-icon hidden><x-icon name="minimize" size="19"/></span>
+        <span class="blog-player-fullscreen-label" data-blog-player-fullscreen-label>Full screen</span>
       </button>
     </div>
   </div>
