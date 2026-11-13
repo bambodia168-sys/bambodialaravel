@@ -586,6 +586,17 @@ Route::middleware('throttle:10,1')->group(function (): void {
 
     \Laravel\Mcp\Facades\Mcp::oauthRoutes(registration: false);
 
+    // Attach the final authorization gate to Passport's real approval route,
+    // AFTER its "web" StartSession middleware has resolved the login. Do not
+    // try to read the browser guard from global middleware pre-session.
+    $consentRoute = Route::getRoutes()->getByName('passport.authorizations.approve');
+    if (! $consentRoute
+        || $consentRoute->uri() !== 'oauth/authorize'
+        || ! in_array('POST', $consentRoute->methods(), true)) {
+        throw new \LogicException('The reviewed Passport OAuth consent route was not registered.');
+    }
+    $consentRoute->middleware('mcp.oauth.consent');
+
     Route::post('/oauth/register',
         \App\Http\Controllers\Api\BambodiaOAuthRegisterController::class)
         ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
