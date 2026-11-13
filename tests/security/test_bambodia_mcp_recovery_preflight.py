@@ -141,5 +141,53 @@ class IsolatedRestoreSafetyTests(unittest.TestCase):
             restore.isolated_root(Path("/www/wwwroot/bambodia-staging-qa"))
 
 
+manifest = load_module(
+    "bambodia_recovery_manifest_reconcile",
+    "support/bambodia-mcp-restored-manifest-reconcile-20261113.py",
+)
+
+
+class RecoveryManifestTests(unittest.TestCase):
+    def setUp(self):
+        self.good = {
+            "schema_version": 1,
+            "database_table_counts": {"a"*64: 7, "b"*64: 0},
+            "media_object_sha256": {"c"*64: "d"*64},
+            "ownership_integrity_hmac": "e"*64,
+            "migration_state_hmac": "f"*64,
+            "release_artifact_sha256": "0"*64,
+        }
+
+    def test_synthetic_manifest_pair_equal(self):
+        first, second, same = manifest.compare(self.good, dict(self.good))
+        self.assertTrue(same)
+        self.assertEqual(first["tables"], 2)
+        self.assertEqual(second["media"], 1)
+
+    def test_media_integrity_mismatch_blocked(self):
+        restored = dict(self.good)
+        restored["media_object_sha256"] = {"c"*64: "1"*64}
+        _, _, same = manifest.compare(self.good, restored)
+        self.assertFalse(same)
+
+    def test_row_count_mismatch_blocked(self):
+        restored = dict(self.good)
+        restored["database_table_counts"] = {"a"*64: 8, "b"*64: 0}
+        _, _, same = manifest.compare(self.good, restored)
+        self.assertFalse(same)
+
+    def test_no_customer_fields_allowed(self):
+        unapproved = dict(self.good)
+        unapproved["customer_records"] = ["synthetic@example.invalid"]
+        with self.assertRaises(manifest.Blocked):
+            manifest.validate(unapproved)
+
+    def test_digest_keys_required(self):
+        unapproved = dict(self.good)
+        unapproved["database_table_counts"] = {"users": 7}
+        with self.assertRaises(manifest.Blocked):
+            manifest.validate(unapproved)
+
+
 if __name__ == "__main__":
     unittest.main()
