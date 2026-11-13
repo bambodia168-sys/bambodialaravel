@@ -68,7 +68,7 @@ class ReviewFixtureTests(unittest.TestCase):
             ("required: true", "required: false"),
             ("teamName: INVALID_ACCESS_NOT_ENABLED", "teamName: live-team"),
             ("- INVALID_APPLICATION_AUDIENCE", "- live-audience-tag"),
-            ("service: unix:/run/bambia", "service: http://127.0.0.1:8080"),
+            ("service: unix:/run/bambodia-previewqa-connector/http.sock", "service: http://127.0.0.1:8080"),
             ("- service: http_status:404", "- service: hello_world"),
             ("hostname: preview-qa.bambodia.com", "hostname: *.bambodia.com"),
             ("httpHostHeader: preview-qa.bambodia.com", "httpHostHeader: localhost"),
