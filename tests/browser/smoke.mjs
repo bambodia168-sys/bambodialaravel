@@ -356,6 +356,85 @@ try {
            !blogIndexHtml.includes('data-blog-youtube-thumbnail'))
           throw new Error(device.name+' full Blog index does not share featured media presentation');
         checks+=7;
+        // Single uploaded-video articles: custom controls must actually work,
+        // still offer a native fallback, and never change YouTube article embeds.
+        if(device.name==='desktop' || device.name==='iphone-emulation'){
+          const uploadedHref=await uploaded.locator('a.blog-card-media').getAttribute('href');
+          const youtubeHref=await youtubeCard.locator('a.blog-card-media').getAttribute('href');
+          const article=await context.newPage();
+          try {
+            const opened=await article.goto(new URL(uploadedHref,origin).toString(),
+              {waitUntil:'networkidle',timeout:30000});
+            if(!opened || opened.status()!==200)
+              throw new Error(device.name+' video article unavailable');
+            const player=article.locator('[data-blog-premium-player]');
+            const articleVideo=player.locator('video[data-blog-player-video]');
+            await article.waitForFunction(()=>
+              document.querySelector('[data-blog-premium-player]')?.dataset.initialized==='true',
+              null,{timeout:8000});
+            const videoState=await player.evaluate(root=>{
+              const video=root.querySelector('video');
+              return {
+                nativeControls:video.controls,paused:video.paused,autoplay:video.autoplay,
+                stageWidth:root.getBoundingClientRect().width,
+                rootWidth:document.documentElement.clientWidth,
+                controlButtons:root.querySelectorAll('.blog-player-controls button').length,
+                fullWidth:getComputedStyle(root).aspectRatio,
+              };
+            });
+            if(videoState.nativeControls || !videoState.paused || videoState.autoplay ||
+               videoState.controlButtons<4 || videoState.stageWidth>videoState.rootWidth+3 ||
+               await player.locator('[data-blog-player-hud]').isHidden())
+              throw new Error(device.name+' native player enhancement invalid '+JSON.stringify(videoState));
+            const title=article.locator('.blog-article-content h1');
+            const titleMetrics=await title.evaluate(heading=>{
+              heading.textContent='From code changes to dependable releases';
+              const style=getComputedStyle(heading),rect=heading.getBoundingClientRect();
+              return {height:rect.height,line:parseFloat(style.lineHeight),width:rect.width,
+                scrollWidth:heading.scrollWidth,wordBreak:style.wordBreak,
+                pageWidth:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth};
+            });
+            if(titleMetrics.scrollWidth>titleMetrics.width+2 ||
+               titleMetrics.pageWidth>titleMetrics.viewport+5 ||
+               (device.name==='desktop' && titleMetrics.height>titleMetrics.line*1.35) ||
+               titleMetrics.wordBreak!=='normal')
+              throw new Error(device.name+' article headline wraps prematurely or overflows '+JSON.stringify(titleMetrics));
+
+            const speed=player.locator('[data-blog-player-rate]');
+            await speed.click();
+            const rate=await articleVideo.evaluate(video=>video.playbackRate);
+            if(Math.abs(rate-1.25)>.01)throw new Error(device.name+' playback speed control did not work');
+            await player.locator('[data-blog-player-mute]').click();
+            if(!(await articleVideo.evaluate(video=>video.muted)))
+              throw new Error(device.name+' mute button did not work');
+
+            if(device.name==='desktop'){
+              await articleVideo.evaluate(video=>{video.muted=true;});
+              await player.locator('[data-blog-player-center]').click();
+              await article.waitForFunction(()=>{
+                const video=document.querySelector('video[data-blog-player-video]');
+                return !!video && (video.currentTime>0 || video.ended);
+              },null,{timeout:7000});
+              await articleVideo.evaluate(video=>video.pause());
+              if(!(await articleVideo.evaluate(video=>video.paused)))
+                throw new Error('Video cannot be paused from accessible controls');
+            }
+            checks+=8;
+
+            const yPage=await article.goto(new URL(youtubeHref,origin).toString(),
+              {waitUntil:'networkidle',timeout:30000});
+            if(!yPage || yPage.status()!==200 ||
+               await article.locator('iframe.post-public-youtube').count()!==1 ||
+               await article.locator('[data-blog-premium-player]').count())
+              throw new Error(device.name+' YouTube player was unexpectedly redesigned');
+            const frameUrl=await article.locator('iframe.post-public-youtube').getAttribute('src');
+            if(!frameUrl.startsWith('https://www.youtube-nocookie.com/embed/'))
+              throw new Error(device.name+' YouTube embed URL changed');
+            checks+=2;
+          } finally {
+            await article.close();
+          }
+        }
         const blogMetrics=await blogTrack.evaluate(track=>{
           const cards=[...track.querySelectorAll('.home-blog-card')];
           const rect=track.getBoundingClientRect();
