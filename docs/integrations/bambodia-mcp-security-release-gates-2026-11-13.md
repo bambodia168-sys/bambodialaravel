@@ -92,3 +92,16 @@ Latest source inventory compared actual live source against the older full stage
 The new read-only `support/bambodia-mcp-private-overlay-freshness-readonly.sh --inspect` compares current live code with the **previously captured private overlay**. For the nine MCP-critical paths, it compares to the saved `review/live-critical` originals; for other approved code paths, it compares to the actual private candidate. It identifies files that changed or were added since the private review, without modifying either side. Results still require operator execution and review, followed by a conflict-safe private candidate refresh.
 
 **Gate status:** physical OAuth QA PASS; production hosting NOT READY; live source reconciliation NOT APPROVED; production backup/independent restore NOT VERIFIED; release/rollout/real ChatGPT OAuth NOT AUTHORIZED. No production MCP deployment or activation occurred.
+
+
+## Overlay freshness audit accepted — operator results 2026-11-13
+
+The root-only read-only freshness auditor verified the previously reviewed MCP overlay against the current production source with **exactly 6 files changed since review, 5 new live-only files, and 26 stage-only source paths**. All **nine protected MCP-critical live snapshots remain unchanged**, so the earlier critical reconciliation is not invalidated by changes to those nine live files.
+
+Changed live files: `resources/css/app.css`, `resources/js/app.js`, `resources/views/content/blog.blade.php`, `resources/views/content/show.blade.php`, `resources/views/home.blade.php`, `resources/views/layouts/main.blade.php`.
+
+New live files: `public/css/footer-two-tone-themes.css`, `public/css/home-hero-aurora.css`, `resources/js/blog-premium-player.js`, `resources/views/components/blog-card-featured-media.blade.php`, `resources/views/components/blog-premium-native-video.blade.php`.
+
+Draft preparation script `support/bambodia-mcp-private-overlay-refresh-20261113.sh --prepare` is operator-approved **private-only** work, not a production installer. Its preflight refuses changes to the live vhost/composer baselines, missing or changed protected snapshots, unapproved changed or new source paths, unsafe symlinks/special files, or missing Vite entries/assets. With typed operator confirmation, it clones the old root-private overlay to a **new** root-private workspace, copies only the 11 approved changed/new live files, and replaces only the **new copy's** Vite build with a checksum-verified current live asset copy. It keeps the previous overlay and its build intact, and records source hashes and build hashes. Matching live Vite assets does **not** prove independent reproducible build provenance.
+
+After the refresh, require manual security-source synchronization of latest PR #46 exact DCR callback allowlist, write scope registration guard and related tests into the newly refreshed private candidate; reconcile any other GitHub drift. The private candidate remains **NOT DEPLOYABLE** until independent PHP/Blade/Vite/UI regression, customer data restore, rollbacks and operator authorization have completed. No source or customer DB data should be uploaded from the private overlay to GitHub. Production source, current Vite assets, Nginx, database, keys and Cloudflare remain untouched.
