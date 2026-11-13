@@ -109,7 +109,7 @@ def guard(head):
         blocked("Unexpected existing shared blog media component")
     header = safe_file(APP / "resources/views/layouts/main.blade.php").read_text()
     if ("header-flag-scroll-top.css" not in header or "data-back-to-top" not in header
-        or "data-language" not in header and "language-flag" not in header):
+        or "header-flag-only" not in header or "<x-language-menu" not in header):
         blocked("Previously installed public header controls changed")
     safe_file(APP / "resources/views/layouts/workspace.blade.php")
     safe_file(APP / "public/css/header-flag-scroll-top.css")
