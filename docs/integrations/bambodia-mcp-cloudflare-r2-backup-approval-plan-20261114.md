@@ -199,3 +199,15 @@ The connected Cloudflare API was used to create **exactly this one bucket**, the
 **Next approvals required:** securely generated bucket-scoped R2 API credentials; separately controlled/escrowed high-entropy Restic password; approved RPO/RTO/retention and independent security reviewer; recovery source scope, MySQL/media consistency and write-quiescence plan; isolated restore target; separate owner authorization for any repository init, backup and restore.
 
 This creation closes only the *dedicated private bucket provisioning* sub-gate. **Overall production recovery and OAuth gate: BLOCKED. PR #46 DRAFT/UNMERGED, production MCP unchanged.**
+
+## Gate 2.6 — R2 encrypted backup/restore operator implementation prepared (2026-11-14)
+
+The owner requested proceeding with scoped R2 credentials, Restic password custody, backup policy, actual encrypted database/media backup and isolated restoration. These are **multiple separately gated operations**. The connected Cloudflare account/bucket was independently rechecked: `bambodia-backup` exists, default jurisdiction, APAC location, managed `r2.dev` disabled, 0 custom domains, 0 object-expiration rules, 0 bucket locks; the only lifecycle rule aborts incomplete multipart uploads.
+
+**Staged implementations (not deployed):**
+- [Encrypted recovery operator gates](bambodia-mcp-r2-recovery-operator-gates-20261114.md) specify secure S3 credential transfer, off-host Restic/password and Laravel APP_KEY escrow, actual MySQL/media consistency, approved RPO/RTO/retention, guarded initial backup, independent restore and evidence/release criteria.
+- `support/bambodia-mcp-r2-recovery-execution-readiness-readonly-20261114.py --inspect` validates a future **root-only** recovery execution contract without reading credential contents, contacting R2/MySQL, installing software, initializing a repository or creating a backup. Its synthetic unit tests are `tests/security/test_bambodia_mcp_r2_recovery_contract.py`.
+
+The owner has not specified RPO/RTO/retention or an off-host custodian and no secure host-to-Cloudflare credentials delivery mechanism was supplied. Cloudflare R2 S3 credentials are one-time-disclosed and must not be created through a channel from which no authorized operator can securely retrieve them; do not manufacture approval or attempt to store them in GitHub/chat. The independently tested live bucket privacy is necessary but not sufficient to approve backup/restore execution.
+
+**Milestone verdict:** recovery plan & offline readiness tool STAGED; physical R2 key custody, Restic initialization, actual backup and independent restore NOT PERFORMED. PR remains DRAFT, full production release BLOCKED.
