@@ -297,5 +297,49 @@ class ApprovedOneFileRemediationTests(unittest.TestCase):
             self.assertTrue(approved_remediation.matches_path_inode(p,expected))
 
 
+    def test_synthetic_file_postcheck_failure_restores_original_mode(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory(prefix="bambodia-fake-remediation-") as tmp:
+            file=Path(tmp)/"fixture.txt"
+            file.write_text("Disposable synthetic fixture only.",encoding="utf-8")
+            file.chmod(0o644)
+            fd=os.open(file,os.O_RDONLY)
+            try:
+                original=file.stat()
+                report={"affected_relative_path":"fixture.txt"}
+                with (
+                    patch.object(approved_remediation,"account_access",
+                                 side_effect=[True,True,False,False]),
+                    patch.object(approved_remediation,"check_acl_chain"),
+                    patch.object(approved_remediation,"write_journal"),
+                ):
+                    with self.assertRaises(approved_remediation.Blocked):
+                        approved_remediation.apply(report,fd,file,original,0o644,0o640)
+                self.assertEqual(stat.S_IMODE(file.stat().st_mode),0o644)
+            finally:
+                os.close(fd)
+
+    def test_synthetic_success_changes_only_other_read(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory(prefix="bambodia-fake-remediation-") as tmp:
+            file=Path(tmp)/"fixture.txt"
+            file.write_text("Disposable synthetic fixture only.",encoding="utf-8")
+            file.chmod(0o644)
+            fd=os.open(file,os.O_RDONLY)
+            try:
+                original=file.stat()
+                report={"affected_relative_path":"fixture.txt"}
+                with (
+                    patch.object(approved_remediation,"account_access",
+                                 side_effect=[True,True,True,False]),
+                    patch.object(approved_remediation,"check_acl_chain"),
+                    patch.object(approved_remediation,"write_journal"),
+                ):
+                    approved_remediation.apply(report,fd,file,original,0o644,0o640)
+                self.assertEqual(stat.S_IMODE(file.stat().st_mode),0o640)
+            finally:
+                os.close(fd)
+
+
 if __name__ == "__main__":
     unittest.main()
