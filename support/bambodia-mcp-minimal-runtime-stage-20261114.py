@@ -123,26 +123,9 @@ def inventory():
     for path in CRITICAL:
         if checked_file(LIVE,path)!=checked_file(review,path):
             raise Stop("LIVE_PROTECTED_MCP_SOURCE_DRIFT")
-    # Previous accepted frontend evidence is explicitly bound to existing
-    # code and build; if the live site changed, stop and rebase safely.
-    manifest=CANDIDATE/"review/20261113-refresh-evidence.json"
-    evidence=json.loads(checked_file(manifest.parent,manifest.name).decode())
-    paths=evidence.get("updated_live_paths",[])+evidence.get("added_live_paths",[])
-    expected=evidence.get("source_sha256",{})
-    if len(paths)!=11 or len(set(paths))!=11:
-        raise Stop("FRONTEND_EVIDENCE_CHANGED")
-    for path in paths:
-        if sha256(checked_file(LIVE,path))!=expected.get(path) or sha256(checked_file(CANDIDATE/"source",path))!=expected.get(path):
-            raise Stop("LIVE_FRONTEND_CHANGED_REBASE_REQUIRED")
-    assets=evidence.get("live_build_sha256")
-    if not isinstance(assets,dict) or len(assets)<15:
-        raise Stop("FRONTEND_BUILD_EVIDENCE_UNVERIFIED")
-    for rel,sha in assets.items():
-        if not isinstance(rel,str) or rel.startswith("/") or ".." in Path(rel).parts:
-            raise Stop("ASSET_MANIFEST_PATH_UNSAFE")
-        for root in (LIVE/"public/build",CANDIDATE/"source/public/build"):
-            if sha256(checked_file(root,rel))!=sha:
-                raise Stop("LIVE_FRONTEND_BUILD_CHANGED_REBASE_REQUIRED")
+    # Global homepage/blog/Vite assets are NOT part of the MCP-only patch.
+    # Protect only the nine live source files MCP actually touches.
+    # Later isolated tests must still verify the resulting application pages.
     source_hashes={}
     existing_changes=[]
     for rel in PATCH:
@@ -156,7 +139,7 @@ def inventory():
 def stage():
     hashes,changes=inventory()
     print("MCP_ONLY_PROTECTED_LIVE_SOURCE=UNCHANGED")
-    print("MCP_ONLY_FRONTEND_SNAPSHOT=UNCHANGED")
+    print("MCP_ONLY_UNRELATED_GLOBAL_FRONTEND=NOT_COPIED_OR_MODIFIED")
     print("MCP_ONLY_PATCH_FILES_VERIFIED="+str(len(hashes)))
     print("MCP_ONLY_EXISTING_FILES_DIFFER="+str(len(changes)))
     # Existing-file changes are expected (e.g. routes/User). Carry evidence
