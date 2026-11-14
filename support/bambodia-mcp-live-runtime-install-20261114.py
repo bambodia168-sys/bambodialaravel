@@ -193,13 +193,36 @@ def write_atomic(path,data,mode,uid,gid):
         os.close(fd)
     os.replace(temporary,path)
 
+def classify_artisan_error(stderr):
+    # Only fixed public-safe category strings are emitted. PHP stderr and
+    # credentials must NEVER be printed or stored in failure metadata.
+    sample=stderr[:65536].decode("utf-8",errors="replace").lower()
+    if "sqlstate" in sample:
+        return "DATABASE_SCHEMA_OR_CONNECTION"
+    if "permission denied" in sample or "failed to open stream" in sample:
+        return "FILESYSTEM_ACCESS"
+    if "failed opening required" in sample or "class " in sample and "not found" in sample:
+        return "PHP_FILE_OR_CLASS_AUTOLOAD"
+    if "parse error" in sample or "syntax error" in sample:
+        return "PHP_SYNTAX"
+    if "private key" in sample or "passport" in sample and "key" in sample:
+        return "OAUTH_KEY_CONFIGURATION"
+    return "UNCLASSIFIED_APPLICATION_FAILURE"
+
+
 def as_www(*args):
     try:
         p=subprocess.run(["runuser","-u","www","--",str(PHP),"artisan",*args],
             cwd=str(LIVE),capture_output=True,timeout=90,check=False)
-    except (OSError,subprocess.TimeoutExpired):
+    except subprocess.TimeoutExpired:
+        print("MCP_ONLY_ARTISAN_DIAGNOSTIC=PROCESS_TIMEOUT")
         raise Stop("LIVE_ARTISAN_EXECUTION_FAILED")
-    if p.returncode!=0:raise Stop("LIVE_ARTISAN_CHECK_FAILED")
+    except OSError:
+        print("MCP_ONLY_ARTISAN_DIAGNOSTIC=PROCESS_START_FAILED")
+        raise Stop("LIVE_ARTISAN_EXECUTION_FAILED")
+    if p.returncode!=0:
+        print("MCP_ONLY_ARTISAN_DIAGNOSTIC="+classify_artisan_error(p.stderr))
+        raise Stop("LIVE_ARTISAN_CHECK_FAILED")
     return p.stdout
 
 def verify_routes():
