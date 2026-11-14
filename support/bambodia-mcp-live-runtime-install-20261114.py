@@ -248,6 +248,29 @@ def rollback(path,original,oldvendor,newvendor):
     if newvendor.exists() and newvendor.is_dir() and not newvendor.is_symlink():
         shutil.rmtree(newvendor)
 
+def prepare_vendor_permissions(vendor_root):
+    # The previously accepted Composer vendor may have been copied from a
+    # root-only QA tree (umask 077). Production PHP-FPM runs as www, so
+    # make only the COPIED vendor tree non-writable but traversable/readable.
+    if vendor_root.is_symlink() or not vendor_root.is_dir():
+        raise Stop("NEW_VENDOR_TYPE_UNSAFE")
+    for root,dirs,files in os.walk(vendor_root,followlinks=False):
+        for name in ["."]+dirs+files:
+            path=Path(root) if name=="." else Path(root)/name
+            if path.is_symlink():continue
+            st=path.lstat()
+            if stat.S_ISDIR(st.st_mode):
+                path.chmod((stat.S_IMODE(st.st_mode)|0o555)&~0o022)
+            elif stat.S_ISREG(st.st_mode):
+                path.chmod((stat.S_IMODE(st.st_mode)|0o444)&~0o022)
+            else:raise Stop("COPIED_VENDOR_SPECIAL_FILE")
+    try:
+        ok=subprocess.run(["runuser","-u","www","--","/usr/bin/test","-r",str(vendor_root/"autoload.php")],
+            capture_output=True,timeout=10,check=False)
+    except (OSError,subprocess.TimeoutExpired):raise Stop("WWW_VENDOR_CHECK_FAILED")
+    if ok.returncode!=0:raise Stop("WWW_VENDOR_UNREADABLE")
+
+
 def install():
     entries=safe_patch_inventory()
     print("MCP_ONLY_LIVE_INSTALL_PREFLIGHT=PASS")
@@ -277,6 +300,7 @@ def install():
         if oldvendor.exists() or newvendor.exists():
             raise Stop("VENDOR_STAGE_COLLISION")
         shutil.copytree(PRIVATE/"source/vendor",newvendor,symlinks=True)
+        prepare_vendor_permissions(newvendor)
         previous=snapshot_originals(backup,entries)
         (backup/"rollback.json").write_text(json.dumps({
           "state":"READY","old_vendor":str(oldvendor),
