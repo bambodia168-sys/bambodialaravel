@@ -151,6 +151,16 @@ def validate_routes(payload):
         seen.update((uri.lstrip("/"),method) for method in methods.split("|"))
     return EXPECT.issubset(seen)
 
+def safe_runuser_binary():
+    # Ubuntu util-linux often installs runuser under /usr/sbin, which the
+    # deliberately restricted test PATH does not contain.
+    for value in ("/usr/sbin/runuser","/usr/bin/runuser"):
+        candidate=Path(value)
+        if candidate.is_file() and os.access(candidate,os.X_OK):
+            return str(candidate)
+    raise Stop("PHP85_RUNUSER_BINARY_NOT_FOUND")
+
+
 def run_ww_php(private_root,env,args,timeout_s,phase):
     """Launch only isolated test PHP; kill/reap the whole child group on timeout.
 
@@ -162,7 +172,7 @@ def run_ww_php(private_root,env,args,timeout_s,phase):
     proc=None
     try:
         proc=subprocess.Popen(
-            ["runuser","-u","www","--",str(PHP),*args],
+            [safe_runuser_binary(),"-u","www","--",str(PHP),*args],
             cwd=str(private_root),env=env,
             stdout=subprocess.PIPE,stderr=subprocess.PIPE,
             stdin=subprocess.DEVNULL,start_new_session=True,
