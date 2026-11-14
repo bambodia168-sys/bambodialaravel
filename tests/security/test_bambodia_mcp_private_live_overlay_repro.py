@@ -102,3 +102,54 @@ class PrivateOverlayCutoverReproTests(TestCase):
         self.assertIn("MCP_REPRODUCTION_BLOCKER=PRIVATE_REVIEW_REQUIRED",buffer.getvalue())
         self.assertNotIn("secret detail",buffer.getvalue())
 
+
+    def test_private_php_binary_launch_passes_without_emitting_secrets(self):
+        from types import SimpleNamespace
+        fake=SimpleNamespace(
+            returncode=0,pid=101,
+            communicate=lambda timeout:(b"PHP85_OK",b"")
+        )
+        with patch.object(m.subprocess,"Popen",return_value=fake) as opened:
+            got=m.run_ww_php(Path("/var/tmp/fixture"),{"APP_ENV":"testing"},
+                             ["-r","echo 'PHP85_OK';"],15,"PHP_BINARY")
+        self.assertEqual(got,b"PHP85_OK")
+        kwargs=opened.call_args.kwargs
+        self.assertTrue(kwargs["start_new_session"])
+        self.assertIs(kwargs["stdin"],m.subprocess.DEVNULL)
+        self.assertEqual(kwargs["cwd"],"/var/tmp/fixture")
+
+    def test_php_spawn_error_is_different_from_timeout(self):
+        with patch.object(m.subprocess,"Popen",side_effect=FileNotFoundError("secret path")):
+            with self.assertRaisesRegex(m.Stop,"PHP85_PHP_BINARY_START_FAILED"):
+                m.run_ww_php(Path("/var/tmp/fixture"),{},["-v"],15,"PHP_BINARY")
+
+    def test_private_php_route_timeout_kills_and_reaps_process_group(self):
+        from types import SimpleNamespace
+        from subprocess import TimeoutExpired
+        class FakeProcess:
+            pid=987
+            def __init__(self):self.calls=0
+            def communicate(self,timeout):
+                self.calls+=1
+                if self.calls==1:raise TimeoutExpired(cmd="test",timeout=timeout)
+                return (b"",b"")
+        fake=FakeProcess()
+        with patch.object(m.subprocess,"Popen",return_value=fake), \
+             patch.object(m.os,"killpg") as killed:
+            with self.assertRaisesRegex(m.Stop,"PHP85_ARTISAN_ROUTE_TIMEOUT_60S"):
+                m.run_ww_php(Path("/var/tmp/fixture"),{},
+                             ["artisan","route:list"],60,"ARTISAN_ROUTE")
+        killed.assert_called_once_with(987,m.signal.SIGKILL)
+        self.assertEqual(fake.calls,2)
+
+    def test_private_php_nonzero_is_classified_not_echoed(self):
+        from types import SimpleNamespace
+        fake=SimpleNamespace(returncode=1,pid=100,
+            communicate=lambda timeout:(b"",b"SQLSTATE[42S02] credentials PRIVATE"))
+        with patch.object(m.subprocess,"Popen",return_value=fake):
+            with self.assertRaisesRegex(m.Stop,"PHP85_ARTISAN_ROUTE_DB_SCHEMA_OR_CONNECTION"):
+                m.run_ww_php(Path("/var/tmp/fixture"),{},["artisan"],60,"ARTISAN_ROUTE")
+
+    def test_only_known_phase_identifiers_allowed(self):
+        with self.assertRaisesRegex(m.Stop,"UNSAFE_EXECUTION_PHASE"):
+            m.run_ww_php(Path("/var/tmp/fixture"),{},["-v"],15,"SECRET_VALUE")
