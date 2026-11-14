@@ -201,6 +201,8 @@ def run_ww_php(private_root,env,args,timeout_s,phase):
 def clone_runtime(mode="testing", simulate_maintenance=False, simulate_discovery=False):
     if mode not in ("testing","production") or not isinstance(simulate_maintenance,bool) or not isinstance(simulate_discovery,bool):
         raise Stop("INVALID_SYNTHETIC_ENV_MODE")
+    if simulate_discovery and (mode!="production" or not simulate_maintenance):
+        raise Stop("INVALID_SYNTHETIC_DISCOVERY_MODE")
     entries=checked_originals()
     print("MCP_REPRODUCTION_LIVE_ORIGINALS=VERIFIED")
     temp=Path(tempfile.mkdtemp(prefix="bambodia-mcp-cutover-repro-",dir="/var/tmp"))
@@ -329,6 +331,7 @@ def clone_runtime(mode="testing", simulate_maintenance=False, simulate_discovery
             shutil.rmtree(temp)
 
 def main():
+    simulate_discovery=False
     if sys.argv[1:]==["--reproduce"]:
         mode="testing";simulate_maintenance=False
     elif sys.argv[1:]==["--reproduce-production-mode"]:
@@ -341,7 +344,7 @@ def main():
         print("USAGE=--reproduce | --reproduce-production-mode | --reproduce-private-maintenance | --reproduce-private-package-discovery");return 64
     try:
         clone_runtime(mode,simulate_maintenance=simulate_maintenance,
-                      simulate_discovery=locals().get("simulate_discovery",False))
+                      simulate_discovery=simulate_discovery)
         print("MCP_REPRODUCTION_LIVE_FILES=UNCHANGED")
         print("MCP_REPRODUCTION_PRODUCTION_DB=NOT_ACCESSED")
         print("MCP_REPRODUCTION_PRODUCTION_MAINTENANCE=NOT_TOUCHED")
