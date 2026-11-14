@@ -90,3 +90,23 @@ class RecoveryContractTests(TestCase):
     def test_reject_malformed_manifest(self):
         with self.assertRaises(gate.Blocked):
             gate.evaluate([],check_files=False)
+
+
+    def test_versioned_reference_cannot_be_mistaken_for_approval(self):
+        import json
+        file=REPO/"docs/integrations/bambodia-mcp-r2-recovery-approval-template-20261114.json"
+        sample=json.loads(file.read_text())
+        self.assertEqual(sample["purpose"],"REFERENCE_ONLY_DO_NOT_USE_AS_APPROVED_MANIFEST")
+        self.assertEqual(sample["r2_bucket_name"],"bambodia-backup")
+        self.assertEqual(sample["r2_jurisdiction"],"global")
+        self.assertIsNone(sample["rpo_minutes"])
+        self.assertIsNone(sample["rto_minutes"])
+        self.assertIsNone(sample["retention_days"])
+        for name in (*gate.BOOL_FIELDS,*gate.SPECIFIC_FIELDS):
+            self.assertIs(sample[name],False)
+        for name in ("r2_account_id","repository","r2_credentials_file",
+                     "restic_password_file","mysql_defaults_file"):
+            self.assertEqual(sample[name],"")
+        self.assertEqual(sample["local_media_roots"],[])
+        checks=gate.evaluate(sample,check_files=False)
+        self.assertFalse(all(checks.values()))
