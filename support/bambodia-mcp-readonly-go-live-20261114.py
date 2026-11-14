@@ -79,6 +79,21 @@ def discovery_ok(url,key,expected):
         return False
 
 
+def nginx_bearer_forwarding():
+    exe=Path("/www/server/nginx/sbin/nginx")
+    if not exe.is_file() or not os.access(exe,os.X_OK):
+        return False
+    try:
+        p=subprocess.run([str(exe),"-T"],capture_output=True,text=True,timeout=20,check=False)
+    except (OSError,subprocess.TimeoutExpired):
+        return False
+    if p.returncode!=0:
+        return False
+    # Nginx may print private configuration: process in memory, never output it.
+    return bool(re.search(r"\bfastcgi_param\s+HTTP_AUTHORIZATION\s+\$http_authorization\s*;",
+                          p.stdout+"\n"+p.stderr,re.I))
+
+
 def migrations_ok():
     command=["runuser","-u","www","--",str(PHP),"artisan","migrate:status","--no-ansi","--no-interaction"]
     try:
@@ -112,6 +127,7 @@ def inspect():
     check("NGINX_ROOT",VHOST.is_file() and not VHOST.is_symlink() and
           bool(re.search(r"\broot\s+/www/wwwroot/bambodia-staging-qa/public\s*;",VHOST.read_text(errors="replace"))))
     check("PHP85",PHP.is_file() and os.access(PHP,os.X_OK))
+    check("NGINX_BEARER_FORWARDING",nginx_bearer_forwarding())
     check("MCP_PACKAGE",(APP/"vendor/laravel/mcp").is_dir())
     check("PASSPORT_PACKAGE",(APP/"vendor/laravel/passport").is_dir())
     check("MCP_CONFIG",(APP/"config/mcp.php").is_file() and all(k in (APP/"config/mcp.php").read_text(errors="replace") for k in ("BAMBODIA_MCP_ENABLED","BAMBODIA_MCP_WRITES_ENABLED")))
