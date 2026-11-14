@@ -198,7 +198,9 @@ def run_ww_php(private_root,env,args,timeout_s,phase):
     return stdout
 
 
-def clone_runtime():
+def clone_runtime(mode="testing"):
+    if mode not in ("testing","production"):
+        raise Stop("INVALID_SYNTHETIC_ENV_MODE")
     entries=checked_originals()
     print("MCP_REPRODUCTION_LIVE_ORIGINALS=VERIFIED")
     temp=Path(tempfile.mkdtemp(prefix="bambodia-mcp-cutover-repro-",dir="/var/tmp"))
@@ -251,7 +253,7 @@ def clone_runtime():
         env={
           "PATH":"/usr/local/bin:/usr/bin:/bin",
           "HOME":str(temp),
-          "APP_ENV":"testing",
+          "APP_ENV":mode,
           "APP_DEBUG":"false",
           "APP_URL":"https://bambodia.com",
           "APP_KEY":"base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
@@ -266,6 +268,7 @@ def clone_runtime():
           "BAMBODIA_MCP_WRITES_ENABLED":"false",
         }
         print("MCP_REPRODUCTION_PRIVATE_SOURCE_OVERLAY=36_FILES",flush=True)
+        print("MCP_REPRODUCTION_SYNTHETIC_APP_ENV="+mode.upper(),flush=True)
         marker=run_ww_php(temp,env,["-r","echo 'PHP85_OK';"],15,"PHP_BINARY")
         if marker.strip()!=b"PHP85_OK":
             raise Stop("PHP85_BINARY_UNEXPECTED_OUTPUT")
@@ -285,10 +288,14 @@ def clone_runtime():
             shutil.rmtree(temp)
 
 def main():
-    if sys.argv[1:]!=["--reproduce"]:
-        print("USAGE=--reproduce");return 64
+    if sys.argv[1:]==["--reproduce"]:
+        mode="testing"
+    elif sys.argv[1:]==["--reproduce-production-mode"]:
+        mode="production"
+    else:
+        print("USAGE=--reproduce | --reproduce-production-mode");return 64
     try:
-        clone_runtime()
+        clone_runtime(mode)
         print("MCP_REPRODUCTION_LIVE_FILES=UNCHANGED")
         print("MCP_REPRODUCTION_PRODUCTION_DB=NOT_ACCESSED")
         print("MCP_REPRODUCTION_PRODUCTION_MAINTENANCE=NOT_TOUCHED")
