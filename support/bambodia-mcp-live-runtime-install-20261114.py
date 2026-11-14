@@ -161,8 +161,27 @@ def safe_patch_inventory():
                     raise Stop("VENDOR_SYMLINK_ESCAPES_CANDIDATE")
     return entries
 
+def safe_live_parent(path):
+    # With the invoking operator's umask 077, mkdir(mode=0755) alone leaves
+    # new Laravel PHP directories unreadable to the www FPM user.
+    # Never chmod/chown existing directories; only those created by this release.
+    try:
+        relative=path.parent.relative_to(LIVE)
+    except ValueError:
+        raise Stop("LIVE_WRITE_PATH_OUTSIDE_ROOT")
+    current=LIVE
+    for component in relative.parts:
+        current=current/component
+        if current.is_symlink():raise Stop("LIVE_PARENT_SYMLINK")
+        if current.exists():
+            if not current.is_dir():raise Stop("LIVE_PARENT_NOT_DIRECTORY")
+        else:
+            current.mkdir(mode=0o700)
+            current.chmod(0o755)
+
+
 def write_atomic(path,data,mode,uid,gid):
-    path.parent.mkdir(parents=True,exist_ok=True)
+    safe_live_parent(path)
     temporary=path.with_name("."+path.name+".mcp-"+uuid.uuid4().hex)
     fd=os.open(temporary,os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,mode)
     try:
