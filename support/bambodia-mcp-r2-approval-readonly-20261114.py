@@ -51,7 +51,7 @@ def private_file_metadata(path,limit):
        any(x in (".","..") for x in p.parts) or not p.exists() or p.is_symlink():
         raise Blocked("PRIVATE_FILE_UNSAFE")
     # Check every intermediate ancestor from /root, never follow a symlink.
-    for ancestor in (Path("/root"),*tuple(reversed(tuple(p.parents)))[:-1]):
+    for ancestor in reversed(tuple(p.parents)):
         if ancestor==Path("/") or not ancestor.is_relative_to("/root"):
             continue
         s=ancestor.lstat()
