@@ -114,11 +114,11 @@ def inspect():
     check("PHP85",PHP.is_file() and os.access(PHP,os.X_OK))
     check("MCP_PACKAGE",(APP/"vendor/laravel/mcp").is_dir())
     check("PASSPORT_PACKAGE",(APP/"vendor/laravel/passport").is_dir())
-    check("MCP_CONFIG",(APP/"config/mcp.php").is_file())
+    check("MCP_CONFIG",(APP/"config/mcp.php").is_file() and all(k in (APP/"config/mcp.php").read_text(errors="replace") for k in ("BAMBODIA_MCP_ENABLED","BAMBODIA_MCP_WRITES_ENABLED")))
     check("PASSPORT_PRIVATE_KEY",key_private(APP/"storage/oauth-private.key"))
     check("PASSPORT_PUBLIC_KEY",(APP/"storage/oauth-public.key").is_file())
     check("CONFIG_NOT_CACHED",not (APP/"bootstrap/cache/config.php").exists())
-    check("MCP_CONTROLLER",(APP/"app/Http/Controllers/Api/BambodiaMcpController.php").is_file())
+    check("MCP_CONTROLLER",(APP/"app/Http/Controllers/Api/BambodiaMcpController.php").is_file() and "production_writes_enabled" in (APP/"app/Http/Controllers/Api/BambodiaMcpController.php").read_text(errors="replace"))
     try:
         env_read()
         env_ok=True
@@ -132,10 +132,7 @@ def inspect():
     return all(checks.values())
 
 
-def update_env():
-    data,st=env_read()
-    if st.st_uid!=0:
-        raise Blocked("ENV_OWNER_NOT_ROOT_REVIEW_REQUIRED")
+def render_env(data):
     lines=data.decode("utf-8").splitlines(keepends=True)
     seen=set()
     for i,line in enumerate(lines):
@@ -149,7 +146,14 @@ def update_env():
         lines.append("\n")
     if "BAMBODIA_MCP_ENABLED" not in seen: lines.append("BAMBODIA_MCP_ENABLED=true\n")
     if "BAMBODIA_MCP_WRITES_ENABLED" not in seen: lines.append("BAMBODIA_MCP_WRITES_ENABLED=false\n")
-    updated="".join(lines).encode("utf-8")
+    return "".join(lines).encode("utf-8")
+
+
+def update_env():
+    data,st=env_read()
+    if st.st_uid!=0:
+        raise Blocked("ENV_OWNER_NOT_ROOT_REVIEW_REQUIRED")
+    updated=render_env(data)
     if BACKUP_DIR.exists():
         if not safe_dir(BACKUP_DIR) or BACKUP_DIR.lstat().st_uid!=0 or stat.S_IMODE(BACKUP_DIR.lstat().st_mode)!=0o700:
             raise Blocked("ROLLBACK_DIRECTORY_UNSAFE")
