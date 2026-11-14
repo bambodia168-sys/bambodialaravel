@@ -71,14 +71,52 @@ def root_private_metadata(path,limit):
         if not ancestor.is_relative_to("/root"):
             raise Blocked()
         s=ancestor.lstat()
-        if not stat.S_ISDIR(s.st_mode) or s.st_uid!=0 or \
-            stat.S_IMODE(s.st_mode)&0o077:
+        if not stat.S_ISDIR(s.st_mode) or s.st_uid!=0:
+            raise Blocked()
+        # /root may permit listing/traversal without exposing a 0700
+        # recovery child. Non-root WRITE on /root remains forbidden.
+        required_clear = 0o022 if ancestor==Path("/root") else 0o077
+        if stat.S_IMODE(s.st_mode)&required_clear:
             raise Blocked()
     v=p.lstat()
     if not stat.S_ISREG(v.st_mode) or v.st_uid!=0 or \
        stat.S_IMODE(v.st_mode)!=0o600 or not 0<v.st_size<=limit or v.st_nlink!=1:
         raise Blocked()
     return p
+
+
+
+def inspect_manifest_slot(manifest=MANIFEST, root=Path("/root")):
+    """Classify an absent manifest without opening it or weakening custody.
+
+    The owner-approved manifest path is fixed; the root argument is used only
+    for disposable, synthetic unit tests.
+    """
+    if manifest.parent.parent!=root:
+        raise Blocked()
+    r=root.lstat()
+    if not stat.S_ISDIR(r.st_mode) or r.st_uid!=0:
+        raise Blocked()
+    mode=stat.S_IMODE(r.st_mode)
+    if mode&0o022:
+        print("MCP_RECOVERY_ROOT_WRITE_EXPOSURE=BLOCKED")
+        raise Blocked()
+    print("MCP_RECOVERY_ROOT_READ_TRAVERSAL="+(
+        "REQUIRES_SEPARATE_REVIEW" if mode&0o055 else "RESTRICTED"))
+    try:
+        parent=manifest.parent.lstat()
+    except FileNotFoundError:
+        return False
+    if not stat.S_ISDIR(parent.st_mode) or parent.st_uid!=0 or \
+       stat.S_IMODE(parent.st_mode)&0o077:
+        raise Blocked()
+    try:
+        target=manifest.lstat()
+    except FileNotFoundError:
+        return False
+    if not stat.S_ISREG(target.st_mode) or target.st_uid!=0:
+        raise Blocked()
+    return True
 
 
 def check_media_scope(scope):
@@ -142,7 +180,11 @@ def main():
     print("MCP_RECOVERY_MYSQLDUMP_TOOL="+(
         "FOUND" if shutil.which("mysqldump") or Path("/www/server/mysql/bin/mysqldump").is_file()
         else "NOT_FOUND"))
-    try:
+    manifest_present=inspect_manifest_slot()
+    if not manifest_present:
+        print("MCP_RECOVERY_APPROVAL_MANIFEST=NOT_PRESENT")
+        print("MCP_RECOVERY_EXECUTION_GATE=BLOCKED_NO_MANIFEST")
+    else:
         p=root_private_metadata(str(MANIFEST),MAX_MANIFEST_BYTES)
         fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW|getattr(os,"O_CLOEXEC",0))
         try:
@@ -155,10 +197,6 @@ def main():
         finally:
             os.close(fd)
         m=json.loads(raw.decode("utf-8"))
-    except FileNotFoundError:
-        print("MCP_RECOVERY_APPROVAL_MANIFEST=NOT_PRESENT")
-        print("MCP_RECOVERY_EXECUTION_GATE=BLOCKED_NO_MANIFEST")
-    else:
         print("MCP_RECOVERY_APPROVAL_MANIFEST=ROOT_PRIVATE_PRESENT")
         checks=evaluate(m,True)
         for key,okay in checks.items():
