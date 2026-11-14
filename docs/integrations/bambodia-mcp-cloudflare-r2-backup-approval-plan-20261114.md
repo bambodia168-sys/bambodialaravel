@@ -155,3 +155,13 @@ The approved JSON manifest schema (booleans required true only **after** actual 
 **R2 architecture proposal: PREPARED. Provider-specific account/bucket/token/key approvals: MISSING. Backup and Restore: NOT PERFORMED. Production state: UNCHANGED by this plan. PR #46: DRAFT/UNMERGED. MCP production release: BLOCKED.**
 
 No account/bucket/credential/token/password values have been invented or created.
+
+## Phase 0.1 — real Cloudflare account discovery and provider-specific preflight (2026-11-14)
+
+An authorized read-only Cloudflare API inventory found **two Cloudflare accounts**, including one named **Bambodia**. That account lists **two R2 buckets**, neither named in a way that indicates a dedicated Restic/recovery repository. The real names and account IDs remain excluded from this document. Neither existing bucket was selected or modified. This inventory does not prove privacy, suitability, credentials, recovery access, or independent backup ownership. The owner must approve a specific private account/bucket/jurisdiction before any mutation.
+
+Provider-specific offline root-only tool: `support/bambodia-mcp-r2-approval-readonly-20261114.py --inspect`. It cannot create buckets, tokens or keys; connect to S3/MySQL; install Restic; initialize a repository; or upload, back up or restore anything. It checks only existence and secure metadata of a future root-only approval manifest and private credential files; its status output excludes all account, bucket, prefix and credential values.
+
+Additional private manifest fields required before provider-specific approval can even be declared (all currently UNAPPROVED): `r2_account_id`, `r2_bucket_name`, `r2_jurisdiction` (matching selected account endpoint), `r2_credentials_file` (root-private file), and the booleans `r2_private_bucket_verified`, `r2_scoped_s3_credential_reviewed`, `r2_endpoint_independently_verified`, `r2_repo_prefix_no_expiry_verified`, `r2_restic_retention_maintenance_approved`, `r2_independent_offhost_secret_escrow_verified`. The earlier generic owner/security signoffs, approved RPO/RTO/retention, DB/media scope, quiescence, rollback plan and isolated restore target are also required.
+
+Even when all declarations are present, the result is `COMPLETE_NOT_INDEPENDENTLY_PROVEN`, **not backup authorization**. The scripts do not create or assume a destination, R2 keys or a Restic secret. The current state remains **NO BUCKET CREATED / NO BACKUP / NO RESTORE / PR DRAFT / RELEASE BLOCKED**.
