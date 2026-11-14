@@ -110,3 +110,81 @@ class RecoveryContractTests(TestCase):
         self.assertEqual(sample["local_media_roots"],[])
         checks=gate.evaluate(sample,check_files=False)
         self.assertFalse(all(checks.values()))
+
+
+class MissingManifestCustodyTests(TestCase):
+    """Disposable mocked inode metadata; never touches the actual /root tree."""
+    def simulated(self, *, root_mode=0o755, child_mode=None, manifest_mode=None,
+                  root_owner=0, child_owner=0, manifest_owner=0):
+        import stat
+        from types import SimpleNamespace
+        import io
+        from contextlib import redirect_stdout
+
+        root=Path("/synthetic-root")
+        manifest=root/"bambodia-mcp-recovery"/"approval.json"
+        def dirinfo(mode,owner):
+            return SimpleNamespace(st_mode=stat.S_IFDIR|mode,st_uid=owner)
+        def fileinfo(mode,owner):
+            return SimpleNamespace(st_mode=stat.S_IFREG|mode,st_uid=owner)
+        def inspect_lstat(p):
+            if p==root: return dirinfo(root_mode,root_owner)
+            if p==manifest.parent:
+                if child_mode is None: raise FileNotFoundError()
+                return dirinfo(child_mode,child_owner)
+            if p==manifest:
+                if manifest_mode is None: raise FileNotFoundError()
+                return fileinfo(manifest_mode,manifest_owner)
+            raise AssertionError("Unexpected path in metadata inspection")
+        output=io.StringIO()
+        with patch.object(Path,"lstat",autospec=True,side_effect=inspect_lstat):
+            with redirect_stdout(output):
+                result=gate.inspect_manifest_slot(manifest=manifest,root=root)
+        return result,output.getvalue()
+
+    def test_root_with_group_other_traversal_and_absent_recovery_dir(self):
+        exists,output=self.simulated(root_mode=0o755)
+        self.assertFalse(exists)
+        self.assertIn("REQUIRES_SEPARATE_REVIEW",output)
+
+    def test_root_private_and_missing_manifest(self):
+        exists,_=self.simulated(root_mode=0o700,child_mode=0o700)
+        self.assertFalse(exists)
+
+    def test_root_shared_traversal_but_child_private_and_manifest_present(self):
+        exists,_=self.simulated(root_mode=0o755,child_mode=0o700,manifest_mode=0o600)
+        self.assertTrue(exists)
+
+    def test_root_other_write_blocks_missing_manifest(self):
+        with self.assertRaises(gate.Blocked):
+            self.simulated(root_mode=0o777)
+
+    def test_parent_directory_too_open_blocks(self):
+        with self.assertRaises(gate.Blocked):
+            self.simulated(root_mode=0o755,child_mode=0o755)
+
+    def test_non_root_owned_parent_blocks(self):
+        with self.assertRaises(gate.Blocked):
+            self.simulated(root_mode=0o755,child_mode=0o700,child_owner=1000)
+
+    def test_non_root_owned_manifest_blocks(self):
+        with self.assertRaises(gate.Blocked):
+            self.simulated(root_mode=0o755,child_mode=0o700,
+                           manifest_mode=0o600,manifest_owner=1000)
+
+    def test_root_private_metadata_allows_no_write_root_but_private_child(self):
+        import stat
+        from types import SimpleNamespace
+        def make_meta(path):
+            if str(path)=="/root":
+                return SimpleNamespace(st_mode=stat.S_IFDIR|0o755,st_uid=0)
+            if str(path)=="/root/bambodia-mcp-recovery":
+                return SimpleNamespace(st_mode=stat.S_IFDIR|0o700,st_uid=0)
+            if str(path)=="/root/bambodia-mcp-recovery/secret":
+                return SimpleNamespace(st_mode=stat.S_IFREG|0o600,
+                                       st_uid=0,st_size=20,st_nlink=1)
+            raise AssertionError("Unexpected metadata path")
+        with patch.object(Path,"lstat",autospec=True,side_effect=make_meta):
+            out=gate.root_private_metadata(
+                "/root/bambodia-mcp-recovery/secret",8192)
+            self.assertEqual(out,Path("/root/bambodia-mcp-recovery/secret"))
