@@ -453,8 +453,13 @@ def install():
         for rel in entries:
             target=guarded_path(LIVE,rel)
             mode=previous[rel].get("mode",0o644)
-            uid=previous[rel].get("uid",pwd.getpwnam("www").pw_uid)
-            gid=previous[rel].get("gid",pwd.getpwnam("www").pw_gid)
+            if previous[rel].get("exists",False):
+                uid=previous[rel]["uid"]
+                gid=previous[rel]["gid"]
+            else:
+                www=pwd.getpwnam("www")
+                uid=www.pw_uid
+                gid=www.pw_gid
             write_atomic(target,read_file(guarded_path(STAGE/"patch",rel)),mode,uid,gid)
         phase="INSTALL_COMPOSER_MANIFESTS"
         for name in ("composer.json","composer.lock"):
