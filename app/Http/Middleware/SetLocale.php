@@ -51,7 +51,7 @@ class SetLocale
             URL::formatPathUsing(static function (string $path) use ($language): string {
             $path = '/'.ltrim($path, '/');
             if (preg_match('~^/('.implode('|',self::SUPPORTED).')(/|$)~', $path)
-                || preg_match('~^/(api|build|storage|vendor|installer|up)(/|$)~', $path)) {
+                || preg_match('~^/(api|oauth|\.well-known|mcp|build|storage|vendor|installer|up)(/|$)~', $path)) {
                 return $path;
             }
             return '/'.$language.($path === '/' ? '' : $path);

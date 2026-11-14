@@ -21,9 +21,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureRole::class,
             'api.token' => AuthenticateApiToken::class,
+            'mcp.auth' => \App\Http\Middleware\AuthenticateMcpToken::class,
             'capability' => EnsureCapability::class,
         ]);
-        $middleware->web(append: [SetLocale::class, EnsureActiveAccount::class]);
+        $middleware->web(append: [SetLocale::class, EnsureActiveAccount::class,
+            \App\Http\Middleware\EnsureMcpOAuthConsentAdmin::class]);
+        $middleware->append(\App\Http\Middleware\RequireMcpOAuthResource::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Credentials are never echoed into validation redirects or flash data.

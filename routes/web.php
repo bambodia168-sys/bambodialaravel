@@ -170,6 +170,12 @@ Route::middleware('auth')->group(function (): void {
     Route::middleware('role:super_admin')->group(function (): void {
         Route::get('/developer', [DeveloperController::class, 'index'])->name('developer.index');
         Route::get('/developer/docs', [DeveloperController::class, 'documentation'])->name('developer.docs');
+        Route::get('/developer/mcp-connection', [\App\Http\Controllers\Developer\McpConnectionCenterController::class, 'index'])
+            ->name('developer.mcp.index');
+        Route::get('/developer/oauth-connections', [\App\Http\Controllers\Developer\OAuthConnectionController::class, 'index'])
+            ->name('developer.oauth.index');
+        Route::delete('/developer/oauth-connections/{token}', [\App\Http\Controllers\Developer\OAuthConnectionController::class, 'destroy'])
+            ->name('developer.oauth.revoke')->middleware('throttle:8,1');
         Route::post('/developer/tokens', [DeveloperController::class, 'store'])->name('developer.store')->middleware('throttle:5,1');
         Route::delete('/developer/tokens/{token}', [DeveloperController::class, 'revoke'])->name('developer.revoke')->middleware('throttle:10,1');
         Route::get('/security-dashboard', [SecurityDashboardController::class, 'index'])->name('security.index');
@@ -556,3 +562,33 @@ foreach (\App\Http\Middleware\SetLocale::SUPPORTED as $languageCode) {
         }
     }
 }
+
+
+// Native main-domain MCP routes; registered outside locale cloning.
+Route::post('/mcp', [\App\Http\Controllers\Api\BambodiaMcpController::class, 'handle'])
+    ->middleware(['mcp.auth', 'throttle:30,1'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
+    ->name('mcp');
+
+Route::middleware('throttle:10,1')->group(function (): void {
+    // Both discovery paths advertise precisely one OAuth resource identifier.
+    // Register the exact root route before the vendor SDK route factory.
+    $metadata = static fn () => response()->json([
+        'resource' => \App\Support\Mcp\McpResource::uri(),
+        'authorization_servers' => [\App\Support\Mcp\McpResource::issuer()],
+        'scopes_supported' => ['mcp:use', 'mcp.write'],
+    ])->header('Cache-Control', 'no-store');
+
+    Route::get('/.well-known/oauth-protected-resource', $metadata)
+        ->name('mcp.oauth.protected-resource');
+    Route::get('/.well-known/oauth-protected-resource/mcp', $metadata)
+        ->name('mcp.oauth.protected-resource.mcp');
+
+    \Laravel\Mcp\Facades\Mcp::oauthRoutes(registration: false);
+
+
+    Route::post('/oauth/register',
+        \App\Http\Controllers\Api\BambodiaOAuthRegisterController::class)
+        ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
+        ->name('mcp.oauth.register');
+});

@@ -121,6 +121,518 @@ jobs:
           bash -n support/marketplace-readiness-audit-aapanel-upgrade.sh
           bash -n support/preview-content-review-aapanel-upgrade.sh
           bash -n support/header-flag-scroll-top-aapanel-upgrade.sh
+          bash -n support/bambodia-mcp-main-domain-readiness.sh
+          bash -n support/bambodia-mcp-main-domain-install-target.sh
+          bash -n support/bambodia-mcp-main-domain-isolated-lock.sh
+          bash -n support/bambodia-mcp-main-domain-isolated-vendor.sh
+          bash -n support/bambodia-mcp-main-domain-isolated-source-bundle.sh
+          bash -n support/bambodia-mcp-main-domain-reuse-live-assets.sh
+          bash -n support/bambodia-mcp-main-domain-live-drift-review.sh
+          bash -n support/bambodia-mcp-main-domain-live-overlay.sh
+          bash -n support/bambodia-mcp-main-domain-resolve-private-layout-review.sh
+          bash -n support/bambodia-mcp-main-domain-resolve-private-critical.sh
+          bash -n support/bambodia-mcp-main-domain-private-runtime-acceptance.sh
+          bash -n support/bambodia-mcp-main-domain-physical-oauth-qa.sh
+          bash -n support/bambodia-mcp-main-domain-private-developer-routes.sh
+          bash -n support/bambodia-mcp-chatgpt-loopback-qa.sh
+          bash -n support/bambodia-mcp-release-gates-readonly.sh
+          bash -n support/bambodia-mcp-private-overlay-freshness-readonly.sh
+          bash -n support/bambodia-mcp-private-overlay-refresh-20261113.sh
+          bash -n support/bambodia-mcp-private-oauth-security-sync-20261113.sh
+          bash -n support/bambodia-mcp-refreshed-candidate-http-qa-20261113.sh
+          bash -n support/bambodia-mcp-refreshed-frontend-drift-readonly-20261113.sh
+          bash -n support/bambodia-mcp-two-blade-private-rebase-20261113.sh
+          bash -n support/bambodia-mcp-two-blade-candidate-http-qa-20261113.sh
+          bash -n support/bambodia-mcp-production-backup-readiness-readonly-20261113.sh
+          bash -n support/bambodia-mcp-production-topology-readonly-20261113.sh
+          bash -n support/bambodia-mcp-private-media-permissions-readonly-20261113.sh
+          python3 -m py_compile support/bambodia-mcp-private-file-review-local-20261113.py
+          python3 -m py_compile support/bambodia-mcp-private-access-impact-readonly-20261114.py
+          python3 -m py_compile support/bambodia-mcp-single-file-approved-remediation-20261114.py
+          python3 -m py_compile support/bambodia-mcp-offsite-backup-approval-preflight-20261113.py
+          python3 -m py_compile support/bambodia-mcp-r2-approval-readonly-20261114.py
+          python3 -m py_compile support/bambodia-mcp-r2-recovery-execution-readiness-readonly-20261114.py
+          python3 -m py_compile support/bambodia-mcp-readonly-go-live-20261114.py
+          python3 -m py_compile support/bambodia-mcp-minimal-runtime-stage-20261114.py
+          python3 -m py_compile support/bambodia-mcp-compatibility-review-readonly-20261114.py
+          python3 -m py_compile support/bambodia-mcp-vendor-route-rehearsal-20261114.py
+          python3 -m py_compile support/bambodia-mcp-live-runtime-install-20261114.py
+          python3 -m py_compile support/bambodia-mcp-private-live-overlay-repro-20261114.py
+          python3 -m py_compile support/bambodia-mcp-package-discovery-readonly-20261114.py
+          python3 -m py_compile support/bambodia-mcp-live-cutover-forensics-readonly-20261114.py
+          python3 -m py_compile support/bambodia-mcp-private-install-write-replay-20261114.py
+          python3 -m py_compile support/bambodia-mcp-r2-recovery-execution-readiness-readonly-20261114.py
+          python3 -m py_compile support/bambodia-mcp-isolated-restore-preflight-20261113.py
+          python3 -m py_compile support/bambodia-mcp-restored-manifest-reconcile-20261113.py
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_recovery_preflight.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_r2_approval.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_r2_recovery_contract.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_only_go_live.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_minimal_runtime_stage.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_compatibility_review.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_vendor_route_rehearsal.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_live_runtime_install.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_private_live_overlay_repro.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_package_discovery_readonly.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_live_cutover_forensics.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_private_install_write_replay.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_r2_recovery_contract.py' -v
+          python3 - <<'PY'
+          from pathlib import Path
+          local=Path("support/bambodia-mcp-private-file-review-local-20261113.py").read_text()
+          impact=Path("support/bambodia-mcp-private-access-impact-readonly-20261114.py").read_text()
+          remedy=Path("support/bambodia-mcp-single-file-approved-remediation-20261114.py").read_text()
+          for token in (
+              "os.fchmod(fd,new)", "os.fchmod(fd,old)",
+              "APPROVAL_CONFIRMATION_OR_ROOT_MISSING",
+              "MCP_AUTO_ROLLBACK=ORIGINAL_MODE_RESTORED",
+              "MCP_POSTCHANGE_WWW_READ=PASS",
+              "MCP_POSTCHANGE_NOBODY_DENIED=PASS",
+              "MCP_APPROVED_SINGLE_FILE_CHANGE=APPLIED_VERIFIED",
+              "MCP_BACKUP_RESTORE=NOT_PERFORMED",
+              "MCP_RELEASE_GATE=BLOCKED",
+              "os.O_EXCL", "os.O_NOFOLLOW", "os.fsync(",
+          ):
+              assert token in remedy, "missing one-file correction guard: "+token
+          assert "os.fchmod(fd,new)" in remedy and "os.chmod(target" not in remedy
+          assert "chmod -R" not in remedy and "os.chown(" not in remedy
+          assert "MCP_SINGLE_FILE_MODE_PROPOSAL" in impact
+          assert "MCP_PRIVATE_FILE_PERMISSIONS=UNCHANGED" in impact
+          assert "MCP_PERMISSION_CHANGE=NOT_AUTHORIZED" in impact
+          assert "REPORT_PATH_NOT_APPROVED" in impact
+          assert "O_NOFOLLOW" in impact
+          backup=Path("support/bambodia-mcp-offsite-backup-approval-preflight-20261113.py").read_text()
+          assert "LOCAL_OPERATOR_REVIEW_ONLY_NOT_APPROVED_NOT_EXECUTABLE" in local
+          assert "MCP_PRIVATE_REMEDIATION=NOT_PERFORMED" in local
+          assert "EXPECTED_EXACTLY_ONE_AFFECTED_FILE" in local
+          assert "PRIVATE_ANCESTOR_UNSAFE" in local
+          assert "O_NOFOLLOW" in local
+          assert "restic_password_file" in backup
+          assert "MCP_RECOVERY_BACKUP_CREATED" in backup
+          assert "MCP_RECOVERY_ISOLATED_RESTORE" in backup
+          isolated=Path("support/bambodia-mcp-isolated-restore-preflight-20261113.py").read_text()
+          assert "MCP_RESTORE_ACCEPTANCE=BLOCKED_PENDING_INDEPENDENT_EVIDENCE" in isolated
+          assert "MCP_RESTORE_ACTUAL_DATABASE_IDENTITY=NOT_VERIFIED" in isolated
+          reconciliation=Path("support/bambodia-mcp-restored-manifest-reconcile-20261113.py").read_text()
+          assert "MCP_RECONCILIATION_SOURCE_PROVENANCE=NOT_INDEPENDENTLY_VERIFIED" in reconciliation
+          assert "MCP_RESTORE_ACCEPTANCE=BLOCKED_PENDING_INDEPENDENT_REVIEW" in reconciliation
+          assert "MANIFEST_MISMATCH" in reconciliation
+          assert "MCP_RESTORE_HOST_NETWORK_ISOLATION=NOT_VERIFIED" in isolated
+          assert "TARGET_OUTSIDE_PRIVATE_RESTORE_AREA" in isolated
+          assert "MCP_PRODUCTION_RELEASE" in backup
+          for code in (local,impact,backup,isolated,reconciliation):
+              for dangerous in ("subprocess.", "os.system(", "mysqldump --", "restic backup",
+                                "os.chown(", "os.remove(", "os.rename(", "chmod -R"):
+                  assert dangerous not in code, "preflight must not execute recovery or production mutations"
+          print("MCP_RECOVERY_STAGED_PREFLIGHT_STATIC_SECURITY=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          script=Path("support/bambodia-mcp-private-media-permissions-readonly-20261113.sh").read_text()
+          marker="python3 - \"$APP\" <<'PY'\n"
+          assert script.count(marker)==1, "expected exactly one Python permissions classifier"
+          ast.parse(script.split(marker,1)[1].split("\nPY\n",1)[0])
+          for required in (
+              "MCP_PRIVATE_MODE_LIVE_IDENTITY=PASS",
+              "MCP_PRIVATE_OTHER_READABLE_WITH_OTHER_TRAVERSAL",
+              "MCP_PRIVATE_OTHER_WRITABLE_FILES",
+              "MCP_PRIVATE_OTHER_WRITABLE_DIRECTORIES",
+              "MCP_PRIVATE_ACL_AND_WEB_EXPOSURE",
+              "MCP_PRIVATE_MEDIA_CONTENT",
+              "MCP_PRIVATE_MODE_AUDIT",
+              "MCP_PRODUCTION_RELEASE",
+              "follow_symlinks=False",
+              "MCP_PRODUCTION_FILES_DATABASE_NGINX=UNCHANGED",
+          ):
+              assert required in script, "missing permission check invariant: "+required
+          for forbidden in ("mysqldump", "mysql -", "chmod ", "chown ",
+                            "subprocess", "os.system(", "os.remove(",
+                            "os.unlink(", "open(", ".read_bytes("):
+              assert forbidden not in script, "unexpected write/content-read operation"
+          print("MCP_PRIVATE_MODE_AUDIT_STATIC_GUARDS=PASS")
+          PY
+          bash -n support/bambodia-mcp-db-metadata-operator-20261113.sh
+          php -l support/bambodia-mcp-db-metadata-readonly-20261113.php
+          python3 - <<'PY'
+          from pathlib import Path
+          operator=Path("support/bambodia-mcp-db-metadata-operator-20261113.sh").read_text()
+          client=Path("support/bambodia-mcp-db-metadata-readonly-20261113.php").read_text()
+          for required in (
+              "AUDIT-MYSQL-METADATA-READ-ONLY",
+              "SOURCE_COMMIT=", "SOURCE_BLOB=", "git hash-object",
+              "MCP_PRIVATE_ROOT_", "OTHER_READ",
+              "MCP_PRIVATE_ACLS_AND_SERVING_RULES=NOT_VERIFIED",
+              "MCP_DB_METADATA_CLIENT_INTEGRITY=PASS",
+              "env -i", "MCP_RELEASE_GATE=BLOCKED",
+          ):
+              assert required in operator, "missing operator security guard: "+required
+          for required in (
+              "information_schema.TABLES", "SELECT DATABASE()",
+              "MCP_DB_IDENTITY", "MCP_DB_BASE_TABLES",
+              "MCP_DB_INNODB_TABLES", "MCP_DB_MYISAM_TABLES",
+              "MCP_DB_BINARY_LOGGING", "MCP_DB_METADATA_AUDIT",
+              "MCP_PRODUCTION_RELEASE", "MCP_DB_CUSTOMER_RECORDS",
+              "mcp_fail('READ_ONLY_CONNECT_OR_METADATA_QUERY_FAILED')",
+          ):
+              assert required in client, "missing client read-only assertion: "+required
+          for forbidden in ("PDO::exec(", "->exec(", "SELECT * FROM users",
+                            "artisan", "mysqldump", "mariadb-dump",
+                            "INSERT INTO", "UPDATE users SET",
+                            "DELETE FROM", "DROP TABLE", "ALTER TABLE"):
+              assert forbidden not in client, "unexpected non-metadata operation: "+forbidden
+          print("MCP_DB_METADATA_OPERATOR_STATIC_GUARDS=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          source = Path("support/bambodia-mcp-production-topology-readonly-20261113.sh").read_text()
+          blocks = source.split("python3 - \"$APP\" <<'PY'\n")
+          assert len(blocks) == 2, "one fixed embedded inspector expected"
+          ast.parse(blocks[1].split("\nPY\n", 1)[0])
+          for required in (
+              "MCP_TOPOLOGY_LIVE_IDENTITY=PASS",
+              "MCP_ENV_FILE", "MCP_DB_ENV_DRIVER", "MCP_DB_NAME_SET",
+              "MCP_PRIVATE_MEDIA", "MCP_PUBLIC_MEDIA",
+              "MCP_CONFIG_CACHE", "MCP_EFFECTIVE_DB_CONNECTION",
+              "MCP_ENCRYPTED_OFFSITE_BACKUP", "MCP_TOPOLOGY_AUDIT",
+              "MCP_PRODUCTION_RELEASE", "O_NOFOLLOW", "followlinks=False",
+          ):
+              assert required in source, "missing read-only guard: " + required
+          for forbidden in ("DB_PASSWORD", "subprocess", "os.system(",
+                            "mysqldump", "mysql -", "artisan migrate",
+                            "chmod -R", "rm -rf"):
+              assert forbidden not in source, "unsafe operation: " + forbidden
+          print("MCP_TOPOLOGY_AUDIT_STATIC_GUARDS=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          source=Path("support/bambodia-mcp-production-backup-readiness-readonly-20261113.sh").read_text()
+          parts=source.split("<<'PY'\n")
+          assert len(parts)==2, "Exactly one embedded backup-metadata inspector required"
+          ast.parse(parts[1].split("\nPY\n",1)[0])
+          for label in (
+              "BACKUP_AAPANEL_DATABASE",
+              "BACKUP_AAPANEL_SITE",
+              "MEDIA_STORAGE_APP_PRIVATE",
+              "MEDIA_STORAGE_APP_PUBLIC",
+              "PRODUCTION_ENV_OTHER_READ_WRITE",
+              "DATABASE_MEDIA_CONSISTENT_BACKUP",
+              "ISOLATED_BACKUP_RESTORE",
+              "APPLICATION_SCHEMA_AND_CODE_ROLLBACK_REHEARSAL",
+              "BACKUP_READINESS_AUDIT",
+              "MCP_PRODUCTION_RELEASE_GATE",
+              "PRODUCTION_SOURCE_DATABASE_SECRETS_NGINX",
+          ):
+              assert label in source, "Missing backup metadata gate: "+label
+          assert "open(" not in source and "subprocess" not in source
+          assert "os.walk(" in source and "followlinks=False" in source
+          print("MCP_BACKUP_READINESS_AUDIT_STATIC_GUARDS=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          import subprocess
+          import sys
+          import tempfile
+          from pathlib import Path
+
+          file=Path("support/bambodia-mcp-two-blade-candidate-http-qa-20261113.sh")
+          script=file.read_text()
+          parts=script.split("<<'PY'\n")
+          assert len(parts)==3, "Require exactly two pinned Python validation/adapter blocks"
+          for part in parts[1:]:
+              ast.parse(part.split("\nPY\n",1)[0])
+
+          for expected in (
+              "NEW=/root/Bambodia-MCP-Overlay-TwoBlade.9ZqCTvhp",
+              "PRIOR=/root/Bambodia-MCP-Overlay-Refresh.hZDR51NJ",
+              "TWO_BLADE_CANDIDATE_PROVENANCE=PASS",
+              "TWO_BLADE_NEWER_TEMPLATES=2_OF_2_VERIFIED",
+              "TWO_BLADE_PRIOR_TEMPLATES=2_SNAPSHOT_PRESERVED",
+              "REFRESHED_CANDIDATE_OAUTH_SOURCE=6_OF_6_VERIFIED",
+              "REFRESHED_CANDIDATE_FRONTEND=11_OF_11_MATCH_LIVE",
+              "REFRESHED_CANDIDATE_CRITICAL_SNAPSHOTS=9_UNCHANGED",
+              "REFRESHED_CANDIDATE_VITE=23_OF_23_VERIFIED",
+              "REFRESHED_CANDIDATE_PUBLIC_HTTP_SMOKE=PASS",
+              "TWO_BLADE_CANDIDATE_INDEPENDENT_HTTP_OAUTH=PASS",
+              "MCP_PRODUCTION_ACTIVATION=NOT_STARTED",
+          ):
+              assert expected in script, "Missing two-Blade private HTTP guard: " + expected
+
+          with tempfile.TemporaryDirectory() as tmp:
+              original=Path(tmp)/"original.sh"
+              adapted=Path(tmp)/"adapted.sh"
+              original.write_text(
+                  Path("support/bambodia-mcp-chatgpt-loopback-qa.sh").read_text()
+              )
+              adapter=parts[2].split("\nPY\n",1)[0]
+              result=subprocess.run(
+                  [sys.executable,"-c",adapter,str(original),str(adapted)],
+                  capture_output=True,text=True
+              )
+              assert result.returncode==0,result.stderr[:300]
+              source=adapted.read_text()
+              assert "qa_patch_php" not in source
+              assert "QA_SOURCE_RELEASE" not in source
+              assert "OVERLAY=/root/Bambodia-MCP-Overlay-TwoBlade.9ZqCTvhp" in source
+              assert "REFRESHED_CANDIDATE_PUBLIC_HTTP_SMOKE=PASS" in source
+              syntax=subprocess.run(["bash","-n",str(adapted)],capture_output=True,text=True)
+              assert syntax.returncode==0,syntax.stderr[:300]
+          print("MCP_TWO_BLADE_PRIVATE_HTTP_QA_SYNTHESIS=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          s=Path("support/bambodia-mcp-two-blade-private-rebase-20261113.sh").read_text()
+          parts=s.split("<<'PY'\n")
+          assert len(parts)==2, "One embedded rebase validator expected"
+          ast.parse(parts[1].split("\nPY\n",1)[0])
+          for guard in (
+              "resources/views/home.blade.php",
+              "resources/views/layouts/main.blade.php",
+              "MCP_TWO_BLADE_OTHER_FRONTEND=9_UNCHANGED",
+              "MCP_TWO_BLADE_OAUTH_SOURCES=6_VERIFIED",
+              "MCP_TWO_BLADE_PROTECTED_LIVE=9_UNCHANGED",
+              "MCP_TWO_BLADE_VITE=23_UNCHANGED",
+              "CATCHUP-TWO-BLADE-PRIVATE-ONLY",
+              "MCP_TWO_BLADE_FILES_COPIED=2",
+              "MCP_TWO_BLADE_PRIOR_CANDIDATE=UNCHANGED",
+              "MCP_TWO_BLADE_CANDIDATE_DEPLOYABLE=NO",
+              "PRODUCTION_SOURCE_DATABASE_NGINX_KEYS=UNCHANGED",
+          ):
+              assert guard in s, "Missing private two-Blade rebase guard "+guard
+          print("MCP_PRIVATE_TWO_BLADE_REBASE_STATIC_GUARDS=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          source=Path("support/bambodia-mcp-refreshed-frontend-drift-readonly-20261113.sh").read_text()
+          parts=source.split("<<'PY'\n")
+          assert len(parts)==2, "Exactly one embedded drift diagnostic required"
+          ast.parse(parts[1].split("\nPY\n",1)[0])
+          for guard in (
+              "MCP_FRONTEND_DRIFT_PATH=",
+              "MCP_FRONTEND_BASELINE_MATCH_LIVE=",
+              "MCP_FRONTEND_BASELINE_MATCH_PRIVATE=",
+              "MCP_VITE_LIVE_BASELINE_MATCH=",
+              "MCP_VITE_PRIVATE_BASELINE_MATCH=",
+              "MCP_FRONTEND_DRIFT_DIAGNOSIS=",
+              "MCP_FRONTEND_DRIFT_AUDIT=READ_ONLY_COMPLETE",
+              "REFRESHED_CANDIDATE_HTTP_QA_GATE=BLOCKED",
+              "PRODUCTION_SOURCE_DATABASE_NGINX_KEYS=UNCHANGED",
+          ):
+              assert guard in source, "Missing drift audit invariant: " + guard
+          print("MCP_FRONTEND_DRIFT_AUDIT_STATIC_GUARDS=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          source = Path("support/bambodia-mcp-refreshed-candidate-http-qa-20261113.sh").read_text()
+          sections = source.split("<<'PY'\n")
+          assert len(sections) == 3, "Two embedded Python review/adapter programs required"
+          for section in sections[1:]:
+              ast.parse(section.split("\nPY\n",1)[0])
+          # Exercise the exact locally adapted script without running Laravel,
+          # contacting a network, or accessing a real environment.
+          import subprocess
+          import sys
+          import tempfile
+          with tempfile.TemporaryDirectory() as temp:
+              root = Path(temp)
+              original = root / "upstream.sh"
+              updated = root / "refreshed.sh"
+              original.write_text(
+                  Path("support/bambodia-mcp-chatgpt-loopback-qa.sh").read_text()
+              )
+              adapter = sections[2].split("\nPY\n", 1)[0]
+              result = subprocess.run(
+                  [sys.executable, "-c", adapter, str(original), str(updated)],
+                  capture_output=True, text=True,
+              )
+              assert result.returncode == 0, result.stderr[:300]
+              contents = updated.read_text()
+              assert "qa_patch_php" not in contents
+              assert "QA_SOURCE_RELEASE" not in contents
+              assert "OVERLAY=/root/Bambodia-MCP-Overlay-Refresh.hZDR51NJ" in contents
+              assert "REFRESHED_CANDIDATE_PUBLIC_HTTP_SMOKE=PASS" in contents
+              syntax = subprocess.run(
+                  ["bash", "-n", str(updated)], capture_output=True, text=True,
+              )
+              assert syntax.returncode == 0, syntax.stderr[:300]
+          print("MCP_REFRESHED_QA_ADAPTER_SYNTHESIS=PASS")
+          for guard in (
+              "REFRESHED_CANDIDATE_OAUTH_SOURCE=6_OF_6_VERIFIED",
+              "REFRESHED_CANDIDATE_FRONTEND=11_OF_11_MATCH_LIVE",
+              "REFRESHED_CANDIDATE_CRITICAL_SNAPSHOTS=9_UNCHANGED",
+              "REFRESHED_CANDIDATE_VITE=23_OF_23_VERIFIED",
+              "REFRESHED_CANDIDATE_PUBLIC_HTTP_SMOKE=PASS",
+              'for item in "HOME|/" "BLOG|/blog" "JOBS|/jobs"',
+              'echo "REFRESHED_PUBLIC_HTTP_${label}=200"',
+              "19e4bae5a5b3ef33cb1baabbd011270d4c49a693",
+              "QA_SOURCE_RELEASE",
+              "qa_patch_php",
+              "REFRESHED_CANDIDATE_QA_SOURCE=UNPATCHED_PRIVATE_CLONE",
+              "CHATGPT_LOOPBACK_INDEPENDENT_ACCEPTANCE=PASS",
+              "PHYSICAL_PHP85_MCP_OAUTH_TESTS=PASS",
+              "MCP_PRODUCTION_ACTIVATION=NOT_STARTED",
+          ):
+              assert guard in source, "Missing refreshed-candidate QA safety guard: " + guard
+          print("MCP_REFRESHED_PRIVATE_HTTP_QA_STATIC_GUARDS=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          script = Path("support/bambodia-mcp-private-oauth-security-sync-20261113.sh").read_text()
+          parts = script.split("<<'PY'\n")
+          assert len(parts) == 2, "Exactly one private OAuth sync Python program required"
+          ast.parse(parts[1].split("\nPY\n", 1)[0])
+          for required in (
+              "SOURCE_REF=396614486e3b7e50a28cd42932af6b4aa6536cfd",
+              "GITHUB_PINNED_OAUTH_SECURITY_FILES=6_VERIFIED",
+              "MCP_PRIVATE_OAUTH_PREIMAGES=6_APPROVED",
+              "MCP_PRIVATE_OAUTH_SECURITY_SOURCE_FILES=6",
+              "app/Http/Middleware/EnsureMcpOAuthConsentAdmin.php",
+              "MCP_PRIVATE_FRONTEND_AND_23_VITE_ASSETS=PRESERVED",
+              "MCP_PROTECTED_MCP_MERGE_SNAPSHOTS=9_UNCHANGED",
+              "SYNC-MCP-PRIVATE-OAUTH-ONLY",
+              "PRIVATE_SECURITY_POSTWRITE_HASH_FAILED",
+              "MCP_PRIVATE_OAUTH_SECURITY_SYNC=PASS",
+              "MCP_PRIVATE_CANDIDATE_DEPLOYABLE=NO",
+              "PRODUCTION_SOURCE_DATABASE_NGINX_KEYS=UNCHANGED",
+          ):
+              assert required in script, "Missing OAuth private sync guard: " + required
+          print("MCP_PRIVATE_OAUTH_SYNC_STATIC_GUARDS=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          path = Path("support/bambodia-mcp-private-overlay-refresh-20261113.sh")
+          content = path.read_text()
+          parts = content.split("<<'PY'\n")
+          assert len(parts) == 2, "Expected one private-only Python validation block"
+          ast.parse(parts[1].split("\nPY\n", 1)[0])
+          for guard in (
+              "allowed_changed = {", "allowed_new = {",
+              "MCP_PRIVATE_REFRESH_DRIFT_COUNTS",
+              "MCP_PROTECTED_MCP_SNAPSHOTS=9_UNCHANGED",
+              "REFRESH-MCP-PRIVATE-OVERLAY",
+              "VITE_LIVE_ASSET_HASH_CHANGED_DURING_COPY",
+              "MCP_PRIVATE_REFRESH_IS_DEPLOYABLE=NO",
+              "PRODUCTION_SOURCE_DATABASE_NGINX_KEYS=UNCHANGED",
+          ):
+              assert guard in content, "Missing private refresh guard " + guard
+          print("MCP_PRIVATE_OVERLAY_REFRESH_STATIC_GUARDS=PASS")
+          PY
+          bash -n support/bambodia-mcp-chatgpt-ci-loopback.sh
+          python3 -m py_compile support/bambodia-mcp-chatgpt-loopback-client.py
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          client = Path("support/bambodia-mcp-chatgpt-loopback-client.py").read_text()
+          ast.parse(client)
+          assert 'class NoRedirect(HTTPRedirectHandler)' in client
+          assert 'http://127.0.0.1:' in client
+          assert 'CHATGPT_LOOPBACK_INDEPENDENT_HTTP_OAUTH_ACCEPTANCE=PASS' in client
+          runner = Path("support/bambodia-mcp-chatgpt-loopback-qa.sh").read_text()
+          assert len(runner.split("<<'PY'\n")) == 7
+          assert "QA_EARLY_EXCEPTION_CLASSIFIER=DISPOSABLE_COPY_ONLY" in runner
+          assert "QA_HTTP_EARLY_EXCEPTION_CLASS=" in runner
+          assert "QA_HTTP_HEADER_MUTATION_" in runner
+          assert 'http_php -d variables_order=EGPCS -S "127.0.0.1:$PORT"' in runner
+          assert 'QA_HTTP_VARIABLES_ORDER=EGPCS_DISPOSABLE_HTTP_ONLY' in runner
+          for section in runner.split("<<'PY'\n")[1:]:
+              ast.parse(section.split("\nPY\n", 1)[0])
+          assert 'CLIENT_BLOB=' in runner
+          assert '"BAMBODIA_MCP_ENABLED=true" "BAMBODIA_MCP_WRITES_ENABLED=true"' in runner
+          assert '"DB_CONNECTION=sqlite" "DB_DATABASE=$HTTP_DB"' in runner
+          assert '"127.0.0.1:$PORT"' in runner
+          assert "EXTERNAL_CHATGPT_ACCOUNT_LINKING=NOT_ATTEMPTED" in runner
+          assert 'http_php artisan route:clear --no-interaction --no-ansi' in runner
+          assert 'http_php artisan route:list --json --no-ansi' in runner
+          assert 'DISPOSABLE_QA_ROUTE_CACHE=REFRESHED' in runner
+          assert 'CACHE_PATH="$QA/bootstrap/cache"' in runner
+          assert 'CHATGPT_METADATA_DIAGNOSTIC=ROOT' in client
+          assert "QA_HTTP_EXCEPTION_DIAGNOSTIC=FOUND" in runner
+          assert "QA_HTTP_EXCEPTION_FINGERPRINT=" in runner
+          assert "QA_HTTP_SQLITE_MISSING_TABLE=" in runner
+          assert "APP_DEBUG stays false" in runner
+          ci_runner = Path("support/bambodia-mcp-chatgpt-ci-loopback.sh").read_text()
+          assert len(ci_runner.split("<<'PY'\n")) == 2
+          ast.parse(ci_runner.split("<<'PY'\n")[1].split("\nPY\n", 1)[0])
+          assert "GITHUB_ACTIONS" in ci_runner
+          assert "storage/app/installed.lock" in ci_runner
+          print("CHATGPT_INDEPENDENT_LOOPBACK_QA_STATIC_GUARDS=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          root = Path('support')
+          script = (root / 'bambodia-mcp-main-domain-private-developer-routes.sh').read_text()
+          parts = script.split("<<'PY'\n")
+          assert len(parts) == 2
+          ast.parse(parts[1].split("\nPY\n", 1)[0])
+          assert "all_other_route_bytes_preserved" in script
+          assert "PRIVATE_ROUTE_NON_DEVELOPER_BYTES=PRESERVED_EXACTLY" in script
+          for name in ("developer.mcp.index", "developer.oauth.index", "developer.oauth.revoke"):
+              assert name in script
+              assert name in (root / 'bambodia-mcp-main-domain-private-runtime-acceptance.sh').read_text()
+          assert "MCP_PRIVATE_DEVELOPER_ROUTE_SUPPLEMENT=VERIFIED" in (
+              root / 'bambodia-mcp-main-domain-physical-oauth-qa.sh').read_text()
+          assert "mcp-private-developer-routes.json" in script
+          print("MCP_PRIVATE_OAUTH_DEVELOPER_ROUTE_GUARDS=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          src = Path('support/bambodia-mcp-main-domain-physical-oauth-qa.sh').read_text()
+          chunks = src.split("<<'PY'\n")
+          assert len(chunks) == 2, "Expected one isolated Python verification"
+          ast.parse(chunks[1].split("\nPY\n", 1)[0])
+          print("MCP_PHYSICAL_OAUTH_QA_PYTHON_SYNTAX=PASS")
+          for required in (
+              'COMPOSER_ENTRY=/usr/bin/composer',
+              'fail COMPOSER_ENTRY_IS_NOT_PHP',
+              'COMPOSER_VERSION_OUTPUT="$(qa_php -d "include_path=/usr/share/php:."',
+              '"$COMPOSER_ENTRY" --version --no-ansi 2>&1)',
+              'COMPOSER_VERSION="$(printf',
+              "COMPOSER_VERIFIED_VERSION=%s",
+              "fail COMPOSER_VERSION_NOT_DETECTED",
+              '"$COMPOSER_ENTRY" install',
+              "COMPOSER_INTERPRETER=VERIFIED_PHP85_ENTRYPOINT",
+              'qa_php "$QA/vendor/bin/phpunit" --colors=never --filter=BambodiaMcp',
+              "QA_PHPUNIT_FROM_LOCKED_DEV_DEPENDENCIES=PASS",
+              "QA_LOCK_CHANGED_DURING_DEV_INSTALL",
+              "QA_MANIFEST_CHANGED_DURING_DEV_INSTALL",
+          ):
+              assert required in src, "Missing guarded disposable PHPUnit workflow: " + required
+          assert "qa_php artisan test" not in src
+          assert 'command -v composer' not in src, "A shell wrapper is unsafe for PHP"
+          assert "execs /usr/bin/php83" in src, "Document the blocked PHP 8.3 wrapper"
+          assert ' "$PHP" "$@"' in src, "The PHP CLI must be pinned"
+          assert "grep -m1 -E" in src and "Composer( version)?" in src
+          assert "error_reporting=8191" in src
+          assert '--no-scripts --no-plugins' in src
+          assert '"COMPOSER_HOME=$QA/.composer-home"' in src
+          assert '"COMPOSER_CACHE_DIR=$QA/.composer-cache"' in src
+          assert "--no-scripts --no-plugins" in src
+          print("MCP_DISPOSABLE_DEV_TEST_RUNNER_GUARD=PASS")
+          PY
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          source = Path('support/bambodia-mcp-main-domain-private-runtime-acceptance.sh').read_text()
+          sections = source.split("<<'PY'\n")[1:]
+          assert len(sections) == 2, "Expected two embedded Python checks"
+          for section in sections:
+              ast.parse(section.split("\nPY\n", 1)[0])
+          print("MCP_PRIVATE_RUNTIME_EMBEDDED_PYTHON=PASS")
+          PY
+          # The private-only MCP script contains Python in a Bash heredoc.
+          # Validate both languages; never run the private server workflow in CI.
+          sed -n "/^python3 - .*<<'PY'$/,/^PY$/p" support/bambodia-mcp-main-domain-resolve-private-critical.sh |
+            sed '1d;$d' |
+            python3 -c 'import ast, sys; src = sys.stdin.read(); assert len(src) > 5000; ast.parse(src); print("MCP_EMBEDDED_PYTHON_SYNTAX=PASS")'
       - name: Check guarded homepage installer syntax
         run: |
           python3 -m py_compile support/home-discovery-aapanel-upgrade.py
@@ -173,6 +685,31 @@ jobs:
         run: |
           php support/hosting-preflight.php --webroot=public --json > /tmp/bambodia-preflight.json
           php -r '$r=json_decode(file_get_contents("/tmp/bambodia-preflight.json"),true,512,JSON_THROW_ON_ERROR); if (!isset($r["status"],$r["blockers"],$r["results"]) || !is_array($r["results"])) exit(1);'
+      - name: Generate isolated Passport keys for OAuth feature tests
+        env:
+          APP_ENV: testing
+        run: |
+          test "${GITHUB_ACTIONS}" = true
+          test ! -e storage/oauth-private.key
+          test ! -e storage/oauth-public.key
+          php artisan passport:keys --no-interaction --no-ansi
+          test -s storage/oauth-private.key
+          test -s storage/oauth-public.key
+          chmod 600 storage/oauth-private.key storage/oauth-public.key
+          echo "CI_ONLY_PASSPORT_KEYS=GENERATED"
+      - name: Independent ChatGPT-style HTTP OAuth acceptance (localhost only)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feature/bambodia-mcp-main-domain-20261112'
+        env:
+          APP_ENV: testing
+        run: bash support/bambodia-mcp-chatgpt-ci-loopback.sh --ci-only
+      - name: Verify revoked administrator cannot approve OAuth consent
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+        run: php artisan test --filter=test_demotion_between_oauth_consent_page_and_approval_is_denied
       - name: Test routes and workflows
         env:
           APP_ENV: testing
