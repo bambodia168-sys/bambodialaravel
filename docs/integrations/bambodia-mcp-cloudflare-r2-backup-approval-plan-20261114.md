@@ -93,7 +93,7 @@ An apparent approved boolean in a local JSON file is insufficient proof of indep
 
 ## Phase 4 — independent restoration and evidence (mandatory, separate approval)
 
-1. From an independently administered, internet-isolated restore environment with allowed *R2-only* outbound access as explicitly configured, independently retrieve and decrypt the checkpoint using escrowed secrets. Verify firewall, credentials, domain/DNS, app identity and DB isolation before import.
+1. From an independently administered restore environment network-isolated from production, with only explicitly allowlisted R2 outbound access, independently retrieve and decrypt the checkpoint using escrowed secrets. Verify firewall, credentials, domain/DNS, app identity and DB isolation before import.
 2. Turn off outbound email/SMS, queue workers, scheduler, webhooks, payments, notifications and all MCP/OAuth entrypoints. Do not point the clone at live R2 application disks or production SaaS credentials.
 3. Restore schema/data and all approved media to dedicated nonpublic destinations. Reconcile table counts, migrations, ownership/role relationships, licenses, orders, protected records and media hashes, using only opaque/redacted audit proofs.
 4. Test sample authorized application workflows, media access, restore decryption and rollback time against the approved RTO. Verify full Restic repository integrity at suitable intervals and independent restore usability; snapshot existence is not sufficient.
