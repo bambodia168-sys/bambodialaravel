@@ -150,6 +150,54 @@ class McpOnlyInstallerSecurityTest(TestCase):
             self.assertFalse(newvend.exists())
 
 
+    def test_interactive_ssh_stdin_stdout_accepts_exact_confirmation(self):
+        import io
+        class FakeTerminal(io.StringIO):
+            def isatty(self):
+                return True
+            def fileno(self):
+                return 0
+        reader=FakeTerminal("INSTALL-BAMBODIA-MCP-RUNTIME\n")
+        writer=FakeTerminal()
+        with patch.object(m.sys,"stdin",reader), \
+             patch.object(m.sys,"stdout",writer), \
+             patch.object(m.os,"isatty",return_value=True):
+            m.require_local_operator_confirmation("INSTALL-BAMBODIA-MCP-RUNTIME")
+        self.assertIn("Type INSTALL-BAMBODIA-MCP-RUNTIME: ",writer.getvalue())
+
+    def test_piped_heredoc_input_never_authorizes_live_mutation(self):
+        import io
+        reader=io.StringIO("INSTALL-BAMBODIA-MCP-RUNTIME\n")
+        writer=io.StringIO()
+        with patch.object(m.sys,"stdin",reader), \
+             patch.object(m.sys,"stdout",writer):
+            with self.assertRaisesRegex(m.Stop,"OPERATOR_INTERACTIVE_TTY_REQUIRED"):
+                m.require_local_operator_confirmation("INSTALL-BAMBODIA-MCP-RUNTIME")
+
+    def test_tty_rejects_wrong_confirmation_and_eof(self):
+        import io
+        class FakeTerminal(io.StringIO):
+            def isatty(self):
+                return True
+            def fileno(self):
+                return 0
+        for input_value, expected_error in [
+            ("ENABLE-BAMBODIA-MCP-RUNTIME\n","OPERATOR_NOT_CONFIRMED"),
+            ("","OPERATOR_TERMINAL_EOF"),
+        ]:
+            with self.subTest(input_value=input_value):
+                with patch.object(m.sys,"stdin",FakeTerminal(input_value)), \
+                     patch.object(m.sys,"stdout",FakeTerminal()), \
+                     patch.object(m.os,"isatty",return_value=True):
+                    with self.assertRaisesRegex(m.Stop,expected_error):
+                        m.require_local_operator_confirmation("INSTALL-BAMBODIA-MCP-RUNTIME")
+
+    def test_same_tty_gate_used_for_runtime_rollback(self):
+        source=FILE.read_text()
+        self.assertIn('require_local_operator_confirmation("ROLLBACK-BAMBODIA-MCP-RUNTIME")',source)
+        self.assertIn('require_local_operator_confirmation("INSTALL-BAMBODIA-MCP-RUNTIME")',source)
+        self.assertNotIn('open("/dev/tty"',source)
+
     def test_tty_preflight_failure_reports_constant_reason_without_mutation(self):
         import io
         from contextlib import redirect_stdout
