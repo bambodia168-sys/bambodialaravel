@@ -148,6 +148,7 @@ jobs:
           bash -n support/bambodia-mcp-private-media-permissions-readonly-20261113.sh
           python3 -m py_compile support/bambodia-mcp-private-file-review-local-20261113.py
           python3 -m py_compile support/bambodia-mcp-private-access-impact-readonly-20261114.py
+          python3 -m py_compile support/bambodia-mcp-single-file-approved-remediation-20261114.py
           python3 -m py_compile support/bambodia-mcp-offsite-backup-approval-preflight-20261113.py
           python3 -m py_compile support/bambodia-mcp-isolated-restore-preflight-20261113.py
           python3 -m py_compile support/bambodia-mcp-restored-manifest-reconcile-20261113.py
@@ -156,6 +157,21 @@ jobs:
           from pathlib import Path
           local=Path("support/bambodia-mcp-private-file-review-local-20261113.py").read_text()
           impact=Path("support/bambodia-mcp-private-access-impact-readonly-20261114.py").read_text()
+          remedy=Path("support/bambodia-mcp-single-file-approved-remediation-20261114.py").read_text()
+          for token in (
+              "os.fchmod(fd,new)", "os.fchmod(fd,old)",
+              "APPROVAL_CONFIRMATION_OR_ROOT_MISSING",
+              "MCP_AUTO_ROLLBACK=ORIGINAL_MODE_RESTORED",
+              "MCP_POSTCHANGE_WWW_READ=PASS",
+              "MCP_POSTCHANGE_NOBODY_DENIED=PASS",
+              "MCP_APPROVED_SINGLE_FILE_CHANGE=APPLIED_VERIFIED",
+              "MCP_BACKUP_RESTORE=NOT_PERFORMED",
+              "MCP_RELEASE_GATE=BLOCKED",
+              "os.O_EXCL", "os.O_NOFOLLOW", "os.fsync(",
+          ):
+              assert token in remedy, "missing one-file correction guard: "+token
+          assert "os.fchmod(fd,new)" in remedy and "os.chmod(target" not in remedy
+          assert "chmod -R" not in remedy and "os.chown(" not in remedy
           assert "MCP_SINGLE_FILE_MODE_PROPOSAL" in impact
           assert "MCP_PRIVATE_FILE_PERMISSIONS=UNCHANGED" in impact
           assert "MCP_PERMISSION_CHANGE=NOT_AUTHORIZED" in impact
