@@ -106,6 +106,8 @@ def safe_copy_source(root,rel,dest):
         (dest/rel).write_bytes(data)
 
 def normalize_code(tree):
+    import pwd
+    www=pwd.getpwnam("www")
     for current,dirs,files in os.walk(tree,followlinks=False):
         for name in ["."]+dirs+files:
             path=Path(current) if name=="." else Path(current)/name
@@ -115,8 +117,9 @@ def normalize_code(tree):
                 if path.is_relative_to(tree/"vendor"):continue
                 raise Stop("CLONE_SYMLINK_UNSAFE")
             m=path.lstat().st_mode
-            if stat.S_ISDIR(m):path.chmod(0o755)
-            elif stat.S_ISREG(m):path.chmod(0o644)
+            path.chown(0,www.pw_gid)
+            if stat.S_ISDIR(m):path.chmod(0o750)
+            elif stat.S_ISREG(m):path.chmod(0o640)
             else:raise Stop("CLONE_SPECIAL_FILE")
 
 def sanitize_php_error(stderr):
@@ -154,7 +157,10 @@ def clone_runtime():
     # Default /var/tmp root-owned, temporary path is never a webserver vhost.
     try:
         if temp.is_symlink():raise Stop("CLONE_DIRECTORY_SYMLINK")
-        temp.chmod(0o755)
+        # The clone is private to the operator and the app's www account.
+        import pwd
+        temp.chown(0,pwd.getpwnam("www").pw_gid)
+        temp.chmod(0o750)
         for rel in ("app","config","routes","resources/views","database/migrations"):
             safe_copy_source(LIVE,rel,temp)
         for rel in ("artisan","bootstrap/app.php","bootstrap/providers.php"):
