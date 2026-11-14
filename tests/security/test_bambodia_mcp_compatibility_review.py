@@ -68,3 +68,20 @@ class CompatibilityInspectionTests(TestCase):
             "BAMBODIA_MCP_ENABLED=true",
         ):
             self.assertNotIn(forbidden,code)
+
+
+    def test_composer_version_changes_are_not_mistaken_for_additions(self):
+        import json
+        make=lambda items:json.dumps({"packages":[{
+            "name":n,"version":v,"source":{"reference":r}
+        } for n,v,r in items],"packages-dev":[]}).encode()
+        old=make([("laravel/framework","v13.17","aaa"),
+                  ("vendor/unchanged","v1.0","ddd")])
+        new=make([("laravel/framework","v13.18","bbb"),
+                  ("laravel/passport","v13.10","ccc"),
+                  ("vendor/unchanged","v1.0","ddd")])
+        self.assertEqual(mod.compare_vendor_lock(old,new),
+                         (["laravel/passport"],[],["laravel/framework"]))
+        removed=make([("vendor/unchanged","v1.0","ddd")])
+        self.assertEqual(mod.compare_vendor_lock(old,removed),
+                         ([],["laravel/framework"],[]))
