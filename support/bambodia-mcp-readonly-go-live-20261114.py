@@ -214,8 +214,14 @@ def main():
     if options.inspect:
         print("MCP_ONLY_ACTIVATION=READY_NOT_ENABLED")
         return 0
-    if not sys.stdin.isatty(): raise Blocked("OPERATOR_TTY_REQUIRED")
-    if input("Type ENABLE-BAMBODIA-MCP-READONLY: ")!="ENABLE-BAMBODIA-MCP-READONLY":
+    try:
+        with open("/dev/tty","r+") as tty:
+            tty.write("Type ENABLE-BAMBODIA-MCP-READONLY: ")
+            tty.flush()
+            approval=tty.readline().strip()
+    except OSError:
+        raise Blocked("OPERATOR_TTY_REQUIRED")
+    if approval!="ENABLE-BAMBODIA-MCP-READONLY":
         raise Blocked("OPERATOR_NOT_CONFIRMED")
     copy=update_env()
     if not bearer_challenge():
