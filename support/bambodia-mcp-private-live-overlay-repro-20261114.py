@@ -117,7 +117,7 @@ def normalize_code(tree):
                 if path.is_relative_to(tree/"vendor"):continue
                 raise Stop("CLONE_SYMLINK_UNSAFE")
             m=path.lstat().st_mode
-            path.chown(0,www.pw_gid)
+            os.chown(path,0,www.pw_gid)
             if stat.S_ISDIR(m):path.chmod(0o750)
             elif stat.S_ISREG(m):path.chmod(0o640)
             else:raise Stop("CLONE_SPECIAL_FILE")
@@ -159,7 +159,7 @@ def clone_runtime():
         if temp.is_symlink():raise Stop("CLONE_DIRECTORY_SYMLINK")
         # The clone is private to the operator and the app's www account.
         import pwd
-        temp.chown(0,pwd.getpwnam("www").pw_gid)
+        os.chown(temp,0,pwd.getpwnam("www").pw_gid)
         temp.chmod(0o750)
         for rel in ("app","config","routes","resources/views","database/migrations"):
             safe_copy_source(LIVE,rel,temp)
@@ -196,7 +196,7 @@ def clone_runtime():
         for root in (temp/"storage",temp/"bootstrap/cache"):
             for current,dirs,files in os.walk(root):
                 directory=Path(current)
-                directory.chown(0,www.pw_gid)
+                os.chown(directory,0,www.pw_gid)
                 directory.chmod(0o770)
         if any((temp/p).exists() for p in (".env",".env.testing","storage/oauth-private.key","storage/oauth-public.key")):
             raise Stop("PRIVATE_CLONE_SECRET_PRESENT")
@@ -249,7 +249,7 @@ def main():
         return 0
     except Stop as e:
         print("MCP_REPRODUCTION_BLOCKER="+str(e))
-    except (FileNotFoundError,OSError,ValueError,TypeError,KeyError):
+    except (FileNotFoundError,OSError,ValueError,TypeError,KeyError,AttributeError):
         print("MCP_REPRODUCTION_BLOCKER=PRIVATE_REVIEW_REQUIRED")
     print("MCP_REPRODUCTION_LIVE_FILES=UNCHANGED")
     print("MCP_REPRODUCTION_STATUS=BLOCKED")
