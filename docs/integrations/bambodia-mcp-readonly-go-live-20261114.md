@@ -74,3 +74,27 @@ New packages include `laravel/mcp v1.2.0`, `laravel/passport v13.11.0`, `league/
 **Pass outcome permits a subsequent reversible MCP runtime installer to be prepared**, not an automatic live switch. The installed runtime must keep `BAMBODIA_MCP_ENABLED=false` and `BAMBODIA_MCP_WRITES_ENABLED=false` until production signing keys, additive OAuth tables, public metadata, exact ChatGPT callback, and read-only tool acceptance are independently proven. The OAuth code currently supports callback-ID-specific ChatGPT redirects only; do not substitute the newer stable callback unless RFC 9207 issuer identification is separately implemented and verified.
 
 R2 recovery, unrelated marketplace design, live content and database modifications remain excluded from this rehearsal.
+
+## Physical PHP 8.5 rehearsal accepted; reversible live MCP runtime installer prepared (2026-11-14)
+
+Owner/operator verified the exact source blob for `support/bambodia-mcp-vendor-route-rehearsal-20261114.py` at DRAFT SHA `c676143cf0c6413109e9a3b420b8fd8647ec916c` and six matching CI passes, then ran the real aaPanel rehearsal:
+- `MCP_ONLY_VENDOR_SIX_CHANGED=EXACT_ACCEPTED`
+- `MCP_ONLY_VENDOR_NINETEEN_ADDITIONS=EXACT_ACCEPTED`
+- `MCP_ONLY_SOURCE_THIRTY_SIX=PASS`
+- `MCP_ONLY_VENDOR_ALL_NINETEEN_AND_SIX_INSTALLED=PASS`
+- `MCP_ONLY_PHP85_VENDOR_AUTOLOAD=PASS`
+- `MCP_ONLY_PHP85_MCP_OAUTH_ROUTES=PASS`
+- `MCP_ONLY_READONLY_REHEARSAL=PASS`
+- Production vendor, database and MCP feature flag all unchanged.
+
+**This physically closes Composer compatibility and private runtime route registration, NOT live installation.**
+
+To advance only MCP, `support/bambodia-mcp-live-runtime-install-20261114.py` provides a local typed-confirmation `--install` command for production **source/vendor installation ONLY**. It validates current Nginx vhost identity, private candidate/stage custody, exact Composer locks (and 19 additions/six upgrades), the 36 staged code file hashes, exact ten existing-code differences and nine protected live source snapshots. It additionally checks the existing live bootstrap against the PR baseline, uncached Laravel configuration and *both MCP flags explicitly OFF*. The script does not run Composer, NPM, MySQL migrations, Passport keys, production OAuth login, backup or restore and does not change unrelated marketplace/frontend code.
+
+The script prepares a root-private `/root/Bambodia-MCP-LiveRollback.*` snapshot of original source files and Composer manifests, prepares the previously physically accepted vendor under a private application-level temporary directory, then with operator's local TTY acceptance places the app into Laravel maintenance mode, atomically replaces only the reviewed MCP/OAuth 36-file allowlist, Composer manifest/lock and the vendor directory, verifies the live PHP85 OAuth/MCP routes, and brings the app back online. On errors it attempts automatic restoration of original code/vendor before leaving maintenance. A prior application maintenance state, changed Bootstrap, unknown file drift, mismatched vendor source or unexpected lockfile blocks installation. The old vendor is retained in a protected, nonpublic directory for manual rollback if problems appear after successful installation.
+
+For an accepted success, record the private path reported as `MCP_ONLY_ROLLBACK_PATH`. An explicit typed `--rollback /root/Bambodia-MCP-LiveRollback.<id>` mode is included; it requires both MCP flags OFF, the installed source still unchanged and a validated root-owned private rollback directory. It never deletes OAuth tables or keys; if the later OAuth initialization has occurred, recovery coordination is required to revoke connections and disable MCP before rolling back package versions. No recursive permission commands, production database drop, unrelated source overwrites or automatic security toggles are included.
+
+**Important operational limitation:** this is an in-place, brief-maintenance release of a pinned Laravel framework upgrade. It is still an application upgrade, and production PHP-FPM opcache/HTTP responses must be independently checked after deployment. A successful `artisan route:list` verifies CLI registration but is **not** proof that the public proxy serves the new OAuth routes or that ChatGPT can authenticate.
+
+**Next separately controlled steps after physical runtime installer PASS:** run forward-only OAuth schema migrations and production-only Passport signing key generation, configure and verify an exact official ChatGPT OAuth callback, test canonical public discovery and anonymous Bearer challenges, then run the approved `--enable-readonly` tool with writes OFF. Owner explicitly suspended R2 backup work; this requirement does not silently restore the R2 recovery gate.
