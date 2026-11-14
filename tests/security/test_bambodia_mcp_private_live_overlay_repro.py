@@ -178,7 +178,7 @@ class PrivateOverlayCutoverReproTests(TestCase):
              patch.object(m.sys,"argv",["repro","--reproduce-production-mode"]):
             with redirect_stdout(io.StringIO()) as output:
                 self.assertEqual(m.main(),0)
-        run.assert_called_once_with("production",simulate_maintenance=False)
+        run.assert_called_once_with("production",simulate_maintenance=False,simulate_discovery=False)
         self.assertIn("MCP_REPRODUCTION_LIVE_FILES=UNCHANGED",output.getvalue())
         self.assertIn("MCP_REPRODUCTION_PRODUCTION_DB=NOT_ACCESSED",output.getvalue())
 
@@ -209,7 +209,7 @@ class PrivateOverlayCutoverReproTests(TestCase):
              patch.object(m.sys,"argv",["repro","--reproduce-private-maintenance"]):
             with redirect_stdout(io.StringIO()) as out:
                 self.assertEqual(m.main(),0)
-        run.assert_called_once_with("production",simulate_maintenance=True)
+        run.assert_called_once_with("production",simulate_maintenance=True,simulate_discovery=False)
         self.assertIn("MCP_REPRODUCTION_LIVE_FILES=UNCHANGED",out.getvalue())
         self.assertIn("MCP_REPRODUCTION_PRODUCTION_DB=NOT_ACCESSED",out.getvalue())
 
@@ -234,3 +234,37 @@ class PrivateOverlayCutoverReproTests(TestCase):
             self.assertEqual(m.run_ww_php(m.LIVE,{},["artisan","up"],30,"ARTISAN_UP"),b"")
         with self.assertRaisesRegex(m.Stop,"UNSAFE_EXECUTION_PHASE"):
             m.run_ww_php(m.LIVE,{},["artisan","migrate"],30,"ARTISAN_MIGRATE")
+
+    def test_private_stale_discovery_mode_is_explicit_and_cloned(self):
+        import io
+        from contextlib import redirect_stdout
+        with patch.object(m,"clone_runtime") as run, \
+             patch.object(m.sys,"argv",["repro","--reproduce-private-package-discovery"]):
+            with redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(m.main(),0)
+        run.assert_called_once_with("production",simulate_maintenance=True,simulate_discovery=True)
+        self.assertIn("MCP_REPRODUCTION_PRODUCTION_DB=NOT_ACCESSED",output.getvalue())
+        with self.assertRaisesRegex(m.Stop,"INVALID_SYNTHETIC_DISCOVERY_MODE"):
+            m.clone_runtime("testing",False,True)
+
+    def test_private_discovery_copies_only_nonsecret_php_provider_manifests(self):
+        source=SRC.read_text()
+        self.assertIn('("bootstrap/cache/packages.php","bootstrap/cache/services.php")',source)
+        self.assertIn('safe_copy_source(LIVE,rel,temp)',source)
+        self.assertIn('"ARTISAN_DISCOVER"',source)
+        self.assertIn('["artisan","package:discover","--no-ansi","--no-interaction"]',source)
+        self.assertIn("MCP_REPRODUCTION_PRIVATE_PACKAGE_SERVICE_CACHE=PASS",source)
+        self.assertIn("MCP_REPRODUCTION_STALE_ROUTE_CHECK=",source)
+        self.assertNotIn('safe_copy_source(LIVE,".env"',source)
+        self.assertNotIn('run_ww_php(LIVE,env',source)
+
+    def test_private_artisan_discover_phase_allowed_but_migrate_denied(self):
+        from types import SimpleNamespace
+        fake=SimpleNamespace(returncode=0,pid=101,
+                             communicate=lambda timeout:(b"",b""))
+        with patch.object(m,"safe_runuser_binary",return_value="/usr/sbin/runuser"), \
+             patch.object(m.subprocess,"Popen",return_value=fake):
+            self.assertEqual(m.run_ww_php(Path("/var/tmp/fixture"),{},
+                ["artisan","package:discover"],60,"ARTISAN_DISCOVER"),b"")
+        with self.assertRaisesRegex(m.Stop,"UNSAFE_EXECUTION_PHASE"):
+            m.run_ww_php(Path("/var/tmp/fixture"),{},["artisan","migrate"],60,"ARTISAN_MIGRATE")
