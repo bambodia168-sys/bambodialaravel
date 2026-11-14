@@ -436,3 +436,63 @@ class McpOnlyInstallerSecurityTest(TestCase):
         install.assert_not_called()
         self.assertIn("MCP_ONLY_RUNTIME_BLOCKER=WWW_BOOTSTRAP_CACHE_NOT_WRITABLE",output.getvalue())
         self.assertNotIn("APP_KEY",output.getvalue())
+
+    def test_simulated_discovery_failure_rolls_back_vendor_code_caches_and_maintenance(self):
+        import io
+        from contextlib import redirect_stdout
+        import tempfile as tempfile_module
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            live=root/"live";stage=root/"stage";private=root/"private"
+            for folder in (live,stage,private/"source/vendor",
+                           live/"bootstrap/cache",live/"routes",
+                           live/"vendor",live/"storage/framework",stage/"patch/routes"):
+                folder.mkdir(parents=True,exist_ok=True)
+            originals={
+                "routes/web.php":b"<?php // old",
+                "composer.json":b'{"old":true}',
+                "composer.lock":b'{"lock":"old"}',
+                "bootstrap/cache/packages.php":b"<?php // original package manifest",
+                "bootstrap/cache/services.php":b"<?php // original provider manifest",
+            }
+            for path,data in originals.items():
+                p=live/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
+            (stage/"patch/routes/web.php").write_bytes(b"<?php // staged MCP")
+            (stage/"composer.json").write_bytes(b'{"new":true}')
+            (stage/"composer.lock").write_bytes(b'{"lock":"candidate"}')
+            (live/"vendor/autoload.php").write_bytes(b"old vendor")
+            (private/"source/vendor/autoload.php").write_bytes(b"new vendor")
+            original_temp=tempfile_module.mkdtemp
+
+            def fake_artisan(*args):
+                if args[0]=="down":
+                    (live/"storage/framework/down").write_text("private synthetic")
+                elif args[0]=="package:discover":
+                    (live/"bootstrap/cache/packages.php").write_bytes(b"laravel/mcp laravel/passport")
+                    (live/"bootstrap/cache/services.php").write_bytes(b"McpServiceProvider PassportServiceProvider")
+                    raise m.Stop("SYNTHETIC_DISCOVERY_FAILURE")
+                elif args[0]=="up":
+                    (live/"storage/framework/down").unlink()
+                return b""
+
+            with patch.object(m,"LIVE",live),patch.object(m,"STAGE",stage), \
+                 patch.object(m,"PRIVATE",private), \
+                 patch.object(m,"safe_patch_inventory",return_value={
+                     "routes/web.php":m.sha(b"<?php // staged MCP")}), \
+                 patch.object(m,"require_www_cache_write_access"), \
+                 patch.object(m,"require_local_operator_confirmation"), \
+                 patch.object(m,"prepare_vendor_permissions"), \
+                 patch.object(m,"env_flag_off"), \
+                 patch.object(m,"as_www",side_effect=fake_artisan), \
+                 patch.object(m.tempfile,"mkdtemp",
+                     side_effect=lambda prefix,dir:original_temp(prefix=prefix,dir=str(root))), \
+                 redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(m.install(),2)
+
+            for name,expected in originals.items():
+                self.assertEqual((live/name).read_bytes(),expected,name)
+            self.assertEqual((live/"vendor/autoload.php").read_bytes(),b"old vendor")
+            self.assertFalse((live/"storage/framework/down").exists())
+            self.assertIn("MCP_ONLY_RUNTIME_FAILURE_PHASE=REBUILD_LARAVEL_PACKAGE_DISCOVERY",output.getvalue())
+            self.assertIn("MCP_ONLY_SOURCE_VENDOR_ROLLBACK=PASS",output.getvalue())
+            self.assertIn("MCP_ONLY_MAINTENANCE_RECOVERY=PASS",output.getvalue())
