@@ -39,6 +39,8 @@ EXISTING_CHANGED={
  "resources/views/layouts/workspace.blade.php","routes/web.php",
 }
 CRITICAL=EXISTING_CHANGED-{"bootstrap/app.php"}
+CACHE_REL=("bootstrap/cache/packages.php","bootstrap/cache/services.php")
+CACHE_OVERRIDE_NAMES=("APP_PACKAGES_CACHE","APP_SERVICES_CACHE")
 ROUTE_CHECK={("mcp","POST"),(".well-known/oauth-protected-resource","GET"),
              (".well-known/oauth-protected-resource/mcp","GET"),
              (".well-known/oauth-authorization-server","GET"),
@@ -83,6 +85,64 @@ def env_flag_off():
        ("BAMBODIA_MCP_ENABLED","BAMBODIA_MCP_WRITES_ENABLED")):
         raise Stop("MCP_FLAGS_MUST_BE_OFF")
 
+def validate_default_package_cache_paths():
+    # Deployment cannot safely reason about overridden cache paths.
+    # Never display .env values, environment variables or private paths.
+    for name in CACHE_OVERRIDE_NAMES:
+        if os.environ.get(name,"").strip():
+            raise Stop("CUSTOM_PACKAGE_CACHE_PATH_UNSUPPORTED")
+    for line in read_file(LIVE/".env",131072).decode("utf-8").splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        for name in CACHE_OVERRIDE_NAMES:
+            if re.match(r"^\s*"+name+r"\s*=",line):
+                raise Stop("CUSTOM_PACKAGE_CACHE_PATH_UNSUPPORTED")
+    base=guarded_path(LIVE,"bootstrap/cache")
+    if base.is_symlink() or not base.is_dir():
+        raise Stop("BOOTSTRAP_CACHE_DIRECTORY_UNSAFE")
+    for rel in CACHE_REL:
+        path=guarded_path(LIVE,rel)
+        if path.exists():
+            read_file(path)
+    return base
+
+
+def require_www_cache_write_access():
+    # Laravel's package:discover is executed as the non-root web account.
+    # Prevent a failed deployment when bootstrap/cache is not writable by www.
+    cache=validate_default_package_cache_paths()
+    executable=next((str(x) for x in
+        (Path("/usr/bin/test"),Path("/bin/test"))
+        if x.is_file() and os.access(x,os.X_OK)),None)
+    runuser=next((str(x) for x in
+        (Path("/usr/sbin/runuser"),Path("/usr/bin/runuser"))
+        if x.is_file() and os.access(x,os.X_OK)),None)
+    if not executable or not runuser:
+        raise Stop("WWW_CACHE_CHECK_COMMAND_MISSING")
+    try:
+        result=subprocess.run([runuser,"-u","www","--",executable,"-w",str(cache)],
+            capture_output=True,timeout=10,check=False)
+    except (OSError,subprocess.TimeoutExpired):
+        raise Stop("WWW_CACHE_CHECK_EXECUTION_FAILED")
+    if result.returncode!=0:
+        raise Stop("WWW_BOOTSTRAP_CACHE_NOT_WRITABLE")
+
+
+def verify_discovery_manifests():
+    # Do not execute, print or return PHP cache contents. Only check for the
+    # expected package and provider registration strings from trusted source.
+    packages=read_file(guarded_path(LIVE,CACHE_REL[0]))
+    services=read_file(guarded_path(LIVE,CACHE_REL[1]))
+    for package in (b"laravel/mcp",b"laravel/passport"):
+        if package not in packages:
+            raise Stop("MCP_PACKAGE_DISCOVERY_INCOMPLETE")
+    # PHP cached service provider classes are single-escaped PHP strings.
+    # Use fixed class-name fragments as a coarse fail-closed verification.
+    if not (b"McpServiceProvider" in services and
+            b"PassportServiceProvider" in services):
+        raise Stop("MCP_PROVIDER_DISCOVERY_INCOMPLETE")
+
+
 def lock_versions(data):
     obj=json.loads(data)
     result={}
@@ -105,6 +165,9 @@ def safe_patch_inventory():
     if (LIVE/"storage/framework/down").exists():raise Stop("LIVE_ALREADY_IN_MAINTENANCE")
     if (LIVE/"bootstrap/cache/config.php").exists() or list((LIVE/"bootstrap/cache").glob("routes-*.php")):
         raise Stop("LIVE_CONFIG_OR_ROUTE_CACHED")
+    # packages.php/services.php are intentionally present on existing Laravel.
+    # They will be snapshot-restored if package discovery fails during cutover.
+    validate_default_package_cache_paths()
     if sha(read_file(LIVE/"composer.lock"))!=LIVE_LOCK_SHA:
         raise Stop("LIVE_LOCK_CHANGED")
     if sha(read_file(STAGE/"composer.lock"))!=NEW_LOCK_SHA or sha(read_file(PRIVATE/"source/composer.lock"))!=NEW_LOCK_SHA:
