@@ -277,6 +277,7 @@ def install():
     if not sys.stdin.isatty():
         # heredoc launches Python with inherited closed stdin; use /dev/tty.
         pass
+    print("MCP_ONLY_OPERATOR_CONFIRMATION=REQUIRED_IN_LOCAL_TERMINAL",flush=True)
     try:
         with open("/dev/tty","r+") as tty:
             tty.write("Type INSTALL-BAMBODIA-MCP-RUNTIME: ");tty.flush()
@@ -420,7 +421,14 @@ def main():
     try:
         if mode=="install":return install()
         return manual_rollback(Path(args[1]))
-    except (Stop,OSError,ValueError,TypeError,KeyError,RuntimeError):
+    except Stop as error:
+        # Stop reason labels are constant, locally authored safety markers.
+        # Never print generic OS exceptions, token values or .env content.
+        print("MCP_ONLY_RUNTIME_BLOCKER="+str(error))
+        print("MCP_ONLY_RUNTIME_ACTION=BLOCKED")
+        return 1
+    except (OSError,ValueError,TypeError,KeyError,RuntimeError):
+        print("MCP_ONLY_RUNTIME_BLOCKER=UNCLASSIFIED_LOCAL_REVIEW_REQUIRED")
         print("MCP_ONLY_RUNTIME_ACTION=BLOCKED")
         return 1
 if __name__=="__main__":sys.exit(main())
