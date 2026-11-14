@@ -153,3 +153,19 @@ class PrivateOverlayCutoverReproTests(TestCase):
     def test_only_known_phase_identifiers_allowed(self):
         with self.assertRaisesRegex(m.Stop,"UNSAFE_EXECUTION_PHASE"):
             m.run_ww_php(Path("/var/tmp/fixture"),{},["-v"],15,"SECRET_VALUE")
+
+    def test_absolute_runuser_works_with_sanitized_path(self):
+        result=m.safe_runuser_binary()
+        self.assertIn(result,("/usr/sbin/runuser","/usr/bin/runuser"))
+        self.assertTrue(Path(result).is_file())
+        self.assertNotEqual(result,"runuser")
+
+    def test_php_process_launch_uses_explicit_runuser_executable(self):
+        from types import SimpleNamespace
+        fake=SimpleNamespace(returncode=0,pid=101,
+                             communicate=lambda timeout:(b"PHP85_OK",b""))
+        with patch.object(m,"safe_runuser_binary",return_value="/usr/sbin/runuser"), \
+             patch.object(m.subprocess,"Popen",return_value=fake) as opened:
+            m.run_ww_php(Path("/var/tmp/fixture"),{"PATH":"/usr/bin:/bin"},
+                         ["-r","echo 'PHP85_OK';"],15,"PHP_BINARY")
+        self.assertEqual(opened.call_args.args[0][0],"/usr/sbin/runuser")
