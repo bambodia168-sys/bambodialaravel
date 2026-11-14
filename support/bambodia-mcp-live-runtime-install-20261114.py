@@ -307,6 +307,7 @@ def install():
     previous={}
     maintenance=False
     mutation=False
+    phase="PREPARE_NEW_VENDOR"
     try:
         # Pre-stage the vendor on the same filesystem; never copy production
         # vendor over the independently accepted candidate.
@@ -314,34 +315,44 @@ def install():
             raise Stop("VENDOR_STAGE_COLLISION")
         shutil.copytree(PRIVATE/"source/vendor",newvendor,symlinks=True)
         prepare_vendor_permissions(newvendor)
+        phase="SNAPSHOT_ORIGINAL_SOURCE"
         previous=snapshot_originals(backup,entries)
         (backup/"rollback.json").write_text(json.dumps({
           "state":"READY","old_vendor":str(oldvendor),
           "new_vendor":str(newvendor),"original":previous},indent=2)+"\n")
         (backup/"rollback.json").chmod(0o600)
+        phase="REVALIDATE_LIVE_BEFORE_MAINTENANCE"
         safe_patch_inventory()
         print("MCP_ONLY_ROLLBACK_SNAPSHOT=READY")
+        phase="ENTER_MAINTENANCE"
         as_www("down","--no-ansi","--no-interaction")
         maintenance=True
+        phase="MOVE_ORIGINAL_VENDOR"
         os.rename(LIVE/"vendor",oldvendor)
         mutation=True
+        phase="ACTIVATE_NEW_VENDOR"
         os.rename(newvendor,LIVE/"vendor")
+        phase="INSTALL_MCP_SOURCE_PATCH"
         for rel in entries:
             target=guarded_path(LIVE,rel)
             mode=previous[rel].get("mode",0o644)
             uid=previous[rel].get("uid",pwd.getpwnam("www").pw_uid)
             gid=previous[rel].get("gid",pwd.getpwnam("www").pw_gid)
             write_atomic(target,read_file(guarded_path(STAGE/"patch",rel)),mode,uid,gid)
+        phase="INSTALL_COMPOSER_MANIFESTS"
         for name in ("composer.json","composer.lock"):
             record=previous[name]
             write_atomic(LIVE/name,read_file(STAGE/name),record["mode"],record["uid"],record["gid"])
+        phase="VERIFY_MCP_FLAGS_DISABLED"
         env_flag_off()
+        phase="VERIFY_LIVE_PHP85_MCP_OAUTH_ROUTES"
         verify_routes()
         print("MCP_ONLY_PHP85_LIVE_ROUTE_REGISTRATION=PASS")
         state=json.loads(read_file(backup/"rollback.json",65536))
         state["state"]="INSTALLED_FLAGS_OFF"
         (backup/"rollback.json").write_text(json.dumps(state,indent=2)+"\n")
         (backup/"rollback.json").chmod(0o600)
+        phase="EXIT_MAINTENANCE"
         as_www("up","--no-ansi","--no-interaction")
         maintenance=False
         print("MCP_ONLY_RUNTIME_INSTALL=PASS")
@@ -352,6 +363,8 @@ def install():
         print("MCP_ONLY_CHATGPT_CONNECT=NOT_YET_VERIFIED")
         return 0
     except Exception:
+        # Never print exception text, environment, SQL, stack traces or tokens.
+        print("MCP_ONLY_RUNTIME_FAILURE_PHASE="+phase)
         print("MCP_ONLY_RUNTIME_INSTALL=FAILED_ROLLBACK_ATTEMPTED")
         if mutation:
             try:
