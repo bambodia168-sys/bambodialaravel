@@ -225,14 +225,44 @@ def as_www(*args):
         raise Stop("LIVE_ARTISAN_CHECK_FAILED")
     return p.stdout
 
+ROUTE_CHECK_LABELS={
+    ("mcp","POST"):"MCP_POST",
+    (".well-known/oauth-protected-resource","GET"):"RESOURCE_METADATA_GET",
+    (".well-known/oauth-protected-resource/mcp","GET"):"RESOURCE_METADATA_MCP_GET",
+    (".well-known/oauth-authorization-server","GET"):"AUTHORIZATION_METADATA_GET",
+    ("oauth/register","POST"):"OAUTH_REGISTER_POST",
+    ("oauth/token","POST"):"OAUTH_TOKEN_POST",
+}
+
+
 def verify_routes():
     try:
         items=json.loads(as_www("route:list","--json","--no-ansi"))
-    except (ValueError,TypeError):raise Stop("LIVE_ROUTES_INVALID")
-    seen={(p.get("uri","").lstrip("/"),method) for p in items
-          for method in p.get("method","").split("|")}
-    if not ROUTE_CHECK.issubset(seen):
+    except (ValueError,TypeError,UnicodeError):
+        print("MCP_ONLY_ROUTE_CHECK_DETAIL=INVALID_JSON")
+        raise Stop("LIVE_ROUTES_INVALID")
+    if not isinstance(items,list):
+        print("MCP_ONLY_ROUTE_CHECK_DETAIL=INVALID_JSON_SHAPE")
+        raise Stop("LIVE_ROUTES_INVALID")
+    seen=set()
+    for item in items:
+        if not isinstance(item,dict):
+            print("MCP_ONLY_ROUTE_CHECK_DETAIL=INVALID_ROUTE_ENTRY")
+            raise Stop("LIVE_ROUTES_INVALID")
+        uri=item.get("uri")
+        methods=item.get("method")
+        if not isinstance(uri,str) or not isinstance(methods,str):
+            print("MCP_ONLY_ROUTE_CHECK_DETAIL=INVALID_ROUTE_FIELDS")
+            raise Stop("LIVE_ROUTES_INVALID")
+        seen.update((uri.lstrip("/"),method) for method in methods.split("|"))
+    missing=ROUTE_CHECK.difference(seen)
+    if missing:
+        for endpoint in sorted(missing):
+            # Only constant, locally defined names; never print raw route output.
+            print("MCP_ONLY_ROUTE_MISSING="+ROUTE_CHECK_LABELS[endpoint])
+        print("MCP_ONLY_ROUTE_CHECK_DETAIL=REQUIRED_ROUTES_MISSING")
         raise Stop("MCP_ROUTES_NOT_REGISTERED")
+    print("MCP_ONLY_ROUTE_CHECK_DETAIL=PASS")
 
 def snapshot_originals(path,entries):
     original={}
