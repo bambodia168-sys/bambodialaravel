@@ -325,12 +325,12 @@ def install():
         env_flag_off()
         verify_routes()
         print("MCP_ONLY_PHP85_LIVE_ROUTE_REGISTRATION=PASS")
-        as_www("up","--no-ansi","--no-interaction")
-        maintenance=False
         state=json.loads(read_file(backup/"rollback.json",65536))
         state["state"]="INSTALLED_FLAGS_OFF"
         (backup/"rollback.json").write_text(json.dumps(state,indent=2)+"\n")
         (backup/"rollback.json").chmod(0o600)
+        as_www("up","--no-ansi","--no-interaction")
+        maintenance=False
         print("MCP_ONLY_RUNTIME_INSTALL=PASS")
         print("MCP_ONLY_ROLLBACK_PATH="+str(backup))
         print("MCP_ONLY_FEATURE_FLAGS=OFF")
