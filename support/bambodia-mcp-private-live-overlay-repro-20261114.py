@@ -167,7 +167,7 @@ def run_ww_php(private_root,env,args,timeout_s,phase):
     No shell, no raw stderr/stdout in user-facing diagnostics. The phase is
     a locally authored constant, never source-derived or user-controlled.
     """
-    if phase not in ("PHP_BINARY","ARTISAN_ROUTE"):
+    if phase not in ("PHP_BINARY","ARTISAN_ROUTE","ARTISAN_DOWN","ARTISAN_UP"):
         raise Stop("UNSAFE_EXECUTION_PHASE")
     proc=None
     try:
@@ -198,8 +198,8 @@ def run_ww_php(private_root,env,args,timeout_s,phase):
     return stdout
 
 
-def clone_runtime(mode="testing"):
-    if mode not in ("testing","production"):
+def clone_runtime(mode="testing", simulate_maintenance=False):
+    if mode not in ("testing","production") or not isinstance(simulate_maintenance,bool):
         raise Stop("INVALID_SYNTHETIC_ENV_MODE")
     entries=checked_originals()
     print("MCP_REPRODUCTION_LIVE_ORIGINALS=VERIFIED")
@@ -273,6 +273,14 @@ def clone_runtime(mode="testing"):
         if marker.strip()!=b"PHP85_OK":
             raise Stop("PHP85_BINARY_UNEXPECTED_OUTPUT")
         print("MCP_REPRODUCTION_WWW_PHP85_PROCESS=PASS",flush=True)
+        if simulate_maintenance:
+            print("MCP_REPRODUCTION_PRIVATE_MAINTENANCE=STARTING",flush=True)
+            run_ww_php(temp,env,
+                ["artisan","down","--no-ansi","--no-interaction"],
+                30,"ARTISAN_DOWN")
+            if not (temp/"storage/framework/down").is_file():
+                raise Stop("PRIVATE_MAINTENANCE_MARKER_NOT_CREATED")
+            print("MCP_REPRODUCTION_PRIVATE_MAINTENANCE=ENTERED",flush=True)
         print("MCP_REPRODUCTION_ARTISAN_ROUTE_CHECK=STARTED",flush=True)
         route_output=run_ww_php(temp,env,
             ["artisan","route:list","--json","--no-ansi"],60,"ARTISAN_ROUTE")
@@ -281,6 +289,14 @@ def clone_runtime(mode="testing"):
         if not validate_routes(payload):raise Stop("MCP_OAUTH_ROUTE_REGISTRATION_MISSING")
         print("MCP_REPRODUCTION_REAL_LIVE_SOURCE_PRIVATE_PHP85=PASS")
         print("MCP_REPRODUCTION_REAL_LIVE_SOURCE_ROUTES=PASS")
+        if simulate_maintenance:
+            print("MCP_REPRODUCTION_PRIVATE_MAINTENANCE=EXITING",flush=True)
+            run_ww_php(temp,env,
+                ["artisan","up","--no-ansi","--no-interaction"],
+                30,"ARTISAN_UP")
+            if (temp/"storage/framework/down").exists():
+                raise Stop("PRIVATE_MAINTENANCE_MARKER_STILL_PRESENT")
+            print("MCP_REPRODUCTION_PRIVATE_MAINTENANCE_RECOVERY=PASS",flush=True)
     finally:
         # Only this newly created /var/tmp directory; never recursively touch
         # production source/vendor, staging, private accepted or backup trees.
@@ -289,13 +305,15 @@ def clone_runtime(mode="testing"):
 
 def main():
     if sys.argv[1:]==["--reproduce"]:
-        mode="testing"
+        mode="testing";simulate_maintenance=False
     elif sys.argv[1:]==["--reproduce-production-mode"]:
-        mode="production"
+        mode="production";simulate_maintenance=False
+    elif sys.argv[1:]==["--reproduce-private-maintenance"]:
+        mode="production";simulate_maintenance=True
     else:
-        print("USAGE=--reproduce | --reproduce-production-mode");return 64
+        print("USAGE=--reproduce | --reproduce-production-mode | --reproduce-private-maintenance");return 64
     try:
-        clone_runtime(mode)
+        clone_runtime(mode,simulate_maintenance=simulate_maintenance)
         print("MCP_REPRODUCTION_LIVE_FILES=UNCHANGED")
         print("MCP_REPRODUCTION_PRODUCTION_DB=NOT_ACCESSED")
         print("MCP_REPRODUCTION_PRODUCTION_MAINTENANCE=NOT_TOUCHED")
