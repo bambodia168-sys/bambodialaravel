@@ -148,3 +148,16 @@ class McpOnlyInstallerSecurityTest(TestCase):
             self.assertEqual(original.read_bytes(),b"OLD ROUTES\n")
             self.assertEqual((vendor/"autoload.php").read_text(),"old")
             self.assertFalse(newvend.exists())
+
+
+    def test_tty_preflight_failure_reports_constant_reason_without_mutation(self):
+        import io
+        from contextlib import redirect_stdout
+        with patch.object(m, "install", side_effect=m.Stop("OPERATOR_LOCAL_TTY_REQUIRED")):
+            with patch("sys.argv", ["operator", "--install"]):
+                stdout=io.StringIO()
+                with redirect_stdout(stdout):
+                    self.assertEqual(m.main(),1)
+        self.assertIn("MCP_ONLY_RUNTIME_BLOCKER=OPERATOR_LOCAL_TTY_REQUIRED",stdout.getvalue())
+        self.assertIn("MCP_ONLY_RUNTIME_ACTION=BLOCKED",stdout.getvalue())
+
