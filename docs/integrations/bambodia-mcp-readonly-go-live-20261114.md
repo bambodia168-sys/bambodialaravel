@@ -53,3 +53,24 @@ The operator successfully executed the SHA-pinned private-only 36-file stage on 
 This is the final **code-compatibility review**, not another disaster-recovery exercise. When code/Composer compatibility is proven, a narrowly scoped installer will be prepared that preserves all ten known old live versions and the existing vendor/Composer state for rollback, applies only the tested MCP files and OAuth schema, checks public discovery/authentication endpoints, then permits read-only MCP activation with writes disabled and independent ChatGPT OAuth acceptance.
 
 **No user authorization to skip the ten-file compatibility gate or overwrite newer production code should be inferred from the request to enable MCP.**
+
+## MCP-only Composer version reconciliation accepted; private PHP85 rehearsal staged (2026-11-14)
+
+The operator completed an exact aaPanel lockfile diff after source-file acceptance. `19` packages added, `0` removed, and exactly `6` existing package versions changed. These are the **actual** versions, not guessed upgrades:
+
+| Existing package | Live | Isolated MCP candidate |
+|---|---|---|
+| `guzzlehttp/guzzle` | `8.3.1` | `8.3.2` |
+| `guzzlehttp/psr7` | `3.2.0` | `3.3.0` |
+| `laravel/framework` | `v13.40.0` | `v13.42.0` |
+| `laravel/prompts` | `v0.3.26` | `v0.3.27` |
+| `laravel/serializable-closure` | `v2.1.0` | `v2.2.0` |
+| `nunomaduro/termwind` | `v2.4.0` | `v2.4.1` |
+
+New packages include `laravel/mcp v1.2.0`, `laravel/passport v13.11.0`, `league/oauth2-server 9.4.1` and sixteen further transitive packages. The candidate lock and private vendor are already present, but the live framework version change means the production vendor tree must **not** be replaced merely because all package names resolved.
+
+`support/bambodia-mcp-vendor-route-rehearsal-20261114.py --rehearse` is the next host action. It pins exact live/candidate lock hashes and the six existing version deltas, validates 19 additions/zero removals, re-hashes all 36 staged MCP files, verifies all 25 changed/new packages against the physically installed **private** vendor metadata, executes only PHP85 autoload smoke and `artisan route:list --json` in a forced SQLite in-memory/testing environment with no private `.env`, and checks presence of MCP, OAuth DCR/token and resource/issuer discovery routes. It catches and suppresses all CLI output containing potential sensitive runtime data, emitting only safe PASS/BLOCKED markers. It does not install packages, run migrations, generate keys, connect to live databases, change Nginx, `.env` or production. A failing test blocks runtime installation.
+
+**Pass outcome permits a subsequent reversible MCP runtime installer to be prepared**, not an automatic live switch. The installed runtime must keep `BAMBODIA_MCP_ENABLED=false` and `BAMBODIA_MCP_WRITES_ENABLED=false` until production signing keys, additive OAuth tables, public metadata, exact ChatGPT callback, and read-only tool acceptance are independently proven. The OAuth code currently supports callback-ID-specific ChatGPT redirects only; do not substitute the newer stable callback unless RFC 9207 issuer identification is separately implemented and verified.
+
+R2 recovery, unrelated marketplace design, live content and database modifications remain excluded from this rehearsal.
