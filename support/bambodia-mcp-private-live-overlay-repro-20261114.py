@@ -109,7 +109,11 @@ def normalize_code(tree):
     for current,dirs,files in os.walk(tree,followlinks=False):
         for name in ["."]+dirs+files:
             path=Path(current) if name=="." else Path(current)/name
-            if path.is_symlink():raise Stop("CLONE_SYMLINK_UNSAFE")
+            if path.is_symlink():
+                # Composer may legitimately contain relative internal symlinks.
+                # They were all verified to remain inside the copied vendor.
+                if path.is_relative_to(tree/"vendor"):continue
+                raise Stop("CLONE_SYMLINK_UNSAFE")
             m=path.lstat().st_mode
             if stat.S_ISDIR(m):path.chmod(0o755)
             elif stat.S_ISREG(m):path.chmod(0o644)
@@ -181,9 +185,13 @@ def clone_runtime():
                     if not resolved.is_relative_to((temp/"vendor").resolve()):
                         raise Stop("PRIVATE_VENDOR_EXTERNAL_SYMLINK")
         normalize_code(temp)
+        import pwd
+        www=pwd.getpwnam("www")
         for root in (temp/"storage",temp/"bootstrap/cache"):
             for current,dirs,files in os.walk(root):
-                Path(current).chmod(0o777 if Path(current)==root else 0o777)
+                directory=Path(current)
+                directory.chown(0,www.pw_gid)
+                directory.chmod(0o770)
         if any((temp/p).exists() for p in (".env",".env.testing","storage/oauth-private.key","storage/oauth-public.key")):
             raise Stop("PRIVATE_CLONE_SECRET_PRESENT")
         env={
