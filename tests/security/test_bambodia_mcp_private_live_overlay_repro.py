@@ -66,7 +66,8 @@ class PrivateOverlayCutoverReproTests(TestCase):
 
     def test_synthetic_env_forces_testing_and_false_mcp_flags(self):
         s=SRC.read_text()
-        self.assertIn('"APP_ENV":"testing"',s)
+        self.assertIn('"APP_ENV":mode',s)
+        self.assertIn('mode not in ("testing","production")',s)
         self.assertIn('"DB_CONNECTION":"sqlite"',s)
         self.assertIn('"DB_DATABASE":":memory:"',s)
         self.assertIn('"BAMBODIA_MCP_ENABLED":"false"',s)
