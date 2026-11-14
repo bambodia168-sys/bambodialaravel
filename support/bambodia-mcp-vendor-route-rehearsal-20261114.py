@@ -158,11 +158,10 @@ def inspect():
     if not (vendor/"autoload.php").is_file():
         raise Stop("CANDIDATE_VENDOR_MISSING")
     installed=installed_versions(file_bytes(vendor/"composer/installed.json"))
-    required={"laravel/framework":"v13.42.0",**REQUIRED_ADDITIONS}
-    for name,version in required.items():
-        if installed.get(name)!=version:
-            raise Stop("VENDOR_PACKAGE_VERSION_MISMATCH")
-    print("MCP_ONLY_VENDOR_INSTALLED_METADATA=PASS")
+    required={**{name:versions[1] for name,versions in EXACT_CHANGES.items()},**added}
+    if any(installed.get(name)!=version for name,version in required.items()):
+        raise Stop("VENDOR_PACKAGE_VERSION_MISMATCH")
+    print("MCP_ONLY_VENDOR_ALL_NINETEEN_AND_SIX_INSTALLED=PASS")
     run_php(["-r","require 'vendor/autoload.php'; if (!class_exists('Laravel\\Passport\\Passport') || !class_exists('Laravel\\Mcp\\Facades\\Mcp')) exit(3);"])
     print("MCP_ONLY_PHP85_VENDOR_AUTOLOAD=PASS")
     routes=json.loads(run_php(["artisan","route:list","--json","--no-ansi"]))
