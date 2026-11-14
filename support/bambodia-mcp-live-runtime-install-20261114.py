@@ -554,15 +554,26 @@ def manual_rollback(directory):
     return 0
 
 
+def inspect_discovery_readiness():
+    entries=safe_patch_inventory()
+    require_www_cache_write_access()
+    print("MCP_ONLY_DISCOVERY_CACHE_READY=PASS")
+    print("MCP_ONLY_DISCOVERY_STAGED_FILE_COUNT="+str(len(entries)))
+    print("MCP_ONLY_DISCOVERY_PRODUCTION_MUTATION=NONE")
+    return 0
+
+
 def main():
     args=sys.argv[1:]
     if args==["--install"]:mode="install"
+    elif args==["--inspect-discovery-readiness"]:mode="inspect"
     elif len(args)==2 and args[0]=="--rollback":mode="rollback"
     else:
-        print("USAGE=--install | --rollback /root/Bambodia-MCP-LiveRollback.<id>")
+        print("USAGE=--inspect-discovery-readiness | --install | --rollback /root/Bambodia-MCP-LiveRollback.<id>")
         return 64
     try:
         if mode=="install":return install()
+        if mode=="inspect":return inspect_discovery_readiness()
         return manual_rollback(Path(args[1]))
     except Stop as error:
         # Stop reason labels are constant, locally authored safety markers.
