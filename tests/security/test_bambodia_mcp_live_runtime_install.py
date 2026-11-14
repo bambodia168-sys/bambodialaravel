@@ -260,3 +260,45 @@ class McpOnlyInstallerSecurityTest(TestCase):
         self.assertIn("MCP_ONLY_ARTISAN_DIAGNOSTIC=DATABASE_SCHEMA_OR_CONNECTION",output.getvalue())
         self.assertNotIn("VALUE",output.getvalue())
         self.assertNotIn("secret",output.getvalue().lower())
+
+    def test_live_route_verification_reports_only_constant_missing_endpoint_names(self):
+        import io, json
+        from contextlib import redirect_stdout
+        entries=[{"uri":uri,"method":method} for uri,method in m.ROUTE_CHECK
+                 if uri!="oauth/token"]
+        with patch.object(m,"as_www",return_value=json.dumps(entries).encode()), \
+             redirect_stdout(io.StringIO()) as out:
+            with self.assertRaisesRegex(m.Stop,"MCP_ROUTES_NOT_REGISTERED"):
+                m.verify_routes()
+        self.assertIn("MCP_ONLY_ROUTE_MISSING=OAUTH_TOKEN_POST",out.getvalue())
+        self.assertIn("MCP_ONLY_ROUTE_CHECK_DETAIL=REQUIRED_ROUTES_MISSING",out.getvalue())
+        self.assertNotIn('"uri"',out.getvalue())
+
+    def test_live_route_verification_accepts_all_expected_methods(self):
+        import io,json
+        from contextlib import redirect_stdout
+        entries=[{"uri":"/"+uri,"method":method} for uri,method in m.ROUTE_CHECK]
+        with patch.object(m,"as_www",return_value=json.dumps(entries).encode()), \
+             redirect_stdout(io.StringIO()) as out:
+            self.assertIsNone(m.verify_routes())
+        self.assertIn("MCP_ONLY_ROUTE_CHECK_DETAIL=PASS",out.getvalue())
+
+    def test_live_route_malformed_payload_is_fail_closed_and_non_disclosing(self):
+        import io
+        from contextlib import redirect_stdout
+        for payload,code in ((b'{secret','INVALID_JSON'),
+                             (b'{"private":"value"}','INVALID_JSON_SHAPE'),
+                             (b'[{"uri":33,"method":"POST"}]','INVALID_ROUTE_FIELDS')):
+            with self.subTest(code=code):
+                with patch.object(m,"as_www",return_value=payload), \
+                     redirect_stdout(io.StringIO()) as out:
+                    with self.assertRaisesRegex(m.Stop,"LIVE_ROUTES_INVALID"):
+                        m.verify_routes()
+                self.assertIn("MCP_ONLY_ROUTE_CHECK_DETAIL="+code,out.getvalue())
+                self.assertNotIn("private",out.getvalue())
+                self.assertNotIn("secret",out.getvalue())
+
+    def test_required_route_labels_cover_exact_trusted_set(self):
+        self.assertEqual(set(m.ROUTE_CHECK_LABELS),m.ROUTE_CHECK)
+        self.assertTrue(all(name.isupper() and len(name)<50
+                            for name in m.ROUTE_CHECK_LABELS.values()))
