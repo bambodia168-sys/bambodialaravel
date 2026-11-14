@@ -209,3 +209,26 @@ class McpOnlyInstallerSecurityTest(TestCase):
         self.assertIn("MCP_ONLY_RUNTIME_BLOCKER=OPERATOR_LOCAL_TTY_REQUIRED",stdout.getvalue())
         self.assertIn("MCP_ONLY_RUNTIME_ACTION=BLOCKED",stdout.getvalue())
 
+
+    def test_cutover_errors_report_only_a_safe_static_phase(self):
+        source=FILE.read_text()
+        required=[
+            'phase="PREPARE_NEW_VENDOR"',
+            'phase="SNAPSHOT_ORIGINAL_SOURCE"',
+            'phase="REVALIDATE_LIVE_BEFORE_MAINTENANCE"',
+            'phase="ENTER_MAINTENANCE"',
+            'phase="MOVE_ORIGINAL_VENDOR"',
+            'phase="ACTIVATE_NEW_VENDOR"',
+            'phase="INSTALL_MCP_SOURCE_PATCH"',
+            'phase="INSTALL_COMPOSER_MANIFESTS"',
+            'phase="VERIFY_MCP_FLAGS_DISABLED"',
+            'phase="VERIFY_LIVE_PHP85_MCP_OAUTH_ROUTES"',
+            'phase="EXIT_MAINTENANCE"',
+        ]
+        for phase in required:
+            with self.subTest(phase=phase):
+                self.assertIn(phase,source)
+        self.assertIn('print("MCP_ONLY_RUNTIME_FAILURE_PHASE="+phase)',source)
+        self.assertIn('print("MCP_ONLY_SOURCE_VENDOR_ROLLBACK=PASS")',source)
+        self.assertNotIn('print(str(error))',source)
+        self.assertNotIn('traceback.print_exc',source)
