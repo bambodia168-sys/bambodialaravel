@@ -66,6 +66,18 @@ class McpOnlyInstallerSecurityTest(TestCase):
                 with self.assertRaises(m.Stop):
                     m.env_flag_off()
 
+    def test_explicit_rollback_does_not_allow_arbitrary_root_path(self):
+        with tempfile.TemporaryDirectory() as dirname:
+            with self.assertRaises(m.Stop):
+                m.manual_rollback(Path(dirname))
+
+    def test_vendor_root_must_be_private_for_source_stage(self):
+        import stat
+        from types import SimpleNamespace
+        with patch.object(m.Path,"lstat",autospec=True,
+                return_value=SimpleNamespace(st_mode=stat.S_IFDIR|0o755,st_uid=0)):
+            self.assertFalse(m.private_dir(m.STAGE))
+
     def test_rollback_preserves_existing_source(self):
         with tempfile.TemporaryDirectory() as directory:
             base=Path(directory)
@@ -82,8 +94,6 @@ class McpOnlyInstallerSecurityTest(TestCase):
             (oldvend/"composer").mkdir(parents=True)
             (oldvend/"autoload.php").write_text("old")
             newvend=live/".mcp-next-vendor"
-            (newvend/"composer").mkdir(parents=True)
-            (newvend/"autoload.php").write_text("new")
             vendor=live/"vendor"
             vendor.mkdir()
             (vendor/"autoload.php").write_text("installed")
