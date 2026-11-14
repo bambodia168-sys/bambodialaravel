@@ -158,6 +158,7 @@ jobs:
           python3 -m py_compile support/bambodia-mcp-vendor-route-rehearsal-20261114.py
           python3 -m py_compile support/bambodia-mcp-live-runtime-install-20261114.py
           python3 -m py_compile support/bambodia-mcp-private-live-overlay-repro-20261114.py
+          python3 -m py_compile support/bambodia-mcp-live-cutover-forensics-readonly-20261114.py
           python3 -m py_compile support/bambodia-mcp-r2-recovery-execution-readiness-readonly-20261114.py
           python3 -m py_compile support/bambodia-mcp-isolated-restore-preflight-20261113.py
           python3 -m py_compile support/bambodia-mcp-restored-manifest-reconcile-20261113.py
@@ -170,6 +171,7 @@ jobs:
           python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_vendor_route_rehearsal.py' -v
           python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_live_runtime_install.py' -v
           python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_private_live_overlay_repro.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_live_cutover_forensics.py' -v
           python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_r2_recovery_contract.py' -v
           python3 - <<'PY'
           from pathlib import Path
