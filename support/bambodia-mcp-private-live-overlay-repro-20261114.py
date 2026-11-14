@@ -167,7 +167,7 @@ def run_ww_php(private_root,env,args,timeout_s,phase):
     No shell, no raw stderr/stdout in user-facing diagnostics. The phase is
     a locally authored constant, never source-derived or user-controlled.
     """
-    if phase not in ("PHP_BINARY","ARTISAN_ROUTE","ARTISAN_DOWN","ARTISAN_UP"):
+    if phase not in ("PHP_BINARY","ARTISAN_ROUTE","ARTISAN_DOWN","ARTISAN_UP","ARTISAN_DISCOVER"):
         raise Stop("UNSAFE_EXECUTION_PHASE")
     proc=None
     try:
@@ -198,8 +198,8 @@ def run_ww_php(private_root,env,args,timeout_s,phase):
     return stdout
 
 
-def clone_runtime(mode="testing", simulate_maintenance=False):
-    if mode not in ("testing","production") or not isinstance(simulate_maintenance,bool):
+def clone_runtime(mode="testing", simulate_maintenance=False, simulate_discovery=False):
+    if mode not in ("testing","production") or not isinstance(simulate_maintenance,bool) or not isinstance(simulate_discovery,bool):
         raise Stop("INVALID_SYNTHETIC_ENV_MODE")
     entries=checked_originals()
     print("MCP_REPRODUCTION_LIVE_ORIGINALS=VERIFIED")
@@ -230,6 +230,11 @@ def clone_runtime(mode="testing", simulate_maintenance=False):
         for name in ("framework/cache","framework/sessions","framework/views","logs"):
             (temp/"storage"/name).mkdir(parents=True,exist_ok=True)
         (temp/"bootstrap/cache").mkdir(parents=True,exist_ok=True)
+        if simulate_discovery:
+            # Exactly the two stale Laravel provider manifests observed on live.
+            # No real .env, storage, config cache, PHP-FPM or DB is copied.
+            for rel in ("bootstrap/cache/packages.php","bootstrap/cache/services.php"):
+                safe_copy_source(LIVE,rel,temp)
         (temp/"public").mkdir(parents=True,exist_ok=True)
         # Avoid symlinks from the private accepted vendor escaping that tree.
         for root,dirs,files in os.walk(temp/"vendor",followlinks=False):
@@ -281,6 +286,18 @@ def clone_runtime(mode="testing", simulate_maintenance=False):
             if not (temp/"storage/framework/down").is_file():
                 raise Stop("PRIVATE_MAINTENANCE_MARKER_NOT_CREATED")
             print("MCP_REPRODUCTION_PRIVATE_MAINTENANCE=ENTERED",flush=True)
+        if simulate_discovery:
+            stale_output=run_ww_php(temp,env,
+                ["artisan","route:list","--json","--no-ansi"],60,"ARTISAN_ROUTE")
+            try: stale_routes=json.loads(stale_output)
+            except (ValueError,UnicodeError):raise Stop("PRIVATE_STALE_ROUTES_INVALID_JSON")
+            print("MCP_REPRODUCTION_STALE_ROUTE_CHECK="+(
+                "ALREADY_COMPLETE" if validate_routes(stale_routes)
+                else "MISSING_REQUIRED"),flush=True)
+            print("MCP_REPRODUCTION_PRIVATE_PACKAGE_DISCOVERY=STARTED",flush=True)
+            run_ww_php(temp,env,["artisan","package:discover","--no-ansi","--no-interaction"],
+                60,"ARTISAN_DISCOVER")
+            print("MCP_REPRODUCTION_PRIVATE_PACKAGE_DISCOVERY=PASS",flush=True)
         print("MCP_REPRODUCTION_ARTISAN_ROUTE_CHECK=STARTED",flush=True)
         route_output=run_ww_php(temp,env,
             ["artisan","route:list","--json","--no-ansi"],60,"ARTISAN_ROUTE")
@@ -289,6 +306,14 @@ def clone_runtime(mode="testing", simulate_maintenance=False):
         if not validate_routes(payload):raise Stop("MCP_OAUTH_ROUTE_REGISTRATION_MISSING")
         print("MCP_REPRODUCTION_REAL_LIVE_SOURCE_PRIVATE_PHP85=PASS")
         print("MCP_REPRODUCTION_REAL_LIVE_SOURCE_ROUTES=PASS")
+        if simulate_discovery:
+            new_packages=read(temp,"bootstrap/cache/packages.php")
+            new_services=read(temp,"bootstrap/cache/services.php")
+            if b"laravel/mcp" not in new_packages or b"laravel/passport" not in new_packages:
+                raise Stop("PRIVATE_DISCOVERY_PACKAGE_MANIFEST_INCOMPLETE")
+            if b"McpServiceProvider" not in new_services or b"PassportServiceProvider" not in new_services:
+                raise Stop("PRIVATE_DISCOVERY_SERVICE_MANIFEST_INCOMPLETE")
+            print("MCP_REPRODUCTION_PRIVATE_PACKAGE_SERVICE_CACHE=PASS",flush=True)
         if simulate_maintenance:
             print("MCP_REPRODUCTION_PRIVATE_MAINTENANCE=EXITING",flush=True)
             run_ww_php(temp,env,
@@ -310,10 +335,13 @@ def main():
         mode="production";simulate_maintenance=False
     elif sys.argv[1:]==["--reproduce-private-maintenance"]:
         mode="production";simulate_maintenance=True
+    elif sys.argv[1:]==["--reproduce-private-package-discovery"]:
+        mode="production";simulate_maintenance=True;simulate_discovery=True
     else:
-        print("USAGE=--reproduce | --reproduce-production-mode | --reproduce-private-maintenance");return 64
+        print("USAGE=--reproduce | --reproduce-production-mode | --reproduce-private-maintenance | --reproduce-private-package-discovery");return 64
     try:
-        clone_runtime(mode,simulate_maintenance=simulate_maintenance)
+        clone_runtime(mode,simulate_maintenance=simulate_maintenance,
+                      simulate_discovery=locals().get("simulate_discovery",False))
         print("MCP_REPRODUCTION_LIVE_FILES=UNCHANGED")
         print("MCP_REPRODUCTION_PRODUCTION_DB=NOT_ACCESSED")
         print("MCP_REPRODUCTION_PRODUCTION_MAINTENANCE=NOT_TOUCHED")
