@@ -90,6 +90,10 @@ This tool intentionally adds the following private manifest fields, which must r
 
 The prior R2 preflight additionally checks exact R2 account ID, `bambodia-backup` bucket, global/default jurisdiction, endpoint format, private bucket exposure, S3 credentials and Restic password existence, owner and reviewer decisions, numeric RPO/RTO/retention, escrow and lifecycle safety. Both preflights must pass their respective declaration gates and an **independent manual approval** before a production backup can begin.
 
+## Owner approval reference template — intentionally unapproved
+
+The version-controlled [R2 recovery approval reference JSON](bambodia-mcp-r2-recovery-approval-template-20261114.json) pre-fills only the already owner-selected `bambodia-backup` / default jurisdiction identifiers; **all 25 approval booleans are false, recovery objectives are null, R2 account ID and repository are empty, and every private credential/password path is empty**. This is a policy reference only, not an operational manifest. A protected reviewer-created manifest must be generated directly under root-only custody *after* actual approvals. Do not commit completed approvals, bucket S3 credential material, the live DB name, or any secrets to the repository.
+
 ## Explicit unresolved decisions (NO values invented)
 
 | Item | Status |
