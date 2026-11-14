@@ -271,19 +271,31 @@ def prepare_vendor_permissions(vendor_root):
     if ok.returncode!=0:raise Stop("WWW_VENDOR_UNREADABLE")
 
 
+def require_local_operator_confirmation(phrase):
+    # Read the EXISTING SSH terminal fds. Some aaPanel shells have a real
+    # /dev/pts/N for stdin but cannot reopen /dev/tty.
+    # Never accept piped heredoc input or skip the typed operator approval.
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        raise Stop("OPERATOR_INTERACTIVE_TTY_REQUIRED")
+    try:
+        if not os.isatty(sys.stdin.fileno()) or not os.isatty(sys.stdout.fileno()):
+            raise Stop("OPERATOR_INTERACTIVE_TTY_REQUIRED")
+        sys.stdout.write("Type "+phrase+": ")
+        sys.stdout.flush()
+        response=sys.stdin.readline()
+    except (OSError,ValueError,TypeError):
+        raise Stop("OPERATOR_TERMINAL_READ_FAILED")
+    if not response:
+        raise Stop("OPERATOR_TERMINAL_EOF")
+    if response.strip()!=phrase:
+        raise Stop("OPERATOR_NOT_CONFIRMED")
+
+
 def install():
     entries=safe_patch_inventory()
     print("MCP_ONLY_LIVE_INSTALL_PREFLIGHT=PASS")
-    if not sys.stdin.isatty():
-        # heredoc launches Python with inherited closed stdin; use /dev/tty.
-        pass
     print("MCP_ONLY_OPERATOR_CONFIRMATION=REQUIRED_IN_LOCAL_TERMINAL",flush=True)
-    try:
-        with open("/dev/tty","r+") as tty:
-            tty.write("Type INSTALL-BAMBODIA-MCP-RUNTIME: ");tty.flush()
-            consent=tty.readline().strip()
-    except OSError:raise Stop("OPERATOR_LOCAL_TTY_REQUIRED")
-    if consent!="INSTALL-BAMBODIA-MCP-RUNTIME":raise Stop("OPERATOR_NOT_CONFIRMED")
+    require_local_operator_confirmation("INSTALL-BAMBODIA-MCP-RUNTIME")
     lock=STAGE/"mcp-deployment.lock"
     fd=os.open(lock,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
     fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -387,13 +399,7 @@ def manual_rollback(directory):
         raise Stop("ROLLBACK_VENDOR_PATH_UNSAFE")
     if not oldvendor.is_dir() or oldvendor.is_symlink() or newvendor.exists():
         raise Stop("ROLLBACK_OLD_VENDOR_MISSING")
-    try:
-        with open("/dev/tty","r+") as tty:
-            tty.write("Type ROLLBACK-BAMBODIA-MCP-RUNTIME: ");tty.flush()
-            approval=tty.readline().strip()
-    except OSError:raise Stop("LOCAL_TTY_REQUIRED")
-    if approval!="ROLLBACK-BAMBODIA-MCP-RUNTIME":
-        raise Stop("ROLLBACK_NOT_CONFIRMED")
+    require_local_operator_confirmation("ROLLBACK-BAMBODIA-MCP-RUNTIME")
     as_www("down","--no-ansi","--no-interaction")
     try:
         rollback(directory,original,oldvendor,newvendor)
