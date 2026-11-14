@@ -408,3 +408,31 @@ class McpOnlyInstallerSecurityTest(TestCase):
         self.assertIn('for rel in list(entries)+["composer.json","composer.lock"]+list(CACHE_REL):',source)
         self.assertIn('|set(CACHE_REL)',source)
         self.assertIn('require_www_cache_write_access()',source)
+
+    def test_discovery_readiness_cli_is_read_only_and_never_confirms_install(self):
+        import io
+        from contextlib import redirect_stdout
+        with patch.object(m,"safe_patch_inventory",return_value={"a.php":"test"}), \
+             patch.object(m,"require_www_cache_write_access") as writable, \
+             patch.object(m,"install") as install, \
+             patch.object(m.sys,"argv",["operator","--inspect-discovery-readiness"]), \
+             redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(m.main(),0)
+        writable.assert_called_once()
+        install.assert_not_called()
+        self.assertIn("MCP_ONLY_DISCOVERY_CACHE_READY=PASS",output.getvalue())
+        self.assertIn("MCP_ONLY_DISCOVERY_PRODUCTION_MUTATION=NONE",output.getvalue())
+
+    def test_discovery_readiness_fails_closed_without_exposing_runtime_secrets(self):
+        import io
+        from contextlib import redirect_stdout
+        with patch.object(m,"safe_patch_inventory",return_value={}), \
+             patch.object(m,"require_www_cache_write_access",
+                          side_effect=m.Stop("WWW_BOOTSTRAP_CACHE_NOT_WRITABLE")), \
+             patch.object(m.sys,"argv",["operator","--inspect-discovery-readiness"]), \
+             patch.object(m,"install") as install, \
+             redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(m.main(),1)
+        install.assert_not_called()
+        self.assertIn("MCP_ONLY_RUNTIME_BLOCKER=WWW_BOOTSTRAP_CACHE_NOT_WRITABLE",output.getvalue())
+        self.assertNotIn("APP_KEY",output.getvalue())
