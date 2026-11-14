@@ -117,3 +117,13 @@ This test must pass independently of the five existing CI workflows before refer
 | Overall production OAuth/MCP release | BLOCKED |
 
 **No automated assumption of approval or guessed credentials is allowed.**
+
+## Gate 2.8 — read-only physical preflight discrepancy and narrow classifier correction (2026-11-14)
+
+The operator's root shell confirmed the exact source blob, all six CI workflows and inspector integrity. The first physical R2 execution-readiness inspection returned `BLOCKED_PRIVATE_REVIEW`, not `BLOCKED_NO_MANIFEST`. A separate metadata-only check established: `/root` is root-owned and a directory but its mode has some group/other access; `/root/bambodia-mcp-recovery` and its `approval.json` **do not exist**. Nothing was modified, no data or credentials were read and no backup exists.
+
+**Root cause of confusing classification:** the inspector previously walked parent mode bits before asking whether the approval path exists, and required all group/other bits on `/root` to be zero. When `/root` was not `0700`, it raised the generic private-review blocker even though no approval manifest had yet been created.
+
+**Narrow code correction:** the inspector now checks the fixed manifest slot via root-owned, metadata-only `lstat`. An absent recovery directory/approval file is classified as `BLOCKED_NO_MANIFEST` only after confirming that `/root` is not group/other-writable; **any group/other WRITE on /root still blocks**. If `/root` has group/other read/traversal bits, the tool reports `MCP_RECOVERY_ROOT_READ_TRAVERSAL=REQUIRES_SEPARATE_REVIEW`, but does not automatically rewrite root permissions. When a recovery child eventually exists it must be root-owned and mode `0700`; the approval file and secret files must be single-link, root-owned, mode `0600` with guarded root-private ancestry. No remote writes, DB reads, backup command or filesystem changes are performed by the inspector.
+
+This is a *classification and custody-check correction only*, not approval to create the manifest, loosen directory modes, install Restic, create S3 keys or run a backup. Before actual approval setup, review the exact root directory access bits and whether changing them could affect services. If other-writable, halt and investigate independently. Do not run recursive chmod/chown. Production MCP stays disabled, release BLOCKED, PR #46 DRAFT/UNMERGED.
