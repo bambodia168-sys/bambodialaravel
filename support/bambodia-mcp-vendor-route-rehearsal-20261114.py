@@ -177,7 +177,14 @@ if __name__=="__main__":
     if sys.argv[1:]!=["--rehearse"]:
         print("USAGE=--rehearse");sys.exit(64)
     try:inspect()
-    except (Stop,FileNotFoundError,ValueError,KeyError,TypeError,UnicodeError,OSError,subprocess.TimeoutExpired):
+    except Stop as error:
+        # Stop codes are constants controlled by this script; never raw PHP logs.
+        print("MCP_ONLY_REHEARSAL_BLOCKER="+str(error))
+        print("MCP_ONLY_READONLY_REHEARSAL=BLOCKED")
+        print("MCP_ONLY_PRODUCTION_UNCHANGED=YES")
+        sys.exit(1)
+    except (FileNotFoundError,ValueError,KeyError,TypeError,UnicodeError,OSError,subprocess.TimeoutExpired):
+        print("MCP_ONLY_REHEARSAL_BLOCKER=SAFE_LOCAL_REVIEW_REQUIRED")
         print("MCP_ONLY_READONLY_REHEARSAL=BLOCKED")
         print("MCP_ONLY_PRODUCTION_UNCHANGED=YES")
         sys.exit(1)
