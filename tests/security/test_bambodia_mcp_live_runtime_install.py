@@ -302,3 +302,109 @@ class McpOnlyInstallerSecurityTest(TestCase):
         self.assertEqual(set(m.ROUTE_CHECK_LABELS),m.ROUTE_CHECK)
         self.assertTrue(all(name.isupper() and len(name)<50
                             for name in m.ROUTE_CHECK_LABELS.values()))
+
+    def test_existing_discovery_cache_bytes_and_metadata_restore_exactly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory)
+            live=base/"live"
+            backup=base/"snapshot"
+            (live/"bootstrap/cache").mkdir(parents=True)
+            (backup/"original").mkdir(parents=True)
+            for path in ("composer.json","composer.lock"):
+                (live/path).write_bytes(b"old original manifest")
+            packages=live/"bootstrap/cache/packages.php"
+            services=live/"bootstrap/cache/services.php"
+            old_packages=b"<?php return ['laravel/framework' => ['providers' => []]];\n"
+            old_services=b"<?php return ['providers' => ['OlderServiceProvider']];\n"
+            packages.write_bytes(old_packages)
+            services.write_bytes(old_services)
+            packages.chmod(0o640)
+            services.chmod(0o644)
+            with patch.object(m,"LIVE",live):
+                original=m.snapshot_originals(backup,{})
+                self.assertEqual(original["bootstrap/cache/packages.php"]["sha"],m.sha(old_packages))
+                self.assertEqual(original["bootstrap/cache/services.php"]["sha"],m.sha(old_services))
+                packages.write_bytes(b"<?php return ['laravel/mcp','laravel/passport'];")
+                services.write_bytes(b"<?php return ['McpServiceProvider','PassportServiceProvider'];")
+                m.rollback(backup,original,live/".absent-oldvendor",live/".absent-newvendor")
+            self.assertEqual(packages.read_bytes(),old_packages)
+            self.assertEqual(services.read_bytes(),old_services)
+            self.assertEqual(stat.S_IMODE(packages.stat().st_mode),0o640)
+            self.assertEqual(stat.S_IMODE(services.stat().st_mode),0o644)
+
+    def test_if_services_cache_was_absent_rollback_unlinks_new_cache(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory)
+            live=base/"live"
+            backup=base/"snapshot"
+            (live/"bootstrap/cache").mkdir(parents=True)
+            for name in ("composer.json","composer.lock"):
+                (live/name).write_bytes(b"original")
+            (live/"bootstrap/cache/packages.php").write_bytes(b"old package manifest")
+            with patch.object(m,"LIVE",live):
+                original=m.snapshot_originals(backup,{})
+                self.assertFalse(original["bootstrap/cache/services.php"]["exists"])
+                (live/"bootstrap/cache/services.php").write_bytes(b"new services manifest")
+                m.rollback(backup,original,live/".absent-oldvendor",live/".absent-newvendor")
+            self.assertFalse((live/"bootstrap/cache/services.php").exists())
+            self.assertEqual((live/"bootstrap/cache/packages.php").read_bytes(),b"old package manifest")
+
+    def test_cache_manifest_verification_requires_both_packages_and_providers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            live=Path(directory)
+            (live/"bootstrap/cache").mkdir(parents=True)
+            packages=live/"bootstrap/cache/packages.php"
+            services=live/"bootstrap/cache/services.php"
+            with patch.object(m,"LIVE",live):
+                packages.write_bytes(b"laravel/mcp laravel/passport")
+                services.write_bytes(b"McpServiceProvider PassportServiceProvider")
+                self.assertIsNone(m.verify_discovery_manifests())
+                services.write_bytes(b"old provider")
+                with self.assertRaisesRegex(m.Stop,"MCP_PROVIDER_DISCOVERY_INCOMPLETE"):
+                    m.verify_discovery_manifests()
+                packages.write_bytes(b"laravel/mcp only")
+                with self.assertRaisesRegex(m.Stop,"MCP_PACKAGE_DISCOVERY_INCOMPLETE"):
+                    m.verify_discovery_manifests()
+
+    def test_custom_package_cache_path_is_fail_closed_without_logging_env(self):
+        with tempfile.TemporaryDirectory() as directory:
+            live=Path(directory)
+            (live/"bootstrap/cache").mkdir(parents=True)
+            env=live/".env"
+            env.write_text("APP_ENV=production\nAPP_PACKAGES_CACHE=/private/secrets\nBAMBODIA_MCP_ENABLED=false\n")
+            with patch.object(m,"LIVE",live), \
+                 patch.dict(m.os.environ,{"APP_PACKAGES_CACHE":"","APP_SERVICES_CACHE":""}):
+                with self.assertRaisesRegex(m.Stop,"CUSTOM_PACKAGE_CACHE_PATH_UNSUPPORTED"):
+                    m.validate_default_package_cache_paths()
+                env.write_text("APP_ENV=production\n")
+                self.assertEqual(m.validate_default_package_cache_paths(),live/"bootstrap/cache")
+                with patch.dict(m.os.environ,{"APP_SERVICES_CACHE":"/private/elsewhere"}):
+                    with self.assertRaisesRegex(m.Stop,"CUSTOM_PACKAGE_CACHE_PATH_UNSUPPORTED"):
+                        m.validate_default_package_cache_paths()
+
+    def test_www_cache_write_preflight_rejects_unwritable_directory(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            live=Path(directory)
+            (live/"bootstrap/cache").mkdir(parents=True)
+            (live/".env").write_text("APP_ENV=production\n")
+            with patch.object(m,"LIVE",live), \
+                 patch.dict(m.os.environ,{"APP_PACKAGES_CACHE":"","APP_SERVICES_CACHE":""}), \
+                 patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=1)) as check:
+                with self.assertRaisesRegex(m.Stop,"WWW_BOOTSTRAP_CACHE_NOT_WRITABLE"):
+                    m.require_www_cache_write_access()
+                self.assertIn("-w",check.call_args.args[0])
+
+    def test_discovery_runs_between_composer_install_and_route_check(self):
+        source=FILE.read_text()
+        composer=source.index('phase="INSTALL_COMPOSER_MANIFESTS"')
+        discovered=source.index('phase="REBUILD_LARAVEL_PACKAGE_DISCOVERY"')
+        routes=source.index('phase="VERIFY_LIVE_PHP85_MCP_OAUTH_ROUTES"')
+        verified=source.index('phase="VERIFY_LARAVEL_DISCOVERY_MANIFESTS"')
+        self.assertLess(composer,discovered)
+        self.assertLess(discovered,routes)
+        self.assertLess(routes,verified)
+        self.assertIn('as_www("package:discover","--no-ansi","--no-interaction")',source)
+        self.assertIn('for rel in list(entries)+["composer.json","composer.lock"]+list(CACHE_REL):',source)
+        self.assertIn('|set(CACHE_REL)',source)
+        self.assertIn('require_www_cache_write_access()',source)
