@@ -62,6 +62,31 @@ def diff_size(before,after):
         if tag in ("replace","insert"):additions+=j2-j1
     return additions,deletions
 
+def lock_packages(data):
+    value=json.loads(data)
+    packages={}
+    for section in ("packages","packages-dev"):
+        for item in value.get(section,[]):
+            if not isinstance(item,dict) or not isinstance(item.get("name"),str):
+                raise Blocked("COMPOSER_LOCK_PACKAGE_INVALID")
+            name=item["name"]
+            version=item.get("version")
+            reference=(item.get("source") or {}).get("reference")
+            if name in packages:
+                raise Blocked("COMPOSER_LOCK_PACKAGE_DUPLICATE")
+            packages[name]=(version,reference)
+    return packages
+
+
+def compare_vendor_lock(original,candidate):
+    old=lock_packages(original)
+    new=lock_packages(candidate)
+    added=sorted(set(new)-set(old))
+    removed=sorted(set(old)-set(new))
+    changed=sorted(k for k in set(old)&set(new) if old[k]!=new[k])
+    return added,removed,changed
+
+
 def inspect():
     if os.geteuid()!=0:raise Blocked("ROOT_REQUIRED")
     if not only_root_dir(STAGE) or not only_root_dir(PRIVATE):
@@ -88,6 +113,15 @@ def inspect():
         raise Blocked("COMPOSER_LOCK_CHANGED")
     print("MCP_ONLY_COMPAT_CANDIDATE=PRIVATE_VENDOR_PRESENT")
     print("MCP_ONLY_COMPAT_COMPOSER_LOCK=PASS")
+    added_packages,removed_packages,changed_packages=compare_vendor_lock(
+        file_bytes(LIVE,"composer.lock"),file_bytes(STAGE,"composer.lock"))
+    print("MCP_ONLY_COMPAT_VENDOR_ADDED_PACKAGES="+str(len(added_packages)))
+    print("MCP_ONLY_COMPAT_VENDOR_REMOVED_PACKAGES="+str(len(removed_packages)))
+    print("MCP_ONLY_COMPAT_VENDOR_CHANGED_PACKAGES="+str(len(changed_packages)))
+    if removed_packages or changed_packages:
+        print("MCP_ONLY_COMPAT_VENDOR_RECONCILIATION=REQUIRED")
+    else:
+        print("MCP_ONLY_COMPAT_VENDOR_RECONCILIATION=ADDITIVE_ONLY")
     patches={}
     for rel,expected in entries.items():
         candidate=file_bytes(STAGE/"patch",rel)
