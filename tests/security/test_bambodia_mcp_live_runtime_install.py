@@ -232,3 +232,31 @@ class McpOnlyInstallerSecurityTest(TestCase):
         self.assertIn('print("MCP_ONLY_SOURCE_VENDOR_ROLLBACK=PASS")',source)
         self.assertNotIn('print(str(error))',source)
         self.assertNotIn('traceback.print_exc',source)
+
+    def test_artisan_error_classification_never_reveals_exception_or_keys(self):
+        cases=(
+            (b"SQLSTATE[42S02] secret-token=ABC","DATABASE_SCHEMA_OR_CONNECTION"),
+            (b"PHP Warning: permission denied in private path","FILESYSTEM_ACCESS"),
+            (b"Class Laravel\\Passport\\Passport not found SECRET","PHP_FILE_OR_CLASS_AUTOLOAD"),
+            (b"PHP Parse error: syntax error PRIVATE","PHP_SYNTAX"),
+            (b"Unable to locate the private key SECRET","OAUTH_KEY_CONFIGURATION"),
+            (b"unexpected problem with auth cookie SECRET","UNCLASSIFIED_APPLICATION_FAILURE"),
+        )
+        for stderr,category in cases:
+            with self.subTest(category=category):
+                self.assertEqual(m.classify_artisan_error(stderr),category)
+                self.assertNotIn("SECRET",m.classify_artisan_error(stderr))
+                self.assertNotIn("ABC",m.classify_artisan_error(stderr))
+
+    def test_artisan_execution_failure_reports_only_static_category(self):
+        import io
+        from contextlib import redirect_stdout
+        from types import SimpleNamespace
+        fake=SimpleNamespace(returncode=1,stderr=b"SQLSTATE secret=VALUE",stdout=b"")
+        with patch.object(m.subprocess,"run",return_value=fake), \
+             redirect_stdout(io.StringIO()) as output:
+            with self.assertRaisesRegex(m.Stop,"LIVE_ARTISAN_CHECK_FAILED"):
+                m.as_www("route:list","--json")
+        self.assertIn("MCP_ONLY_ARTISAN_DIAGNOSTIC=DATABASE_SCHEMA_OR_CONNECTION",output.getvalue())
+        self.assertNotIn("VALUE",output.getvalue())
+        self.assertNotIn("secret",output.getvalue().lower())
