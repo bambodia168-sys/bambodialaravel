@@ -181,3 +181,21 @@ The owner named the **existing** bucket `bambodia` for proposed backup storage. 
 Official documentation: https://developers.cloudflare.com/r2/buckets/public-buckets/ and https://developers.cloudflare.com/r2/reference/data-location/
 
 **Gate remains BLOCKED**: no approved private R2 destination, secrets, key escrow, manifest, approved RPO/RTO/retention, backup or isolated restore. PR #46 remains DRAFT/UNMERGED; production remains unchanged.
+
+## Gate 2.5 — approved dedicated private bucket physically created (2026-11-14)
+
+Owner explicitly authorized **creating only** the R2 bucket `bambodia-backup` in the Cloudflare account **Bambodia** with the **default non-jurisdictional** setting, keeping `r2.dev` public access disabled and zero custom domains. The owner's authorization explicitly excluded API credential creation, Restic init, backups and restores.
+
+The connected Cloudflare API was used to create **exactly this one bucket**, then re-read its settings independently:
+- Bucket `bambodia-backup`: **CREATED**, location APAC, jurisdiction `default`, storage class `Standard`.
+- Managed public `r2.dev` endpoint: `enabled=false`.
+- Custom domains: **0 configured, 0 enabled**.
+- Bucket lock rules: **0**.
+- The one enabled lifecycle rule is multipart-upload abort/cleanup, NOT an observed generic age-based object-expiration rule.
+- Existing `bambodia` bucket and domain settings: unchanged.
+
+**No credentials or Restic password generated, no Restic installation, no repository initialization, no source data access, no backup/upload or restore** were performed. Direct public-domain access to this new bucket is disabled as verified, but network/Access policy, credential scoping, key escrow and security reviewer signoff are still separate controls.
+
+**Next approvals required:** securely generated bucket-scoped R2 API credentials; separately controlled/escrowed high-entropy Restic password; approved RPO/RTO/retention and independent security reviewer; recovery source scope, MySQL/media consistency and write-quiescence plan; isolated restore target; separate owner authorization for any repository init, backup and restore.
+
+This creation closes only the *dedicated private bucket provisioning* sub-gate. **Overall production recovery and OAuth gate: BLOCKED. PR #46 DRAFT/UNMERGED, production MCP unchanged.**
