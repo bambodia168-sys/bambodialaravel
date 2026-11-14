@@ -78,6 +78,30 @@ class McpOnlyInstallerSecurityTest(TestCase):
                 return_value=SimpleNamespace(st_mode=stat.S_IFDIR|0o755,st_uid=0)):
             self.assertFalse(m.private_dir(m.STAGE))
 
+    def test_new_laravel_directories_remain_www_readable_with_strict_root_umask(self):
+        with tempfile.TemporaryDirectory() as directory:
+            live=Path(directory)/"application"
+            live.mkdir(mode=0o700)
+            dest=live/"app/Http/Controllers/Developer/NewController.php"
+            with patch.object(m,"LIVE",live):
+                old=os.umask(0o077)
+                try:
+                    m.safe_live_parent(dest)
+                finally:
+                    os.umask(old)
+            for path in (live/"app",live/"app/Http",live/"app/Http/Controllers",
+                         live/"app/Http/Controllers/Developer"):
+                self.assertEqual(stat.S_IMODE(path.stat().st_mode),0o755)
+
+    def test_parent_symlink_never_followed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            live=Path(directory)/"application"
+            live.mkdir()
+            (live/"app").symlink_to(Path(directory),target_is_directory=True)
+            with patch.object(m,"LIVE",live):
+                with self.assertRaises(m.Stop):
+                    m.safe_live_parent(live/"app/Controls/file.php")
+
     def test_rollback_preserves_existing_source(self):
         with tempfile.TemporaryDirectory() as directory:
             base=Path(directory)
