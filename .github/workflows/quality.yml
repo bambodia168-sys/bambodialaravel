@@ -154,6 +154,7 @@ jobs:
           python3 -m py_compile support/bambodia-mcp-r2-recovery-execution-readiness-readonly-20261114.py
           python3 -m py_compile support/bambodia-mcp-readonly-go-live-20261114.py
           python3 -m py_compile support/bambodia-mcp-minimal-runtime-stage-20261114.py
+          python3 -m py_compile support/bambodia-mcp-compatibility-review-readonly-20261114.py
           python3 -m py_compile support/bambodia-mcp-r2-recovery-execution-readiness-readonly-20261114.py
           python3 -m py_compile support/bambodia-mcp-isolated-restore-preflight-20261113.py
           python3 -m py_compile support/bambodia-mcp-restored-manifest-reconcile-20261113.py
@@ -162,6 +163,7 @@ jobs:
           python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_r2_recovery_contract.py' -v
           python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_only_go_live.py' -v
           python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_minimal_runtime_stage.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_compatibility_review.py' -v
           python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_r2_recovery_contract.py' -v
           python3 - <<'PY'
           from pathlib import Path
