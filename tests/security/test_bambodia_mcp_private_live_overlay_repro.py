@@ -178,7 +178,7 @@ class PrivateOverlayCutoverReproTests(TestCase):
              patch.object(m.sys,"argv",["repro","--reproduce-production-mode"]):
             with redirect_stdout(io.StringIO()) as output:
                 self.assertEqual(m.main(),0)
-        run.assert_called_once_with("production")
+        run.assert_called_once_with("production",simulate_maintenance=False)
         self.assertIn("MCP_REPRODUCTION_LIVE_FILES=UNCHANGED",output.getvalue())
         self.assertIn("MCP_REPRODUCTION_PRODUCTION_DB=NOT_ACCESSED",output.getvalue())
 
@@ -201,3 +201,36 @@ class PrivateOverlayCutoverReproTests(TestCase):
         self.assertIn('"BAMBODIA_MCP_ENABLED":"false"',source)
         self.assertIn('"BAMBODIA_MCP_WRITES_ENABLED":"false"',source)
         self.assertNotIn('read(LIVE,".env")',source)
+
+    def test_private_maintenance_mode_is_explicit_and_never_live(self):
+        import io
+        from contextlib import redirect_stdout
+        with patch.object(m,"clone_runtime") as run, \
+             patch.object(m.sys,"argv",["repro","--reproduce-private-maintenance"]):
+            with redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(m.main(),0)
+        run.assert_called_once_with("production",simulate_maintenance=True)
+        self.assertIn("MCP_REPRODUCTION_LIVE_FILES=UNCHANGED",out.getvalue())
+        self.assertIn("MCP_REPRODUCTION_PRODUCTION_DB=NOT_ACCESSED",out.getvalue())
+
+    def test_private_maintenance_uses_clone_only_and_runs_up_after_route_check(self):
+        s=SRC.read_text()
+        self.assertIn('run_ww_php(temp,env,',s)
+        self.assertIn('["artisan","down","--no-ansi","--no-interaction"]',s)
+        self.assertIn('["artisan","up","--no-ansi","--no-interaction"]',s)
+        self.assertIn('(temp/"storage/framework/down").is_file()',s)
+        self.assertIn('(temp/"storage/framework/down").exists()',s)
+        self.assertIn('MCP_REPRODUCTION_PRIVATE_MAINTENANCE_RECOVERY=PASS',s)
+        self.assertNotIn('run_ww_php(LIVE,env',s)
+        self.assertNotIn('shutil.rmtree(LIVE)',s)
+
+    def test_down_up_process_phases_are_allowed_but_not_unsafe_user_phases(self):
+        from types import SimpleNamespace
+        mock_result=SimpleNamespace(returncode=0,pid=101,
+                                    communicate=lambda timeout:(b"",b""))
+        with patch.object(m,"safe_runuser_binary",return_value="/usr/sbin/runuser"), \
+             patch.object(m.subprocess,"Popen",return_value=mock_result):
+            self.assertEqual(m.run_ww_php(m.LIVE,{},["artisan","down"],30,"ARTISAN_DOWN"),b"")
+            self.assertEqual(m.run_ww_php(m.LIVE,{},["artisan","up"],30,"ARTISAN_UP"),b"")
+        with self.assertRaisesRegex(m.Stop,"UNSAFE_EXECUTION_PHASE"):
+            m.run_ww_php(m.LIVE,{},["artisan","migrate"],30,"ARTISAN_MIGRATE")
