@@ -165,3 +165,19 @@ Provider-specific offline root-only tool: `support/bambodia-mcp-r2-approval-read
 Additional private manifest fields required before provider-specific approval can even be declared (all currently UNAPPROVED): `r2_account_id`, `r2_bucket_name`, `r2_jurisdiction` (matching selected account endpoint), `r2_credentials_file` (root-private file), and the booleans `r2_private_bucket_verified`, `r2_scoped_s3_credential_reviewed`, `r2_endpoint_independently_verified`, `r2_repo_prefix_no_expiry_verified`, `r2_restic_retention_maintenance_approved`, `r2_independent_offhost_secret_escrow_verified`. The earlier generic owner/security signoffs, approved RPO/RTO/retention, DB/media scope, quiescence, rollback plan and isolated restore target are also required.
 
 Even when all declarations are present, the result is `COMPLETE_NOT_INDEPENDENTLY_PROVEN`, **not backup authorization**. The scripts do not create or assume a destination, R2 keys or a Restic secret. The current state remains **NO BUCKET CREATED / NO BACKUP / NO RESTORE / PR DRAFT / RELEASE BLOCKED**.
+
+## Gate 2.4 — owner-identified existing R2 bucket "bambodia" (read-only verified 2026-11-14)
+
+The owner named the **existing** bucket `bambodia` for proposed backup storage. Connected Cloudflare API was used **READ-ONLY** to verify its state in the Cloudflare account named Bambodia:
+
+- Bucket `bambodia` **EXISTS**, created 2026-05-24; bucket location **APAC**, jurisdiction **default/non-jurisdictional** (not a selected eu/us/fedramp jurisdiction).
+- Managed public `r2.dev` domain is disabled.
+- **One custom domain is enabled**, its SSL and ownership statuses are active. Cloudflare documentation explains that a connected custom domain can deliver bucket objects publicly; whether any additional Access policy applies or which objects exist was **NOT VERIFIED**. Never assume the bucket is private merely because `r2.dev` is disabled.
+- Lifecycle inspection returned **one enabled multipart-upload abort/cleanup rule**, not an identified broad object-expiration rule. No bucket lock rules were returned.
+- No R2 object names or contents, access keys, account IDs or custom domain names were read or printed; no bucket modification, domain change, key creation, Restic installation, repository init, backup or restore occurred.
+
+**Decision: `bambodia` is NOT APPROVED as the encrypted backup destination while the enabled custom domain remains and independent privacy/tenant/Access review is missing.** Do not set `r2_private_bucket_verified=true` for this bucket. Do not attempt `restic init` or upload a backup into its current namespace. Do not disable its existing custom domain without a separate, explicit owner impact review and change authorization; it may serve existing production assets. The safe default is an owner-named **new dedicated private R2 backup bucket** with managed `r2.dev` disabled, zero enabled custom domains, separate scoped credentials and validated retention/key custody. The owner has not yet chosen the new bucket name or authorized bucket creation. An existing bucket may only be reconsidered after independent proof that all paths and object keys are appropriately private, and explicit owner/security signoff.
+
+Official documentation: https://developers.cloudflare.com/r2/buckets/public-buckets/ and https://developers.cloudflare.com/r2/reference/data-location/
+
+**Gate remains BLOCKED**: no approved private R2 destination, secrets, key escrow, manifest, approved RPO/RTO/retention, backup or isolated restore. PR #46 remains DRAFT/UNMERGED; production remains unchanged.
