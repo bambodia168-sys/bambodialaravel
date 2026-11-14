@@ -10,6 +10,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import pwd
 import shutil
 import stat
 import sys
@@ -69,6 +70,7 @@ def replay():
         # Redirect the accepted installer's write_atomic and safe_live_parent
         # logic, including actual chown and root umask handling, to /root ONLY.
         installer.LIVE=clone
+        www=pwd.getpwnam("www")
         counter=0
         for rel in entries:
             source=installer.guarded_path(STAGE/"patch",rel)
@@ -78,8 +80,8 @@ def replay():
                     installer.guarded_path(clone,rel),
                     installer.read_file(source),
                     current["mode"] if current else 0o644,
-                    current["uid"] if current else 0,
-                    current["gid"] if current else 0)
+                    current["uid"] if current else www.pw_uid,
+                    current["gid"] if current else www.pw_gid)
             except Exception:
                 print(f"MCP_WRITE_REPLAY_FAILED_AT_INDEX={counter+1}")
                 print("MCP_WRITE_REPLAY_STAGE=CODE_FILE_WRITE")
