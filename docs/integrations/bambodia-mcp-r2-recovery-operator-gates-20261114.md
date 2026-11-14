@@ -94,6 +94,12 @@ The prior R2 preflight additionally checks exact R2 account ID, `bambodia-backup
 
 The version-controlled [R2 recovery approval reference JSON](bambodia-mcp-r2-recovery-approval-template-20261114.json) pre-fills only the already owner-selected `bambodia-backup` / default jurisdiction identifiers; **all 25 approval booleans are false, recovery objectives are null, R2 account ID and repository are empty, and every private credential/password path is empty**. This is a policy reference only, not an operational manifest. A protected reviewer-created manifest must be generated directly under root-only custody *after* actual approvals. Do not commit completed approvals, bucket S3 credential material, the live DB name, or any secrets to the repository.
 
+## Synthetic end-to-end Restic acceptance (isolated CI ONLY)
+
+The draft branch contains `tests/security/bambodia-mcp-r2-restic-synthetic-restore-qa.sh` and a dedicated GitHub workflow `bambodia-mcp-r2-restic-synthetic.yml`. The workflow installs Ubuntu's packaged Restic on an ephemeral runner, generates an ephemeral local-only password, creates a **local-only synthetic Restic repository**, saves disposable SQL-like and media fixture snapshots, checks repository integrity, restores both into a separate runner-local directory, verifies exact fixture content, and asserts that a failing stream child cannot create a valid backup snapshot. It cannot access production MySQL, Bambodia aaPanel, R2, existing credentials or a live Restic key. This validates Restic mechanics only, **not** production backup, R2 S3 network compatibility or independent real-host recovery.
+
+This test must pass independently of the five existing CI workflows before referring to encrypted-backup/restore tooling as synthetically accepted. Even if all synthetic checks pass, **no production snapshot or restore is implied**.
+
 ## Explicit unresolved decisions (NO values invented)
 
 | Item | Status |
