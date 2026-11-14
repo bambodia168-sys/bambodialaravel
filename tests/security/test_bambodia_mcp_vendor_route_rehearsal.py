@@ -43,7 +43,8 @@ class VendorRouteRehearsalTests(TestCase):
         rows=[{"uri":p,"method":method} for p,method in gate.ROUTES]
         self.assertTrue(gate.validate_routes(rows))
         self.assertFalse(gate.validate_routes(rows[:-1]))
-        self.assertFalse(gate.validate_routes({"routes":rows}))
+        with self.assertRaises(gate.Stop):
+            gate.validate_routes({"routes":rows})
 
     def test_read_only_rehearsal_denies_nonroot(self):
         with patch.object(gate.os,"geteuid",return_value=1001):
