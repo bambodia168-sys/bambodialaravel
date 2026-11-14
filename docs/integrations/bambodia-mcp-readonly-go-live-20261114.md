@@ -39,3 +39,17 @@ Committed `support/bambodia-mcp-minimal-runtime-stage-20261114.py --stage`. It v
 After the physical stage succeeds, review the exact existing-file change inventory and candidate package diff, build a narrowly scoped **reversible installer** against current host runtime, then install MCP/Passport and forward-only OAuth schema in a controlled deployment window (with minimal relevant rollback). Run `--inspect` then `--enable-readonly` only after those prerequisites pass. Keep write tools off. Actual ChatGPT OAuth linking remains a separate final acceptance.
 
 **Current production MCP: not enabled.** This work excludes further R2 backup planning per owner's explicit scope direction.
+
+## Physical MCP-only staging acceptance — ten code differences (2026-11-14)
+
+The operator successfully executed the SHA-pinned private-only 36-file stage on aaPanel from draft head `1a9cf4fd12bf2db8edde8bbbe91a73cd70275c79` (6/6 commit-specific CI PASS). Sanitized actual output:
+- `MCP_ONLY_PROTECTED_LIVE_SOURCE=UNCHANGED`, `MCP_ONLY_UNRELATED_GLOBAL_FRONTEND=NOT_COPIED_OR_MODIFIED`
+- `MCP_ONLY_PATCH_FILES_VERIFIED=36`, `MCP_ONLY_EXISTING_FILES_DIFFER=10`
+- `MCP_ONLY_PRIVATE_STAGE=CREATED`, at root-private `/root/Bambodia-MCP-Only-Install.kw4pjkmi`
+- `MCP_ONLY_INSTALLABLE_RELEASE=NOT_YET_APPROVED`; no production files, vendor, migrations, environment or feature flags touched.
+
+**Immediate installation compatibility step:** `support/bambodia-mcp-compatibility-review-readonly-20261114.py --inspect` inspects only the immutable root-private stage, its expected 36 file SHA-256 values, the nine live MCP-critical snapshots, and the ten currently modified source files, plus the Composer lockfile package inventories. It prints code filenames and aggregate changed line counts (not source contents) and reports whether Composer adds dependencies without altering/removing existing dependency versions. It does not copy vendor, install packages, run PHP, connect to MySQL, modify the live website, enable MCP, touch credential files or R2. An unsafe source change or hash mismatch blocks; a non-additive Composer change requires explicit dependency reconciliation before a live vendor swap.
+
+This is the final **code-compatibility review**, not another disaster-recovery exercise. When code/Composer compatibility is proven, a narrowly scoped installer will be prepared that preserves all ten known old live versions and the existing vendor/Composer state for rollback, applies only the tested MCP files and OAuth schema, checks public discovery/authentication endpoints, then permits read-only MCP activation with writes disabled and independent ChatGPT OAuth acceptance.
+
+**No user authorization to skip the ten-file compatibility gate or overwrite newer production code should be inferred from the request to enable MCP.**
