@@ -72,3 +72,33 @@ class PrivateOverlayCutoverReproTests(TestCase):
         self.assertIn('"BAMBODIA_MCP_ENABLED":"false"',s)
         self.assertIn('"BAMBODIA_MCP_WRITES_ENABLED":"false"',s)
         self.assertNotIn('".env",temp',s)
+
+    def test_synthetic_clone_permissions_use_os_chown_not_path_chown(self):
+        from types import SimpleNamespace
+        import stat
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)/"clone"
+            source=root/"app/Example.php"
+            source.parent.mkdir(parents=True)
+            source.write_text("<?php",encoding="utf-8")
+            with patch.object(m.os,"chown") as chown, \
+                 patch("pwd.getpwnam",return_value=SimpleNamespace(pw_gid=1234)):
+                m.normalize_code(root)
+            self.assertEqual(stat.S_IMODE(source.stat().st_mode),0o640)
+            self.assertEqual(stat.S_IMODE(source.parent.stat().st_mode),0o750)
+            chown.assert_any_call(root,0,1234)
+            chown.assert_any_call(source,0,1234)
+        self.assertNotIn(".chown(",SRC.read_text().replace("os.chown(",""))
+
+    def test_unexpected_attribute_error_is_safe_and_no_traceback_leaks(self):
+        import io
+        from contextlib import redirect_stdout
+        with patch.object(m,"clone_runtime",side_effect=AttributeError("secret detail")), \
+             patch.object(m.sys,"argv",["test","--reproduce"]):
+            buffer=io.StringIO()
+            with redirect_stdout(buffer):
+                outcome=m.main()
+        self.assertEqual(outcome,1)
+        self.assertIn("MCP_REPRODUCTION_BLOCKER=PRIVATE_REVIEW_REQUIRED",buffer.getvalue())
+        self.assertNotIn("secret detail",buffer.getvalue())
+
