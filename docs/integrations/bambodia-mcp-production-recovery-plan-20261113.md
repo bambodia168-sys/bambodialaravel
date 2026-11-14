@@ -18,6 +18,14 @@ The Laravel repository defines storage/app/private as its local disk, storage/ap
 
 Expected results: MCP_TOPOLOGY_LIVE_IDENTITY=PASS, MCP_TOPOLOGY_AUDIT=READ_ONLY_COMPLETED and MCP_PRODUCTION_RELEASE=BLOCKED. Stop and investigate any changed vhost/Composer hash, unsafe env, unexpected storage symlink, scan error/truncation, different filesystem, remote storage or non-explicitly-off feature switch.
 
+## Cloudflare R2 off-server backup decision (PLANNING ONLY, 2026-11-14)
+
+Cloudflare R2 was selected by the owner as the **candidate provider for backup approval and implementation planning**, without selecting or creating any account, bucket, API token, client-side Restic password, encryption escrow, repository, schedule or backup. The full provider-specific approval checklist, R2 S3 endpoint shape, prohibited automatic lifecycle deletion and bucket-lock/Restic-prune interaction, reversible consistency/restore execution plan and required independent go/no-go criteria are in:
+
+[Cloudflare R2 backup approval and implementation plan](bambodia-mcp-cloudflare-r2-backup-approval-plan-20261114.md)
+
+At plan preparation time, Restic remained not installed, the root-private approval manifest was not present, and no approved remote destination, key custody, RPO, RTO or retention policy existed. **No backup, repository initialization, remote access test or isolated restore has happened.** Keep this recovery gate BLOCKED.
+
 ## Gate 2 — approved encrypted backup (NOT EXECUTED)
 
 1. Under restricted access, confirm the effective database engine/host/database/user, table engines, migration state, binlog/PITR settings and the actual current app connection; separately confirm local and cloud media roots and object versions. Do not paste identifiers or credentials into chat.
