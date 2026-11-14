@@ -329,7 +329,7 @@ def verify_routes():
 
 def snapshot_originals(path,entries):
     original={}
-    for rel in list(entries)+["composer.json","composer.lock"]:
+    for rel in list(entries)+["composer.json","composer.lock"]+list(CACHE_REL):
         p=guarded_path(LIVE,rel)
         if p.exists():
             s=p.lstat()
@@ -409,6 +409,7 @@ def require_local_operator_confirmation(phrase):
 
 def install():
     entries=safe_patch_inventory()
+    require_www_cache_write_access()
     print("MCP_ONLY_LIVE_INSTALL_PREFLIGHT=PASS")
     print("MCP_ONLY_OPERATOR_CONFIRMATION=REQUIRED_IN_LOCAL_TERMINAL",flush=True)
     require_local_operator_confirmation("INSTALL-BAMBODIA-MCP-RUNTIME")
@@ -459,11 +460,17 @@ def install():
         for name in ("composer.json","composer.lock"):
             record=previous[name]
             write_atomic(LIVE/name,read_file(STAGE/name),record["mode"],record["uid"],record["gid"])
+        phase="REBUILD_LARAVEL_PACKAGE_DISCOVERY"
+        as_www("package:discover","--no-ansi","--no-interaction")
+        print("MCP_ONLY_PACKAGE_DISCOVERY=PASS")
         phase="VERIFY_MCP_FLAGS_DISABLED"
         env_flag_off()
         phase="VERIFY_LIVE_PHP85_MCP_OAUTH_ROUTES"
         verify_routes()
         print("MCP_ONLY_PHP85_LIVE_ROUTE_REGISTRATION=PASS")
+        phase="VERIFY_LARAVEL_DISCOVERY_MANIFESTS"
+        verify_discovery_manifests()
+        print("MCP_ONLY_PACKAGE_SERVICE_CACHE=VERIFIED")
         state=json.loads(read_file(backup/"rollback.json",65536))
         state["state"]="INSTALLED_FLAGS_OFF"
         (backup/"rollback.json").write_text(json.dumps(state,indent=2)+"\n")
@@ -512,7 +519,7 @@ def manual_rollback(directory):
     if obj.get("state")!="INSTALLED_FLAGS_OFF":
         raise Stop("ROLLBACK_NOT_IN_INSTALLED_STATE")
     original=obj.get("original",{})
-    if not isinstance(original,dict) or set(original)!=set(json.loads(read_file(STAGE/"review.json",65536))["mcp_only_patch_sha256"])|{"composer.json","composer.lock"}:
+    if not isinstance(original,dict) or set(original)!=set(json.loads(read_file(STAGE/"review.json",65536))["mcp_only_patch_sha256"])|{"composer.json","composer.lock"}|set(CACHE_REL):
         raise Stop("ROLLBACK_SOURCE_MANIFEST_CHANGED")
     if sha(read_file(LIVE/"composer.lock"))!=NEW_LOCK_SHA:
         raise Stop("LIVE_CHANGED_AFTER_MCP_INSTALL")
@@ -520,6 +527,7 @@ def manual_rollback(directory):
         if sha(read_file(guarded_path(LIVE,rel)))!=sha(read_file(guarded_path(STAGE/"patch",rel))):
             raise Stop("LIVE_SOURCE_EDITED_SINCE_INSTALL")
     env_flag_off()
+    validate_default_package_cache_paths()
     oldvendor=Path(obj.get("old_vendor",""))
     newvendor=Path(obj.get("new_vendor",""))
     if oldvendor.parent!=LIVE or newvendor.parent!=LIVE or \
