@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -150,6 +151,43 @@ def validate_routes(payload):
         seen.update((uri.lstrip("/"),method) for method in methods.split("|"))
     return EXPECT.issubset(seen)
 
+def run_ww_php(private_root,env,args,timeout_s,phase):
+    """Launch only isolated test PHP; kill/reap the whole child group on timeout.
+
+    No shell, no raw stderr/stdout in user-facing diagnostics. The phase is
+    a locally authored constant, never source-derived or user-controlled.
+    """
+    if phase not in ("PHP_BINARY","ARTISAN_ROUTE"):
+        raise Stop("UNSAFE_EXECUTION_PHASE")
+    proc=None
+    try:
+        proc=subprocess.Popen(
+            ["runuser","-u","www","--",str(PHP),*args],
+            cwd=str(private_root),env=env,
+            stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+            stdin=subprocess.DEVNULL,start_new_session=True,
+        )
+    except OSError:
+        raise Stop("PHP85_"+phase+"_START_FAILED")
+    try:
+        stdout,stderr=proc.communicate(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid,signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        try:
+            proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            raise Stop("PHP85_"+phase+"_TIMEOUT_KILL_UNCONFIRMED")
+        raise Stop("PHP85_"+phase+"_TIMEOUT_"+str(timeout_s)+"S")
+    if proc.returncode!=0:
+        raise Stop("PHP85_"+phase+"_"+sanitize_php_error(stderr))
+    if len(stdout)>2_000_000 or len(stderr)>2_000_000:
+        raise Stop("PHP85_"+phase+"_EXCESSIVE_OUTPUT")
+    return stdout
+
+
 def clone_runtime():
     entries=checked_originals()
     print("MCP_REPRODUCTION_LIVE_ORIGINALS=VERIFIED")
@@ -218,16 +256,14 @@ def clone_runtime():
           "BAMBODIA_MCP_WRITES_ENABLED":"false",
         }
         print("MCP_REPRODUCTION_PRIVATE_SOURCE_OVERLAY=36_FILES",flush=True)
-        try:
-            result=subprocess.run(["runuser","-u","www","--",str(PHP),"artisan",
-                                   "route:list","--json","--no-ansi"],
-                                  cwd=str(temp),env=env,capture_output=True,
-                                  timeout=60,check=False)
-        except (OSError,subprocess.TimeoutExpired):
-            raise Stop("PHP85_ISOLATED_EXECUTION_FAILED")
-        if result.returncode!=0:
-            raise Stop("PHP85_"+sanitize_php_error(result.stderr))
-        try: payload=json.loads(result.stdout)
+        marker=run_ww_php(temp,env,["-r","echo 'PHP85_OK';"],15,"PHP_BINARY")
+        if marker.strip()!=b"PHP85_OK":
+            raise Stop("PHP85_BINARY_UNEXPECTED_OUTPUT")
+        print("MCP_REPRODUCTION_WWW_PHP85_PROCESS=PASS",flush=True)
+        print("MCP_REPRODUCTION_ARTISAN_ROUTE_CHECK=STARTED",flush=True)
+        route_output=run_ww_php(temp,env,
+            ["artisan","route:list","--json","--no-ansi"],60,"ARTISAN_ROUTE")
+        try: payload=json.loads(route_output)
         except (ValueError,UnicodeError):raise Stop("PHP85_ROUTE_JSON_INVALID")
         if not validate_routes(payload):raise Stop("MCP_OAUTH_ROUTE_REGISTRATION_MISSING")
         print("MCP_REPRODUCTION_REAL_LIVE_SOURCE_PRIVATE_PHP85=PASS")
