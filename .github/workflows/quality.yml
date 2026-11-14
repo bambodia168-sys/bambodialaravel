@@ -150,9 +150,11 @@ jobs:
           python3 -m py_compile support/bambodia-mcp-private-access-impact-readonly-20261114.py
           python3 -m py_compile support/bambodia-mcp-single-file-approved-remediation-20261114.py
           python3 -m py_compile support/bambodia-mcp-offsite-backup-approval-preflight-20261113.py
+          python3 -m py_compile support/bambodia-mcp-r2-approval-readonly-20261114.py
           python3 -m py_compile support/bambodia-mcp-isolated-restore-preflight-20261113.py
           python3 -m py_compile support/bambodia-mcp-restored-manifest-reconcile-20261113.py
           python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_recovery_preflight.py' -v
+          python3 -m unittest discover -s tests/security -p 'test_bambodia_mcp_r2_approval.py' -v
           python3 - <<'PY'
           from pathlib import Path
           local=Path("support/bambodia-mcp-private-file-review-local-20261113.py").read_text()
