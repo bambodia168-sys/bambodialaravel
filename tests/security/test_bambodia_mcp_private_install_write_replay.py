@@ -56,3 +56,10 @@ class McpWriteReplaySafetyTests(TestCase):
              patch.object(mod,"replay") as run:
             self.assertEqual(mod.main(),64)
             run.assert_not_called()
+
+    def test_new_patch_file_owner_matches_exact_installer_www_defaults(self):
+        source=FILE.read_text()
+        self.assertIn('www=pwd.getpwnam("www")',source)
+        self.assertIn('current["uid"] if current else www.pw_uid',source)
+        self.assertIn('current["gid"] if current else www.pw_gid',source)
+        self.assertNotIn('current["uid"] if current else 0',source)
