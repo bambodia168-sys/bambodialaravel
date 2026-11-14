@@ -137,7 +137,7 @@ def main():
     if not options.inspect or os.geteuid()!=0:
         raise Blocked()
     print("MCP_RECOVERY_BUCKET=bambodia-backup")
-    print("MCP_RECOVERY_BUCKET_ACCESS=PROVIDER_READONLY_PREVIOUSLY_VERIFIED")
+    print("MCP_RECOVERY_BUCKET_ACCESS=NOT_TESTED_IN_THIS_OFFLINE_CHECK")
     print("MCP_RECOVERY_RESTIC_TOOL="+("FOUND" if shutil.which("restic") else "NOT_FOUND"))
     print("MCP_RECOVERY_MYSQLDUMP_TOOL="+(
         "FOUND" if shutil.which("mysqldump") or Path("/www/server/mysql/bin/mysqldump").is_file()
