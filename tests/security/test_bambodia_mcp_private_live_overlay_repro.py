@@ -169,3 +169,34 @@ class PrivateOverlayCutoverReproTests(TestCase):
             m.run_ww_php(Path("/var/tmp/fixture"),{"PATH":"/usr/bin:/bin"},
                          ["-r","echo 'PHP85_OK';"],15,"PHP_BINARY")
         self.assertEqual(opened.call_args.args[0][0],"/usr/sbin/runuser")
+
+    def test_synthetic_production_mode_uses_private_clone_only(self):
+        import io
+        from contextlib import redirect_stdout
+        with patch.object(m,"clone_runtime") as run, \
+             patch.object(m.sys,"argv",["repro","--reproduce-production-mode"]):
+            with redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(m.main(),0)
+        run.assert_called_once_with("production")
+        self.assertIn("MCP_REPRODUCTION_LIVE_FILES=UNCHANGED",output.getvalue())
+        self.assertIn("MCP_REPRODUCTION_PRODUCTION_DB=NOT_ACCESSED",output.getvalue())
+
+    def test_only_explicit_modes_accepted(self):
+        import io
+        from contextlib import redirect_stdout
+        with patch.object(m,"clone_runtime") as run, \
+             patch.object(m.sys,"argv",["repro","--install"]):
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(m.main(),64)
+        run.assert_not_called()
+        with self.assertRaisesRegex(m.Stop,"INVALID_SYNTHETIC_ENV_MODE"):
+            m.clone_runtime("real-prod")
+
+    def test_env_mode_replay_does_not_copy_production_env(self):
+        source=SRC.read_text()
+        self.assertIn('"APP_ENV":mode',source)
+        self.assertIn('"DB_CONNECTION":"sqlite"',source)
+        self.assertIn('"DB_DATABASE":":memory:"',source)
+        self.assertIn('"BAMBODIA_MCP_ENABLED":"false"',source)
+        self.assertIn('"BAMBODIA_MCP_WRITES_ENABLED":"false"',source)
+        self.assertNotIn('read(LIVE,".env")',source)
