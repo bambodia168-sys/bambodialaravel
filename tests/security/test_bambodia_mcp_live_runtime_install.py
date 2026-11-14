@@ -102,6 +102,24 @@ class McpOnlyInstallerSecurityTest(TestCase):
                 with self.assertRaises(m.Stop):
                     m.safe_live_parent(live/"app/Controls/file.php")
 
+    def test_new_vendor_copy_becomes_readable_to_www_without_mutating_original(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as dirname:
+            vendor=Path(dirname)/"vendor"
+            folder=vendor/"laravel/passport"
+            folder.mkdir(parents=True)
+            (vendor/"autoload.php").write_text("<?php")
+            (folder/"Passport.php").write_text("<?php")
+            for path in (vendor,vendor/"laravel",folder):
+                path.chmod(0o700)
+            for path in (vendor/"autoload.php",folder/"Passport.php"):
+                path.chmod(0o600)
+            with patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=0)):
+                m.prepare_vendor_permissions(vendor)
+            self.assertEqual(stat.S_IMODE(vendor.stat().st_mode),0o755)
+            self.assertEqual(stat.S_IMODE(folder.stat().st_mode),0o755)
+            self.assertEqual(stat.S_IMODE((folder/"Passport.php").stat().st_mode),0o644)
+
     def test_rollback_preserves_existing_source(self):
         with tempfile.TemporaryDirectory() as directory:
             base=Path(directory)
