@@ -136,15 +136,20 @@ def audit():
     f=os.statvfs(LIVE)
     available=f.f_bavail*f.f_frsize//(1024*1024)
     print(f"MCP_FORENSICS_APP_DISK_FREE_MIB={available}")
+    storage_ok=accessible_to_www(
+        stat_metadata(LIVE/"storage/framework"),www.pw_uid,gids,writable=True)
     print("MCP_FORENSICS_APP_STORAGE_WWW_WRITABLE="+(
-        "PASS" if accessible_to_www(stat_metadata(LIVE/"storage/framework"),www.pw_uid,gids,writable=True) else "BLOCKED"))
+        "PASS" if storage_ok else "BLOCKED"))
+    cli_ok=True
     for label,command in (
       ("ORIGINAL_ROUTE_CLI",["route:list","--json","--no-ansi"]),
       ("ARTISAN_DOWN_HELP",["down","--help","--no-ansi"]),
       ("ARTISAN_UP_HELP",["up","--help","--no-ansi"]),
     ):
+        completed=www_cli_command(PHP,command)
+        cli_ok=cli_ok and completed
         print("MCP_FORENSICS_"+label+"="+(
-            "PASS" if www_cli_command(PHP,command) else "BLOCKED"))
+            "PASS" if completed else "BLOCKED"))
     candidates=list(Path("/root").glob("Bambodia-MCP-LiveRollback.*/rollback.json"))
     states={"READY":0,"INSTALLED_FLAGS_OFF":0,"ROLLED_BACK":0,"OTHER":0}
     for file in candidates:
@@ -159,7 +164,7 @@ def audit():
     print("MCP_FORENSICS_INSTALLER_FAILURE_PHASE=NOT_RECORDED_IN_OLD_RELEASE")
     print("MCP_FORENSICS_PRIVATE_LOGS=NOT_READ")
     print("MCP_FORENSICS_PRODUCTION_MUTATION=NONE")
-    return not anomalies
+    return not anomalies and storage_ok and cli_ok
 
 def main():
     if sys.argv[1:]!=["--inspect"]:
