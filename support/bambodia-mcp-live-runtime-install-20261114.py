@@ -60,7 +60,7 @@ def read_file(path,maxsize=20000000):
     return path.read_bytes()
 
 def good_relative(rel):
-    return isinstance(rel,str) and rel and not rel.startswith("/") and "\x00" not in rel and all(x not in ("",".","..") for x in Path(rel).parts)
+    return isinstance(rel,str) and bool(rel) and not rel.startswith("/") and "\x00" not in rel and str(Path(rel))==rel and all(x not in ("",".","..") for x in Path(rel).parts)
 
 def guarded_path(root,rel):
     if not good_relative(rel):raise Stop("RELATIVE_PATH_UNSAFE")
@@ -284,6 +284,10 @@ def install():
         print("MCP_ONLY_PHP85_LIVE_ROUTE_REGISTRATION=PASS")
         as_www("up","--no-ansi","--no-interaction")
         maintenance=False
+        state=json.loads(read_file(backup/"rollback.json",65536))
+        state["state"]="INSTALLED_FLAGS_OFF"
+        (backup/"rollback.json").write_text(json.dumps(state,indent=2)+"\n")
+        (backup/"rollback.json").chmod(0o600)
         print("MCP_ONLY_RUNTIME_INSTALL=PASS")
         print("MCP_ONLY_ROLLBACK_PATH="+str(backup))
         print("MCP_ONLY_FEATURE_FLAGS=OFF")
@@ -314,12 +318,66 @@ def install():
     finally:
         os.close(fd)
 
+def manual_rollback(directory):
+    # Only a release produced by this exact installer may be rolled back.
+    if os.geteuid()!=0 or not directory.is_relative_to(Path("/root")) or \
+       not directory.name.startswith("Bambodia-MCP-LiveRollback.") or not private_dir(directory):
+        raise Stop("ROLLBACK_DIRECTORY_UNSAFE")
+    obj=json.loads(read_file(directory/"rollback.json",65536))
+    if obj.get("state")!="INSTALLED_FLAGS_OFF":
+        raise Stop("ROLLBACK_NOT_IN_INSTALLED_STATE")
+    original=obj.get("original",{})
+    if not isinstance(original,dict) or set(original)!=set(json.loads(read_file(STAGE/"review.json",65536))["mcp_only_patch_sha256"])|{"composer.json","composer.lock"}:
+        raise Stop("ROLLBACK_SOURCE_MANIFEST_CHANGED")
+    if sha(read_file(LIVE/"composer.lock"))!=NEW_LOCK_SHA:
+        raise Stop("LIVE_CHANGED_AFTER_MCP_INSTALL")
+    for rel in json.loads(read_file(STAGE/"review.json",65536))["mcp_only_patch_sha256"]:
+        if sha(read_file(guarded_path(LIVE,rel)))!=sha(read_file(guarded_path(STAGE/"patch",rel))):
+            raise Stop("LIVE_SOURCE_EDITED_SINCE_INSTALL")
+    env_flag_off()
+    oldvendor=Path(obj.get("old_vendor",""))
+    newvendor=Path(obj.get("new_vendor",""))
+    if oldvendor.parent!=LIVE or newvendor.parent!=LIVE or \
+       not re.fullmatch(r"\.mcp-previous-vendor-[0-9a-f]{32}",oldvendor.name) or \
+       not re.fullmatch(r"\.mcp-next-vendor-[0-9a-f]{32}",newvendor.name):
+        raise Stop("ROLLBACK_VENDOR_PATH_UNSAFE")
+    if not oldvendor.is_dir() or oldvendor.is_symlink() or newvendor.exists():
+        raise Stop("ROLLBACK_OLD_VENDOR_MISSING")
+    try:
+        with open("/dev/tty","r+") as tty:
+            tty.write("Type ROLLBACK-BAMBODIA-MCP-RUNTIME: ");tty.flush()
+            approval=tty.readline().strip()
+    except OSError:raise Stop("LOCAL_TTY_REQUIRED")
+    if approval!="ROLLBACK-BAMBODIA-MCP-RUNTIME":
+        raise Stop("ROLLBACK_NOT_CONFIRMED")
+    as_www("down","--no-ansi","--no-interaction")
+    try:
+        rollback(directory,original,oldvendor,newvendor)
+        as_www("up","--no-ansi","--no-interaction")
+        obj["state"]="ROLLED_BACK"
+        (directory/"rollback.json").write_text(json.dumps(obj,indent=2)+"\n")
+        (directory/"rollback.json").chmod(0o600)
+    except Exception:
+        print("MCP_ONLY_MANUAL_ROLLBACK=CRITICAL_MANUAL_REVIEW")
+        print("MCP_ONLY_MAINTENANCE=LEFT_ENABLED")
+        return 5
+    print("MCP_ONLY_MANUAL_ROLLBACK=PASS")
+    print("MCP_ONLY_OAUTH_TABLES=NOT_DROPPED")
+    print("MCP_ONLY_MCP_FLAGS=OFF")
+    return 0
+
+
 def main():
-    if sys.argv[1:]!=["--install"]:
-        print("USAGE=--install");return 64
-    try:return install()
+    args=sys.argv[1:]
+    if args==["--install"]:mode="install"
+    elif len(args)==2 and args[0]=="--rollback":mode="rollback"
+    else:
+        print("USAGE=--install | --rollback /root/Bambodia-MCP-LiveRollback.<id>")
+        return 64
+    try:
+        if mode=="install":return install()
+        return manual_rollback(Path(args[1]))
     except (Stop,OSError,ValueError,TypeError,KeyError,RuntimeError):
-        print("MCP_ONLY_INSTALL_PREP=BLOCKED")
-        print("MCP_ONLY_FEATURE_FLAGS=UNCHANGED")
+        print("MCP_ONLY_RUNTIME_ACTION=BLOCKED")
         return 1
 if __name__=="__main__":sys.exit(main())
