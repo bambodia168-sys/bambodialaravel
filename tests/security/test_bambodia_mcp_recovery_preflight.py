@@ -245,5 +245,57 @@ class PrivateAccessImpactTests(unittest.TestCase):
             access_impact.verdict(True,True,"ABSENT_IN_XATTR_LIST"))
 
 
+approved_remediation = load_module(
+    "bambodia_approved_single_file",
+    "support/bambodia-mcp-single-file-approved-remediation-20261114.py",
+)
+
+
+class ApprovedOneFileRemediationTests(unittest.TestCase):
+    """Synthetic safety assertions: never perform chmod on a live file."""
+
+    def test_removes_exactly_other_read(self):
+        self.assertEqual(0o640, approved_remediation.candidate_mode(0o644))
+        self.assertEqual(0o660, approved_remediation.candidate_mode(0o664))
+        self.assertEqual(0o600, approved_remediation.candidate_mode(0o604))
+        self.assertEqual(0o600, approved_remediation.candidate_mode(0o600))
+
+    def test_post_change_access_fails_closed(self):
+        self.assertTrue(approved_remediation.acceptable_post_access(True, False))
+        for www, nobody in ((True, True), (False, False), (False, True)):
+            self.assertFalse(approved_remediation.acceptable_post_access(www, nobody))
+
+    def test_real_report_path_is_fixed_to_root_private(self):
+        self.assertEqual(
+            "/root/bambodia-mcp-private-review-cjk6rv6z/review.json",
+            str(approved_remediation.REPORT)
+        )
+        self.assertEqual(
+            "approved-permission-rollback.json",
+            approved_remediation.JOURNAL_NAME
+        )
+        self.assertEqual(
+            "APPLY-ONE-VERIFIED-FILE-OTHER-READ",
+            approved_remediation.CONFIRM
+        )
+
+    def test_mismatched_inode_never_passes(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp) / "synthetic.txt"
+            p.write_text("dummy content only", encoding="utf-8")
+            current=p.lstat()
+            modified=SimpleNamespace(
+                st_dev=current.st_dev, st_ino=current.st_ino+1,
+                st_nlink=1, st_uid=current.st_uid, st_gid=current.st_gid,
+            )
+            self.assertFalse(approved_remediation.matches_path_inode(p,modified))
+            expected=SimpleNamespace(
+                st_dev=current.st_dev, st_ino=current.st_ino,
+                st_nlink=1, st_uid=current.st_uid, st_gid=current.st_gid,
+            )
+            self.assertTrue(approved_remediation.matches_path_inode(p,expected))
+
+
 if __name__ == "__main__":
     unittest.main()
