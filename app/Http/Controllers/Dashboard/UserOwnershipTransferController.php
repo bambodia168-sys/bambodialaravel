@@ -50,6 +50,7 @@ class UserOwnershipTransferController extends Controller
             'reason'=>['required','string','min:20','max:500'],
             'rights_confirmed'=>['accepted'],
             'confirmation'=>['required','in:TRANSFER'],
+            'leave_media'=>['sometimes','boolean'],
         ]);
         $type = $data['type'];
         $id = (int) $data['id'];
@@ -79,14 +80,15 @@ class UserOwnershipTransferController extends Controller
                 throw $exception;
             }
 
-            return redirect($formUrl)->withInput($request->only('recipient', 'reason'))
+            return redirect($formUrl)->withInput($request->only('recipient', 'reason', 'leave_media'))
                 ->withErrors(['transfer' => $exception->getMessage()]);
         }
 
         $destination = $fromManager ? MarketplaceManagement::indexUrl($type) : route('dashboard.users.show', $user);
 
-        return redirect($destination)
-            ->with('status','Ownership transfer completed and recorded in the audit trail.');
+        return redirect($destination)->with('status', $request->boolean('leave_media')
+            ? 'Draft product transferred. The new owner can attach replacement media in Builder Studio.'
+            : 'Ownership transfer completed and recorded in the audit trail.');
     }
 
     private function transfer(Request $request, User $user, User $target, array $data, bool $fromManager): void
@@ -116,7 +118,19 @@ class UserOwnershipTransferController extends Controller
             abort_if($fromManager && PreviewContentReview::hasCustomerActivity($item), 409,
                 'This record has customer activity such as saved items, comments, or support history. Review that activity before transferring ownership.');
 
-            $mediaIds = $this->reassignMedia($item, $user->id, $target->id);
+            if ($request->boolean('leave_media')) {
+                abort_unless($item instanceof MarketplaceListing && $item->type === 'product' && $item->status === 'draft', 409,
+                    'Only draft products can be transferred without their attached media.');
+                $item->cover_media_id = null;
+                $item->gallery_media_ids = [];
+                $item->featured_media_id = null;
+                if (in_array($item->featured_kind, ['image', 'video'], true)) {
+                    $item->featured_kind = 'none';
+                }
+                $mediaIds = [];
+            } else {
+                $mediaIds = $this->reassignMedia($item, $user->id, $target->id);
+            }
             $item->setAttribute($item instanceof MarketplaceJob ? 'client_id' : 'user_id', $target->id);
             $item->save();
             DB::table('user_ownership_transfers')->insert([
