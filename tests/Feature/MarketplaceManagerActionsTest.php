@@ -174,10 +174,12 @@ class MarketplaceManagerActionsTest extends TestCase
         $params = ['user' => $owner, 'type' => 'project', 'id' => $listing->id];
         $form = route('dashboard.marketplace.transfer', $params);
         $post = route('dashboard.marketplace.transfer.store', $owner);
+        $localizedPost = route('localized.en.dashboard.marketplace.transfer.store', $owner);
         $data = $this->transferData($listing, $recipient->public_id);
 
         $this->actingAs($admin)->get(route('localized.en.dashboard.marketplace.transfer', $params))
-            ->assertOk()->assertSee('action="'.$post.'"', false);
+            ->assertOk()->assertSee('action="'.$localizedPost.'"', false);
+        $this->postJson($localizedPost, $data)->assertConflict();
         $this->get(route('dashboard.marketplace.transfer', $owner))
             ->assertRedirect(MarketplaceManagement::indexUrl('freelance'));
         $this->post($post, [...$data, 'recipient' => $owner->public_id])
