@@ -18,7 +18,7 @@ class ProductManagerController extends Controller
         abort_unless(MarketplaceManagement::mayView($request->user()), 403);
         $query = MarketplaceListing::query()->where('type', 'product')->with(['creator:id,public_id,name', 'category:id,name', 'licenseDefinition', 'coverAsset', 'featuredAsset']);
         $filters = MarketplaceManagement::applyFilters($query, $request, 'product', [
-            'all' => 'All statuses', ...MarketplaceManagement::STATUSES, 'withdrawn' => 'Withdrawn',
+            'all' => 'All statuses', 'review_queue' => 'Awaiting review', ...MarketplaceManagement::STATUSES, 'withdrawn' => 'Withdrawn',
         ]);
         $products = $query->latest()->paginate(10)->withQueryString();
 

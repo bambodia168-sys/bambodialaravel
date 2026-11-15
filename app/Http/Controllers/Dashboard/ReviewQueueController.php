@@ -22,7 +22,7 @@ class ReviewQueueController extends Controller
         abort_unless(mb_strlen($search) <= 120, 404);
 
         $listings = MarketplaceListing::query()
-            ->with('creator:id,name,public_id')->whereIn('status', ['pending', 'in_review'])
+            ->with('creator:id,name,public_id')->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)
             ->when($type !== 'all', fn ($q) => $q->where('type', $type))
             ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
                 $inner->where('title','like','%'.$search.'%')
@@ -30,7 +30,7 @@ class ReviewQueueController extends Controller
             }))
             ->oldest()->paginate(10)->withQueryString();
 
-        $counts = MarketplaceListing::query()->whereIn('status', ['pending', 'in_review'])
+        $counts = MarketplaceListing::query()->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)
             ->selectRaw('type, COUNT(*) as total')->groupBy('type')->pluck('total','type');
         $recentReviews = AuditEvent::query()
             ->whereIn('event',['listing.review.published','listing.review.rejected'])

@@ -22,8 +22,8 @@ class MarketplaceManagerActionsTest extends TestCase
 
     public function test_five_managers_link_to_existing_builder_and_scope_media_and_filters(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $owner = User::factory()->create(['role' => 'super_admin']);
+        $admin = $this->member('admin');
+        $owner = $this->member('super_admin');
         Storage::fake('local');
         $cover = $this->asset($owner);
         $unrelated = $this->asset($owner);
@@ -31,7 +31,7 @@ class MarketplaceManagerActionsTest extends TestCase
 
         foreach (['project', 'freelance', 'service', 'product', 'job'] as $type) {
             $record = $this->record($type, $owner, $cover);
-            $differentOwner = User::factory()->create(['role' => 'super_admin']);
+            $differentOwner = $this->member('super_admin');
             $other = $this->record($type, $differentOwner);
             $preview = MarketplaceManagement::builderUrl($record, true);
             $edit = MarketplaceManagement::builderUrl($record);
@@ -55,8 +55,8 @@ class MarketplaceManagerActionsTest extends TestCase
 
     public function test_review_transitions_validate_and_managed_edits_keep_identity_owner_and_status(): void
     {
-        $admin = User::factory()->create(['role' => 'super_admin']);
-        $owner = User::factory()->create(['role' => 'freelancer']);
+        $admin = $this->member('super_admin');
+        $owner = $this->member('freelancer');
         $record = $this->record('project', $owner);
         $params = ['type' => 'project', 'publicId' => $record->public_id];
         $status = route('dashboard.marketplace.status', $params);
@@ -97,13 +97,13 @@ class MarketplaceManagerActionsTest extends TestCase
 
     public function test_only_assigned_staff_can_transfer_and_modifying_or_exposing_unrelated_records_is_denied(): void
     {
-        $staff = User::factory()->create(['role' => 'staff']);
-        $owner = User::factory()->create(['role' => 'freelancer']);
-        $recipient = User::factory()->create(['role' => 'freelancer']);
+        $staff = $this->member('staff');
+        $owner = $this->member('freelancer');
+        $recipient = $this->member('freelancer');
         Storage::fake('local');
         $cover = $this->asset($owner);
         $record = $this->record('service', $owner, $cover);
-        $unrelated = User::factory()->create(['role' => 'customer']);
+        $unrelated = $this->member('customer');
         $transferParams = ['user' => $owner, 'type' => 'service', 'id' => $record->id];
         $url = route('dashboard.marketplace.transfer', $transferParams);
         $post = route('dashboard.marketplace.transfer.store', $owner);
@@ -134,6 +134,16 @@ class MarketplaceManagerActionsTest extends TestCase
             'resource_type' => 'service', 'resource_public_id' => $record->public_id,
         ]);
         $this->post($post, $data)->assertNotFound();
+    }
+
+    private function member(string $role): User
+    {
+        return User::query()->create([
+            'name' => ucfirst($role).' '.Str::random(8),
+            'email' => Str::uuid().'@example.test',
+            'password' => 'TestOnlyMarketplacePassword!',
+            'role' => $role,
+        ]);
     }
 
     private function record(string $type, User $owner, ?MediaAsset $asset = null): MarketplaceJob|MarketplaceListing

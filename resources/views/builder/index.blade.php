@@ -184,7 +184,7 @@
       @foreach($errors->all() as $error)<p class="notice" role="alert">{{ $error }}</p>@endforeach
     @endif
     @if(!$canEdit)
-      <div class="notice">{{ $managed ? 'Read-only preview.' : 'Submitted listings are read-only during review.' }}</div>
+      <div class="notice">{{ $managed ? 'Read-only preview.' : 'You can inspect this submission but cannot change it directly.' }}</div>
     @endif
 
     <div class="studio-columns">

@@ -19,7 +19,7 @@ class JobManagerController extends Controller
         abort_unless(MarketplaceManagement::mayView($request->user()), 403);
         $query = MarketplaceJob::query()->with(['client:id,public_id,name', 'featuredAsset']);
         $filters = MarketplaceManagement::applyFilters($query, $request, 'job', [
-            'all' => 'All statuses', ...MarketplaceManagement::STATUSES, 'withdrawn' => 'Withdrawn', 'closed' => 'Closed',
+            'all' => 'All statuses', 'review_queue' => 'Awaiting review', ...MarketplaceManagement::STATUSES, 'withdrawn' => 'Withdrawn', 'closed' => 'Closed',
         ]);
         $jobs = $query->latest()->paginate(10)->withQueryString();
 

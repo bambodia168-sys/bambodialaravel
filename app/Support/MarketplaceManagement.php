@@ -13,6 +13,8 @@ use Illuminate\Validation\Rule;
 
 final class MarketplaceManagement
 {
+    public const REVIEW_STATUSES = ['pending', 'in_review'];
+
     public const STATUSES = [
         'draft' => 'Draft', 'pending' => 'Pending', 'in_review' => 'In Review',
         'published' => 'Published', 'rejected' => 'Rejected',
@@ -92,7 +94,8 @@ final class MarketplaceManagement
         $owner = $data['owner'] ?? null;
         $category = $data['category'] ?? null;
 
-        $query->when($status !== 'all', fn ($q) => $q->where('status', $status))
+        $query->when($status === 'review_queue', fn ($q) => $q->whereIn('status', self::REVIEW_STATUSES))
+            ->when(!in_array($status, ['all', 'review_queue'], true), fn ($q) => $q->where('status', $status))
             ->when($search !== '', fn ($q) => $q->where(fn ($match) => $match
                 ->where('title', 'like', '%'.$search.'%')->orWhere('public_id', 'like', '%'.$search.'%')))
             ->when($owner !== null, fn ($q) => $q->where($type === 'job' ? 'client_id' : 'user_id', $owner))
