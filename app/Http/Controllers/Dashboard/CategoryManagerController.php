@@ -57,8 +57,9 @@ class CategoryManagerController extends Controller
             abort(409, 'Referenced categories cannot switch marketplace type.');
         }
 
-        if ($data['parent_id'] !== $category->parent_id && $category->children()->exists()) {
-            abort(409, 'A parent category cannot become a subcategory while it has children.');
+        if ($data['parent_id'] !== $category->parent_id &&
+            ($category->children()->exists() || $category->listings()->exists())) {
+            abort(409, 'Categories with assigned listings or children cannot change parents.');
         }
 
         if (MarketplaceCategory::query()->where('type', $data['type'])
