@@ -48,7 +48,7 @@
           <option value="">All categories</option>
           @foreach($categories as $category)
             @if($type==='' || $category->type===$type)
-              <option value="{{ $category->public_id }}" @selected($selectedCategory===$category->public_id)>{{ ucfirst($category->type) }} · {{ $category->name }}</option>
+              <option value="{{ $category->public_id }}" @selected($selectedCategory===$category->public_id)>{{ ucfirst($category->type) }} · {{ $category->parent ? $category->parent->name.' / ' : '' }}{{ $category->name }}</option>
             @endif
           @endforeach
         </select>
