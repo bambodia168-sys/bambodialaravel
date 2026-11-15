@@ -61,6 +61,10 @@ class CategoryManagerController extends Controller
             ($category->children()->exists() || $category->listings()->exists())) {
             abort(409, 'Categories with assigned listings or children cannot change parents.');
         }
+        if ($category->type === 'job' && $data['name'] !== $category->name &&
+            $category->jobs()->exists()) {
+            abort(409, 'Job categories with existing jobs cannot be renamed.');
+        }
 
         if (MarketplaceCategory::query()->where('type', $data['type'])
             ->where('slug', Str::slug($data['name']))
