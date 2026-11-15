@@ -75,11 +75,19 @@ class LicenseDefinition extends Model
         }
 
         // Match the original layout fixture owner and title marker before withdrawing the terms.
-        return ! $this->listings()->where(fn ($query) => $query
+        $listings = $this->listings();
+        if ((clone $listings)->where(fn ($query) => $query
             ->where('type', '!=', 'product')
             ->orWhere('title', 'not like', '[LAYOUT TEST] %')
             ->orWhereDoesntHave('creator', fn ($creator) => $creator->where('email', 'layout-preview-creator@bambodia.invalid'))
-        )->exists();
+        )->exists()) {
+            return false;
+        }
+
+        // The original layout samples have no downloadable release or license history.
+        $ids = $listings->select('marketplace_listings.id');
+        return ! ProductFileVersion::query()->whereIn('marketplace_listing_id', $ids)->exists()
+            && ! ProductLicense::query()->whereIn('marketplace_listing_id', $ids)->exists();
     }
 
     public function permissionsMarkup(): string

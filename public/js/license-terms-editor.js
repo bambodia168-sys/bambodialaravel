@@ -69,3 +69,5 @@ document.querySelectorAll('[data-license-terms]').forEach((field) => {
         }
     });
 });
+
+document.querySelector('dialog[data-license-reopen]')?.showModal();

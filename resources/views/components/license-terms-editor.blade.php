@@ -1,4 +1,5 @@
 @props(['id', 'field', 'label', 'value' => '', 'html' => null])
+@php($html = is_string($html) ? $html : null)
 <div class="license-terms-field" data-license-terms>
   <label for="{{ $id }}" id="{{ $id }}-label">{{ $label }}</label>
   <textarea id="{{ $id }}" name="{{ $field }}" minlength="30" maxlength="50000" rows="6" required data-license-terms-plain>{{ $value }}</textarea>

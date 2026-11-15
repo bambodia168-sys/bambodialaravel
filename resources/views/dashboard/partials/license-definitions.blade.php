@@ -112,24 +112,26 @@
               </dialog>
             @endif
             @if($editable)
-            <dialog class="config-dialog wide-dialog" id="license-{{ $license->id }}">
+            @php($restoreEdit = $errors->any() && old('definition_form') === 'edit-'.$license->id)
+            <dialog class="config-dialog wide-dialog" id="license-{{ $license->id }}" @if($restoreEdit) data-license-reopen @endif>
               <form method="post" action="{{ route('dashboard.licenses.update',$license) }}">
                 @csrf @method('PATCH')
+                <input type="hidden" name="definition_form" value="edit-{{ $license->id }}">
                 <h2>Edit {{ $license->name }}</h2>
                 <p>Public license ID {{ $license->public_id }} · {{ $license->tierLabel() }} · {{ $license->listings_count + $license->extended_listings_count }} referenced products</p>
                   <label for="license-tier-{{ $license->id }}">License definition type</label>
                   <select id="license-tier-{{ $license->id }}" name="tier" required>
                     @foreach(\App\Models\LicenseDefinition::TIERS as $tier=>$label)
-                      <option value="{{ $tier }}" @selected($license->tier===$tier)>{{ $label }}</option>
+                      <option value="{{ $tier }}" @selected(($restoreEdit ? old('tier') : $license->tier) === $tier)>{{ $label }}</option>
                     @endforeach
                   </select>
                   @if(!$license->tier)<p class="hint">This older definition is unclassified. Assign its type before saving; existing issued licenses keep their terms.</p>@endif
-                  <label for="license-code-{{ $license->id }}">License code (A–Z, 0–9, underscore)</label><input id="license-code-{{ $license->id }}" name="code" value="{{ $license->code }}" required maxlength="32">
-                  <label for="license-name-{{ $license->id }}">Display name</label><input id="license-name-{{ $license->id }}" name="name" value="{{ $license->name }}" required maxlength="120">
-                  <label for="license-version-{{ $license->id }}">Version</label><input id="license-version-{{ $license->id }}" name="version" value="{{ $license->version }}" required placeholder="1.0.0">
-                  <x-license-terms-editor id="license-permissions-{{ $license->id }}" field="permissions" label="Permissions granted" :value="$license->permissions" :html="$license->permissions_html"/>
-                  <x-license-terms-editor id="license-restrictions-{{ $license->id }}" field="restrictions" label="Restrictions and prohibited uses" :value="$license->restrictions" :html="$license->restrictions_html"/>
-                  <label for="license-status-{{ $license->id }}">Status</label><select id="license-status-{{ $license->id }}" name="status"><option value="draft" @selected($license->status==='draft')>Draft</option><option value="active" @selected($license->status==='active')>Active</option></select>
+                  <label for="license-code-{{ $license->id }}">License code (A–Z, 0–9, underscore)</label><input id="license-code-{{ $license->id }}" name="code" value="{{ $restoreEdit ? old('code') : $license->code }}" required maxlength="32">
+                  <label for="license-name-{{ $license->id }}">Display name</label><input id="license-name-{{ $license->id }}" name="name" value="{{ $restoreEdit ? old('name') : $license->name }}" required maxlength="120">
+                  <label for="license-version-{{ $license->id }}">Version</label><input id="license-version-{{ $license->id }}" name="version" value="{{ $restoreEdit ? old('version') : $license->version }}" required placeholder="1.0.0">
+                  <x-license-terms-editor id="license-permissions-{{ $license->id }}" field="permissions" label="Permissions granted" :value="$restoreEdit ? (string) old('permissions') : $license->permissions" :html="$restoreEdit ? old('permissions_html') : $license->permissions_html"/>
+                  <x-license-terms-editor id="license-restrictions-{{ $license->id }}" field="restrictions" label="Restrictions and prohibited uses" :value="$restoreEdit ? (string) old('restrictions') : $license->restrictions" :html="$restoreEdit ? old('restrictions_html') : $license->restrictions_html"/>
+                  <label for="license-status-{{ $license->id }}">Status</label><select id="license-status-{{ $license->id }}" name="status"><option value="draft" @selected(($restoreEdit ? old('status') : $license->status) === 'draft')>Draft</option><option value="active" @selected(($restoreEdit ? old('status') : $license->status) === 'active')>Active</option></select>
                   <label class="check-label"><input type="checkbox" name="confirm_review" value="1"> I have reviewed these license terms and authorize their publication</label>
                   <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit">Save license</button></div>
               </form>
@@ -142,22 +144,24 @@
   </table></div>
   <x-pagination :paginator="$licenses"/>
 </section>
-<dialog class="config-dialog wide-dialog" id="license-create">
+@php($restoreCreate = $errors->any() && old('definition_form') === 'create')
+<dialog class="config-dialog wide-dialog" id="license-create" @if($restoreCreate) data-license-reopen @endif>
   <form method="post" action="{{ route('dashboard.licenses.store') }}">
     @csrf
+    <input type="hidden" name="definition_form" value="create">
     <h2>Create a license definition</h2>
     <p>Define the rights granted to buyers and the prohibited uses for one license type. Review the draft wording before publishing it.</p>
     <label for="license-new-tier">License definition type</label>
     <select id="license-new-tier" name="tier" required>
-      <option value="regular" @selected(old('tier','regular')==='regular')>Regular License</option>
-      <option value="extended" @selected(old('tier')==='extended')>Extended License</option>
+      <option value="regular" @selected(!$restoreCreate || old('tier') === 'regular')>Regular License</option>
+      <option value="extended" @selected($restoreCreate && old('tier') === 'extended')>Extended License</option>
     </select>
-    <label for="license-new-code">License code</label><input id="license-new-code" name="code" placeholder="REGULAR" maxlength="32" required>
-    <label for="license-new-name">License name</label><input id="license-new-name" name="name" maxlength="120" required>
-    <label for="license-new-version">Version</label><input id="license-new-version" name="version" value="1.0.0" required>
-    <x-license-terms-editor id="license-new-permissions" field="permissions" label="Permissions granted"/>
-    <x-license-terms-editor id="license-new-restrictions" field="restrictions" label="Restrictions and prohibited uses"/>
-    <label for="license-new-status">Publication status</label><select id="license-new-status" name="status"><option value="draft">Draft</option><option value="active">Active</option></select>
+    <label for="license-new-code">License code</label><input id="license-new-code" name="code" value="{{ $restoreCreate ? old('code') : '' }}" placeholder="REGULAR" maxlength="32" required>
+    <label for="license-new-name">License name</label><input id="license-new-name" name="name" value="{{ $restoreCreate ? old('name') : '' }}" maxlength="120" required>
+    <label for="license-new-version">Version</label><input id="license-new-version" name="version" value="{{ $restoreCreate ? old('version') : '1.0.0' }}" required>
+    <x-license-terms-editor id="license-new-permissions" field="permissions" label="Permissions granted" :value="$restoreCreate ? (string) old('permissions') : ''" :html="$restoreCreate ? old('permissions_html') : null"/>
+    <x-license-terms-editor id="license-new-restrictions" field="restrictions" label="Restrictions and prohibited uses" :value="$restoreCreate ? (string) old('restrictions') : ''" :html="$restoreCreate ? old('restrictions_html') : null"/>
+    <label for="license-new-status">Publication status</label><select id="license-new-status" name="status"><option value="draft">Draft</option><option value="active" @selected($restoreCreate && old('status') === 'active')>Active</option></select>
     <label class="check-label"><input type="checkbox" name="confirm_review" value="1"> I have reviewed these license terms and authorize their publication</label>
     <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit">Create license</button></div>
   </form>
