@@ -1,0 +1,47 @@
+.site-not-found {
+    min-height: 52vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-block: clamp(48px, 8vw, 104px);
+    text-align: center;
+}
+
+.site-not-found-mark {
+    display: block;
+    width: clamp(150px, 48vw, 332px);
+    max-width: 100%;
+    height: auto;
+    color: var(--text);
+}
+
+.site-not-found-zero {
+    stroke: var(--accent);
+}
+
+.site-not-found h1 {
+    margin: 1rem 0 .55rem;
+    font-size: clamp(1.85rem, 5vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.12;
+}
+
+.site-not-found p {
+    margin: 0;
+    max-width: 38rem;
+    color: var(--muted);
+    font-size: clamp(.94rem, 1.4vw, 1.06rem);
+}
+
+.site-not-found-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .75rem;
+    margin-top: 1.6rem;
+}
+
+.site-not-found-actions .btn {
+    min-height: 44px;
+}
