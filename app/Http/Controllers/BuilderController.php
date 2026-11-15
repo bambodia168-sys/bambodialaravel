@@ -123,6 +123,11 @@ class BuilderController extends Controller
         $raw = (string) $request->server('QUERY_STRING', '');
         abort_unless(preg_match('/^=([0-9]{9})$/D', $raw, $match) === 1, 404);
 
+        $editableJob = MarketplaceJob::query()
+            ->where('public_id', $match[1])
+            ->where('client_id', $request->user()->id)
+            ->firstOrFail();
+
         BuilderContent::prepare($request);
         $termsHash = BuilderSubmissionTerms::requireAcceptance($request);
         $data = $request->validate([
@@ -131,7 +136,7 @@ class BuilderController extends Controller
             'description_html' => ['nullable', 'string', 'max:60000'],
             ...BuilderFeaturedMedia::rules(),
             ...BuilderGallery::rules(),
-            'category' => ['required', Rule::in(array_keys(BambodiaTaxonomy::jobFilterChoices()))],
+            'category' => ['required', Rule::in(array_keys(BambodiaTaxonomy::jobEditorChoices($editableJob->category)))],
             'budget' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
         ]);
 
