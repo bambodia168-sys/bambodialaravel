@@ -75,6 +75,7 @@ class ListingController extends Controller
             'title'=>['required','string','min:4','max:180'],
             'description'=>['required','string','min:40','max:10000'],
             ...BuilderFeaturedMedia::rules(),
+            ...BuilderGallery::rules(),
             'description_html'=>['nullable','string','max:60000'],
             'price'=>['nullable','numeric','min:0','max:9999999999.99'],
             'license_terms'=>['nullable','string','max:20000'],
@@ -87,8 +88,8 @@ class ListingController extends Controller
                 && in_array($locked->type,['project','freelance','service'],true),404);
             abort_unless(in_array($locked->status,['draft','rejected'],true),409);
             $this->checkCategory([...$data,'type'=>$locked->type]);
-            BuilderFeaturedMedia::check($data, (int)$request->user()->id);
-            BuilderGallery::check($data, $request);
+            BuilderFeaturedMedia::check($data, (int)$request->user()->id, $locked->featured_media_id);
+            BuilderGallery::check($data, $request, attachedIds: $locked->gallery_media_ids ?? []);
             $locked->update([...$data,'status'=>'pending']);
             BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, $locked->type, (int)$locked->id);
             AuditEvent::record('listing.resubmitted',$request->user(),$request);

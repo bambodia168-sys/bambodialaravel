@@ -60,7 +60,7 @@ class JobBoardController extends Controller
             ? SavedJob::query()->where('user_id',$request->user()->id)
                 ->where('marketplace_job_id',$listing->id)->exists()
             : false;
-        $screenshots = BuilderGallery::approvedFor($listing->gallery_media_ids, (int)$listing->client_id);
+        $screenshots = BuilderGallery::attachedImages($listing->gallery_media_ids);
         $relatedJobs=MarketplaceJob::query()
             ->where('status','published')
             ->whereKeyNot($listing->id)

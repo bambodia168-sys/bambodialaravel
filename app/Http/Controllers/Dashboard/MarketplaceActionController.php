@@ -37,8 +37,6 @@ final class MarketplaceActionController extends Controller
         $record = MarketplaceManagement::record($type, $publicId);
         $asset = MediaAsset::query()->whereIn('id', MarketplaceManagement::mediaIds($record))
             ->where('public_id', $mediaId)->firstOrFail();
-        abort_unless((int) $asset->user_id === MarketplaceManagement::ownerId($record), 404);
-
         return MediaLibraryController::servePreview($request, $asset);
     }
 }

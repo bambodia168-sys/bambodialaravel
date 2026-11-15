@@ -107,7 +107,7 @@ class ListingController extends Controller
                 ->pluck('marketplace_listing_id')->map(fn($id)=>(int)$id)->all()
             : [];
 
-        $screenshots = BuilderGallery::approvedFor($listing->gallery_media_ids, (int)$listing->user_id);
+        $screenshots = BuilderGallery::attachedImages($listing->gallery_media_ids);
         return view('marketplace.detail',compact('listing','isSaved','relatedListings','savedRelatedIds','screenshots'));
     }
 }
