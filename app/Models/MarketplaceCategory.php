@@ -14,7 +14,7 @@ class MarketplaceCategory extends Model
 
     protected function casts(): array
     {
-        return ['is_active'=>'boolean','sort_order'=>'integer'];
+        return ['is_active'=>'boolean','sort_order'=>'integer','parent_id'=>'integer'];
     }
 
     protected static function booted(): void
