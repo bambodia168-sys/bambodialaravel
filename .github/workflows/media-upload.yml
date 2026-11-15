@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm ci --ignore-scripts && npm run build
+      - run: npm install --ignore-scripts && npm run build
       - run: |
           cp .env.example .env
           php artisan key:generate
