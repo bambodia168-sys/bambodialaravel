@@ -18,7 +18,7 @@
         <tr>
           <td class="mono">{{ $job->public_id }}</td>
           <td><strong>{{ $job->title }}</strong></td>
-          <td>{{ ucfirst($job->category) }}</td>
+          <td>{{ $job->category_label }}</td>
           <td>{{ $job->budget===null?'—':'$'.number_format((float)$job->budget,2) }}</td>
           <td><span class="role-pill">{{ ucfirst($job->status) }}</span></td>
           <td>{{ $job->proposals_count }}</td>
