@@ -1,0 +1,1660 @@
+diff --git a/app/Http/Controllers/BuilderController.php b/app/Http/Controllers/BuilderController.php
+index 572f0c7..cb3e829 100644
+--- a/app/Http/Controllers/BuilderController.php
++++ b/app/Http/Controllers/BuilderController.php
+@@ -7,6 +7,9 @@
+ use App\Support\BuilderSubmissionTerms;
+ use App\Support\BuilderFeaturedMedia;
+ use App\Support\BambodiaTaxonomy;
++use App\Support\MarketplaceManagement;
++use App\Support\UserManagementAccess;
++use App\Http\Controllers\Creator\ProductController;
+ use App\Models\AuditEvent;
+ use App\Models\AiDraftProvider;
+ use App\Models\FeatureFlag;
+@@ -31,8 +34,22 @@ public function show(Request $request): View
+         $raw = (string) $request->server('QUERY_STRING', '');
+         $record = null;
+         $type = null;
+-
+-        if ($raw === '') {
++        $managerMode = null;
++
++        if ($request->query->has('mode') || $request->query->has('item')) {
++            $type = $request->query('type');
++            $publicId = $request->query('item');
++            $managerMode = $request->query('mode');
++            abort_unless(in_array($type, ['product', 'project', 'service', 'freelance', 'job'], true)
++                && is_string($publicId) && preg_match('/^[0-9]{9}$/D', $publicId) === 1
++                && in_array($managerMode, ['manage', 'preview'], true), 404);
++            abort_unless(MarketplaceManagement::mayView($request->user()), 403);
++            $record = MarketplaceManagement::record($type, $publicId);
++            if ($managerMode === 'manage') {
++                abort_unless(UserManagementAccess::allows($request->user(), 'marketplace_review'), 403);
++                abort_unless(MarketplaceManagement::mayEdit($record), 409);
++            }
++        } elseif ($raw === '') {
+             // The builder landing page lets authorized users choose what to create.
+         } elseif (preg_match('/^=([0-9]{9})$/D', $raw, $match) === 1) {
+             // The public ID is not authorization: fetch resources belonging to the session user.
+@@ -54,14 +71,14 @@ public function show(Request $request): View
+             abort(404);
+         }
+ 
+-        if ($type !== null) {
++        if ($type !== null && $managerMode === null) {
+             abort_unless(in_array($type, $allowedTypes, true), 403);
+         }
+ 
+-        $canEdit = $record === null
++        $canEdit = $managerMode === 'manage' || ($managerMode === null && ($record === null
+             || ($type === 'job'
+-                ? in_array($record->status, ['pending', 'rejected'], true)
+-                : in_array($record->status, ['draft', 'rejected'], true));
++                ? in_array($record->status, ['draft', 'pending', 'rejected'], true)
++                : in_array($record->status, ['draft', 'rejected'], true))));
+ 
+         $jobCategoryChoices = $type === 'job'
+             ? BambodiaTaxonomy::jobEditorChoices($record?->category)
+@@ -83,12 +100,14 @@ public function show(Request $request): View
+             : collect();
+         $regularLicenses = $licenses->filter(fn (LicenseDefinition $definition) => $definition->allowsTier('regular'));
+         $extendedLicenses = $licenses->filter(fn (LicenseDefinition $definition) => $definition->allowsTier('extended'));
++        $ownerId = $managerMode !== null ? MarketplaceManagement::ownerId($record) : (int) $request->user()->id;
+         $assets = $type !== null
+-            ? MediaAsset::query()->where('user_id', $request->user()->id)
++            ? MediaAsset::query()->where('user_id', $ownerId)
++                ->when($managerMode === 'preview', fn ($query) => $query->whereIn('id', MarketplaceManagement::mediaIds($record)))
+                 ->latest()->get(['id', 'public_id', 'alt_text', 'mime_type'])
+             : collect();
+ 
+-        $productVersions = $type === 'product' && $record
++        $productVersions = $managerMode === null && $type === 'product' && $record
+             ? \App\Models\ProductFileVersion::query()
+                 ->where('marketplace_listing_id', $record->id)->latest('id')->get()
+             : collect();
+@@ -96,14 +115,15 @@ public function show(Request $request): View
+         $aiDraftReady = AiDraftProvider::configured()?->ready() ?? false;
+ 
+         return view('builder.index', compact(
+-            'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'jobCategoryChoices', 'licenses', 'regularLicenses', 'extendedLicenses', 'assets',
++            'type', 'record', 'canEdit', 'managerMode', 'ownerId', 'allowedTypes', 'categories', 'jobCategoryChoices', 'licenses', 'regularLicenses', 'extendedLicenses', 'assets',
+             'termsPublications', 'termsSha256', 'suggestedTerms', 'productVersions', 'publishedLegalPolicies', 'aiDraftReady'
+         ));
+     }
+ 
+     public function previewContent(Request $request): JsonResponse
+     {
+-        abort_unless(count($this->allowedTypes($request)) > 0, 403);
++        abort_unless(count($this->allowedTypes($request)) > 0
++            || UserManagementAccess::allows($request->user(), 'marketplace_review'), 403);
+         $values = $request->validate([
+             'html' => ['required', 'string', 'max:100000'],
+         ]);
+@@ -142,24 +162,88 @@ public function updateJob(Request $request): RedirectResponse
+ 
+         BuilderFeaturedMedia::check($data, (int)$request->user()->id);
+         BuilderGallery::check($data, $request);
+-        DB::transaction(function () use ($request, $match, $data, $termsHash): void {
++        $status = DB::transaction(function () use ($request, $match, $data, $termsHash): string {
+             $job = MarketplaceJob::query()->where('public_id', $match[1])
+                 ->lockForUpdate()->firstOrFail();
+             abort_unless((int) $job->client_id === (int) $request->user()->id, 404);
+-            abort_unless(in_array($job->status, ['pending', 'rejected'], true), 409,
+-                'Only pending or rejected job posts can be edited.');
++            abort_unless(in_array($job->status, ['draft', 'pending', 'rejected'], true), 409,
++                'Only drafts, pending jobs, or rejected jobs can be edited.');
+             $job->update([
+                 ...$data,
+-                'status' => 'pending',
++                'status' => $job->status === 'draft' ? 'draft' : 'pending',
+                 'reviewed_by' => null,
+                 'reviewed_at' => null,
+             ]);
+             BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, 'job', (int)$job->id);
+             AuditEvent::record('job.updated', $request->user(), $request);
++
++            return $job->status;
+         });
+ 
+         return redirect('/builder?='.$match[1])
+-            ->with('status', 'Job saved and queued for administrator review.');
++            ->with('status', $status === 'draft' ? 'Job draft saved.' : 'Job saved and queued for administrator review.');
++    }
++
++    public function updateManaged(Request $request, string $type, string $publicId): RedirectResponse
++    {
++        $expected = $request->validate([
++            'expected_owner' => ['required', 'integer', 'min:1'],
++            'expected_revision' => ['required', 'string', 'size:64'],
++        ]);
++
++        $record = DB::transaction(function () use ($request, $type, $publicId, $expected) {
++            $record = MarketplaceManagement::record($type, $publicId, true);
++            abort_unless(MarketplaceManagement::mayEdit($record), 409);
++            $ownerId = MarketplaceManagement::ownerId($record);
++            abort_unless($ownerId === (int) $expected['expected_owner']
++                && hash_equals(MarketplaceManagement::revision($record), $expected['expected_revision']), 409,
++                'This listing changed while the form was open. Reopen it before saving.');
++
++            $request->merge(['builder_mode' => '1', 'status' => 'draft']);
++            if ($request->has('featured_media_id') && !$request->has('featured_kind')) {
++                throw \Illuminate\Validation\ValidationException::withMessages(['featured_kind' => 'Choose a featured media type.']);
++            }
++            if ($type === 'product') {
++                $data = app(ProductController::class)->validated($request, $ownerId);
++                unset($data['status']);
++            } else {
++                $data = $this->managedListingData($request, $record, $type, $ownerId);
++            }
++            // Preserve publication, identity, ownership and the creator's original acceptance.
++            $record->update($data);
++            AuditEvent::record($type === 'job' ? 'job.manager.updated' : 'listing.manager.updated', $request->user(), $request);
++
++            return $record;
++        }, 3);
++
++        return redirect(MarketplaceManagement::builderUrl($record))->with('status', 'Listing changes saved.');
++    }
++
++    private function managedListingData(Request $request, MarketplaceJob|MarketplaceListing $record, string $type, int $ownerId): array
++    {
++        BuilderContent::prepare($request);
++        $isJob = $record instanceof MarketplaceJob;
++        $amount = ['nullable', 'numeric', 'min:0', 'max:9999999999.99'];
++        $data = $request->validate([
++            'title' => ['required', 'string', 'min:'.($isJob ? '8' : '4'), 'max:180'],
++            'description' => ['required', 'string', 'min:'.($isJob ? '70' : '40'), 'max:10000'],
++            'description_html' => ['nullable', 'string', 'max:60000'],
++            ...BuilderFeaturedMedia::rules(),
++            ...BuilderGallery::rules(),
++            ...($isJob ? [
++                'category' => ['required', Rule::in(array_keys(BambodiaTaxonomy::jobEditorChoices($record->category)))],
++                'budget' => $amount,
++            ] : [
++                'category_id' => ['nullable', 'integer', Rule::exists('marketplace_categories', 'id')
++                    ->where('type', $type)->where('is_active', true)],
++                'price' => $amount,
++                'license_terms' => ['nullable', 'string', 'max:20000'],
++            ]),
++        ]);
++        BuilderFeaturedMedia::check($data, $ownerId);
++        BuilderGallery::check($data, $request, $ownerId);
++
++        return $data;
+     }
+ 
+     private function allowedTypes(Request $request): array
+diff --git a/app/Http/Controllers/Creator/ProductController.php b/app/Http/Controllers/Creator/ProductController.php
+index f399c17..5a5b085 100644
+--- a/app/Http/Controllers/Creator/ProductController.php
++++ b/app/Http/Controllers/Creator/ProductController.php
+@@ -26,7 +26,7 @@ class ProductController extends Controller
+     public function index(Request $request): View
+     {
+         $status = (string)$request->query('status','all');
+-        abort_unless(in_array($status,['all','draft','pending','published','rejected'],true),404);
++        abort_unless(in_array($status,['all','draft','pending','in_review','published','rejected'],true),404);
+         $search = trim((string)$request->query('q',''));
+         abort_unless(mb_strlen($search)<=120,404);
+         $owned = MarketplaceListing::query()->where('type','product')
+@@ -111,8 +111,9 @@ public function update(Request $request, MarketplaceListing $product): RedirectR
+         return back()->with('status', 'Product changes saved.');
+     }
+ 
+-    private function validated(Request $request): array
++    public function validated(Request $request, ?int $ownerId = null): array
+     {
++        $ownerId ??= (int) $request->user()->id;
+         BuilderContent::prepare($request);
+         $data = $request->validate([
+             'title' => ['required', 'string', 'min:4', 'max:180'],
+@@ -138,7 +139,7 @@ private function validated(Request $request): array
+         // A draft must never be allowed to reference a different creator's private asset.
+         if (! empty($data['cover_media_id'])
+             && ! MediaAsset::query()->whereKey($data['cover_media_id'])
+-                ->where('user_id', $request->user()->id)->exists()) {
++                ->where('user_id', $ownerId)->exists()) {
+             throw ValidationException::withMessages([
+                 'cover_media_id' => 'Select a preview image from your own Media Library.',
+             ]);
+@@ -148,8 +149,8 @@ private function validated(Request $request): array
+             ->whereKey($data['category_id'])->where('type','product')->where('is_active',true)->exists()){
+             throw ValidationException::withMessages(['category_id'=>'Select an active product category.']);
+         }
+-        BuilderFeaturedMedia::check($data, (int)$request->user()->id);
+-        BuilderGallery::check($data, $request);
++        BuilderFeaturedMedia::check($data, $ownerId);
++        BuilderGallery::check($data, $request, $ownerId);
+         // Keep existing preview links when older product forms do not send this field.
+         if (array_key_exists('preview_url',$data)) {
+             $rawPreview=trim((string)($data['preview_url'] ?? ''));
+diff --git a/app/Http/Controllers/Dashboard/DashboardController.php b/app/Http/Controllers/Dashboard/DashboardController.php
+index ea5382d..dda60ac 100644
+--- a/app/Http/Controllers/Dashboard/DashboardController.php
++++ b/app/Http/Controllers/Dashboard/DashboardController.php
+@@ -9,6 +9,7 @@
+ use App\Models\MarketplaceListing;
+ use App\Models\SupportTicket;
+ use App\Models\User;
++use App\Support\MarketplaceManagement;
+ use Illuminate\View\View;
+ 
+ class DashboardController extends Controller
+@@ -34,14 +35,14 @@ public function index(): View
+                  'count' => CreatorApplication::query()->where('status', 'pending')->count(),
+                  'route' => 'dashboard.creator-applications', 'icon' => 'user-round-check'],
+                 ['label' => 'All listings awaiting review',
+-                 'count' => MarketplaceListing::query()->where('status', 'pending')->count(),
++                 'count' => MarketplaceListing::query()->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)->count(),
+                  'route' => 'dashboard.reviews', 'icon' => 'layers'],
+                 ['label' => 'Digital products awaiting review',
+-                 'count' => MarketplaceListing::query()->where('status', 'pending')->where('type', 'product')->count(),
+-                 'route' => 'dashboard.products.index', 'params' => ['status' => 'pending'], 'icon' => 'package'],
++                 'count' => MarketplaceListing::query()->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)->where('type', 'product')->count(),
++                 'route' => 'dashboard.products.index', 'params' => ['status' => 'review_queue'], 'icon' => 'package'],
+                 ['label' => 'Job posts awaiting review',
+-                 'count' => MarketplaceJob::query()->where('status', 'pending')->count(),
+-                 'route' => 'dashboard.jobs.index', 'icon' => 'briefcase'],
++                 'count' => MarketplaceJob::query()->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)->count(),
++                 'route' => 'dashboard.jobs.index', 'params' => ['status' => 'review_queue'], 'icon' => 'briefcase'],
+                 ['label' => 'Unresolved contract disputes',
+                  'count' => ContractDispute::query()->whereIn('status', ['open', 'under_review'])->count(),
+                  'route' => 'dashboard.contracts.disputes', 'icon' => 'shield'],
+@@ -52,7 +53,7 @@ public function index(): View
+         $recent = $isStaff
+             ? SupportTicket::query()->whereIn('status', ['open', 'in_progress'])
+                 ->latest('updated_at')->limit(5)->get(['id', 'public_id', 'subject', 'status', 'updated_at'])
+-            : MarketplaceListing::query()->where('status', 'pending')
++            : MarketplaceListing::query()->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)
+                 ->latest()->limit(5)->get(['id', 'type', 'title', 'status', 'created_at']);
+ 
+         return view('dashboard.index', compact('isStaff', 'stats', 'queues', 'recent'));
+diff --git a/app/Http/Controllers/Dashboard/JobManagerController.php b/app/Http/Controllers/Dashboard/JobManagerController.php
+index 7470890..4309202 100644
+--- a/app/Http/Controllers/Dashboard/JobManagerController.php
++++ b/app/Http/Controllers/Dashboard/JobManagerController.php
+@@ -3,10 +3,10 @@
+ namespace App\Http\Controllers\Dashboard;
+ 
+ use App\Http\Controllers\Controller;
+-use App\Models\AuditEvent;
+-use App\Models\AccountNotification;
+ use App\Models\MarketplaceJob;
+ use Illuminate\Http\RedirectResponse;
++use App\Support\BambodiaTaxonomy;
++use App\Support\MarketplaceManagement;
+ use Illuminate\Http\Request;
+ use Illuminate\Support\Facades\DB;
+ use Illuminate\Validation\Rule;
+@@ -16,26 +16,22 @@ class JobManagerController extends Controller
+ {
+     public function index(Request $request): View
+     {
+-        $status=(string)$request->query('status','pending');
+-        abort_unless(in_array($status,['all','pending','published','rejected','closed','withdrawn'],true),404);
+-        $jobs=MarketplaceJob::query()->with('client:id,name,public_id')
+-            ->when($status !== 'all',fn($q)=>$q->where('status',$status))
+-            ->latest()->paginate(10)->withQueryString();
+-        return view('dashboard.jobs', compact('jobs','status'));
++        abort_unless(MarketplaceManagement::mayView($request->user()), 403);
++        $query = MarketplaceJob::query()->with(['client:id,public_id,name', 'featuredAsset']);
++        $filters = MarketplaceManagement::applyFilters($query, $request, 'job', [
++            'all' => 'All statuses', 'review_queue' => 'Awaiting review', ...MarketplaceManagement::STATUSES, 'withdrawn' => 'Withdrawn', 'closed' => 'Closed',
++        ]);
++        $jobs = $query->latest()->paginate(10)->withQueryString();
++
++        return view('dashboard.jobs', [...$filters, 'jobs' => $jobs, 'jobCategories' => BambodiaTaxonomy::jobFilterChoices()]);
+     }
++
+     public function decide(Request $request, MarketplaceJob $job): RedirectResponse
+     {
+         $data=$request->validate(['decision'=>['required',Rule::in(['published','rejected'])]]);
+         DB::transaction(function()use($job,$data,$request){
+             $locked=MarketplaceJob::query()->lockForUpdate()->findOrFail($job->id);
+-            abort_unless($locked->status==='pending',409);
+-            $locked->update(['status'=>$data['decision'],'reviewed_by'=>$request->user()->id,'reviewed_at'=>now()]);
+-            AccountNotification::deliver(
+-                (int)$locked->client_id,'job.reviewed','Job review completed',
+-                'Your submitted job was '.($data['decision']==='published'?'published':'rejected').'.',
+-                '/my-jobs'
+-            );
+-            AuditEvent::record('job.review.'.$data['decision'],$request->user(),$request);
++            MarketplaceManagement::changeStatus($locked, $data['decision'], $request);
+         });
+         return back()->with('status','Job review recorded.');
+     }
+diff --git a/app/Http/Controllers/Dashboard/MarketplaceActionController.php b/app/Http/Controllers/Dashboard/MarketplaceActionController.php
+new file mode 100644
+index 0000000..ccde923
+--- /dev/null
++++ b/app/Http/Controllers/Dashboard/MarketplaceActionController.php
+@@ -0,0 +1,44 @@
++<?php
++
++namespace App\Http\Controllers\Dashboard;
++
++use App\Http\Controllers\Controller;
++use App\Http\Controllers\MediaLibraryController;
++use App\Models\MediaAsset;
++use App\Support\MarketplaceManagement;
++use Illuminate\Http\RedirectResponse;
++use Illuminate\Http\Request;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Validation\Rule;
++use Symfony\Component\HttpFoundation\Response;
++
++final class MarketplaceActionController extends Controller
++{
++    public function status(Request $request, string $type, string $publicId): RedirectResponse
++    {
++        $data = $request->validate([
++            'status' => ['required', Rule::in(array_keys(MarketplaceManagement::STATUSES))],
++            'expected_status' => ['required', 'string', 'max:20'],
++        ]);
++
++        DB::transaction(function () use ($request, $type, $publicId, $data): void {
++            $record = MarketplaceManagement::record($type, $publicId, true);
++            abort_unless($record->status === $data['expected_status'], 409, 'The status changed. Refresh the manager and try again.');
++            MarketplaceManagement::changeStatus($record, $data['status'], $request);
++        }, 3);
++
++        return redirect(MarketplaceManagement::indexUrl($type))
++            ->with('status', 'Listing status set to '.MarketplaceManagement::STATUSES[$data['status']].'.');
++    }
++
++    public function asset(Request $request, string $type, string $publicId, string $mediaId): Response
++    {
++        abort_unless(MarketplaceManagement::mayView($request->user()), 403);
++        $record = MarketplaceManagement::record($type, $publicId);
++        $asset = MediaAsset::query()->whereIn('id', MarketplaceManagement::mediaIds($record))
++            ->where('public_id', $mediaId)->firstOrFail();
++        abort_unless((int) $asset->user_id === MarketplaceManagement::ownerId($record), 404);
++
++        return MediaLibraryController::servePreview($request, $asset);
++    }
++}
+diff --git a/app/Http/Controllers/Dashboard/MarketplaceManagerController.php b/app/Http/Controllers/Dashboard/MarketplaceManagerController.php
+index bb735cc..fbcd35d 100644
+--- a/app/Http/Controllers/Dashboard/MarketplaceManagerController.php
++++ b/app/Http/Controllers/Dashboard/MarketplaceManagerController.php
+@@ -4,6 +4,7 @@
+ 
+ use App\Http\Controllers\Controller;
+ use App\Models\MarketplaceListing;
++use App\Support\MarketplaceManagement;
+ use Illuminate\Http\Request;
+ use Illuminate\View\View;
+ 
+@@ -11,17 +12,13 @@ class MarketplaceManagerController extends Controller
+ {
+     public function index(Request $request, string $type): View
+     {
+-        abort_unless(in_array($type,['project','freelance','service'],true),404);
+-        $status=(string)$request->query('status','all');
+-        abort_unless(in_array($status,['all','pending','published','rejected','draft','withdrawn'],true),404);
+-        $search=mb_substr(trim((string)$request->query('q','')),0,120);
+-        $listings=MarketplaceListing::query()->where('type',$type)
+-            ->with(['creator:id,public_id,name','category:id,name'])
+-            ->when($status!=='all',fn($q)=>$q->where('status',$status))
+-            ->when($search!=='',fn($q)=>$q->where(function($q)use($search){
+-                $q->where('title','like','%'.$search.'%')->orWhere('public_id','like','%'.$search.'%');
+-            }))
+-            ->latest()->paginate(10)->withQueryString();
+-        return view('dashboard.marketplace',compact('listings','type','status','search'));
++        abort_unless(MarketplaceManagement::mayView($request->user()), 403);
++        $query = MarketplaceListing::query()->where('type', $type)->with(['creator:id,public_id,name', 'category:id,name', 'featuredAsset']);
++        $filters = MarketplaceManagement::applyFilters($query, $request, $type, [
++            'all' => 'All statuses', ...MarketplaceManagement::STATUSES, 'withdrawn' => 'Withdrawn',
++        ]);
++        $listings = $query->latest()->paginate(10)->withQueryString();
++
++        return view('dashboard.marketplace', [ ...$filters, 'listings' => $listings ]);
+     }
+ }
+diff --git a/app/Http/Controllers/Dashboard/ProductManagerController.php b/app/Http/Controllers/Dashboard/ProductManagerController.php
+index 42ec385..bf91f76 100644
+--- a/app/Http/Controllers/Dashboard/ProductManagerController.php
++++ b/app/Http/Controllers/Dashboard/ProductManagerController.php
+@@ -3,11 +3,9 @@
+ namespace App\Http\Controllers\Dashboard;
+ 
+ use App\Http\Controllers\Controller;
+-use App\Models\AuditEvent;
+-use App\Models\AccountNotification;
+ use App\Models\MarketplaceListing;
+-use App\Support\ProductReadiness;
+ use Illuminate\Http\RedirectResponse;
++use App\Support\MarketplaceManagement;
+ use Illuminate\Http\Request;
+ use Illuminate\Support\Facades\DB;
+ use Illuminate\Validation\Rule;
+@@ -17,20 +15,14 @@ class ProductManagerController extends Controller
+ {
+     public function index(Request $request): View
+     {
+-        $status = (string) $request->query('status', 'all');
+-        abort_unless(in_array($status, ['all', 'draft', 'pending', 'published', 'rejected', 'withdrawn'], true), 404);
+-        $search = mb_substr(trim((string) $request->query('search', '')), 0, 120);
+-
+-        $products = MarketplaceListing::query()
+-            ->where('type', 'product')
+-            ->with(['creator:id,name,public_id', 'licenseDefinition:id,name,version,status', 'coverAsset:id,public_id,alt_text,review_status'])
+-            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
+-            ->when($search !== '', fn ($q) => $q->where(function ($q) use ($search): void {
+-                $q->where('title', 'like', '%'.$search.'%')->orWhere('public_id', 'like', '%'.$search.'%');
+-            }))
+-            ->latest()->paginate(10)->withQueryString();
+-
+-        return view('dashboard.products', compact('products', 'status', 'search'));
++        abort_unless(MarketplaceManagement::mayView($request->user()), 403);
++        $query = MarketplaceListing::query()->where('type', 'product')->with(['creator:id,public_id,name', 'category:id,name', 'licenseDefinition', 'coverAsset', 'featuredAsset']);
++        $filters = MarketplaceManagement::applyFilters($query, $request, 'product', [
++            'all' => 'All statuses', 'review_queue' => 'Awaiting review', ...MarketplaceManagement::STATUSES, 'withdrawn' => 'Withdrawn',
++        ]);
++        $products = $query->latest()->paginate(10)->withQueryString();
++
++        return view('dashboard.products', [ ...$filters, 'products' => $products ]);
+     }
+ 
+     public function decide(Request $request, MarketplaceListing $product): RedirectResponse
+@@ -40,19 +32,7 @@ public function decide(Request $request, MarketplaceListing $product): RedirectR
+         DB::transaction(function () use ($product, $data, $request): void {
+             $product = MarketplaceListing::query()->lockForUpdate()->findOrFail($product->id);
+             abort_unless($product->type === 'product', 404);
+-            abort_unless($product->status === 'pending', 409, 'Only pending products can be reviewed.');
+-            if ($data['decision'] === 'published') {
+-                ProductReadiness::assertListing($product);
+-            }
+-            $product->update(['status' => $data['decision']]);
+-            AccountNotification::deliver(
+-                (int) $product->user_id,
+-                'listing.reviewed',
+-                'Digital product reviewed',
+-                'Your digital product submission was '.($data['decision'] === 'published' ? 'published' : 'rejected').' after review.',
+-                '/studio/products'
+-            );
+-            AuditEvent::record('listing.review.'.$data['decision'], $request->user(), $request);
++            MarketplaceManagement::changeStatus($product, $data['decision'], $request);
+         });
+ 
+         return back()->with('status', 'Product '.$data['decision'].'.');
+diff --git a/app/Http/Controllers/Dashboard/ReviewQueueController.php b/app/Http/Controllers/Dashboard/ReviewQueueController.php
+index 4364a8a..25230d9 100644
+--- a/app/Http/Controllers/Dashboard/ReviewQueueController.php
++++ b/app/Http/Controllers/Dashboard/ReviewQueueController.php
+@@ -5,8 +5,7 @@
+ use App\Http\Controllers\Controller;
+ use App\Models\MarketplaceListing;
+ use App\Models\AuditEvent;
+-use App\Models\AccountNotification;
+-use App\Support\ProductReadiness;
++use App\Support\MarketplaceManagement;
+ use Illuminate\Support\Facades\DB;
+ use Illuminate\Http\RedirectResponse;
+ use Illuminate\Http\Request;
+@@ -23,7 +22,7 @@ public function index(Request $request): View
+         abort_unless(mb_strlen($search) <= 120, 404);
+ 
+         $listings = MarketplaceListing::query()
+-            ->with('creator:id,name,public_id')->where('status','pending')
++            ->with('creator:id,name,public_id')->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)
+             ->when($type !== 'all', fn ($q) => $q->where('type', $type))
+             ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
+                 $inner->where('title','like','%'.$search.'%')
+@@ -31,7 +30,7 @@ public function index(Request $request): View
+             }))
+             ->oldest()->paginate(10)->withQueryString();
+ 
+-        $counts = MarketplaceListing::query()->where('status','pending')
++        $counts = MarketplaceListing::query()->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)
+             ->selectRaw('type, COUNT(*) as total')->groupBy('type')->pluck('total','type');
+         $recentReviews = AuditEvent::query()
+             ->whereIn('event',['listing.review.published','listing.review.rejected'])
+@@ -46,17 +45,7 @@ public function decide(Request $request, MarketplaceListing $listing): RedirectR
+         $data = $request->validate(['decision' => ['required', Rule::in(['published', 'rejected'])]]);
+         DB::transaction(function () use ($listing, $data, $request): void {
+             $record = MarketplaceListing::query()->lockForUpdate()->findOrFail($listing->id);
+-            abort_unless($record->status === 'pending', 409, 'This listing is no longer pending.');
+-            if ($data['decision'] === 'published') {
+-                ProductReadiness::assertListing($record);
+-            }
+-            $record->update(['status' => $data['decision']]);
+-            AccountNotification::deliver(
+-                (int)$record->user_id,'listing.reviewed','Marketplace listing reviewed',
+-                'A listing was '.($data['decision']==='published'?'published':'rejected').' after review.',
+-                $record->type==='product'?'/studio/products':'/studio/listings'
+-            );
+-            AuditEvent::record('listing.review.'.$data['decision'], $request->user(), $request);
++            MarketplaceManagement::changeStatus($record, $data['decision'], $request);
+         });
+ 
+         return back()->with('status', 'Listing marked as '.$data['decision'].'.');
+diff --git a/app/Http/Controllers/Dashboard/UserManagerController.php b/app/Http/Controllers/Dashboard/UserManagerController.php
+index fdcaf3c..d527421 100644
+--- a/app/Http/Controllers/Dashboard/UserManagerController.php
++++ b/app/Http/Controllers/Dashboard/UserManagerController.php
+@@ -231,9 +231,19 @@ private function saveProfile(User $user,array $data): void
+     private function savePermissions(User $user,array $permissions): void
+     {
+         foreach(UserManagementAccess::CAPABILITIES as $key=>$label) {
++            if ($key === 'marketplace_transfer') {
++                if ($user->role !== 'staff') {
++                    DB::table('user_permission_overrides')->where('user_id', $user->id)
++                        ->where('permission', $key)->delete();
++                    continue;
++                }
++                if (!array_key_exists($key, $permissions)) {
++                    continue;
++                }
++            }
+             DB::table('user_permission_overrides')->updateOrInsert(
+                 ['user_id'=>$user->id,'permission'=>$key],
+-                ['allowed'=>(bool)($permissions[$key]??true),'updated_at'=>now(),'created_at'=>now()]
++                ['allowed'=>(bool)($permissions[$key]??UserManagementAccess::defaultAllowed($user,$key)),'updated_at'=>now(),'created_at'=>now()]
+             );
+         }
+     }
+diff --git a/app/Http/Controllers/Dashboard/UserOwnershipTransferController.php b/app/Http/Controllers/Dashboard/UserOwnershipTransferController.php
+index 76f72af..0d0b1c3 100644
+--- a/app/Http/Controllers/Dashboard/UserOwnershipTransferController.php
++++ b/app/Http/Controllers/Dashboard/UserOwnershipTransferController.php
+@@ -8,6 +8,8 @@
+ use App\Models\MarketplaceListing;
+ use App\Models\MediaAsset;
+ use App\Models\User;
++use App\Support\MarketplaceManagement;
++use App\Support\PreviewContentReview;
+ use Illuminate\Http\RedirectResponse;
+ use Illuminate\Http\Request;
+ use Illuminate\Support\Facades\DB;
+@@ -27,6 +29,7 @@ public function create(Request $request,User $user): View
+         $item=$this->ownedItem($user,$data['type'],(int)$data['id']);
+         return view('dashboard.user-transfer',[
+             'member'=>$user,'item'=>$item,'type'=>$data['type'],
++            'fromManager'=>$request->routeIs('dashboard.marketplace.transfer'),
+         ]);
+     }
+ 
+@@ -55,8 +58,15 @@ public function store(Request $request,User $user): RedirectResponse
+         DB::transaction(function()use($user,$target,$data,$request){
+             // Lock all participating accounts before the resource to serialize admin changes.
+             User::query()->whereIn('id',[$user->id,$target->id])->orderBy('id')->lockForUpdate()->get();
+-            abort_unless(User::query()->whereKey($target->id)->where('account_status','active')->exists(),409);
++            $recipient = User::query()->findOrFail($target->id);
++            abort_unless($recipient->account_status === 'active' && $recipient->role === $target->role, 409,
++                'The recipient account changed. Check the recipient and try again.');
+             $item=$this->ownedItem($user,$data['type'],(int)$data['id'],true);
++            if ($request->routeIs('dashboard.marketplace.transfer.store')) {
++                abort_if(PreviewContentReview::isPreviewTitle($item->title)
++                    || PreviewContentReview::hasCustomerActivity($item), 409,
++                    'This record requires case review before ownership can be transferred.');
++            }
+             if($data['type']==='job'){
+                 abort_if(DB::table('job_proposals')->where('marketplace_job_id',$item->id)->exists(),409,
+                     'This job has proposals; transfer requires case review.');
+@@ -89,7 +99,11 @@ public function store(Request $request,User $user): RedirectResponse
+             AuditEvent::record('user.resource.transferred',$request->user(),$request);
+         },3);
+ 
+-        return redirect()->route('dashboard.users.show',$user)
++        $destination = $request->routeIs('dashboard.marketplace.transfer.store')
++            ? MarketplaceManagement::indexUrl($data['type'])
++            : route('dashboard.users.show', $user);
++
++        return redirect($destination)
+             ->with('status','Ownership transfer completed and recorded in the audit trail.');
+     }
+ 
+diff --git a/app/Http/Controllers/MediaLibraryController.php b/app/Http/Controllers/MediaLibraryController.php
+index d4f365d..4cbac91 100644
+--- a/app/Http/Controllers/MediaLibraryController.php
++++ b/app/Http/Controllers/MediaLibraryController.php
+@@ -223,6 +223,12 @@ public function preview(Request $request, string $publicId): Response
+         );
+ 
+         abort_unless($owner || $admin || $public, 404);
++
++        return self::servePreview($request, $asset);
++    }
++
++    public static function servePreview(Request $request, MediaAsset $asset): Response
++    {
+         abort_unless(in_array($asset->mime_type, MediaAsset::ALLOWED_MIME, true), 404);
+         $storageDisk = $asset->storage_disk ?: 'local';
+         abort_unless(in_array($storageDisk, ['local', 'r2'], true), 404);
+diff --git a/app/Models/AuditEvent.php b/app/Models/AuditEvent.php
+index 2860546..17e28df 100644
+--- a/app/Models/AuditEvent.php
++++ b/app/Models/AuditEvent.php
+@@ -39,6 +39,10 @@ class AuditEvent extends Model
+         'marketplace.job.featured.updated',
+         'listing.review.published',
+         'listing.review.rejected',
++        'listing.review.pending',
++        'listing.review.in_review',
++        'listing.review.draft',
++        'listing.manager.updated',
+         'detail.comment.created',
+         'detail.comment.updated',
+         'detail.comment.deleted',
+@@ -91,6 +95,10 @@ class AuditEvent extends Model
+         'job.closed',
+         'job.review.published',
+         'job.review.rejected',
++        'job.review.pending',
++        'job.review.in_review',
++        'job.review.draft',
++        'job.manager.updated',
+         'job.proposal.submitted',
+         'job.proposal.reviewed',
+         'job.saved',
+diff --git a/app/Models/MarketplaceListing.php b/app/Models/MarketplaceListing.php
+index 6c2816e..90ebc3c 100644
+--- a/app/Models/MarketplaceListing.php
++++ b/app/Models/MarketplaceListing.php
+@@ -11,7 +11,7 @@
+ class MarketplaceListing extends Model
+ {
+     public const TYPES = ['product', 'project', 'freelance', 'service'];
+-    public const STATUSES = ['draft', 'pending', 'published', 'rejected', 'withdrawn'];
++    public const STATUSES = ['draft', 'pending', 'in_review', 'published', 'rejected', 'withdrawn'];
+ 
+     protected $fillable = ['user_id', 'type', 'title', 'description', 'description_html', 'featured_kind', 'featured_media_id', 'featured_color', 'featured_youtube_id', 'is_featured', 'preview_url', 'price', 'software_version', 'software_published_on', 'software_updated_on', 'regular_price', 'extended_price', 'extended_license_definition_id', 'gallery_media_ids', 'currency', 'license_terms', 'license_definition_id', 'cover_media_id', 'category_id', 'status'];
+ 
+diff --git a/app/Support/BuilderAccess.php b/app/Support/BuilderAccess.php
+index f7b23c1..46c7d58 100644
+--- a/app/Support/BuilderAccess.php
++++ b/app/Support/BuilderAccess.php
+@@ -37,7 +37,7 @@ public static function assertEditable(User $user, string $type, ?string $referen
+                 ->where('public_id', $reference)
+                 ->where('client_id', $user->getKey())
+                 ->firstOrFail();
+-            abort_unless(in_array($job->status, ['pending', 'rejected'], true), 409);
++            abort_unless(in_array($job->status, ['draft', 'pending', 'rejected'], true), 409);
+             return;
+         }
+ 
+diff --git a/app/Support/BuilderGallery.php b/app/Support/BuilderGallery.php
+index 8edc586..5d9e94e 100644
+--- a/app/Support/BuilderGallery.php
++++ b/app/Support/BuilderGallery.php
+@@ -18,7 +18,7 @@ public static function rules(): array
+         ];
+     }
+ 
+-    public static function check(array &$data, Request $request): void
++    public static function check(array &$data, Request $request, ?int $ownerId = null): void
+     {
+         if (! $request->boolean('builder_mode')) {
+             // Legacy forms do not overwrite or clear the builder gallery.
+@@ -28,7 +28,7 @@ public static function check(array &$data, Request $request): void
+ 
+         $ids = array_map('intval', $data['gallery_media_ids'] ?? []);
+         $allowed = MediaAsset::query()->whereIn('id', $ids)
+-            ->where('user_id', $request->user()->id)
++            ->where('user_id', $ownerId ?? $request->user()->id)
+             ->whereIn('mime_type', ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+             ->count();
+         if ($allowed !== count($ids)) {
+diff --git a/app/Support/MarketplaceManagement.php b/app/Support/MarketplaceManagement.php
+new file mode 100644
+index 0000000..f8e2697
+--- /dev/null
++++ b/app/Support/MarketplaceManagement.php
+@@ -0,0 +1,158 @@
++<?php
++
++namespace App\Support;
++
++use App\Models\AccountNotification;
++use App\Models\AuditEvent;
++use App\Models\MarketplaceJob;
++use App\Models\MarketplaceListing;
++use App\Models\User;
++use Illuminate\Database\Eloquent\Builder;
++use Illuminate\Http\Request;
++use Illuminate\Validation\Rule;
++
++final class MarketplaceManagement
++{
++    public const REVIEW_STATUSES = ['pending', 'in_review'];
++
++    public const STATUSES = [
++        'draft' => 'Draft', 'pending' => 'Pending', 'in_review' => 'In Review',
++        'published' => 'Published', 'rejected' => 'Rejected',
++    ];
++
++    public static function type(MarketplaceJob|MarketplaceListing $record): string
++    {
++        return $record instanceof MarketplaceJob ? 'job' : $record->type;
++    }
++
++    public static function record(string $type, string $publicId, bool $lock = false): MarketplaceJob|MarketplaceListing
++    {
++        $query = $type === 'job'
++            ? MarketplaceJob::query()
++            : MarketplaceListing::query()->where('type', $type);
++
++        return $query->where('public_id', $publicId)->when($lock, fn ($query) => $query->lockForUpdate())->firstOrFail();
++    }
++
++    public static function ownerId(MarketplaceJob|MarketplaceListing $record): int
++    {
++        return (int) ($record instanceof MarketplaceJob ? $record->client_id : $record->user_id);
++    }
++
++    public static function mediaIds(MarketplaceJob|MarketplaceListing $record): array
++    {
++        return array_filter([
++            ...($record->gallery_media_ids ?? []),
++            $record->featured_media_id,
++            $record instanceof MarketplaceListing ? $record->cover_media_id : null,
++        ]);
++    }
++
++    public static function revision(MarketplaceJob|MarketplaceListing $record): string
++    {
++        return hash('sha256', json_encode($record->getAttributes(), JSON_THROW_ON_ERROR));
++    }
++
++    public static function indexUrl(string $type, array $filters = []): string
++    {
++        return match ($type) {
++            'job' => route('dashboard.jobs.index', $filters),
++            'product' => route('dashboard.products.index', $filters),
++            default => route('dashboard.marketplace.index', ['type' => $type, ...$filters]),
++        };
++    }
++
++    public static function builderUrl(MarketplaceJob|MarketplaceListing $record, bool $preview = false): string
++    {
++        return route('builder', [
++            'type' => self::type($record), 'item' => $record->public_id,
++            'mode' => $preview ? 'preview' : 'manage',
++        ]);
++    }
++
++    public static function mayView(User $actor): bool
++    {
++        return $actor->account_status === 'active' && (in_array($actor->role, ['admin', 'super_admin'], true)
++            || UserManagementAccess::allows($actor, 'marketplace_transfer'));
++    }
++
++    public static function mayEdit(MarketplaceJob|MarketplaceListing $record): bool
++    {
++        return in_array($record->status, ['draft', 'pending', 'in_review', 'rejected'], true);
++    }
++
++    public static function applyFilters(Builder $query, Request $request, string $type, array $statuses): array
++    {
++        $data = $request->validate([
++            'status' => ['sometimes', 'string', Rule::in(array_keys($statuses))],
++            'q' => ['nullable', 'string', 'max:120'], 'search' => ['nullable', 'string', 'max:120'],
++            'owner' => ['nullable', 'integer', 'min:1'],
++            'category' => $type === 'job' ? ['nullable', 'string', 'max:64'] : ['nullable', 'integer', 'min:1'],
++        ]);
++        $status = $data['status'] ?? 'all';
++        $search = trim($data['q'] ?? $data['search'] ?? '');
++        $owner = $data['owner'] ?? null;
++        $category = $data['category'] ?? null;
++
++        $query->when($status === 'review_queue', fn ($q) => $q->whereIn('status', self::REVIEW_STATUSES))
++            ->when(!in_array($status, ['all', 'review_queue'], true), fn ($q) => $q->where('status', $status))
++            ->when($search !== '', fn ($q) => $q->where(fn ($match) => $match
++                ->where('title', 'like', '%'.$search.'%')->orWhere('public_id', 'like', '%'.$search.'%')))
++            ->when($owner !== null, fn ($q) => $q->where($type === 'job' ? 'client_id' : 'user_id', $owner))
++            ->when($category !== null, fn ($q) => $q->where($type === 'job' ? 'category' : 'category_id', $category));
++
++        return compact('type', 'status', 'search', 'owner', 'category', 'statuses');
++    }
++
++    public static function actions(MarketplaceJob|MarketplaceListing $record): array
++    {
++        $statuses = match ($record->status) {
++            'draft' => ['pending', 'in_review'],
++            'pending' => ['published', 'draft', 'in_review', 'rejected'],
++            'in_review' => ['published', 'draft', 'pending', 'rejected'],
++            'rejected' => ['draft', 'pending', 'in_review'],
++            'published' => PreviewContentReview::isPreviewTitle($record->title) ? [] : ['draft'],
++            default => [],
++        };
++
++        return array_intersect_key([
++            'published' => 'Publish', 'draft' => 'Draft', 'in_review' => 'In Review',
++            'pending' => 'Pending', 'rejected' => 'Rejected',
++        ], array_flip($statuses));
++    }
++
++    public static function changeStatus(
++        MarketplaceJob|MarketplaceListing $record, string $target, Request $request
++    ): void {
++        abort_unless(isset(self::actions($record)[$target]), 409, 'This status change is unavailable for the current record.');
++        $isJob = $record instanceof MarketplaceJob;
++        if ($target === 'published' && ! $isJob) {
++            ProductReadiness::assertListing($record);
++        }
++        if ($record->status === 'published') {
++            abort_if(PreviewContentReview::hasCustomerActivity($record), 409,
++                'Active customer records must be resolved before this listing can return to draft.');
++        }
++
++        $record->status = $target;
++        $isDecision = in_array($target, ['published', 'rejected'], true);
++        if ($isJob) {
++            $record->reviewed_by = $isDecision || $target === 'in_review' ? $request->user()->id : null;
++            $record->reviewed_at = $isDecision ? now() : null;
++        }
++        $record->save();
++
++        $kind = $isJob ? 'job' : 'listing';
++        AuditEvent::record($kind.'.review.'.$target, $request->user(), $request);
++        if ($isDecision) {
++            $isProduct = !$isJob && $record->type === 'product';
++            AccountNotification::deliver(
++                (int) ($isJob ? $record->client_id : $record->user_id),
++                $kind.'.reviewed',
++                $isJob ? 'Job review completed' : ($isProduct ? 'Digital product reviewed' : 'Marketplace listing reviewed'),
++                'Your submission was '.$target.' after review.',
++                $isJob ? '/my-jobs' : ($record->type === 'product' ? '/studio/products' : '/studio/listings'),
++            );
++        }
++    }
++}
+diff --git a/app/Support/PreviewContentReview.php b/app/Support/PreviewContentReview.php
+index 87c679a..fdd73cf 100644
+--- a/app/Support/PreviewContentReview.php
++++ b/app/Support/PreviewContentReview.php
+@@ -81,6 +81,13 @@ public static function record(string $kind, int $id): array
+         return self::jobReport($record);
+     }
+ 
++    public static function hasCustomerActivity(MarketplaceJob|MarketplaceListing $record): bool
++    {
++        $report = $record instanceof MarketplaceJob ? self::jobReport($record) : self::listingReport($record);
++
++        return $report['customer_activity_blocked'];
++    }
++
+     public static function isPreviewTitle(string $title): bool
+     {
+         return preg_match('/\[\s*(?:LAYOUT TEST|DEMO|SAMPLE)\s*\]|\bPREVIEW ONLY\b/iu', $title) === 1;
+diff --git a/app/Support/UserManagementAccess.php b/app/Support/UserManagementAccess.php
+index 0d822b1..3293c93 100644
+--- a/app/Support/UserManagementAccess.php
++++ b/app/Support/UserManagementAccess.php
+@@ -7,17 +7,18 @@
+ 
+ final class UserManagementAccess
+ {
+-    // These are opt-out restrictions, not privilege-escalating grants.
++    // Staff marketplace transfers require an explicit assignment.
+     public const CAPABILITIES = [
+         'badge_awards'=>'Creator badge grants',
+         'support_center'=>'Support ticket management',
+         'marketplace_review'=>'Marketplace review queue',
++        'marketplace_transfer'=>'Marketplace ownership transfers',
+     ];
+ 
+     public static function baseAllowed(User $user, string $permission): bool
+     {
+         return match($permission) {
+-            'badge_awards','support_center'=>in_array($user->role,['staff','admin','super_admin'],true),
++            'badge_awards','support_center','marketplace_transfer'=>in_array($user->role,['staff','admin','super_admin'],true),
+             'marketplace_review'=>in_array($user->role,['admin','super_admin'],true),
+             default=>false,
+         };
+@@ -29,7 +30,13 @@ public static function allows(User $user, string $permission): bool
+         if ($user->role === 'super_admin') return true;
+         $value = DB::table('user_permission_overrides')
+             ->where('user_id',$user->id)->where('permission',$permission)->value('allowed');
+-        return $value === null ? true : (bool)$value;
++        return $value === null ? self::defaultAllowed($user, $permission) : (bool)$value;
++    }
++
++    public static function defaultAllowed(User $user, string $permission): bool
++    {
++        return self::baseAllowed($user, $permission)
++            && ($permission !== 'marketplace_transfer' || $user->role !== 'staff');
+     }
+ 
+     public static function allowedFor(User $user): array
+@@ -42,7 +49,7 @@ public static function allowedFor(User $user): array
+                 'name'=>$name,
+                 'role_permits'=>self::baseAllowed($user,$key),
+                 'allowed'=>self::baseAllowed($user,$key)
+-                    && ($user->role==='super_admin' || !isset($existing[$key]) || (bool)$existing[$key]),
++                    && ($user->role==='super_admin' || (isset($existing[$key]) ? (bool) $existing[$key] : self::defaultAllowed($user, $key))),
+             ];
+         }
+         return $result;
+diff --git a/resources/views/account/products.blade.php b/resources/views/account/products.blade.php
+index 1e0f773..8fb2d37 100644
+--- a/resources/views/account/products.blade.php
++++ b/resources/views/account/products.blade.php
+@@ -15,7 +15,7 @@
+     </div>
+     <div class="workspace-queue-toolbar">
+       <nav class="workspace-queue-tabs" aria-label="Your products by status">
+-        @foreach(['all'=>'All','draft'=>'Draft','pending'=>'Pending','published'=>'Published','rejected'=>'Rejected'] as $value=>$label)
++        @foreach(['all'=>'All','draft'=>'Draft','pending'=>'Pending','in_review'=>'In Review','published'=>'Published','rejected'=>'Rejected'] as $value=>$label)
+           <a href="{{ route('studio.products.index',array_merge(request()->except('status','page'),$value==='all'?[]:['status'=>$value])) }}"
+              class="{{ $status===$value?'is-active':'' }}" @if($status===$value)aria-current="page"@endif>
+             {{ $label }} <span>{{ $value==='all'?$counts->sum():(int)$counts->get($value,0) }}</span>
+@@ -50,7 +50,7 @@ class="{{ $status===$value?'is-active':'' }}" @if($status===$value)aria-current=
+               @endif
+             </div></td>
+             <td>@if($product->coverAsset)<img class="media-thumb" src="{{ $product->coverAsset->previewUrl() }}" alt="{{ $product->coverAsset->alt_text }}" width="52" height="52">@else<span class="text-muted">Not selected</span>@endif</td>
+-            <td><span class="role-pill">{{ ucfirst($product->status) }}</span></td><td>{{ $product->created_at->format('d M Y') }}</td>
++            <td><span class="role-pill">{{ ($product->status === 'in_review' ? 'In Review' : ucfirst($product->status)) }}</span></td><td>{{ $product->created_at->format('d M Y') }}</td>
+             <td>
+               <x-row-action-menu :id="'creator-product-'.$product->id" :label="$product->title">
+                 <a href="{{ url('/builder?='.$product->public_id) }}"><x-icon name="edit" size="16"/> {{ in_array($product->status,['draft','rejected'],true) ? 'Edit in builder' : 'Details' }}</a>
+diff --git a/resources/views/builder/index.blade.php b/resources/views/builder/index.blade.php
+index 344c8bf..ca6bf37 100644
+--- a/resources/views/builder/index.blade.php
++++ b/resources/views/builder/index.blade.php
+@@ -2,6 +2,8 @@
+ @section('title', 'Builder Studio')
+ @section('content')
+ @php
++  use App\Support\MarketplaceManagement;
++
+   $types = [
+     'product'=>['label'=>'Product','icon'=>'package','text'=>'Licensed digital products and original source files'],
+     'project'=>['label'=>'Project','icon'=>'layers','text'=>'Present your project with scope and deliverables'],
+@@ -12,14 +14,20 @@
+   $editing = $record !== null;
+   $isProduct = $type === 'product';
+   $isJob = $type === 'job';
+-  $back = $isJob ? route('jobs.mine') : ($isProduct ? route('studio.products.index') : route('studio.listings'));
+-  $action = $isJob
++  $managed = $managerMode !== null;
++  $back = $managed ? MarketplaceManagement::indexUrl($type) : ($isJob ? route('jobs.mine') : ($isProduct ? route('studio.products.index') : route('studio.listings')));
++  $action = $managed ? route('builder.manage.update', ['type' => $type, 'publicId' => $record->public_id]) : ($isJob
+     ? ($editing ? url('/builder?='.$record->public_id) : route('jobs.store'))
+     : ($isProduct
+       ? ($editing ? route('studio.products.update',$record) : route('studio.products.store'))
+-      : ($editing ? route('studio.listings.update',$record) : route('studio.listings.store')));
++      : ($editing ? route('studio.listings.update',$record) : route('studio.listings.store'))));
++  $mediaUrl = fn ($asset) => $managerMode === 'preview'
++    ? route('dashboard.marketplace.asset', ['type' => $type, 'publicId' => $record->public_id, 'mediaId' => $asset->public_id])
++    : $asset->previewUrl();
++  $productCover = $managed && $isProduct ? $assets->firstWhere('id', $record->cover_media_id) : null;
++  $statusLabel = $editing ? (MarketplaceManagement::STATUSES[$record->status] ?? ucfirst($record->status)) : null;
+   $shareUrl = $editing
+-    ? ($record->status === 'published' ? $record->publicUrl() : url('/builder?='.$record->public_id))
++    ? ($record->status === 'published' ? $record->publicUrl() : ($managed ? MarketplaceManagement::builderUrl($record, true) : url('/builder?='.$record->public_id)))
+     : null;
+   $selectedKind = old('featured_kind', $record?->featured_kind ?? 'none');
+   $selectedMedia = old('featured_media_id', $record?->featured_media_id);
+@@ -37,7 +45,7 @@
+       <div class="studio-landing-hero-content">
+         <span class="studio-landing-eyebrow"><x-icon name="shield" size="16"/> Creative workspace</span>
+         <h1 id="studio-editor-heading">Builder Studio</h1>
+-        <p>{{ $editing ? 'Review and manage your '.$types[$type]['label'].' submission.' : 'Create a professional '.$types[$type]['label'].' in one focused workspace.' }}</p>
++        <p>{{ $managed ? 'Manage this listing from the '.$types[$type]['label'].' Manager.' : ($editing ? 'Review and manage your '.$types[$type]['label'].' submission.' : 'Create a professional '.$types[$type]['label'].' in one focused workspace.') }}</p>
+       </div>
+     </section>
+   @else
+@@ -54,7 +62,7 @@
+ 
+   <nav class="studio-types" aria-label="Builder content type">
+     @foreach($types as $key=>$meta)
+-      @continue(!in_array($key, $allowedTypes, true))
++      @continue($managed || !in_array($key, $allowedTypes, true))
+       <a class="studio-type {{ $type===$key?'is-active':'' }}"
+          href="{{ route('builder',['type'=>$key]) }}"
+          @if($type===$key)aria-current="page"@endif>
+@@ -67,7 +75,7 @@
+       </a>
+     @else
+       <div class="studio-type-actions" role="group" aria-label="Builder tools">
+-        @if($canEdit)
++        @if($canEdit && !$managed)
+           <button type="button" class="studio-tool-action" data-modal-open="studio-ai-draft" @disabled(!$aiDraftReady)
+                   title="{{ $aiDraftReady ? 'Write a draft with AI; review before applying' : 'AI provider not enabled by administrator' }}">
+             <x-icon name="sparkles" size="17"/> AI Draft
+@@ -76,7 +84,7 @@
+         <button type="button" class="studio-tool-action" data-builder-preview-toggle>
+           <x-icon name="eye" size="17"/> Preview
+         </button>
+-        <a class="studio-tool-action" href="{{ $back }}"><x-icon name="folders" size="17"/> My Content</a>
++        <a class="studio-tool-action" href="{{ $back }}"><x-icon name="folders" size="17"/> {{ $managed ? 'Back to manager' : 'My Content' }}</a>
+         <a class="studio-tool-action" href="{{ route('home') }}"><x-icon name="globe" size="17"/> Website</a>
+       </div>
+     @endif
+@@ -166,24 +174,37 @@
+     <div class="studio-section-heading">
+       <div>
+         <span class="eyebrow">{{ $types[$type]['label'] }} / {{ $editing ? 'Management' : 'New submission' }}</span>
+-        <h2>{{ $editing ? 'Edit '.$types[$type]['label'] : 'Create '.$types[$type]['label'] }}</h2>
+-        @if($editing)<p>Public ID <span class="mono">{{ $record->public_id }}</span> · {{ ucfirst($record->status) }}</p>@endif
++        <h2>{{ $editing ? ($canEdit ? 'Edit ' : 'Preview ').$types[$type]['label'] : 'Create '.$types[$type]['label'] }}</h2>
++        @if($editing)<p>Public ID <span class="mono">{{ $record->public_id }}</span> · {{ $statusLabel }}</p>@endif
+       </div>
+-      @if($editing)<span class="studio-status">{{ ucfirst($record->status) }}</span>@endif
++      @if($editing)<span class="studio-status">{{ $statusLabel }}</span>@endif
+     </div>
+ 
++    @if($managed && $errors->any())
++      @foreach($errors->all() as $error)<p class="notice" role="alert">{{ $error }}</p>@endforeach
++    @endif
+     @if(!$canEdit)
+-      <div class="notice">This {{ strtolower($types[$type]['label']) }} is {{ $record->status }}. You can inspect its content but cannot change it directly. Administrator review and publication safeguards remain active.</div>
++      <div class="notice">{{ $managed ? 'Read-only preview.' : 'You can inspect this submission but cannot change it directly.' }}</div>
+     @endif
+ 
+     <div class="studio-columns">
+       <div class="studio-primary">
++        @if($managerMode === 'preview' && $productCover)
++          <section class="studio-card" aria-label="Product cover">
++            <img class="media-dialog-preview" src="{{ $mediaUrl($productCover) }}" alt="{{ $productCover->alt_text }}">
++          </section>
++        @endif
+         <form data-builder-form method="post" action="{{ $action }}" class="studio-form">
+           @csrf
+           @if($editing)@method('PATCH')@endif
+           <input type="hidden" name="builder_mode" value="1">
+           @if(!$editing && !$isJob && !$isProduct)<input type="hidden" name="type" value="{{ $type }}">@endif
+-          <input type="hidden" name="terms_sha256" value="{{ $termsSha256 }}">
++          @if($managed)
++            <input type="hidden" name="expected_owner" value="{{ $ownerId }}">
++            <input type="hidden" name="expected_revision" value="{{ MarketplaceManagement::revision($record) }}">
++          @else
++            <input type="hidden" name="terms_sha256" value="{{ $termsSha256 }}">
++          @endif
+           <fieldset>
+             <section class="studio-card" aria-labelledby="studio-basic-title">
+               <div class="studio-card-heading">
+@@ -356,14 +377,14 @@
+                     <option value="">Choose media</option>
+                     @foreach($assets as $asset)
+                       
+-                      <option value="{{ $asset->id }}" data-media-mime="{{ $asset->mime_type }}" data-media-url="{{ $asset->previewUrl() }}"
++                      <option value="{{ $asset->id }}" data-media-mime="{{ $asset->mime_type }}" data-media-url="{{ $mediaUrl($asset) }}"
+                               data-media-alt="{{ $asset->alt_text }}" @selected((string)$selectedMedia===(string)$asset->id)>
+                         {{ $asset->alt_text }} · {{ $asset->public_id }} ({{ strtoupper(explode('/',$asset->mime_type)[1] ?? 'media') }})
+                       </option>
+                     @endforeach
+                   </select>
+                 </div>
+-                @if($canEdit)<button class="studio-tool-action" type="button" data-modal-open="studio-media-upload"><x-icon name="upload" size="16"/> Upload new media</button>@endif
++                @if($canEdit && !$managed)<button class="studio-tool-action" type="button" data-modal-open="studio-media-upload"><x-icon name="upload" size="16"/> Upload new media</button>@endif
+                 <small class="hint">Files uploaded here must pass rights review before they can be selected.</small>
+               </div>
+               <div class="studio-field studio-media-youtube" data-featured-youtube-wrap hidden>
+@@ -393,7 +414,7 @@
+                     <h4>Images & screenshots</h4>
+                     <p class="hint">Choose up to eight images from your Media Library. Upload screenshots here without leaving the builder. New uploads can be used immediately.</p>
+                   </div>
+-                  @if($canEdit)<button type="button" class="studio-tool-action" data-modal-open="studio-media-upload"><x-icon name="upload" size="17"/> Upload screenshots</button>@endif
++                  @if($canEdit && !$managed)<button type="button" class="studio-tool-action" data-modal-open="studio-media-upload"><x-icon name="upload" size="17"/> Upload screenshots</button>@endif
+                 </div>
+                 <div class="studio-gallery-grid" data-gallery-grid>
+                   @if($assets->whereIn('mime_type',['image/jpeg','image/png','image/webp','image/gif'])->isEmpty())
+@@ -405,7 +426,7 @@
+                       <input type="checkbox" name="gallery_media_ids[]" value="{{ $asset->id }}"
+                         @checked(in_array((int)$asset->id, array_map('intval', old('gallery_media_ids', $record?->gallery_media_ids ?? []))))
+                         @disabled(!$canEdit)>
+-                      <img src="{{ $asset->previewUrl() }}" alt="{{ $asset->alt_text }}" loading="lazy">
++                      <img src="{{ $mediaUrl($asset) }}" alt="{{ $asset->alt_text }}" loading="lazy">
+                       <span>{{ $asset->alt_text }}</span>
+                       
+                     </label>
+@@ -526,7 +547,7 @@
+               </section>
+             @endunless
+ 
+-            @if($isProduct)
++            @if($isProduct && !$managed)
+               <section class="studio-final-action">
+                 <label for="studio-next-status">Next action</label>
+                 <select id="studio-next-status" name="status" @disabled(!$canEdit)>
+@@ -536,7 +557,7 @@
+               </section>
+             @endif
+           </fieldset>
+-          @if($canEdit)
++          @if($canEdit && !$managed)
+             <div class="studio-accept-block">
+               <label class="studio-accept-check">
+                 <input type="checkbox" name="accept_terms" value="1" data-builder-terms-check required>
+@@ -551,14 +572,14 @@
+           <div class="studio-submit-bar">
+             <span><x-icon name="shield-check" size="17"/> Your work is protected by account ownership and content review.</span>
+             <div class="studio-submit-actions">
+-              <a class="studio-tool-action" href="{{ $back }}">Cancel</a>
++              <a class="studio-tool-action" href="{{ $back }}">{{ $canEdit ? 'Cancel' : 'Close preview' }}</a>
+               @if($canEdit)
+                 <button class="btn primary" type="submit"><x-icon name="save" size="17"/> {{ $isProduct ? 'Save product' : ($editing ? 'Save changes' : 'Submit for review') }}</button>
+               @endif
+             </div>
+           </div>
+         </form>
+-        @if($isProduct)
++        @if($isProduct && !$managed)
+           <section class="studio-card studio-product-original" aria-labelledby="studio-original-title">
+             <div class="studio-card-heading">
+               <div><span class="studio-step">06</span><h3 id="studio-original-title">Original downloadable product</h3></div>
+@@ -604,7 +625,7 @@
+           <h3>{{ $editing ? $record->title : 'New '.$types[$type]['label'] }}</h3>
+           <dl class="studio-summary">
+             <div><dt>Type</dt><dd>{{ $types[$type]['label'] }}</dd></div>
+-            <div><dt>Status</dt><dd>{{ $editing ? ucfirst($record->status) : 'Not saved' }}</dd></div>
++            <div><dt>Status</dt><dd>{{ $statusLabel ?? 'Not saved' }}</dd></div>
+             <div><dt>Visibility</dt><dd>Private until approved</dd></div>
+           </dl>
+           @if($editing && $record->status === 'published')<a class="studio-tool-action" href="{{ $record->publicUrl() }}"><x-icon name="external-link" size="16"/> View published page</a>@endif
+@@ -620,10 +641,10 @@
+           </div>
+           <p class="hint">Creating a listing or job does not charge a customer, enable checkout or fund escrow.</p>
+         </section>
+-        @if($editing && $isProduct && $record->status==='published')
++        @if(!$managed && $editing && $isProduct && $record->status==='published')
+           <a class="studio-tool-action" href="{{ route('studio.vault.index',$record) }}"><x-icon name="archive" size="17"/> Manage secure file releases</a>
+         @endif
+-        @if($editing && $isJob)
++        @if(!$managed && $editing && $isJob)
+           <a class="studio-tool-action" href="{{ route('jobs.proposals',$record) }}"><x-icon name="users" size="17"/> Review job proposals</a>
+         @endif
+       </aside>
+@@ -668,7 +689,7 @@
+         <button type="button" class="btn primary" data-builder-terms-accept><x-icon name="check-circle" size="17"/> Accept terms</button>
+       </div>
+     </dialog>
+-    @if($canEdit)
++    @if($canEdit && !$managed)
+       @include('builder.ai-draft-dialog')
+       <script defer src="{{ asset('js/ai-draft-studio.js') }}?v=2"></script>
+     @endif
+diff --git a/resources/views/dashboard/index.blade.php b/resources/views/dashboard/index.blade.php
+index 7bbeb87..9ef1e8f 100644
+--- a/resources/views/dashboard/index.blade.php
++++ b/resources/views/dashboard/index.blade.php
+@@ -41,7 +41,7 @@
+       @php
+         $itemUrl = $isStaff
+           ? route('dashboard.support.show', $item->public_id)
+-          : ($item->type === 'product' ? route('dashboard.products.index',['status'=>'pending','search'=>$item->title]) : route('dashboard.reviews'));
++          : ($item->type === 'product' ? route('dashboard.products.index',['status'=>$item->status,'search'=>$item->title]) : route('dashboard.reviews'));
+       @endphp
+       <a class="workspace-overview-row" href="{{ $itemUrl }}">
+         <span class="workspace-overview-row-main">
+diff --git a/resources/views/dashboard/jobs.blade.php b/resources/views/dashboard/jobs.blade.php
+index 4064aad..8a9696d 100644
+--- a/resources/views/dashboard/jobs.blade.php
++++ b/resources/views/dashboard/jobs.blade.php
+@@ -1,32 +1,5 @@
+ @extends('layouts.dashboard')
+-@section('title','Job Manager')
++@section('title', 'Job Manager')
+ @section('content')
+-<div class="page-intro"><div class="eyebrow">Marketplace Governance</div><h1>Job Manager</h1><p>Moderate posted jobs before public visibility. Only real client-submitted briefs appear in this table.</p></div>
+-<section class="panel"><div class="panel-head"><h2>Job review <span class="count">{{ $jobs->total() }}</span></h2>
+-<form method="get" class="table-search"><select class="table-select" name="status" aria-label="Filter jobs">
+-@foreach(['pending'=>'Pending','published'=>'Published','rejected'=>'Rejected','closed'=>'Closed','withdrawn'=>'Withdrawn','all'=>'All'] as $value=>$name)<option value="{{ $value }}" @selected($status===$value)>{{ $name }}</option>@endforeach
+-</select><button class="btn subtle" type="submit">Filter</button></form></div>
+-<div class="table-scroll"><table class="data-table"><thead><tr><th>Job ID</th><th>Title</th><th>Client</th><th>Category</th><th>Budget</th><th>Status</th><th>Action</th></tr></thead><tbody>
+-@forelse($jobs as $job)<tr><td class="mono">{{ $job->public_id }}</td><td><strong>{{ $job->title }}</strong></td><td>{{ $job->client?->name }}</td><td>{{ $job->category_label }}</td><td>{{ $job->budget===null?'—':'$'.number_format((float)$job->budget,2) }}</td><td><span class="role-pill">{{ ucfirst($job->status) }}</span></td>
+-<td><x-row-action-menu :id="'job-'.$job->id" :label="$job->title">
+-<button type="button" data-modal-open="admin-job-{{ $job->id }}"><x-icon name="settings" size="16"/> Configure</button>
+-</x-row-action-menu>
+-<dialog class="config-dialog wide-dialog" id="admin-job-{{ $job->id }}"><h2>{{ $job->title }}</h2><p>{{ $job->client?->name }} · {{ $job->public_id }}</p><p class="review-text">{{ $job->description }}</p>
+-@if($job->status === 'pending')
+-<form method="post" action="{{ route('dashboard.jobs.decide',$job) }}">@csrf @method('PATCH')
+-<div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Cancel</button><button class="btn subtle" type="submit" name="decision" value="rejected">Reject</button><button class="btn primary" type="submit" name="decision" value="published">Publish job</button></div></form>
+-@else
+-  @if($job->status==='published')
+-    <form method="post" action="{{ route('dashboard.card-features.job',$job) }}" class="marketplace-card-feature-form">
+-      @csrf @method('PATCH')
+-      <label><input type="checkbox" name="featured_checkbox" value="1" @checked($job->is_featured)> Featured on public cards</label>
+-      <input type="hidden" name="is_featured" value="{{ $job->is_featured ? '1' : '0' }}">
+-      <button class="btn subtle compact" type="submit">Save Featured status</button>
+-    </form>
+-  @endif
+-  <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Close</button></div>
+-@endif
+-</dialog></td></tr>
+-@empty<tr><td colspan="7" class="empty-cell">No job posts match this status.</td></tr>@endforelse
+-</tbody></table></div><x-pagination :paginator="$jobs"/></section>
++  @include('dashboard.partials.marketplace-manager', ['records' => $jobs])
+ @endsection
+diff --git a/resources/views/dashboard/marketplace.blade.php b/resources/views/dashboard/marketplace.blade.php
+index 31887da..f01491b 100644
+--- a/resources/views/dashboard/marketplace.blade.php
++++ b/resources/views/dashboard/marketplace.blade.php
+@@ -1,37 +1,5 @@
+ @extends('layouts.dashboard')
+-@section('title',ucfirst($type).' Manager')
++@section('title', ucfirst($type).' Manager')
+ @section('content')
+-<div class="page-intro"><div class="eyebrow">Marketplace Governance</div><h1>{{ ucfirst($type) }} Manager</h1>
+-<p>Review submitted {{ $type }} listings from real creator accounts. Published listings are accessible through their nine-digit canonical URLs.</p></div>
+-<section class="panel"><div class="panel-head"><h2>{{ ucfirst($type) }} listings <span class="count">{{ $listings->total() }}</span></h2>
+-<form method="get" class="table-search"><input name="q" value="{{ $search }}" placeholder="Search title or public ID" aria-label="Search listings">
+-<select name="status" class="table-select" aria-label="Status">
+-@foreach(['all'=>'All','pending'=>'Pending','published'=>'Published','rejected'=>'Rejected','draft'=>'Draft','withdrawn'=>'Withdrawn'] as $key=>$value)<option value="{{ $key }}" @selected($status===$key)>{{ $value }}</option>@endforeach
+-</select><button class="btn subtle" type="submit">Filter</button></form></div>
+-<div class="table-scroll"><table class="data-table"><thead><tr><th>Public ID</th><th>Title</th><th>Creator</th><th>Category</th><th>Price</th><th>Status</th><th>Action</th></tr></thead><tbody>
+-@forelse($listings as $listing)<tr>
+-<td class="mono">{{ $listing->public_id }}</td><td><strong>{{ $listing->title }}</strong></td><td>{{ $listing->creator?->name }}</td><td>{{ $listing->category?->name ?? 'Uncategorized' }}</td>
+-<td>{{ $listing->price===null?'—':'$'.number_format((float)$listing->price,2) }}</td><td><span class="role-pill">{{ ucfirst($listing->status) }}</span></td>
+-<td><x-row-action-menu :id="'listing-'.$listing->id" :label="$listing->title">
+-    <button type="button" data-modal-open="listing-{{ $listing->id }}"><x-icon name="settings" size="16"/> Configure</button>
+-  </x-row-action-menu>
+-<dialog class="config-dialog wide-dialog" id="listing-{{ $listing->id }}"><h2>{{ $listing->title }}</h2><p>ID {{ $listing->public_id }} · {{ $listing->creator?->name }}</p>
+-<p class="review-text">{{ $listing->description }}</p>
+-@if($listing->status==='pending')
+-<form method="post" action="{{ route('dashboard.reviews.update',$listing) }}">@csrf @method('PATCH')
+-<div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Cancel</button><button class="btn subtle" type="submit" name="decision" value="rejected">Reject</button><button class="btn primary" type="submit" name="decision" value="published">Publish</button></div></form>
+-@else
+-  @if($listing->status==='published')
+-    <form method="post" action="{{ route('dashboard.card-features.listing',$listing) }}" class="marketplace-card-feature-form">
+-      @csrf @method('PATCH')
+-      <label><input type="checkbox" name="featured_checkbox" value="1" @checked($listing->is_featured)> Featured on public cards</label>
+-      <input type="hidden" name="is_featured" value="{{ $listing->is_featured ? '1' : '0' }}" data-featured-value>
+-      <button class="btn subtle compact" type="submit">Save Featured status</button>
+-    </form>
+-  @endif
+-  <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Close</button>@if($listing->status==='published')<a class="btn primary" href="{{ $listing->publicUrl() }}">View</a>@endif</div>
+-@endif
+-</dialog></td></tr>
+-@empty<tr><td colspan="7" class="empty-cell">There are no {{ $type }} listings matching this filter.</td></tr>@endforelse
+-</tbody></table></div><x-pagination :paginator="$listings"/></section>
++  @include('dashboard.partials.marketplace-manager', ['records' => $listings])
+ @endsection
+diff --git a/resources/views/dashboard/partials/marketplace-actions.blade.php b/resources/views/dashboard/partials/marketplace-actions.blade.php
+new file mode 100644
+index 0000000..f909d16
+--- /dev/null
++++ b/resources/views/dashboard/partials/marketplace-actions.blade.php
+@@ -0,0 +1,59 @@
++@php
++  use App\Support\MarketplaceManagement;
++
++  $dialogId = 'manager-'.$type.'-'.$record->id;
++  $editUrl = $canReview && MarketplaceManagement::mayEdit($record) ? MarketplaceManagement::builderUrl($record) : null;
++  $transferUrl = $canTransfer && $member ? route('dashboard.marketplace.transfer', [
++    'user' => $member, 'type' => $type, 'id' => $record->id,
++  ]) : null;
++  $actions = $canReview ? MarketplaceManagement::actions($record) : [];
++@endphp
++<x-row-action-menu :id="$dialogId" :label="$record->title">
++  <button type="button" data-modal-open="{{ $dialogId }}"><x-icon name="settings" size="16"/> Configure</button>
++  @if($editUrl)<a href="{{ $editUrl }}"><x-icon name="pencil" size="16"/> Edit</a>@endif
++  @foreach($actions as $target => $label)
++    <button type="button" data-modal-open="{{ $dialogId }}-{{ $target }}">{{ $label }}</button>
++  @endforeach
++  @if($transferUrl)<a href="{{ $transferUrl }}">Change {{ $isJob ? 'client' : 'creator' }}</a>@endif
++</x-row-action-menu>
++<dialog class="config-dialog wide-dialog" id="{{ $dialogId }}" aria-labelledby="{{ $dialogId }}-heading">
++  <div class="dialog-heading">
++    <h2 id="{{ $dialogId }}-heading">{{ $record->title }}</h2>
++    <p>{{ $record->public_id }} · {{ $member?->name ?? 'Unavailable' }} · {{ $statusLabel }}</p>
++  </div>
++  @if($thumbUrl)<img class="media-dialog-preview" src="{{ $thumbUrl }}" alt="{{ $thumbnail->alt_text }}" loading="lazy">@endif
++  <p class="review-text">{{ $record->description }}</p>
++  @if($isProduct && $record->licenseDefinition?->status === 'active')
++    <p><a href="{{ $record->licenseDefinition->publicUrl() }}">Read license definition</a></p>
++  @endif
++  @if($canReview && $record->status === 'published')
++    <form method="post" action="{{ route($isJob ? 'dashboard.card-features.job' : 'dashboard.card-features.listing', $record) }}" class="marketplace-card-feature-form">
++      @csrf @method('PATCH')
++      <input type="hidden" name="is_featured" value="{{ $record->is_featured ? '1' : '0' }}">
++      <label><input type="checkbox" @checked($record->is_featured)> Featured on public cards</label>
++      <button class="btn subtle compact" type="submit">Save Featured status</button>
++    </form>
++  @endif
++  <div class="dialog-actions">
++    <button type="button" class="btn subtle" data-modal-close>Close</button>
++    <a class="btn subtle" href="{{ $previewUrl }}">Open Builder preview</a>
++    @if($editUrl)<a class="btn primary" href="{{ $editUrl }}">Edit in Builder Studio</a>@endif
++    @if($transferUrl)<a class="btn subtle" href="{{ $transferUrl }}">Change {{ $isJob ? 'client' : 'creator' }}</a>@endif
++    @if($record->status === 'published')<a class="btn subtle" href="{{ $record->publicUrl() }}">View published listing</a>@endif
++  </div>
++</dialog>
++@foreach($actions as $target => $label)
++  <dialog class="config-dialog" id="{{ $dialogId }}-{{ $target }}" aria-labelledby="{{ $dialogId }}-{{ $target }}-title">
++    <h2 id="{{ $dialogId }}-{{ $target }}-title">{{ $target === 'published' ? 'Publish listing' : 'Move to '.$label }}</h2>
++    <p>{{ $record->title }}</p>
++    @if($target === 'published' && $isProduct)<p>An active license and the creator’s stored cover are required.</p>@endif
++    <form method="post" action="{{ route('dashboard.marketplace.status', ['type' => $type, 'publicId' => $record->public_id]) }}">
++      @csrf @method('PATCH')
++      <input type="hidden" name="expected_status" value="{{ $record->status }}">
++      <div class="dialog-actions">
++        <button type="button" class="btn subtle" data-modal-close>Cancel</button>
++        <button class="btn primary" type="submit" name="status" value="{{ $target }}">{{ $target === 'published' ? 'Publish' : 'Set '.$label }}</button>
++      </div>
++    </form>
++  </dialog>
++@endforeach
+diff --git a/resources/views/dashboard/partials/marketplace-manager.blade.php b/resources/views/dashboard/partials/marketplace-manager.blade.php
+new file mode 100644
+index 0000000..0ee2afa
+--- /dev/null
++++ b/resources/views/dashboard/partials/marketplace-manager.blade.php
+@@ -0,0 +1,112 @@
++@php
++  use App\Support\MarketplaceManagement;
++  use App\Support\UserManagementAccess;
++  use Illuminate\Support\Str;
++
++  $isJob = $type === 'job';
++  $isProduct = $type === 'product';
++  $name = ucfirst($type);
++  $canReview = UserManagementAccess::allows(auth()->user(), 'marketplace_review');
++  $canTransfer = UserManagementAccess::allows(auth()->user(), 'marketplace_transfer');
++  $managerUrl = MarketplaceManagement::indexUrl($type);
++  $filters = array_filter(['q' => $search, 'status' => $status, 'owner' => $owner, 'category' => $category],
++    fn ($value) => $value !== null && $value !== '');
++@endphp
++<div class="page-intro">
++  <div class="eyebrow">Marketplace Governance</div>
++  <h1>{{ $name }} Manager</h1>
++  <p>{{ $isProduct ? 'Products require an active license and a valid creator-owned cover to publish.' : 'Find listings, open their Builder Studio preview, and manage review status.' }}</p>
++</div>
++@foreach($errors->all() as $error)
++  <p class="notice" role="alert">{{ $error }}</p>
++@endforeach
++<section class="panel">
++  <div class="panel-head">
++    <h2>{{ $isProduct ? 'Digital products' : $name.' listings' }} <span class="count">{{ $records->total() }}</span></h2>
++    <form class="table-search" method="get" action="{{ $managerUrl }}">
++      @if($owner !== null)<input type="hidden" name="owner" value="{{ $owner }}">@endif
++      @if($category !== null)<input type="hidden" name="category" value="{{ $category }}">@endif
++      <input name="q" value="{{ $search }}" placeholder="Search title or public ID" aria-label="Search listings" maxlength="120">
++      <select class="table-select" name="status" aria-label="Filter status">
++        @foreach($statuses as $key => $label)
++          <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
++        @endforeach
++      </select>
++      <button class="btn subtle" type="submit">Filter</button>
++      @if($owner !== null || $category !== null || $status !== 'all' || $search !== '')
++        <a class="btn subtle" href="{{ $managerUrl }}">Clear filters</a>
++      @endif
++    </form>
++  </div>
++  <div class="table-scroll">
++    <table class="data-table">
++      <thead><tr>
++        <th scope="col">Public ID</th><th scope="col">Title</th><th scope="col">{{ $isJob ? 'Client' : 'Creator' }}</th>
++        <th scope="col">Category</th><th scope="col">{{ $isProduct ? 'License' : ($isJob ? 'Budget' : 'Price') }}</th>
++        <th scope="col">Preview</th><th scope="col">Status</th><th scope="col">Action</th>
++      </tr></thead>
++      <tbody>
++        @forelse($records as $record)
++          @php
++            $member = $isJob ? $record->client : $record->creator;
++            $categoryName = ($isJob ? ($jobCategories[$record->category] ?? Str::headline($record->category ?? '')) : $record->category?->name) ?: 'Uncategorized';
++            $categoryKey = $isJob ? $record->category : $record->category_id;
++            $previewUrl = MarketplaceManagement::builderUrl($record, true);
++            $thumbnail = $isProduct ? ($record->coverAsset ?? $record->featuredAsset) : $record->featuredAsset;
++            if ($thumbnail && ((int) $thumbnail->user_id !== MarketplaceManagement::ownerId($record)
++                || !str_starts_with($thumbnail->mime_type, 'image/'))) {
++              $thumbnail = null;
++            }
++            $thumbUrl = $thumbnail ? route('dashboard.marketplace.asset', [
++              'type' => $type, 'publicId' => $record->public_id, 'mediaId' => $thumbnail->public_id,
++            ]) : null;
++            $amount = $isJob ? $record->budget : $record->price;
++            $statusLabel = $statuses[$record->status] ?? ucfirst($record->status);
++          @endphp
++          <tr>
++            <td class="mono"><a href="{{ $previewUrl }}" aria-label="Preview listing {{ $record->public_id }}">{{ $record->public_id }}</a></td>
++            <td><strong><a href="{{ $previewUrl }}">{{ $record->title }}</a></strong></td>
++            <td>
++              @if($member)
++                <a href="{{ MarketplaceManagement::indexUrl($type, array_replace($filters, ['owner' => $member->id])) }}"
++                   aria-label="Filter by {{ $isJob ? 'client' : 'creator' }} {{ $member->name }}">{{ $member->name }}</a>
++              @else
++                <span class="text-muted">Unavailable</span>
++              @endif
++            </td>
++            <td>
++              @if($categoryKey)
++                <a href="{{ MarketplaceManagement::indexUrl($type, array_replace($filters, ['category' => $categoryKey])) }}"
++                   aria-label="Filter by category {{ $categoryName }}">{{ $categoryName }}</a>
++              @else
++                <span class="text-muted">{{ $categoryName }}</span>
++              @endif
++            </td>
++            <td>
++              @if($isProduct)
++                {{ $record->licenseDefinition?->name ?? 'Missing' }}
++                @if($record->licenseDefinition)<div class="text-muted">{{ $record->licenseDefinition->version }}</div>@endif
++              @else
++                {{ $amount === null ? '—' : '$'.number_format((float) $amount, 2) }}
++              @endif
++            </td>
++            <td>
++              <a href="{{ $previewUrl }}" aria-label="Preview {{ $record->title }}">
++                @if($thumbUrl)
++                  <img class="media-thumb" src="{{ $thumbUrl }}" width="52" height="52" style="display:block;width:52px;height:52px;object-fit:cover" alt="" loading="lazy">
++                @else
++                  <x-icon name="eye" size="18"/> Preview
++                @endif
++              </a>
++            </td>
++            <td><span class="role-pill">{{ $statusLabel }}</span></td>
++            <td>@include('dashboard.partials.marketplace-actions')</td>
++          </tr>
++        @empty
++          <tr><td colspan="8" class="empty-cell">No listings match these filters.</td></tr>
++        @endforelse
++      </tbody>
++    </table>
++  </div>
++  <x-pagination :paginator="$records"/>
++</section>
+diff --git a/resources/views/dashboard/products.blade.php b/resources/views/dashboard/products.blade.php
+index 3a89cb9..7af92ac 100644
+--- a/resources/views/dashboard/products.blade.php
++++ b/resources/views/dashboard/products.blade.php
+@@ -1,71 +1,5 @@
+ @extends('layouts.dashboard')
+-@section('title','Product Manager')
++@section('title', 'Product Manager')
+ @section('content')
+-<div class="page-intro"><div class="eyebrow">Marketplace · Catalog Governance</div><h1>Product Manager</h1>
+-  <p>Review real digital product records. Published listings require an active license definition and a valid cover image from their creator.</p></div>
+-<section class="panel">
+-  <div class="panel-head">
+-    <h2>Digital products <span class="count">{{ $products->total() }}</span></h2>
+-    <form class="table-search" method="get">
+-      <x-icon name="search" size="17"/><input name="search" value="{{ $search }}" placeholder="Product title or ID" aria-label="Search product catalog">
+-      <select name="status" aria-label="Filter status" class="table-select">
+-        @foreach(['all'=>'All statuses','draft'=>'Draft','pending'=>'Pending','published'=>'Published','rejected'=>'Rejected','withdrawn'=>'Withdrawn'] as $value=>$label)
+-          <option value="{{ $value }}" @selected($status===$value)>{{ $label }}</option>
+-        @endforeach
+-      </select><button class="btn subtle" type="submit">Search</button>
+-    </form>
+-  </div>
+-  <div class="table-scroll">
+-    <table class="data-table">
+-      <thead><tr><th>Product ID</th><th>Title</th><th>Creator</th><th>License</th><th>Preview</th><th>Status</th><th>Action</th></tr></thead>
+-      <tbody>
+-        @forelse($products as $product)
+-          <tr>
+-            <td class="mono">{{ $product->public_id }}</td>
+-            <td><strong>{{ $product->title }}</strong></td><td>{{ $product->creator?->name }}</td>
+-            <td>{{ $product->licenseDefinition?->name ?? 'Missing' }}<div class="text-muted">{{ $product->licenseDefinition?->version }}</div></td>
+-            <td>@if($product->coverAsset)<img class="media-thumb" src="{{ $product->coverAsset->previewUrl() }}" width="52" height="52" alt="{{ $product->coverAsset->alt_text }}">@else<span class="text-muted">Missing</span>@endif</td>
+-            <td><span class="role-pill">{{ ucfirst($product->status) }}</span></td>
+-            <td>
+-              <x-row-action-menu :id="'admin-product-'.$product->id" :label="$product->title">
+-                <button type="button" data-modal-open="admin-product-{{ $product->id }}"><x-icon name="settings" size="16"/> Configure</button>
+-              </x-row-action-menu>
+-              <dialog class="config-dialog wide-dialog" id="admin-product-{{ $product->id }}">
+-                <div class="dialog-heading"><h2>{{ $product->title }}</h2><p>ID {{ $product->public_id }} · {{ $product->creator?->name }} · {{ ucfirst($product->status) }}</p></div>
+-                @if($product->coverAsset)<img class="media-dialog-preview" src="{{ $product->coverAsset->previewUrl() }}" alt="{{ $product->coverAsset->alt_text }}">@endif
+-                <strong>Product description</strong><p class="review-text">{{ $product->description }}</p>
+-                <p><strong>Listed price:</strong> {{ $product->price === null ? 'Not specified' : '$'.number_format((float)$product->price,2).' USD' }}</p>
+-                <p><strong>License:</strong> {{ $product->licenseDefinition?->name ?? 'Not selected' }} @if($product->licenseDefinition) ({{ $product->licenseDefinition->status }}) @endif</p>
+-                @if($product->licenseDefinition && $product->licenseDefinition->status === 'active')
+-                  <a href="{{ $product->licenseDefinition->publicUrl() }}" class="btn subtle compact" target="_blank" rel="noopener noreferrer">Read license definition</a>
+-                @endif
+-                
+-                @if($product->license_terms)<strong>Additional terms</strong><p class="review-text">{{ $product->license_terms }}</p>@endif
+-                @if($product->status === 'pending')
+-                  <form method="post" action="{{ route('dashboard.products.decide',$product) }}">
+-                    @csrf @method('PATCH')
+-                    <p class="hint">Publishing requires an active license, a valid creator-owned preview, and a securely stored image.</p>
+-                    <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn subtle" type="submit" name="decision" value="rejected">Reject</button><button class="btn primary" type="submit" name="decision" value="published">Publish product</button></div>
+-                  </form>
+-                @else
+-                  @if($product->status === 'published')
+-                    <form method="post" action="{{ route('dashboard.card-features.listing',$product) }}" class="marketplace-card-feature-form">
+-                      @csrf @method('PATCH')
+-                      <label><input type="checkbox" name="featured_checkbox" value="1" @checked($product->is_featured)> Featured on public cards</label>
+-                      <input type="hidden" name="is_featured" value="{{ $product->is_featured ? '1' : '0' }}">
+-                      <button class="btn subtle compact" type="submit">Save Featured status</button>
+-                    </form>
+-                    <a class="btn subtle" href="{{ $product->publicUrl() }}" target="_blank" rel="noopener noreferrer">View published product</a>
+-                  @endif
+-                  <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Close</button></div>
+-                @endif
+-              </dialog>
+-            </td>
+-          </tr>
+-        @empty<tr><td class="empty-cell" colspan="7">No digital products match these filters.</td></tr>@endforelse
+-      </tbody>
+-    </table>
+-  </div>
+-  <x-pagination :paginator="$products"/>
+-</section>
++  @include('dashboard.partials.marketplace-manager', ['records' => $products])
+ @endsection
+diff --git a/resources/views/dashboard/user-form.blade.php b/resources/views/dashboard/user-form.blade.php
+index a6c5e78..66ad2f1 100644
+--- a/resources/views/dashboard/user-form.blade.php
++++ b/resources/views/dashboard/user-form.blade.php
+@@ -53,14 +53,19 @@
+         @endunless
+       </div>
+       <div class="user-manager-permissions">
+-        <h3>Individual restrictions</h3>
+-        <p class="hint">A role sets the maximum access. The settings below may restrict access to the connected workflows; they cannot grant more access than the role allows. Superadmin access is not restricted.</p>
++        <h3>Individual permissions</h3>
++        <p class="hint">Permissions apply within each account role. Enable marketplace ownership transfers to assign that task to a staff account.</p>
+         @foreach(\App\Support\UserManagementAccess::CAPABILITIES as $key=>$label)
++        @php
++          $default = $key === 'marketplace_transfer' && $member->role !== 'staff'
++            ? false : ($permissions[$key]['allowed'] ?? $key !== 'marketplace_transfer');
++          $selected = (string) old('permissions.'.$key, $default ? '1' : '0');
++        @endphp
+         <label class="user-manager-permission">
+           <span><strong>{{ $label }}</strong><small>{{ $key }}</small></span>
+           <select name="permissions[{{ $key }}]" aria-label="Access to {{ $label }}">
+-            <option value="1" @selected((string)old('permissions.'.$key,($permissions[$key]['allowed']??true)?'1':'0')==='1')>Allowed by role</option>
+-            <option value="0" @selected((string)old('permissions.'.$key,($permissions[$key]['allowed']??true)?'1':'0')==='0')>Restrict access</option>
++            <option value="1" @selected($selected === '1')>{{ $key==='marketplace_transfer' ? 'Allow ownership transfers' : 'Allowed by role' }}</option>
++            <option value="0" @selected($selected === '0')>Restrict access</option>
+           </select>
+         </label>
+         @endforeach
+diff --git a/resources/views/dashboard/user-transfer.blade.php b/resources/views/dashboard/user-transfer.blade.php
+index be85a1b..ebc5e46 100644
+--- a/resources/views/dashboard/user-transfer.blade.php
++++ b/resources/views/dashboard/user-transfer.blade.php
+@@ -5,7 +5,7 @@
+   <div class="page-intro user-manager-header"><div>
+     <div class="eyebrow">User Manager / Ownership</div><h1>Transfer {{ ucfirst($type) }}</h1>
+     <p>Move an eligible marketplace record to another active user without changing its public reference.</p>
+-  </div><a class="btn subtle" href="{{ route('dashboard.users.show',$member) }}"><x-icon name="arrow-left" size="16"/> Back to user</a></div>
++  </div><a class="btn subtle" href="{{ $fromManager ? \App\Support\MarketplaceManagement::indexUrl($type) : route('dashboard.users.show', $member) }}"><x-icon name="arrow-left" size="16"/> {{ $fromManager ? 'Back to manager' : 'Back to user' }}</a></div>
+ 
+   <div class="user-manager-two-cols">
+     <section class="panel">
+@@ -21,7 +21,7 @@
+     </section>
+     <section class="panel">
+       <div class="panel-head"><h2>New owner</h2></div>
+-      <form method="post" action="{{ route('dashboard.users.transfer.store',$member) }}" class="user-manager-transfer-form">
++      <form method="post" action="{{ route($fromManager ? 'dashboard.marketplace.transfer.store' : 'dashboard.users.transfer.store', $member) }}" class="user-manager-transfer-form">
+         @csrf
+         <input type="hidden" name="type" value="{{ $type }}">
+         <input type="hidden" name="id" value="{{ $item->id }}">
+diff --git a/resources/views/layouts/workspace.blade.php b/resources/views/layouts/workspace.blade.php
+index 95c09ee..f22dc28 100644
+--- a/resources/views/layouts/workspace.blade.php
++++ b/resources/views/layouts/workspace.blade.php
+@@ -93,6 +93,15 @@
+         ['route'=>'dashboard.notifications.index','label'=>'Notification Analytics','icon'=>'bell'],
+       ]];
+     }
++    if ($user->role === 'staff' && \App\Support\UserManagementAccess::allows($user, 'marketplace_transfer')) {
++      $groups[] = ['heading'=>'Marketplace Management','items'=>[
++        ['route'=>'dashboard.products.index','label'=>'Digital Products','icon'=>'package'],
++        ['route'=>'dashboard.jobs.index','label'=>'Job Manager','icon'=>'briefcase'],
++        ['route'=>'dashboard.marketplace.index','label'=>'Projects','icon'=>'folders','params'=>['type'=>'project']],
++        ['route'=>'dashboard.marketplace.index','label'=>'Freelance','icon'=>'user-check','params'=>['type'=>'freelance']],
++        ['route'=>'dashboard.marketplace.index','label'=>'Services','icon'=>'wrench','params'=>['type'=>'service']],
++      ]];
++    }
+     $groups[] = ['heading'=>'Assistance','items'=>[
+       ['route'=>'dashboard.support','label'=>'Support Center','icon'=>'life-buoy'],
+     ]];
+diff --git a/routes/web.php b/routes/web.php
+index 8d60919..59881d8 100644
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -30,6 +30,7 @@
+ use App\Http\Controllers\Dashboard\TurnstileProtectionController;
+ use App\Http\Controllers\SiteManifestController;
+ use App\Http\Controllers\Dashboard\CategoryManagerController;
++use App\Http\Controllers\Dashboard\MarketplaceActionController;
+ use App\Http\Controllers\Dashboard\MarketplaceManagerController;
+ use App\Http\Controllers\Dashboard\MarketplaceCardFeaturesController;
+ use App\Http\Controllers\AccountNotificationController;
+@@ -154,6 +155,9 @@
+ 
+ Route::middleware('auth')->group(function (): void {
+     Route::get('/builder', [BuilderController::class, 'show'])->name('builder');
++    Route::patch('/builder/manage/{type}/{publicId}', [BuilderController::class, 'updateManaged'])
++        ->where('type', 'product|project|freelance|service|job')->where('publicId', '[0-9]{9}')
++        ->middleware(['capability:marketplace_review', 'throttle:15,1'])->name('builder.manage.update');
+     Route::post('/builder/ai-drafts', [AiDraftController::class, 'generate'])
+         ->name('builder.ai.generate')->middleware('throttle:4,1');
+     Route::post('/builder/ai-drafts/{draft}/reviewed', [AiDraftController::class, 'reviewed'])
+@@ -321,6 +325,21 @@
+     });
+ 
+     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
++        Route::get('/{type}-manager', [MarketplaceManagerController::class, 'index'])
++            ->where('type','project|freelance|service')->name('dashboard.marketplace.index');
++        Route::get('/job-manager', [JobManagerController::class, 'index'])->name('dashboard.jobs.index');
++        Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');
++        Route::get('/marketplace-records/{type}/{publicId}/media/{mediaId}', [MarketplaceActionController::class, 'asset'])
++            ->where('type', 'product|project|freelance|service|job')
++            ->where(['publicId' => '[0-9]{9}', 'mediaId' => '[0-9]{9}'])->name('dashboard.marketplace.asset');
++        Route::patch('/marketplace-records/{type}/{publicId}/status', [MarketplaceActionController::class, 'status'])
++            ->where('type', 'product|project|freelance|service|job')->where('publicId', '[0-9]{9}')
++            ->middleware(['capability:marketplace_review', 'throttle:15,1'])->name('dashboard.marketplace.status');
++        Route::get('/marketplace-owners/{user}/transfer', [UserOwnershipTransferController::class, 'create'])
++            ->middleware('capability:marketplace_transfer')->name('dashboard.marketplace.transfer');
++        Route::post('/marketplace-owners/{user}/transfer', [UserOwnershipTransferController::class, 'store'])
++            ->middleware(['capability:marketplace_transfer', 'throttle:10,1'])->name('dashboard.marketplace.transfer.store');
++
+         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+         Route::get('/support-center', [SupportCenterController::class, 'index'])->name('dashboard.support')->middleware('capability:support_center');
+         Route::get('/creator-badges', [CreatorBadgeController::class,'index'])->name('dashboard.badges.index');
+@@ -407,8 +426,6 @@
+             Route::get('/category-manager', [CategoryManagerController::class, 'index'])->name('dashboard.categories.index');
+             Route::post('/category-manager', [CategoryManagerController::class, 'store'])->name('dashboard.categories.store');
+             Route::patch('/category-manager/{category}', [CategoryManagerController::class, 'update'])->name('dashboard.categories.update');
+-            Route::get('/{type}-manager', [MarketplaceManagerController::class, 'index'])
+-                ->where('type','project|freelance|service')->name('dashboard.marketplace.index');
+             Route::patch('/card-features/listings/{listing}', [MarketplaceCardFeaturesController::class,'listing'])
+                 ->name('dashboard.card-features.listing')->middleware('throttle:15,1');
+             Route::patch('/card-features/jobs/{job}', [MarketplaceCardFeaturesController::class,'job'])
+@@ -417,9 +434,7 @@
+             Route::get('/contract-disputes', [ContractOversightController::class,'disputes'])->name('dashboard.contracts.disputes');
+             Route::get('/contract-disputes/{dispute}', [ContractOversightController::class,'inspect'])->name('dashboard.contracts.inspect');
+             Route::patch('/contract-disputes/{dispute}', [ContractOversightController::class,'decide'])->name('dashboard.contracts.decide');
+-            Route::get('/job-manager', [JobManagerController::class, 'index'])->name('dashboard.jobs.index');
+             Route::patch('/job-manager/{job}', [JobManagerController::class, 'decide'])->name('dashboard.jobs.decide')->middleware('capability:marketplace_review');
+-            Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');
+             Route::patch('/product-manager/{product}', [ProductManagerController::class, 'decide'])->name('dashboard.products.decide')->middleware('capability:marketplace_review');
+             Route::get('/license-manager', [LicenseManagerController::class, 'index'])->name('dashboard.licenses.index');
+             Route::post('/license-manager', [LicenseManagerController::class, 'store'])->name('dashboard.licenses.store');
