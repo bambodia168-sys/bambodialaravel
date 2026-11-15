@@ -22,8 +22,8 @@ class MediaLibraryController extends Controller
 {
     public function index(Request $request): View
     {
-        $studio = $request->routeIs('studio.media.*', 'account.media.*');
-        $accountMedia = $request->routeIs('account.media.*');
+        $accountMedia = $request->routeIs('account.media.*', 'localized.*.account.media.*');
+        $studio = $accountMedia || $request->routeIs('studio.media.*', 'localized.*.studio.media.*');
         $routePrefix = $accountMedia ? 'account.media' : ($studio ? 'studio.media' : 'dashboard.media');
         $assets = MediaAsset::query()
             ->with('owner:id,name,public_id')
@@ -36,16 +36,12 @@ class MediaLibraryController extends Controller
 
     public function store(Request $request): RedirectResponse|JsonResponse
     {
-        $fromBuilder = $request->routeIs('builder.media.store');
-        $fromPost = $request->routeIs('dashboard.posts.media.store');
-        $fromAccount = $request->routeIs('account.media.*');
-        $studio = $request->routeIs('studio.media.*') || $fromAccount || $fromBuilder;
+        $fromBuilder = $request->routeIs('builder.media.store', 'localized.*.builder.media.store');
+        $fromPost = $request->routeIs('dashboard.posts.media.store', 'localized.*.dashboard.posts.media.store');
+        $fromAccount = $request->routeIs('account.media.*', 'localized.*.account.media.*');
+        $studio = $request->routeIs('studio.media.*', 'localized.*.studio.media.*') || $fromAccount || $fromBuilder;
         if ($fromPost) {
             abort_unless(in_array($request->user()->role, ['admin', 'super_admin'], true), 403);
-            $request->validate([
-                'rights_confirmed' => ['accepted'],
-                'rights_basis' => ['required', Rule::in(['owned'])],
-            ]);
         }
         if ($fromBuilder) {
             abort_unless(in_array($request->user()->role, [
@@ -105,6 +101,8 @@ class MediaLibraryController extends Controller
                 'bytes' => $file->getSize(),
                 'width' => $video ? 0 : $info[0],
                 'height' => $video ? 0 : $info[1],
+                'rights_basis' => 'unspecified',
+                'rights_holder' => '',
                 'review_status' => 'pending',
             ]);
         } catch (\Throwable $error) {
@@ -272,7 +270,7 @@ class MediaLibraryController extends Controller
 
     private function authorizeAsset(Request $request, MediaAsset $asset): void
     {
-        if ($request->routeIs('studio.media.*', 'account.media.*')) {
+        if ($request->routeIs('studio.media.*', 'account.media.*', 'localized.*.studio.media.*', 'localized.*.account.media.*')) {
             abort_unless((int) $asset->user_id === (int) $request->user()->id, 404);
             return;
         }
@@ -283,9 +281,6 @@ class MediaLibraryController extends Controller
     {
         $rules = [
             'alt_text' => ['required', 'string', 'min:4', 'max:180'],
-            'rights_basis' => ['required', Rule::in(['owned', 'licensed'])],
-            'rights_holder' => ['required', 'string', 'min:2', 'max:180'],
-            'rights_note' => ['nullable', 'string', 'max:3000', 'required_if:rights_basis,licensed'],
         ];
         if ($withFile) {
             $rules['image'] = ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm',

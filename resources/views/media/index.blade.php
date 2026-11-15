@@ -7,14 +7,14 @@
 <link rel="stylesheet" href="{{ asset('css/media-library-video.css') }}?v=2">
 <script defer src="{{ asset('js/media-library-video.js') }}?v=1"></script>
 <div class="{{ $studio ? 'container inner-page' : '' }}">
-  <div class="page-intro"><div class="eyebrow">Rights-aware media management</div><h1>Media Library</h1>
+  <div class="page-intro"><div class="eyebrow">Manage media</div><h1>Media Library</h1>
     <p>Upload JPEG, PNG, WebP, GIF animation, MP4 or WebM. Media stays private until attached to published content. Admins manage all media; other users manage their own files.</p></div>
   <section class="panel">
     <div class="panel-head"><h2>Images and videos <span class="count">{{ $assets->total() }}</span></h2>
       <button class="btn primary" type="button" data-modal-open="media-new"><x-icon name="upload" size="17"/> Upload media</button>
     </div>
     <div class="table-scroll">
-      <table class="data-table"><thead><tr><th>Preview</th><th>Public ID</th><th>Asset / description</th>@unless($studio)<th>Owner</th>@endunless<th>Rights</th><th>Products</th><th>Action</th></tr></thead>
+      <table class="data-table"><thead><tr><th>Preview</th><th>Public ID</th><th>Asset / description</th>@unless($studio)<th>Owner</th>@endunless<th>Products</th><th>Action</th></tr></thead>
         <tbody>
           @forelse($assets as $asset)
           <tr>
@@ -37,7 +37,6 @@
             <td class="mono">{{ $asset->public_id }}</td>
             <td><strong>{{ $asset->original_name }}</strong><div class="text-muted">{{ $asset->alt_text }}</div><div class="text-muted">{{ $asset->width && $asset->height ? $asset->width.' × '.$asset->height.' · ' : '' }}{{ number_format($asset->bytes / 1024) }} KB</div></td>
             @unless($studio)<td>{{ $asset->owner?->name }}</td>@endunless
-            <td>{{ ucfirst($asset->rights_basis) }}<div class="text-muted">{{ $asset->rights_holder }}</div></td>
             <td>{{ $asset->cover_listings_count }}</td>
             <td>
               <x-row-action-menu :id="'media-'.$asset->id" :label="$asset->original_name"><button type="button" data-modal-open="media-{{ $asset->id }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
@@ -85,21 +84,12 @@
                   <img class="media-dialog-preview" src="{{ $asset->previewUrl() }}"
                     alt="{{ $asset->alt_text }}" loading="lazy">
                 @endif
-                <p><strong>Rights holder:</strong> {{ $asset->rights_holder }} · {{ ucfirst($asset->rights_basis) }}</p>
-                @if($asset->rights_note)<p class="review-text">{{ $asset->rights_note }}</p>@endif
                 
                 @if($studio || in_array(auth()->user()->role,['super_admin','admin'],true))
                 <form method="post" action="{{ route($routePrefix.'.update', $asset) }}">
                   @csrf @method('PATCH')
                   <label for="alt-{{ $asset->id }}">Accessible {{ str_starts_with($asset->mime_type, 'video/') ? 'video' : 'image' }} description</label>
                   <input id="alt-{{ $asset->id }}" name="alt_text" value="{{ $asset->alt_text }}" maxlength="180" required>
-                  <label for="basis-{{ $asset->id }}">Basis of media rights</label>
-                  <select id="basis-{{ $asset->id }}" name="rights_basis">
-                    <option value="owned" @selected($asset->rights_basis === 'owned')>Owned</option>
-                    <option value="licensed" @selected($asset->rights_basis === 'licensed')>Licensed</option>
-                  </select>
-                  <label for="holder-{{ $asset->id }}">Rights holder</label><input id="holder-{{ $asset->id }}" name="rights_holder" value="{{ $asset->rights_holder }}" maxlength="180" required>
-                  <label for="rights-note-{{ $asset->id }}">License documentation / usage permission</label><textarea id="rights-note-{{ $asset->id }}" name="rights_note" maxlength="3000" rows="3">{{ $asset->rights_note }}</textarea>
                   <div class="dialog-actions"><button class="btn primary" type="submit">Save media details</button></div>
                 </form>
                 @endif
@@ -116,7 +106,7 @@
             </td>
           </tr>
           @empty
-          <tr><td class="empty-cell" colspan="{{ $studio ? 6 : 7 }}">No media has been uploaded.</td></tr>
+          <tr><td class="empty-cell" colspan="{{ $studio ? 5 : 6 }}">No media has been uploaded.</td></tr>
           @endforelse
         </tbody></table>
     </div><x-pagination :paginator="$assets"/>
@@ -128,10 +118,7 @@
       <p>JPEG, PNG, WebP (4 MB), animated GIF (8 MB), or MP4/WebM (20 MB). Images are limited to 24 megapixels. No SVG or executable files.</p>
       <label for="preview-upload">Media file</label><input id="preview-upload" type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" required>
       <label for="preview-alt">Accessible media description</label><input id="preview-alt" name="alt_text" minlength="4" maxlength="180" required>
-      <label for="preview-basis">Basis of rights</label><select id="preview-basis" name="rights_basis"><option value="owned">Owned by uploader</option><option value="licensed">Licensed with permission</option></select>
-      <label for="preview-holder">Legal rights holder</label><input id="preview-holder" name="rights_holder" minlength="2" maxlength="180" required>
-      <label for="preview-note">License evidence or permission summary (required for licensed assets)</label><textarea id="preview-note" name="rights_note" rows="4" maxlength="3000"></textarea>
-      <p class="hint">Uploading media does not publish it. You can use uploads immediately. Only publish media you own or are licensed to use.</p>
+      <p class="hint">You can attach uploads immediately. Media remains private until the content is published.</p>
       <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit">Upload privately</button></div>
     </form>
   </dialog>

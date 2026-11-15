@@ -296,15 +296,12 @@ class ProductMediaLicenseTest extends TestCase
         $this->actingAs($owner)->post(route('account.media.store'), [
             'image' => $this->makeImage(),
             'alt_text' => 'Personal project cover image',
-            'rights_basis' => 'owned',
-            'rights_holder' => $owner->name,
         ])->assertRedirect(route('account.media.index'));
         $asset = MediaAsset::query()->latest('id')->firstOrFail();
         $this->actingAs($owner)->get(route('account.media.index'))
             ->assertOk()->assertSee($asset->original_name)->assertSee('My Account');
         $this->patch(route('account.media.update', $asset), [
             'alt_text' => 'New personal image description',
-            'rights_basis' => 'owned', 'rights_holder' => $owner->name,
         ])->assertRedirect();
         $this->assertSame('New personal image description', $asset->fresh()->alt_text);
 
