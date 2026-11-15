@@ -38,6 +38,11 @@ MANIFEST = {'app/Console/Commands/VerifyBambodiaTaxonomyThirteen.php': [None, 'e
     'resources/views/jobs/mine.blade.php': ['f614e8edee7e058a4ed9954426e2b2ce668890d9', '3a222992be059c795ae2092fe58ae16e9fb6c208'],
     'resources/views/jobs/show.blade.php': ['1aee0e3d4bb9536803da2518c7ba28bab6d23d9f', '6ad46f47f3ad91063265292789aca14a45f1bdfd'],
     'resources/views/marketplace/search.blade.php': ['441ab915d9cc6c174b04f8ab04f20ba75533e90f', '9512244bdd713fd569219485b9c3bdc7b52e2438']}
+JOB_MANAGER = "resources/views/dashboard/jobs.blade.php"
+LIVE_JOB_MANAGER = (
+    "5779cfb83e7f4d27ac4d338647663b23f4534ad1",
+    "c3273f0a279908c691f8661de8a59d892d690fdf",
+)
 
 
 def require(ok, message):
@@ -81,10 +86,10 @@ def safe_target(relative):
     return target
 
 
-def prepare(staged):
+def prepare(staged, manifest):
     changes = []
     conflicts = []
-    for relative, (before, after) in MANIFEST.items():
+    for relative, (before, after) in manifest.items():
         target = safe_target(relative)
         actual = blob(target) if target.exists() else None
         if actual not in (before, after):
@@ -96,10 +101,18 @@ def prepare(staged):
     for relative in changes:
         dest = staged / relative
         dest.parent.mkdir(parents=True, exist_ok=True)
-        with dest.open("wb") as out:
-            call(["gh", "api", "-H", "Accept: application/vnd.github.raw+json",
-                  f"repos/{REPO}/contents/{relative}?ref={RELEASE}"], stdout=out)
-        require(blob(dest) == MANIFEST[relative][1], f"RELEASE_FILE_HASH_MISMATCH={relative}")
+        if relative == JOB_MANAGER and manifest[relative] == LIVE_JOB_MANAGER:
+            source = safe_target(relative)
+            require(blob(source) == LIVE_JOB_MANAGER[0], f"LIVE_FILE_CHANGED_DURING_PREPARATION={relative}")
+            dest.write_bytes(source.read_bytes().replace(
+                b"{{ ucfirst($job->category) }}", b"{{ $job->category_label }}", 1,
+            ))
+            print("TAXONOMY_JOB_MANAGER_LOCAL_VARIANT=VERIFIED", flush=True)
+        else:
+            with dest.open("wb") as out:
+                call(["gh", "api", "-H", "Accept: application/vnd.github.raw+json",
+                      f"repos/{REPO}/contents/{relative}?ref={RELEASE}"], stdout=out)
+        require(blob(dest) == manifest[relative][1], f"RELEASE_FILE_HASH_MISMATCH={relative}")
         if not relative.endswith(".blade.php"):
             call([PHP, "-l", str(dest)], capture=True)
     print(f"TAXONOMY_SOURCE_CHECK=PASS ({len(changes)} files to install)", flush=True)
@@ -205,7 +218,7 @@ def install_file(source, target, metadata):
         Path(tmp).unlink(missing_ok=True)
 
 
-def apply(staged, changes, config):
+def apply(staged, changes, config, manifest):
     backup = Path(tempfile.mkdtemp(prefix="bambodia-taxonomy-backup-", dir="/root"))
     print(f"TAXONOMY_BACKUP_DIR={backup}", flush=True)
     before = {}
@@ -215,7 +228,7 @@ def apply(staged, changes, config):
     try:
         for relative in changes:
             target = safe_target(relative)
-            expected = MANIFEST[relative][0]
+            expected = manifest[relative][0]
             require((blob(target) if target.exists() else None) == expected,
                     f"LIVE_FILE_CHANGED_DURING_PREPARATION={relative}")
             saved = backup / "source" / relative
@@ -237,12 +250,13 @@ def apply(staged, changes, config):
                 target = safe_target(relative)
                 install_file(staged / relative, target, before[relative] or (0, 0, 0o644))
                 installed.append(relative)
-                require(blob(target) == MANIFEST[relative][1], f"POST_INSTALL_MISMATCH={relative}")
+                require(blob(target) == manifest[relative][1], f"POST_INSTALL_MISMATCH={relative}")
             if relative == MIGRATION:
                 migration_started = True
                 artisan("migrate", "--path=" + MIGRATION, "--force")
 
         artisan("view:clear")
+        artisan("help", "bambodia:taxonomy:verify")
         artisan("db:seed", "--class=Database\\Seeders\\BambodiaTaxonomyThirteenSeeder", "--force")
         artisan("bambodia:taxonomy:verify")
     except BaseException:
@@ -285,18 +299,22 @@ def main():
     os.umask(0o077)
     with tempfile.TemporaryDirectory(prefix="bambodia-taxonomy-source-", dir="/root") as staged:
         config = database_config()
-        changes = prepare(Path(staged))
+        manifest = MANIFEST.copy()
+        job_manager = safe_target(JOB_MANAGER)
+        if job_manager.is_file() and blob(job_manager) in LIVE_JOB_MANAGER:
+            manifest[JOB_MANAGER] = LIVE_JOB_MANAGER
+        changes = prepare(Path(staged), manifest)
         if sys.argv[1] == "--check":
             print("TAXONOMY_PRECHECK=PASS")
             return
         with open("/run/lock/bambodia-taxonomy.lock", "a") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             require(database_config() == config, "DATABASE_CONFIGURATION_CHANGED")
-            for relative in MANIFEST.keys() - set(changes):
+            for relative in manifest.keys() - set(changes):
                 target = safe_target(relative)
-                require(target.is_file() and blob(target) == MANIFEST[relative][1],
+                require(target.is_file() and blob(target) == manifest[relative][1],
                         f"LIVE_FILE_CHANGED_DURING_PREPARATION={relative}")
-            apply(Path(staged), changes, config)
+            apply(Path(staged), changes, config, manifest)
     print("TAXONOMY_DEPLOYMENT=PASS")
 
 
