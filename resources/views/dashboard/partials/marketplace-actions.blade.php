@@ -12,16 +12,9 @@
   <button type="button" data-modal-open="{{ $dialogId }}"><x-icon name="settings" size="16"/> Configure</button>
   @if($editUrl)<a href="{{ $editUrl }}"><x-icon name="pencil" size="16"/> Edit</a>@endif
   @foreach($actions as $target => $label)
-    <button type="button" data-modal-open="{{ $dialogId }}-{{ $target }}">
-      @if($target === 'in_review')
-        <x-icon name="clipboard-check" size="16"/>
-      @elseif($target === 'pending')
-        <x-icon name="clock" size="16"/>
-      @endif
-      {{ $label }}
-    </button>
+    <button type="button" data-modal-open="{{ $dialogId }}-{{ $target }}">{{ $label }}</button>
   @endforeach
-  @if($transferUrl)<a href="{{ $transferUrl }}"><x-icon name="users" size="16"/> Change {{ $isJob ? 'client' : 'creator' }}</a>@endif
+  @if($transferUrl)<a href="{{ $transferUrl }}">Change {{ $isJob ? 'client' : 'creator' }}</a>@endif
 </x-row-action-menu>
 <dialog class="config-dialog wide-dialog" id="{{ $dialogId }}" aria-labelledby="{{ $dialogId }}-heading">
   <div class="dialog-heading">

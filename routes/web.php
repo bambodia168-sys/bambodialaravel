@@ -307,6 +307,8 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/listings', [CreatorListingController::class, 'index'])->name('studio.listings');
         Route::post('/listings', [CreatorListingController::class, 'store'])->name('studio.listings.store')->middleware('throttle:10,1');
         Route::patch('/listings/{listing}', [CreatorListingController::class, 'update'])->name('studio.listings.update');
+        Route::patch('/listings/{listing}/status', [CreatorListingController::class, 'changeStatus'])->name('studio.listings.status');
+        Route::delete('/listings/{listing}', [CreatorListingController::class, 'destroy'])->name('studio.listings.destroy');
         Route::get('/products/{product}/releases', [ProductVaultController::class, 'index'])->name('studio.vault.index');
         Route::patch('/products/{product}/releases/{version}/rights', [ProductVaultController::class,'evidence'])
             ->name('studio.vault.rights');

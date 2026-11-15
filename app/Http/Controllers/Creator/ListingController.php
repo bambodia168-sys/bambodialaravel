@@ -11,6 +11,8 @@ use App\Models\MarketplaceListing;
 use App\Models\FeatureFlag;
 use App\Models\MarketplaceCategory;
 use App\Models\AuditEvent;
+use App\Models\ProductEntitlement;
+use App\Models\ProductLicense;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\RedirectResponse;
@@ -22,14 +24,16 @@ class ListingController extends Controller
 {
     public function index(Request $request): View
     {
+        $archived = $request->query('status') === 'archived';
         $listings = MarketplaceListing::query()
+            ->inCreatorStudio()
             ->where('user_id', $request->user()->id)
-            ->latest()->paginate(10);
+            ->where('status', $archived ? '=' : '!=', 'archived')
+            ->latest()->orderByDesc('id')->paginate(10)->withQueryString();
+        $publicListingIds = MarketplaceListing::query()->publiclyAvailable()
+            ->whereKey($listings->getCollection()->modelKeys())->pluck('id')->flip();
 
-        $categories=MarketplaceCategory::query()->where('is_active',true)
-            ->whereIn('type',['project','freelance','service'])
-            ->orderBy('type')->orderBy('sort_order')->get(['id','type','name']);
-        return view('account.listings', ['listings' => $listings,'categories'=>$categories]);
+        return view('account.listings', compact('listings', 'archived', 'publicListingIds'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -61,7 +65,7 @@ class ListingController extends Controller
 
         BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, $listing->type, (int)$listing->id);
         if ($request->boolean('builder_mode')) {
-            return redirect('/builder?='.$listing->public_id)->with('status', 'Listing submitted for review.');
+            return redirect($listing->builderUrl())->with('status', 'Listing submitted for review.');
         }
 
         return redirect()->route('studio.listings')->with('status', 'Listing submitted for review.');
@@ -94,6 +98,60 @@ class ListingController extends Controller
             AuditEvent::record('listing.resubmitted',$request->user(),$request);
         });
         return back()->with('status','Listing changes resubmitted for review.');
+    }
+
+    public function changeStatus(Request $request, MarketplaceListing $listing): RedirectResponse
+    {
+        $data = $request->validate(['status' => ['required', Rule::in(['archived', 'draft'])]]);
+        $status = $data['status'];
+        $this->changeOwnedStatus($request, $listing, $status);
+
+        return $status === 'archived'
+            ? redirect()->route('studio.listings', ['status' => 'archived'])->with('status', 'Listing archived.')
+            : redirect($listing->builderUrl())->with('status', 'Listing moved to draft.');
+    }
+
+    public function destroy(Request $request, MarketplaceListing $listing): RedirectResponse
+    {
+        $this->changeOwnedStatus($request, $listing, 'deleted');
+
+        $filters = $request->input('from') === 'archived' ? ['status' => 'archived'] : [];
+
+        return redirect()->route('studio.listings', $filters)->with('status', 'Listing deleted.');
+    }
+
+    private function changeOwnedStatus(Request $request, MarketplaceListing $listing, string $status): void
+    {
+        DB::transaction(function () use ($request, $listing, $status): void {
+            $locked = MarketplaceListing::query()->whereKey($listing->id)
+                ->where('user_id', $request->user()->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status === $status) {
+                return;
+            }
+
+            abort_unless($locked->canCreatorSetStatus($status), $locked->status === 'deleted' ? 404 : 409);
+
+            if ($locked->type === 'product' && $this->hasCustomerAccess($locked)) {
+                throw ValidationException::withMessages([
+                    'listing' => 'This product has an existing customer license or download entitlement. Contact the Support Center to manage it.',
+                ]);
+            }
+
+            // Preserve references from contracts, inquiries, and other historical records.
+            $locked->update(['status' => $status]);
+            AuditEvent::record('listing.creator.'.$status, $request->user(), $request);
+        }, 3);
+    }
+
+    private function hasCustomerAccess(MarketplaceListing $listing): bool
+    {
+        return ProductLicense::query()->where('marketplace_listing_id', $listing->id)
+            ->whereIn('status', ['active', 'suspended'])->whereNull('revoked_at')
+            ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))->exists()
+            || ProductEntitlement::query()->where('status', 'active')->whereNull('revoked_at')
+                ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->whereHas('version', fn ($query) => $query->where('marketplace_listing_id', $listing->id))->exists();
     }
 
     private function checkCategory(array $data): void

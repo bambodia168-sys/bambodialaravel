@@ -29,7 +29,7 @@ class ProductController extends Controller
         abort_unless(in_array($status,['all','draft','pending','in_review','published','rejected'],true),404);
         $search = trim((string)$request->query('q',''));
         abort_unless(mb_strlen($search)<=120,404);
-        $owned = MarketplaceListing::query()->where('type','product')
+        $owned = MarketplaceListing::query()->inCreatorStudio()->where('type','product')
             ->where('user_id',$request->user()->id);
         $counts = (clone $owned)->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')->pluck('total','status');

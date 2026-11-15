@@ -54,6 +54,7 @@ class BuilderController extends Controller
         } elseif (preg_match('/^=([0-9]{9})$/D', $raw, $match) === 1) {
             // The public ID is not authorization: fetch resources belonging to the session user.
             $listing = MarketplaceListing::query()
+                ->inCreatorStudio()
                 ->where('public_id', $match[1])
                 ->where('user_id', $request->user()->id)->first();
             $job = MarketplaceJob::query()
@@ -71,14 +72,15 @@ class BuilderController extends Controller
             abort(404);
         }
 
-        if ($type !== null && $managerMode === null) {
+        $existingCreatorListing = $record instanceof MarketplaceListing && $request->user()->isCreator();
+        if ($type !== null && $managerMode === null && ! $existingCreatorListing) {
             abort_unless(in_array($type, $allowedTypes, true), 403);
         }
 
         $canEdit = $managerMode === 'manage' || ($managerMode === null && ($record === null
-            || ($type === 'job'
+            || (in_array($type, $allowedTypes, true) && ($type === 'job'
                 ? in_array($record->status, ['draft', 'pending', 'rejected'], true)
-                : in_array($record->status, ['draft', 'rejected'], true))));
+                : in_array($record->status, ['draft', 'rejected'], true)))));
 
         $jobCategoryChoices = $type === 'job'
             ? BambodiaTaxonomy::jobEditorChoices($record?->category)
