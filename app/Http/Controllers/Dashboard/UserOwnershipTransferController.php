@@ -14,14 +14,22 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class UserOwnershipTransferController extends Controller
 {
     private const LISTING_TYPES=['product','project','service','freelance'];
 
-    public function create(Request $request,User $user): View
+    public function create(Request $request, User $user): View|RedirectResponse
     {
+        $fromManager = $request->routeIs('dashboard.marketplace.transfer', 'localized.*.dashboard.marketplace.transfer');
+        if (! $request->filled(['type', 'id'])) {
+            return redirect($fromManager ? MarketplaceManagement::indexUrl('freelance') : route('dashboard.users.show', $user))
+                ->with('warning', 'Choose the listing or job you want to transfer.');
+        }
+
         $data=$request->validate([
             'type'=>['required',Rule::in([...self::LISTING_TYPES,'job'])],
             'id'=>['required','integer','min:1'],
@@ -29,7 +37,7 @@ class UserOwnershipTransferController extends Controller
         $item=$this->ownedItem($user,$data['type'],(int)$data['id']);
         return view('dashboard.user-transfer',[
             'member'=>$user,'item'=>$item,'type'=>$data['type'],
-            'fromManager'=>$request->routeIs('dashboard.marketplace.transfer'),
+            'fromManager'=>$fromManager,
         ]);
     }
 
@@ -43,39 +51,58 @@ class UserOwnershipTransferController extends Controller
             'rights_confirmed'=>['accepted'],
             'confirmation'=>['required','in:TRANSFER'],
         ]);
-        $target=User::query()->where('public_id',$data['recipient'])
-            ->orWhere('email',$data['recipient'])->first();
-        abort_unless($target && $target->account_status==='active',422,'Choose an existing, active recipient.');
-        abort_if($target->id===$user->id,422,'The new owner must be a different user.');
-        if($data['type']==='job'){
-            abort_unless(in_array($target->role,['customer','subscriber','super_admin'],true),422,
-                'A job recipient must be a customer, subscriber or super administrator.');
-        } else {
-            abort_unless(in_array($target->role,['freelancer','super_admin'],true),422,
-                'A listing recipient must be a freelancer or super administrator.');
+        $type = $data['type'];
+        $id = (int) $data['id'];
+        $fromManager = $request->routeIs('dashboard.marketplace.transfer.store', 'localized.*.dashboard.marketplace.transfer.store');
+        $formUrl = route($fromManager ? 'dashboard.marketplace.transfer' : 'dashboard.users.transfer', [
+            'user' => $user, 'type' => $type, 'id' => $id,
+        ]);
+        $target = User::query()->where('public_id', $data['recipient'])
+            ->orWhere('email', $data['recipient'])->first();
+        $recipientError = match (true) {
+            ! $target || $target->account_status !== 'active' => 'Choose an existing, active recipient.',
+            (int) $target->id === (int) $user->id => 'The new owner must be a different user.',
+            $type === 'job' && ! in_array($target->role, ['customer', 'subscriber', 'super_admin'], true)
+                => 'A job recipient must be a customer, subscriber or super administrator.',
+            $type !== 'job' && ! $target->isCreator()
+                => 'A listing recipient must be a freelancer or super administrator.',
+            default => null,
+        };
+        if ($recipientError !== null) {
+            throw ValidationException::withMessages(['recipient' => $recipientError])->redirectTo($formUrl);
         }
 
-        DB::transaction(function()use($user,$target,$data,$request){
+        try {
+            $this->transfer($request, $user, $target, $data, $fromManager);
+        } catch (HttpExceptionInterface $exception) {
+            if ($exception->getStatusCode() !== 409 || $request->expectsJson()) {
+                throw $exception;
+            }
+
+            return redirect($formUrl)->withInput($request->only('recipient', 'reason'))
+                ->withErrors(['transfer' => $exception->getMessage()]);
+        }
+
+        $destination = $fromManager ? MarketplaceManagement::indexUrl($type) : route('dashboard.users.show', $user);
+
+        return redirect($destination)
+            ->with('status','Ownership transfer completed and recorded in the audit trail.');
+    }
+
+    private function transfer(Request $request, User $user, User $target, array $data, bool $fromManager): void
+    {
+        DB::transaction(function () use ($user, $target, $data, $request, $fromManager): void {
             // Lock all participating accounts before the resource to serialize admin changes.
             User::query()->whereIn('id',[$user->id,$target->id])->orderBy('id')->lockForUpdate()->get();
             $recipient = User::query()->findOrFail($target->id);
             abort_unless($recipient->account_status === 'active' && $recipient->role === $target->role, 409,
                 'The recipient account changed. Check the recipient and try again.');
             $item=$this->ownedItem($user,$data['type'],(int)$data['id'],true);
-            if ($request->routeIs('dashboard.marketplace.transfer.store')) {
-                abort_if(PreviewContentReview::isPreviewTitle($item->title)
-                    || PreviewContentReview::hasCustomerActivity($item), 409,
-                    'This record requires case review before ownership can be transferred.');
-            }
+            abort_if(in_array($item->status, ['withdrawn', 'deleted'], true), 409,
+                'Withdrawn or deleted records cannot be transferred.');
             if($data['type']==='job'){
                 abort_if(DB::table('job_proposals')->where('marketplace_job_id',$item->id)->exists(),409,
                     'This job has proposals; transfer requires case review.');
-                abort_if(DB::table('freelance_contracts')
-                    ->join('job_proposals','job_proposals.id','=','freelance_contracts.job_proposal_id')
-                    ->where('job_proposals.marketplace_job_id',$item->id)->exists(),409,
-                    'This job has contracts; ownership cannot be silently changed.');
-                $mediaIds=$this->reassignMedia($item,$user->id,$target->id);
-                $item->client_id=$target->id;
             } else {
                 abort_if(DB::table('service_inquiries')->where('marketplace_listing_id',$item->id)->exists(),409,
                     'This listing has private inquiries and cannot be transferred automatically.');
@@ -85,9 +112,12 @@ class UserOwnershipTransferController extends Controller
                     abort_if(DB::table('product_licenses')->where('marketplace_listing_id',$item->id)->exists(),409,
                         'This product has issued licenses and cannot be transferred automatically.');
                 }
-                $mediaIds=$this->reassignMedia($item,$user->id,$target->id);
-                $item->user_id=$target->id;
             }
+            abort_if($fromManager && PreviewContentReview::hasCustomerActivity($item), 409,
+                'This record has customer activity such as saved items, comments, or support history. Review that activity before transferring ownership.');
+
+            $mediaIds = $this->reassignMedia($item, $user->id, $target->id);
+            $item->setAttribute($item instanceof MarketplaceJob ? 'client_id' : 'user_id', $target->id);
             $item->save();
             DB::table('user_ownership_transfers')->insert([
                 'actor_id'=>$request->user()->id,'from_user_id'=>$user->id,
@@ -98,13 +128,6 @@ class UserOwnershipTransferController extends Controller
             ]);
             AuditEvent::record('user.resource.transferred',$request->user(),$request);
         },3);
-
-        $destination = $request->routeIs('dashboard.marketplace.transfer.store')
-            ? MarketplaceManagement::indexUrl($data['type'])
-            : route('dashboard.users.show', $user);
-
-        return redirect($destination)
-            ->with('status','Ownership transfer completed and recorded in the audit trail.');
     }
 
     private function ownedItem(User $user,string $type,int $id,bool $lock=false): MarketplaceListing|MarketplaceJob
