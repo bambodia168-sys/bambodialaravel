@@ -220,6 +220,57 @@ class MarketplaceManagerActionsTest extends TestCase
         ];
     }
 
+    public function test_draft_product_can_transfer_without_reassigning_any_attached_media(): void
+    {
+        $admin = $this->member('super_admin');
+        $recipient = $this->member('freelancer');
+        Storage::fake('local');
+        $cover = $this->asset($this->member('freelancer'));
+        $gallery = $this->asset($admin);
+        $draft = $this->record('product', $admin, $cover);
+        $draft->update(['gallery_media_ids' => [$gallery->id]]);
+        $url = $draft->publicUrl();
+        $form = route('dashboard.marketplace.transfer', ['user' => $admin, 'type' => 'product', 'id' => $draft->id]);
+        $post = route('dashboard.marketplace.transfer.store', $admin);
+        $data = $this->transferData($draft, $recipient->public_id);
+
+        $this->actingAs($admin)->get($form)->assertOk()->assertSee('Transfer draft without attached media');
+        $this->post($post, $data)->assertRedirect($form)->assertSessionHasErrors('transfer');
+        $this->post($post, [...$data, 'leave_media' => '1'])->assertRedirect(MarketplaceManagement::indexUrl('product'));
+
+        $draft->refresh();
+        $this->assertSame($recipient->id, $draft->user_id);
+        $this->assertSame('draft', $draft->status);
+        $this->assertSame($url, $draft->publicUrl());
+        $this->assertNull($draft->cover_media_id);
+        $this->assertNull($draft->featured_media_id);
+        $this->assertSame('none', $draft->featured_kind);
+        $this->assertSame([], $draft->gallery_media_ids);
+        $this->assertSame($cover->user_id, $cover->fresh()->user_id);
+        $this->assertSame($admin->id, $gallery->fresh()->user_id);
+        Storage::disk('local')->assertExists([$cover->storage_path, $gallery->storage_path]);
+        $this->assertDatabaseHas('user_ownership_transfers', [
+            'resource_id' => $draft->id, 'to_user_id' => $recipient->id,
+        ]);
+    }
+
+    public function test_leave_media_cannot_be_used_to_modify_a_published_product(): void
+    {
+        $admin = $this->member('super_admin');
+        $recipient = $this->member('freelancer');
+        Storage::fake('local');
+        $cover = $this->asset($admin);
+        $product = $this->record('product', $admin, $cover);
+        $product->update(['status' => 'published']);
+        $data = $this->transferData($product, $recipient->public_id);
+
+        $this->actingAs($admin)->postJson(route('dashboard.marketplace.transfer.store', $admin), [...$data, 'leave_media' => '1'])
+            ->assertConflict();
+        $this->assertSame($admin->id, $product->fresh()->user_id);
+        $this->assertSame($cover->id, $product->fresh()->cover_media_id);
+        $this->assertDatabaseCount('user_ownership_transfers', 0);
+    }
+
     private function member(string $role): User
     {
         return User::query()->create([
