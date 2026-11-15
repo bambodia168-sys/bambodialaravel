@@ -101,10 +101,13 @@ class BuilderController extends Controller
         $regularLicenses = $licenses->filter(fn (LicenseDefinition $definition) => $definition->allowsTier('regular'));
         $extendedLicenses = $licenses->filter(fn (LicenseDefinition $definition) => $definition->allowsTier('extended'));
         $ownerId = $managerMode !== null ? MarketplaceManagement::ownerId($record) : (int) $request->user()->id;
+        $attachedMediaIds = $record ? array_map('intval', MarketplaceManagement::mediaIds($record)) : [];
         $assets = $type !== null
-            ? MediaAsset::query()->where('user_id', $ownerId)
-                ->when($managerMode === 'preview', fn ($query) => $query->whereIn('id', MarketplaceManagement::mediaIds($record)))
-                ->latest()->get(['id', 'public_id', 'alt_text', 'mime_type'])
+            ? MediaAsset::query()
+                ->when($managerMode === 'preview',
+                    fn ($query) => $query->whereIn('id', $attachedMediaIds),
+                    fn ($query) => $query->where(fn ($scope) => $scope->where('user_id', $ownerId)->orWhereIn('id', $attachedMediaIds)))
+                ->latest()->get(['id', 'user_id', 'public_id', 'alt_text', 'mime_type'])
             : collect();
 
         $productVersions = $managerMode === null && $type === 'product' && $record
@@ -160,14 +163,14 @@ class BuilderController extends Controller
             'budget' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
         ]);
 
-        BuilderFeaturedMedia::check($data, (int)$request->user()->id);
-        BuilderGallery::check($data, $request);
         $status = DB::transaction(function () use ($request, $match, $data, $termsHash): string {
             $job = MarketplaceJob::query()->where('public_id', $match[1])
                 ->lockForUpdate()->firstOrFail();
             abort_unless((int) $job->client_id === (int) $request->user()->id, 404);
             abort_unless(in_array($job->status, ['draft', 'pending', 'rejected'], true), 409,
                 'Only drafts, pending jobs, or rejected jobs can be edited.');
+            BuilderFeaturedMedia::check($data, (int) $job->client_id, $job->featured_media_id);
+            BuilderGallery::check($data, $request, (int) $job->client_id, $job->gallery_media_ids ?? []);
             $job->update([
                 ...$data,
                 'status' => $job->status === 'draft' ? 'draft' : 'pending',
@@ -204,7 +207,7 @@ class BuilderController extends Controller
                 throw \Illuminate\Validation\ValidationException::withMessages(['featured_kind' => 'Choose a featured media type.']);
             }
             if ($type === 'product') {
-                $data = app(ProductController::class)->validated($request, $ownerId);
+                $data = app(ProductController::class)->validated($request, $ownerId, $record);
                 unset($data['status']);
             } else {
                 $data = $this->managedListingData($request, $record, $type, $ownerId);
@@ -240,8 +243,8 @@ class BuilderController extends Controller
                 'license_terms' => ['nullable', 'string', 'max:20000'],
             ]),
         ]);
-        BuilderFeaturedMedia::check($data, $ownerId);
-        BuilderGallery::check($data, $request, $ownerId);
+        BuilderFeaturedMedia::check($data, $ownerId, $record->featured_media_id);
+        BuilderGallery::check($data, $request, $ownerId, $record->gallery_media_ids ?? []);
 
         return $data;
     }

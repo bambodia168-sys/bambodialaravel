@@ -8,6 +8,7 @@ use App\Models\MediaAsset;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceJob;
 use App\Support\Media\PrivateVideoStreamer;
+use App\Support\MarketplaceManagement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -222,9 +223,28 @@ class MediaLibraryController extends Controller
                 ->where('status', 'published')->exists()
         );
 
-        abort_unless($owner || $admin || $public, 404);
+        abort_unless($owner || $admin || $public || $this->ownsAttachedRecord($request, $asset), 404);
 
         return self::servePreview($request, $asset);
+    }
+
+    private function ownsAttachedRecord(Request $request, MediaAsset $asset): bool
+    {
+        $actor = $request->user();
+        $type = $request->query('listing_type');
+        $reference = $request->query('listing');
+        if (! $actor || $actor->account_status !== 'active'
+            || ! in_array($type, [...MarketplaceListing::TYPES, 'job'], true)
+            || ! is_string($reference) || ! preg_match('/^[0-9]{9}$/D', $reference)) {
+            return false;
+        }
+
+        $record = $type === 'job'
+            ? MarketplaceJob::query()->where('client_id', $actor->id)
+            : MarketplaceListing::query()->where('user_id', $actor->id)->where('type', $type)->where('status', '!=', 'deleted');
+        $listing = $record->where('public_id', $reference)->first();
+
+        return $listing && in_array((int) $asset->id, array_map('intval', MarketplaceManagement::mediaIds($listing)), true);
     }
 
     public static function servePreview(Request $request, MediaAsset $asset): Response

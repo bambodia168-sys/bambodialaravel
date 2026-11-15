@@ -20,7 +20,7 @@ final class BuilderFeaturedMedia
         ];
     }
 
-    public static function check(array &$data, int $ownerId): void
+    public static function check(array &$data, int $ownerId, ?int $attachedId = null): void
     {
         if (! array_key_exists('featured_kind', $data)) {
             unset($data['featured_youtube_url']);
@@ -71,7 +71,8 @@ final class BuilderFeaturedMedia
 
         $asset = ! empty($data['featured_media_id'])
             ? MediaAsset::query()->whereKey($data['featured_media_id'])
-                ->where('user_id', $ownerId)->first()
+                ->where(fn ($query) => $query->where('user_id', $ownerId)->orWhere('id', $attachedId))
+                ->first()
             : null;
 
         if (! $asset || ! in_array($asset->mime_type, $mimes, true)) {

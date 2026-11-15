@@ -21,9 +21,14 @@
     : ($isProduct
       ? ($editing ? route('studio.products.update',$record) : route('studio.products.store'))
       : ($editing ? route('studio.listings.update',$record) : route('studio.listings.store'))));
-  $mediaUrl = fn ($asset) => $managerMode === 'preview'
-    ? route('dashboard.marketplace.asset', ['type' => $type, 'publicId' => $record->public_id, 'mediaId' => $asset->public_id])
-    : $asset->previewUrl();
+  $mediaUrl = function ($asset) use ($managerMode, $editing, $ownerId, $type, $record) {
+    if ($managerMode === 'preview' || ($managerMode === 'manage' && (int) $asset->user_id !== $ownerId)) {
+      return route('dashboard.marketplace.asset', ['type' => $type, 'publicId' => $record->public_id, 'mediaId' => $asset->public_id]);
+    }
+    return $editing && (int) $asset->user_id !== $ownerId
+      ? route('media.preview', ['publicId' => $asset->public_id, 'listing_type' => $type, 'listing' => $record->public_id])
+      : $asset->previewUrl();
+  };
   $productCover = $managed && $isProduct ? $assets->firstWhere('id', $record->cover_media_id) : null;
   $statusLabel = $editing ? (MarketplaceManagement::STATUSES[$record->status] ?? ucfirst($record->status)) : null;
   $shareUrl = $editing
@@ -372,7 +377,7 @@
               </div>
               <div class="studio-media-chooser" data-featured-media-select>
                 <div class="studio-field">
-                  <label for="studio-featured-media">Select media from your library</label>
+                  <label for="studio-featured-media">Select attached media or a file from your library</label>
                   <select id="studio-featured-media" name="featured_media_id" data-featured-media @disabled(!$canEdit)>
                     <option value="">Choose media</option>
                     @foreach($assets as $asset)
@@ -417,6 +422,7 @@
                   @if($canEdit && !$managed)<button type="button" class="studio-tool-action" data-modal-open="studio-media-upload"><x-icon name="upload" size="17"/> Upload screenshots</button>@endif
                 </div>
                 <div class="studio-gallery-grid" data-gallery-grid>
+                  @if($canEdit)<input type="hidden" name="gallery_present" value="1">@endif
                   @if($assets->whereIn('mime_type',['image/jpeg','image/png','image/webp','image/gif'])->isEmpty())
                     <p class="studio-gallery-empty" data-gallery-empty>No screenshots yet. Upload original images here and they will remain private until review.</p>
                   @endif
