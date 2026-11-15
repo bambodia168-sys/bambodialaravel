@@ -7,7 +7,6 @@ RELEASE=90dee2a478fd8fb84946536fb736f98c13eba1fe
 APP=/www/wwwroot/bambodia-staging-qa
 PHP=/www/server/php/85/bin/php
 DOMAIN=bambodia.com
-MEDIA_OVERLAY=68bca195512af4a0c7a08e2e7f15a4615d011a5c
 
 test "$(id -u)" -eq 0
 test "$(realpath -e -- "$APP")" = "$APP"
@@ -79,34 +78,137 @@ stage() {
     STAGED+=("$path")
 }
 
+reconcile_media() {
+    local path="$1" incoming="$WORK/$1" installed
+    test ! -L "$path"
+    test -f "$path"
+    test "$(realpath -e -- "$path")" = "$APP/$path"
+    installed="$(installed_hash "$path")"
+    mkdir -p "$(dirname -- "$incoming")"
+    python3 - "$path" "$incoming" <<'PY_RECONCILE'
+from pathlib import Path
+import re
+import sys
+
+
+source, output = map(Path, sys.argv[1:])
+raw = source.read_bytes()
+newline = b'\r\n' if b'\r\n' in raw else b'\n'
+original = raw.decode('utf-8').replace('\r\n', '\n')
+text = original
+
+
+def fail(reason):
+    sys.exit(f'MEDIA_WORKFLOW_RECONCILE_CONFLICT={source} {reason}')
+
+
+def remove_block(pattern, value='', required=False):
+    global text
+    text, count = re.subn(pattern, value, text, flags=re.M | re.S)
+    if count > 1 or (required and count != 1):
+        fail('unexpected number of matches for a media form or validation block')
+
+
+if source.name == 'MediaLibraryController.php':
+    for signature in (
+        'class MediaLibraryController extends Controller',
+        'public function store(Request $request)',
+        'public function update(Request $request, MediaAsset $asset)',
+        'public function destroy(Request $request, MediaAsset $asset)',
+        'private function validateMetadata(',
+    ):
+        if text.count(signature) != 1:
+            fail('unexpected controller structure')
+
+    remove_block(r"^[ \t]+\$request->validate\(\[\n[ \t]+'rights_confirmed'[^\n]*\n[ \t]+'rights_basis'[^\n]*\n[ \t]*\]\);\n")
+    text = re.sub(r"(?m)^[ \t]+'rights_(?:basis|holder|note)'\s*=>\s*\[[^\n]*\n", '', text)
+    text = re.sub(r"(?m)^[ \t]+\$data\['rights_(?:basis|holder|note)'\][^\n]*\n", '', text)
+    text = re.sub(r"(?m)^[ \t]+'rights_(?:basis|holder|note)'\s*=>[^\n]*\n", '', text)
+    remove_block(
+        r"^(?P<indent>[ \t]+)(?P<setting>'review_status'\s*=>\s*'pending',)[ \t]*$",
+        r"\g<indent>'rights_basis' => 'unspecified',\n\g<indent>'rights_holder' => '',\n\g<indent>\g<setting>",
+        required=True,
+    )
+    if any(line.strip() not in {"'rights_basis' => 'unspecified',", "'rights_holder' => '',"}
+           for line in text.splitlines() if re.search(r'rights_(?:basis|holder|note|confirmed)', line)):
+        fail('an unrecognized media rights reference remains in the controller')
+
+    def localize(match):
+        parameters = match[1]
+        for name in ('studio.media.*', 'account.media.*', 'dashboard.media.*', 'builder.media.store', 'dashboard.posts.media.store'):
+            if f"'{name}'" in parameters and f"'localized.*.{name}'" not in parameters:
+                parameters += f", 'localized.*.{name}'"
+        return '->routeIs(' + parameters + ')'
+
+    text = re.sub(r'->routeIs\(([^\n()]*)\)', localize, text)
+else:
+    if '@section(' not in text:
+        fail('unexpected view structure')
+    if source.as_posix().endswith('views/builder/index.blade.php'):
+        remove_block(r'^        <div class="studio-form-grid">\n          <div class="studio-field">\n            <label for="studio-upload-rights">[^\n]*\n.*?(?=^        <p class="hint" role="status" data-builder-upload-status)')
+        text = text.replace('Files uploaded here must pass rights review before they can be selected.', 'Files uploaded here are available to select immediately.')
+        text = text.replace('Media ownership and usage rights', 'Preview images and screenshots')
+        text = text.replace('each is reviewed individually and stored in your Media Library', 'each is stored in your Media Library')
+    elif source.as_posix().endswith('views/media/edit.blade.php'):
+        remove_block(r'^[ \t]*<details[^\n]*rights_basis[^\n]*\n.*?^[ \t]*</details>[ \t]*\n')
+    elif source.as_posix().endswith('views/media/index.blade.php'):
+        remove_block(r'^[ \t]*<details><summary>Advanced Settings</summary><label for="basis-[^\n]*\n.*?^[ \t]*</details>(?=<div class="dialog-actions">)', '                  ')
+        remove_block(r'^[ \t]*<label for="basis-\{\{ \$asset->id \}\}">[^\n]*\n[ \t]*<select[^\n]*rights_basis[^\n]*\n.*?^[ \t]*</select>[ \t]*\n')
+        if '<th>Rights</th>' in text:
+            text = text.replace('<th>Rights</th>', '').replace('$studio ? 6 : 7', '$studio ? 5 : 6')
+        text = text.replace('Rights-aware media management', 'Manage media')
+        text = text.replace(
+            'Uploading media does not publish it. You can use uploads immediately. Only publish media you own or are licensed to use.',
+            'You can attach uploads immediately. Media remains private until the content is published.',
+        )
+        text = '\n'.join(line for line in text.split('\n') if not re.search(
+            r'<td>\{\{ ucfirst\(\$asset->rights_basis\)|<p><strong>Rights holder:|@if\(\$asset->rights_note\)|<label for="(?:holder-|rights-note-|preview-basis|preview-holder|preview-note)', line))
+    elif source.as_posix().endswith('views/media/upload.blade.php'):
+        text = '\n'.join(line for line in text.split('\n') if not re.search(
+            r'<label for="upload-(?:basis|holder|note)"', line))
+    elif source.as_posix().endswith('views/dashboard/post-builder.blade.php'):
+        remove_block(r'^[ \t]*<label class="post-featured-rights"[^\n]*</label>[ \t]*\n')
+        text = re.sub(r' data-rights-holder="[^"\n]*"', '', text)
+        text = re.sub(r'\bdata-post-media(?=[\s>])', 'data-editorial-post-media', text)
+        if text.count('data-editorial-post-media') != 1:
+            fail('unexpected Post Builder media panel')
+        if 'js/post-builder-media.js' not in text:
+            remove_block(r"^@section\('content'\)[ \t]*$",
+                         "@section('content')\n<script defer src=\"{{ asset('js/post-builder-media.js') }}\"></script>",
+                         required=True)
+        if 'data-post-featured-rights' in text or 'data-rights-holder' in text:
+            fail('an unrecognized Post Builder rights field remains')
+    else:
+        fail('no reconciliation defined for this file')
+    if re.search(r'rights_(?:basis|holder|note|confirmed)|studio-upload-(?:rights|holder|note)', text):
+        fail('an unrecognized media rights field remains in the view')
+
+output.write_bytes(text.encode('utf-8').replace(b'\n', newline))
+PY_RECONCILE
+    if cmp -s -- "$path" "$incoming"; then
+        return
+    fi
+    "$PHP" -l "$incoming"
+    ORIGINAL_HASH["$path"]="$installed"
+    STAGED+=("$path")
+}
+
 stage 'app/Http/Controllers/Dashboard/UserOwnershipTransferController.php' 'd2abb238ad56a501dc870e8d9e67e2b998bc3a4d' 'ff0c4cbcd5294eb76de70d16ec2c307d4cc0dfb0'
-if [[ "$(installed_hash 'app/Http/Controllers/MediaLibraryController.php')" == '65b10fc1af39cff267206622bebb06581acf3377' || "$(installed_hash 'app/Http/Controllers/MediaLibraryController.php')" == '81607ce62a3f092b068ddcf1734e85eb51739ead' ]]; then
-    stage 'app/Http/Controllers/MediaLibraryController.php' '65b10fc1af39cff267206622bebb06581acf3377' '81607ce62a3f092b068ddcf1734e85eb51739ead' "$MEDIA_OVERLAY"
-else
-    stage 'app/Http/Controllers/MediaLibraryController.php' '4cbac91f4d2f8fecb92ff0a8c1a1e07d3d3dee8b' '7a8ca27758492153a4bbfc60962abc84a2478059'
+if [[ "$(installed_hash 'app/Support/SupportKnowledge.php')" == 'e46d4793208ab960344ea907c333ec123169d70b' ]]; then
+    stage 'app/Support/SupportKnowledge.php' 'e46d4793208ab960344ea907c333ec123169d70b' '4c2c75c134fe41aaaec1577c779e666b4e1f5250'
 fi
-stage 'app/Support/SupportKnowledge.php' 'e46d4793208ab960344ea907c333ec123169d70b' '4c2c75c134fe41aaaec1577c779e666b4e1f5250'
 stage 'public/js/post-builder-media.js' 'absent' 'ca1fdf4db5ba845b9512eb3b88c72344ca36c875'
-if [[ "$(installed_hash 'resources/views/builder/index.blade.php')" == '3b33f817c312ac2be4143b13af811d16adbaadd3' || "$(installed_hash 'resources/views/builder/index.blade.php')" == '6fd1a0c72b866a216c5e320e95dc7087ccf00669' ]]; then
-    stage 'resources/views/builder/index.blade.php' '3b33f817c312ac2be4143b13af811d16adbaadd3' '6fd1a0c72b866a216c5e320e95dc7087ccf00669' "$MEDIA_OVERLAY"
-else
-    stage 'resources/views/builder/index.blade.php' 'ca6bf37fd943856abcc1f7f19aa97b1a930103a3' 'dca1e5f45cdfe4b033c02f5ba211b8655df21db3'
-fi
-stage 'resources/views/dashboard/post-builder.blade.php' '1b09e910a97cde2fbfa26eaf12a414241c56c954' '8c9b3a5785fe084f87ccde4ec23192e5d072065c'
+reconcile_media 'resources/views/dashboard/post-builder.blade.php'
 stage 'resources/views/dashboard/user-transfer.blade.php' 'fbc23a84e14c23c5fbebb98bb2c4aa97846c261a' 'bb0243d2e151001e7c0cdb030eb9cfd48dc92ca1'
-if [[ "$(installed_hash 'resources/views/media/index.blade.php')" == 'ad00ac045b849f6b10e9563c94b34219c099aec5' || "$(installed_hash 'resources/views/media/index.blade.php')" == '81dce7e3c5edcd4b7c77c645cac04f585de0866d' ]]; then
-    stage 'resources/views/media/index.blade.php' 'ad00ac045b849f6b10e9563c94b34219c099aec5' '81dce7e3c5edcd4b7c77c645cac04f585de0866d' "$MEDIA_OVERLAY"
-else
-    stage 'resources/views/media/index.blade.php' '09d8a0acf224a3eb168c7a2d38bb66f2fea05987' '0aa20b4b6f98e45218f81b96fca59e09f3ba6a82'
-fi
-
-if [[ -e 'resources/views/media/edit.blade.php' || -L 'resources/views/media/edit.blade.php' ]]; then
-    stage 'resources/views/media/edit.blade.php' 'd957fbcc73826b7ed4906824156739976a31cff9' '9cf6a1191051d3cddebe989e701f19cfa49d90c9' "$MEDIA_OVERLAY"
-fi
-
+reconcile_media 'resources/views/media/index.blade.php'
 if [[ -e 'resources/views/media/upload.blade.php' || -L 'resources/views/media/upload.blade.php' ]]; then
-    stage 'resources/views/media/upload.blade.php' '34285881078aeb7ff2474677cd479a67eca4d7c8' 'cc99158c17ffca7c6ed39fcabddc0a6362d50095' "$MEDIA_OVERLAY"
+    reconcile_media 'resources/views/media/upload.blade.php'
 fi
+if [[ -e 'resources/views/media/edit.blade.php' || -L 'resources/views/media/edit.blade.php' ]]; then
+    reconcile_media 'resources/views/media/edit.blade.php'
+fi
+reconcile_media 'resources/views/builder/index.blade.php'
+reconcile_media 'app/Http/Controllers/MediaLibraryController.php'
 
 if (( ${#STAGED[@]} > 0 )); then
     BACKUP="$(mktemp -d /root/bambodia-media-workflow-backup.XXXXXXXX)"
