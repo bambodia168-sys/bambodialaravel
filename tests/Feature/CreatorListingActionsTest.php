@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\LicenseDefinition;
 use App\Models\MarketplaceListing;
 use App\Models\ProductEntitlement;
 use App\Models\ProductFileVersion;
+use App\Models\ProductLicense;
 use App\Models\ServiceInquiry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,10 +18,10 @@ class CreatorListingActionsTest extends TestCase
 
     public function test_recent_submissions_open_the_correct_owned_builder(): void
     {
-        $owner = User::factory()->create(['role' => 'freelancer']);
+        $owner = $this->user('freelancer');
         $product = $this->listing($owner, 'product', 'Creator dashboard product');
         $service = $this->listing($owner, 'service', 'Creator dashboard service');
-        $other = $this->listing(User::factory()->create(['role' => 'freelancer']));
+        $other = $this->listing($this->user('freelancer'));
 
         $this->actingAs($owner)->get('/creator')->assertOk()
             ->assertSee('href="'.$product->builderUrl().'"', false)
@@ -33,11 +35,11 @@ class CreatorListingActionsTest extends TestCase
 
     public function test_creator_can_archive_draft_and_delete_their_published_listing(): void
     {
-        $owner = User::factory()->create(['role' => 'freelancer']);
+        $owner = $this->user('freelancer');
         $listing = $this->listing($owner, 'service');
         $inquiry = ServiceInquiry::query()->create([
             'marketplace_listing_id' => $listing->id,
-            'client_id' => User::factory()->create(['role' => 'customer'])->id,
+            'client_id' => $this->user('customer')->id,
             'creator_id' => $owner->id,
             'subject' => 'Existing client inquiry',
         ]);
@@ -71,20 +73,23 @@ class CreatorListingActionsTest extends TestCase
         $this->get('/creator')->assertOk()->assertDontSee($listing->title);
         $this->get($listing->builderUrl())->assertNotFound();
         $this->patch($statusUrl, ['status' => 'draft'])->assertNotFound();
-        $this->assertDatabaseCount('audit_events', 3);
+        foreach (['archived', 'draft', 'deleted'] as $status) {
+            $this->assertDatabaseHas('audit_events', ['actor_id' => $owner->id, 'event' => 'listing.creator.'.$status]);
+        }
+        $this->assertSame(1, \App\Models\AuditEvent::query()->where('event', 'listing.creator.archived')->count());
     }
 
     public function test_mutations_require_ownership_and_respect_moderation(): void
     {
-        $owner = User::factory()->create(['role' => 'freelancer']);
+        $owner = $this->user('freelancer');
         $listing = $this->listing($owner);
         $statusUrl = route('studio.listings.status', $listing);
         $deleteUrl = route('studio.listings.destroy', $listing);
 
-        $this->actingAs(User::factory()->create(['role' => 'freelancer']));
+        $this->actingAs($this->user('freelancer'));
         $this->patch($statusUrl, ['status' => 'archived'])->assertNotFound();
         $this->delete($deleteUrl)->assertNotFound();
-        $this->actingAs(User::factory()->create(['role' => 'customer']));
+        $this->actingAs($this->user('customer'));
         $this->patch($statusUrl, ['status' => 'archived'])->assertForbidden();
         $this->actingAs($owner)->patchJson($statusUrl, ['status' => 'published'])
             ->assertUnprocessable()->assertJsonValidationErrors('status');
@@ -95,7 +100,7 @@ class CreatorListingActionsTest extends TestCase
 
     public function test_creator_actions_preserve_customer_access_to_digital_products(): void
     {
-        $owner = User::factory()->create(['role' => 'freelancer']);
+        $owner = $this->user('freelancer');
         $product = $this->listing($owner, 'product');
         $version = ProductFileVersion::query()->create([
             'marketplace_listing_id' => $product->id,
@@ -110,9 +115,9 @@ class CreatorListingActionsTest extends TestCase
             'rights_attested_at' => now(),
         ]);
         $entitlement = ProductEntitlement::query()->create([
-            'user_id' => User::factory()->create(['role' => 'customer'])->id,
+            'user_id' => $this->user('customer')->id,
             'product_file_version_id' => $version->id,
-            'granted_by' => User::factory()->create(['role' => 'super_admin'])->id,
+            'granted_by' => $this->user('super_admin')->id,
             'grant_reason' => 'Isolated fulfillment fixture',
             'expires_at' => now()->addWeek(),
         ]);
@@ -125,8 +130,43 @@ class CreatorListingActionsTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors('listing');
         $this->assertSame('published', $product->fresh()->status);
         $entitlement->update(['expires_at' => now()->subDay()]);
+        $definition = LicenseDefinition::query()->create([
+            'code' => 'TEST_LISTING_ACCESS',
+            'name' => 'Test listing access',
+            'version' => '1.0.0',
+            'permissions' => 'Test permissions.',
+            'restrictions' => 'Test restrictions.',
+            'created_by' => $entitlement->granted_by,
+        ]);
+        $license = ProductLicense::query()->create([
+            'product_entitlement_id' => $entitlement->id,
+            'marketplace_listing_id' => $product->id,
+            'product_file_version_id' => $version->id,
+            'user_id' => $entitlement->user_id,
+            'license_definition_id' => $definition->id,
+            'tier' => 'regular',
+            'source' => 'admin_complimentary',
+            'key_hash' => str_repeat('a', 64),
+            'key_prefix' => 'BAM-TEST',
+            'key_ciphertext' => 'test-only-key',
+            'status' => 'active',
+            'expires_at' => now()->subDay(),
+        ]);
+        $this->deleteJson(route('studio.listings.destroy', $product))
+            ->assertUnprocessable()->assertJsonValidationErrors('listing');
+        $license->update(['status' => 'revoked', 'revoked_at' => now()]);
         $this->delete(route('studio.listings.destroy', $product))->assertRedirect(route('studio.listings'));
         $this->get(route('studio.products.index'))->assertOk()->assertDontSee($product->title);
+    }
+
+    private function user(string $role): User
+    {
+        return User::query()->create([
+            'name' => 'Creator listing test '.$role,
+            'email' => uniqid($role, true).'@example.test',
+            'password' => 'test-only-password',
+            'role' => $role,
+        ]);
     }
 
     private function listing(User $owner, string $type = 'freelance', string $title = 'Creator listing under test'): MarketplaceListing

@@ -77,10 +77,10 @@ class BuilderController extends Controller
             abort_unless(in_array($type, $allowedTypes, true), 403);
         }
 
-        $canEdit = $managerMode === 'manage' || ($managerMode === null && ($record === null
-            || (in_array($type, $allowedTypes, true) && ($type === 'job'
-                ? in_array($record->status, ['draft', 'pending', 'rejected'], true)
-                : in_array($record->status, ['draft', 'rejected'], true)))));
+        $editableStatuses = $type === 'job' ? ['draft', 'pending', 'rejected'] : ['draft', 'rejected'];
+        $canEdit = $managerMode === 'manage'
+            || ($managerMode === null && ($record === null
+                || (in_array($type, $allowedTypes, true) && in_array($record->status, $editableStatuses, true))));
 
         $jobCategoryChoices = $type === 'job'
             ? BambodiaTaxonomy::jobEditorChoices($record?->category)

@@ -148,7 +148,8 @@ class ListingController extends Controller
     {
         return ProductLicense::query()->where('marketplace_listing_id', $listing->id)
             ->whereIn('status', ['active', 'suspended'])->whereNull('revoked_at')
-            ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))->exists()
+            ->whereHas('entitlement', fn ($query) => $query->where('status', 'active')->whereNull('revoked_at'))
+            ->exists()
             || ProductEntitlement::query()->where('status', 'active')->whereNull('revoked_at')
                 ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
                 ->whereHas('version', fn ($query) => $query->where('marketplace_listing_id', $listing->id))->exists();
