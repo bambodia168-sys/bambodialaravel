@@ -231,9 +231,19 @@ class UserManagerController extends Controller
     private function savePermissions(User $user,array $permissions): void
     {
         foreach(UserManagementAccess::CAPABILITIES as $key=>$label) {
+            if ($key === 'marketplace_transfer') {
+                if ($user->role !== 'staff') {
+                    DB::table('user_permission_overrides')->where('user_id', $user->id)
+                        ->where('permission', $key)->delete();
+                    continue;
+                }
+                if (!array_key_exists($key, $permissions)) {
+                    continue;
+                }
+            }
             DB::table('user_permission_overrides')->updateOrInsert(
                 ['user_id'=>$user->id,'permission'=>$key],
-                ['allowed'=>(bool)($permissions[$key]??true),'updated_at'=>now(),'created_at'=>now()]
+                ['allowed'=>(bool)($permissions[$key]??UserManagementAccess::defaultAllowed($user,$key)),'updated_at'=>now(),'created_at'=>now()]
             );
         }
     }

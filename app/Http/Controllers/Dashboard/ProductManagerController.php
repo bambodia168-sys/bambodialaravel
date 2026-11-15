@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\AuditEvent;
-use App\Models\AccountNotification;
 use App\Models\MarketplaceListing;
-use App\Support\ProductReadiness;
 use Illuminate\Http\RedirectResponse;
+use App\Support\MarketplaceManagement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -17,20 +15,14 @@ class ProductManagerController extends Controller
 {
     public function index(Request $request): View
     {
-        $status = (string) $request->query('status', 'all');
-        abort_unless(in_array($status, ['all', 'draft', 'pending', 'published', 'rejected', 'withdrawn'], true), 404);
-        $search = mb_substr(trim((string) $request->query('search', '')), 0, 120);
+        abort_unless(MarketplaceManagement::mayView($request->user()), 403);
+        $query = MarketplaceListing::query()->where('type', 'product')->with(['creator:id,public_id,name', 'category:id,name', 'licenseDefinition', 'coverAsset', 'featuredAsset']);
+        $filters = MarketplaceManagement::applyFilters($query, $request, 'product', [
+            'all' => 'All statuses', ...MarketplaceManagement::STATUSES, 'withdrawn' => 'Withdrawn',
+        ]);
+        $products = $query->latest()->paginate(10)->withQueryString();
 
-        $products = MarketplaceListing::query()
-            ->where('type', 'product')
-            ->with(['creator:id,name,public_id', 'licenseDefinition:id,name,version,status', 'coverAsset:id,public_id,alt_text,review_status'])
-            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
-            ->when($search !== '', fn ($q) => $q->where(function ($q) use ($search): void {
-                $q->where('title', 'like', '%'.$search.'%')->orWhere('public_id', 'like', '%'.$search.'%');
-            }))
-            ->latest()->paginate(10)->withQueryString();
-
-        return view('dashboard.products', compact('products', 'status', 'search'));
+        return view('dashboard.products', [ ...$filters, 'products' => $products ]);
     }
 
     public function decide(Request $request, MarketplaceListing $product): RedirectResponse
@@ -40,19 +32,7 @@ class ProductManagerController extends Controller
         DB::transaction(function () use ($product, $data, $request): void {
             $product = MarketplaceListing::query()->lockForUpdate()->findOrFail($product->id);
             abort_unless($product->type === 'product', 404);
-            abort_unless($product->status === 'pending', 409, 'Only pending products can be reviewed.');
-            if ($data['decision'] === 'published') {
-                ProductReadiness::assertListing($product);
-            }
-            $product->update(['status' => $data['decision']]);
-            AccountNotification::deliver(
-                (int) $product->user_id,
-                'listing.reviewed',
-                'Digital product reviewed',
-                'Your digital product submission was '.($data['decision'] === 'published' ? 'published' : 'rejected').' after review.',
-                '/studio/products'
-            );
-            AuditEvent::record('listing.review.'.$data['decision'], $request->user(), $request);
+            MarketplaceManagement::changeStatus($product, $data['decision'], $request);
         });
 
         return back()->with('status', 'Product '.$data['decision'].'.');

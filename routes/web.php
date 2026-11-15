@@ -30,6 +30,7 @@ use App\Http\Controllers\Dashboard\CloudStorageController;
 use App\Http\Controllers\Dashboard\TurnstileProtectionController;
 use App\Http\Controllers\SiteManifestController;
 use App\Http\Controllers\Dashboard\CategoryManagerController;
+use App\Http\Controllers\Dashboard\MarketplaceActionController;
 use App\Http\Controllers\Dashboard\MarketplaceManagerController;
 use App\Http\Controllers\Dashboard\MarketplaceCardFeaturesController;
 use App\Http\Controllers\AccountNotificationController;
@@ -154,6 +155,9 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/builder', [BuilderController::class, 'show'])->name('builder');
+    Route::patch('/builder/manage/{type}/{publicId}', [BuilderController::class, 'updateManaged'])
+        ->where('type', 'product|project|freelance|service|job')->where('publicId', '[0-9]{9}')
+        ->middleware(['capability:marketplace_review', 'throttle:15,1'])->name('builder.manage.update');
     Route::post('/builder/ai-drafts', [AiDraftController::class, 'generate'])
         ->name('builder.ai.generate')->middleware('throttle:4,1');
     Route::post('/builder/ai-drafts/{draft}/reviewed', [AiDraftController::class, 'reviewed'])
@@ -321,6 +325,21 @@ Route::middleware('auth')->group(function (): void {
     });
 
     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
+        Route::get('/{type}-manager', [MarketplaceManagerController::class, 'index'])
+            ->where('type','project|freelance|service')->name('dashboard.marketplace.index');
+        Route::get('/job-manager', [JobManagerController::class, 'index'])->name('dashboard.jobs.index');
+        Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');
+        Route::get('/marketplace-records/{type}/{publicId}/media/{mediaId}', [MarketplaceActionController::class, 'asset'])
+            ->where('type', 'product|project|freelance|service|job')
+            ->where(['publicId' => '[0-9]{9}', 'mediaId' => '[0-9]{9}'])->name('dashboard.marketplace.asset');
+        Route::patch('/marketplace-records/{type}/{publicId}/status', [MarketplaceActionController::class, 'status'])
+            ->where('type', 'product|project|freelance|service|job')->where('publicId', '[0-9]{9}')
+            ->middleware(['capability:marketplace_review', 'throttle:15,1'])->name('dashboard.marketplace.status');
+        Route::get('/marketplace-owners/{user}/transfer', [UserOwnershipTransferController::class, 'create'])
+            ->middleware('capability:marketplace_transfer')->name('dashboard.marketplace.transfer');
+        Route::post('/marketplace-owners/{user}/transfer', [UserOwnershipTransferController::class, 'store'])
+            ->middleware(['capability:marketplace_transfer', 'throttle:10,1'])->name('dashboard.marketplace.transfer.store');
+
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/support-center', [SupportCenterController::class, 'index'])->name('dashboard.support')->middleware('capability:support_center');
         Route::get('/creator-badges', [CreatorBadgeController::class,'index'])->name('dashboard.badges.index');
@@ -407,8 +426,6 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/category-manager', [CategoryManagerController::class, 'index'])->name('dashboard.categories.index');
             Route::post('/category-manager', [CategoryManagerController::class, 'store'])->name('dashboard.categories.store');
             Route::patch('/category-manager/{category}', [CategoryManagerController::class, 'update'])->name('dashboard.categories.update');
-            Route::get('/{type}-manager', [MarketplaceManagerController::class, 'index'])
-                ->where('type','project|freelance|service')->name('dashboard.marketplace.index');
             Route::patch('/card-features/listings/{listing}', [MarketplaceCardFeaturesController::class,'listing'])
                 ->name('dashboard.card-features.listing')->middleware('throttle:15,1');
             Route::patch('/card-features/jobs/{job}', [MarketplaceCardFeaturesController::class,'job'])
@@ -417,9 +434,7 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/contract-disputes', [ContractOversightController::class,'disputes'])->name('dashboard.contracts.disputes');
             Route::get('/contract-disputes/{dispute}', [ContractOversightController::class,'inspect'])->name('dashboard.contracts.inspect');
             Route::patch('/contract-disputes/{dispute}', [ContractOversightController::class,'decide'])->name('dashboard.contracts.decide');
-            Route::get('/job-manager', [JobManagerController::class, 'index'])->name('dashboard.jobs.index');
             Route::patch('/job-manager/{job}', [JobManagerController::class, 'decide'])->name('dashboard.jobs.decide')->middleware('capability:marketplace_review');
-            Route::get('/product-manager', [ProductManagerController::class, 'index'])->name('dashboard.products.index');
             Route::patch('/product-manager/{product}', [ProductManagerController::class, 'decide'])->name('dashboard.products.decide')->middleware('capability:marketplace_review');
             Route::get('/license-manager', [LicenseManagerController::class, 'index'])->name('dashboard.licenses.index');
             Route::post('/license-manager', [LicenseManagerController::class, 'store'])->name('dashboard.licenses.store');

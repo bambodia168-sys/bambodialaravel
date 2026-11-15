@@ -81,6 +81,13 @@ final class PreviewContentReview
         return self::jobReport($record);
     }
 
+    public static function hasCustomerActivity(MarketplaceJob|MarketplaceListing $record): bool
+    {
+        $report = $record instanceof MarketplaceJob ? self::jobReport($record) : self::listingReport($record);
+
+        return $report['customer_activity_blocked'];
+    }
+
     public static function isPreviewTitle(string $title): bool
     {
         return preg_match('/\[\s*(?:LAYOUT TEST|DEMO|SAMPLE)\s*\]|\bPREVIEW ONLY\b/iu', $title) === 1;

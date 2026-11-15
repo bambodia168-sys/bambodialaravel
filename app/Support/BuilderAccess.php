@@ -37,7 +37,7 @@ final class BuilderAccess
                 ->where('public_id', $reference)
                 ->where('client_id', $user->getKey())
                 ->firstOrFail();
-            abort_unless(in_array($job->status, ['pending', 'rejected'], true), 409);
+            abort_unless(in_array($job->status, ['draft', 'pending', 'rejected'], true), 409);
             return;
         }
 

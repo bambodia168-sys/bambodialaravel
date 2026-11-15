@@ -5,8 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceListing;
 use App\Models\AuditEvent;
-use App\Models\AccountNotification;
-use App\Support\ProductReadiness;
+use App\Support\MarketplaceManagement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +22,7 @@ class ReviewQueueController extends Controller
         abort_unless(mb_strlen($search) <= 120, 404);
 
         $listings = MarketplaceListing::query()
-            ->with('creator:id,name,public_id')->where('status','pending')
+            ->with('creator:id,name,public_id')->whereIn('status', ['pending', 'in_review'])
             ->when($type !== 'all', fn ($q) => $q->where('type', $type))
             ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
                 $inner->where('title','like','%'.$search.'%')
@@ -31,7 +30,7 @@ class ReviewQueueController extends Controller
             }))
             ->oldest()->paginate(10)->withQueryString();
 
-        $counts = MarketplaceListing::query()->where('status','pending')
+        $counts = MarketplaceListing::query()->whereIn('status', ['pending', 'in_review'])
             ->selectRaw('type, COUNT(*) as total')->groupBy('type')->pluck('total','type');
         $recentReviews = AuditEvent::query()
             ->whereIn('event',['listing.review.published','listing.review.rejected'])
@@ -46,17 +45,7 @@ class ReviewQueueController extends Controller
         $data = $request->validate(['decision' => ['required', Rule::in(['published', 'rejected'])]]);
         DB::transaction(function () use ($listing, $data, $request): void {
             $record = MarketplaceListing::query()->lockForUpdate()->findOrFail($listing->id);
-            abort_unless($record->status === 'pending', 409, 'This listing is no longer pending.');
-            if ($data['decision'] === 'published') {
-                ProductReadiness::assertListing($record);
-            }
-            $record->update(['status' => $data['decision']]);
-            AccountNotification::deliver(
-                (int)$record->user_id,'listing.reviewed','Marketplace listing reviewed',
-                'A listing was '.($data['decision']==='published'?'published':'rejected').' after review.',
-                $record->type==='product'?'/studio/products':'/studio/listings'
-            );
-            AuditEvent::record('listing.review.'.$data['decision'], $request->user(), $request);
+            MarketplaceManagement::changeStatus($record, $data['decision'], $request);
         });
 
         return back()->with('status', 'Listing marked as '.$data['decision'].'.');

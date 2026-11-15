@@ -18,7 +18,7 @@ final class BuilderGallery
         ];
     }
 
-    public static function check(array &$data, Request $request): void
+    public static function check(array &$data, Request $request, ?int $ownerId = null): void
     {
         if (! $request->boolean('builder_mode')) {
             // Legacy forms do not overwrite or clear the builder gallery.
@@ -28,7 +28,7 @@ final class BuilderGallery
 
         $ids = array_map('intval', $data['gallery_media_ids'] ?? []);
         $allowed = MediaAsset::query()->whereIn('id', $ids)
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $ownerId ?? $request->user()->id)
             ->whereIn('mime_type', ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
             ->count();
         if ($allowed !== count($ids)) {

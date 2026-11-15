@@ -15,7 +15,7 @@
     </div>
     <div class="workspace-queue-toolbar">
       <nav class="workspace-queue-tabs" aria-label="Your products by status">
-        @foreach(['all'=>'All','draft'=>'Draft','pending'=>'Pending','published'=>'Published','rejected'=>'Rejected'] as $value=>$label)
+        @foreach(['all'=>'All','draft'=>'Draft','pending'=>'Pending','in_review'=>'In Review','published'=>'Published','rejected'=>'Rejected'] as $value=>$label)
           <a href="{{ route('studio.products.index',array_merge(request()->except('status','page'),$value==='all'?[]:['status'=>$value])) }}"
              class="{{ $status===$value?'is-active':'' }}" @if($status===$value)aria-current="page"@endif>
             {{ $label }} <span>{{ $value==='all'?$counts->sum():(int)$counts->get($value,0) }}</span>
@@ -50,7 +50,7 @@
               @endif
             </div></td>
             <td>@if($product->coverAsset)<img class="media-thumb" src="{{ $product->coverAsset->previewUrl() }}" alt="{{ $product->coverAsset->alt_text }}" width="52" height="52">@else<span class="text-muted">Not selected</span>@endif</td>
-            <td><span class="role-pill">{{ ucfirst($product->status) }}</span></td><td>{{ $product->created_at->format('d M Y') }}</td>
+            <td><span class="role-pill">{{ ($product->status === 'in_review' ? 'In Review' : ucfirst($product->status)) }}</span></td><td>{{ $product->created_at->format('d M Y') }}</td>
             <td>
               <x-row-action-menu :id="'creator-product-'.$product->id" :label="$product->title">
                 <a href="{{ url('/builder?='.$product->public_id) }}"><x-icon name="edit" size="16"/> {{ in_array($product->status,['draft','rejected'],true) ? 'Edit in builder' : 'Details' }}</a>

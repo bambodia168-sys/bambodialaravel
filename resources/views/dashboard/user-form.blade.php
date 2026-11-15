@@ -53,14 +53,19 @@
         @endunless
       </div>
       <div class="user-manager-permissions">
-        <h3>Individual restrictions</h3>
-        <p class="hint">A role sets the maximum access. The settings below may restrict access to the connected workflows; they cannot grant more access than the role allows. Superadmin access is not restricted.</p>
+        <h3>Individual permissions</h3>
+        <p class="hint">Permissions apply within each account role. Enable marketplace ownership transfers to assign that task to a staff account.</p>
         @foreach(\App\Support\UserManagementAccess::CAPABILITIES as $key=>$label)
+        @php
+          $default = $key === 'marketplace_transfer' && $member->role !== 'staff'
+            ? false : ($permissions[$key]['allowed'] ?? $key !== 'marketplace_transfer');
+          $selected = (string) old('permissions.'.$key, $default ? '1' : '0');
+        @endphp
         <label class="user-manager-permission">
           <span><strong>{{ $label }}</strong><small>{{ $key }}</small></span>
           <select name="permissions[{{ $key }}]" aria-label="Access to {{ $label }}">
-            <option value="1" @selected((string)old('permissions.'.$key,($permissions[$key]['allowed']??true)?'1':'0')==='1')>Allowed by role</option>
-            <option value="0" @selected((string)old('permissions.'.$key,($permissions[$key]['allowed']??true)?'1':'0')==='0')>Restrict access</option>
+            <option value="1" @selected($selected === '1')>{{ $key==='marketplace_transfer' ? 'Allow ownership transfers' : 'Allowed by role' }}</option>
+            <option value="0" @selected($selected === '0')>Restrict access</option>
           </select>
         </label>
         @endforeach
