@@ -9,7 +9,7 @@
   <div class="premium-detail-layout">
     <main class="premium-detail-main">
       <x-detail-featured-media :item="$job" kind="job" type-icon="briefcase"
-        :fallback-title="ucfirst($job->category)" fallback-text="Read the job brief below"/>
+        :fallback-title="$job->category_label" fallback-text="Read the job brief below"/>
 
       <h1 class="premium-detail-below-title">{{ $job->title }}</h1>
       <div class="premium-showcase-actions">
@@ -145,7 +145,7 @@
         <div class="premium-side-card-heading"><h2>Information</h2></div>
         <dl class="premium-info-list">
           <div><dt>Client</dt><dd>{{ $job->client?->name ?? 'Bambodia client' }}</dd></div>
-          <div><dt>Category</dt><dd>{{ ucfirst($job->category) }}</dd></div>
+          <div><dt>Category</dt><dd>{{ $job->category_label }}</dd></div>
           <div><dt>Status</dt><dd>{{ $layoutSample ? 'Preview only' : 'Published' }}</dd></div>
           <div><dt>Created</dt><dd>{{ $job->created_at->format('d M Y') }}</dd></div>
           <div><dt>Last updated</dt><dd>{{ $job->updated_at->format('d M Y') }}</dd></div>
