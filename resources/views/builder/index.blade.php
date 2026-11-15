@@ -385,7 +385,7 @@
                   </select>
                 </div>
                 @if($canEdit && !$managed)<button class="studio-tool-action" type="button" data-modal-open="studio-media-upload"><x-icon name="upload" size="16"/> Upload new media</button>@endif
-                <small class="hint">Files uploaded here must pass rights review before they can be selected.</small>
+                <small class="hint">Files uploaded here are available to select immediately.</small>
               </div>
               <div class="studio-field studio-media-youtube" data-featured-youtube-wrap hidden>
                 <label for="studio-youtube-url">YouTube video URL (HTTPS)</label>
@@ -635,7 +635,7 @@
           <h3>Ready to publish?</h3>
           <div class="studio-checklist">
             <div><x-icon name="check-circle" size="18"/> Clear title and description</div>
-            <div><x-icon name="image" size="18"/> Media ownership and usage rights</div>
+            <div><x-icon name="image" size="18"/> Preview images and screenshots</div>
             <div><x-icon name="shield" size="18"/> Follow platform policies</div>
             <div><x-icon name="clipboard-check" size="18"/> Administrator review</div>
           </div>
@@ -702,25 +702,11 @@
         <div class="studio-field">
           <label for="studio-upload-file">Image, screenshots, animation or video</label>
           <input id="studio-upload-file" name="image" type="file" data-builder-upload-files accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" required>
-          <small class="hint">You can select multiple files when JavaScript is available; each is reviewed individually and stored in your Media Library.</small>
+          <small class="hint">You can select multiple files when JavaScript is available; each is stored in your Media Library.</small>
         </div>
         <div class="studio-field">
           <label for="studio-upload-alt">Description</label>
           <input id="studio-upload-alt" name="alt_text" type="text" minlength="4" maxlength="180" required>
-        </div>
-        <div class="studio-form-grid">
-          <div class="studio-field">
-            <label for="studio-upload-rights">Basis of rights</label>
-            <select id="studio-upload-rights" name="rights_basis"><option value="owned">I own this media</option><option value="licensed">I have a license</option></select>
-          </div>
-          <div class="studio-field">
-            <label for="studio-upload-holder">Rights holder</label>
-            <input id="studio-upload-holder" name="rights_holder" minlength="2" maxlength="180" required>
-          </div>
-        </div>
-        <div class="studio-field">
-          <label for="studio-upload-note">Rights evidence or permission details</label>
-          <textarea id="studio-upload-note" name="rights_note" rows="3" maxlength="3000"></textarea>
         </div>
         <p class="hint" role="status" data-builder-upload-status aria-live="polite"></p>
         <div class="studio-submit-actions"><button class="studio-tool-action" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit"><x-icon name="upload" size="16"/> Upload privately</button></div>

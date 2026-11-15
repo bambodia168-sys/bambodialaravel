@@ -229,23 +229,15 @@ class PostBuilderExperienceTest extends TestCase
         $this->get(route('dashboard.posts.preview', $post))->assertSee('background-color:#cc55aa', false);
     }
 
-    public function test_post_drag_drop_upload_can_publish_with_owner_attestation(): void
+    public function test_post_drag_drop_upload_can_publish_without_media_rights_fields(): void
     {
         Storage::fake('local');
         $admin = $this->member();
         $this->actingAs($admin);
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8B8CkAAAAASUVORK5CYII=');
-        $payload = [
-            'image' => UploadedFile::fake()->createWithContent('post-cover.png', $png),
-            'alt_text' => 'Licensed editorial cover',
-            'rights_basis' => 'owned',
-            'rights_holder' => 'Post Author',
-        ];
-        $this->postJson(route('dashboard.posts.media.store'), $payload)->assertUnprocessable();
         $response = $this->postJson(route('dashboard.posts.media.store'), [
-            ...$payload,
             'image' => UploadedFile::fake()->createWithContent('post-cover.png', $png),
-            'rights_confirmed' => '1',
+            'alt_text' => 'Editorial cover image',
         ])->assertCreated()->assertJsonPath('review_status', 'pending');
         $asset = MediaAsset::query()->findOrFail($response->json('id'));
         $this->assertSame('local', $asset->storage_disk);

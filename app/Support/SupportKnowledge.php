@@ -142,10 +142,10 @@ final class SupportKnowledge
                 'Use clear release details' => 'Provide a version, relevant documentation and a change history when those fields are available. Distinguish tested functionality from features that are planned.',
                 'Check the final presentation' => 'Review the listing as a customer would. Fix misleading screenshots, broken links and unclear license references before submitting for review. Saving a draft does not make the listing publicly visible.',
             ]),
-            self::article('Preparing product screenshots and media responsibly', 'creators', 'Use approved images and accurate previews when building a product listing.', [
+            self::article('Preparing product screenshots and media responsibly', 'creators', 'Use accurate previews when building a product listing.', [
                 'Use assets you may distribute' => 'Upload your own product images or materials for which you have appropriate permission. Do not use someone else\'s brand imagery or confidential customer information without authorization.',
                 'Show the real product' => 'Select screenshots that match the delivered version. Remove passwords, private license keys and personal data from every image before upload.',
-                'Follow review requirements' => 'Check the current media and product submission controls for file type, size, rights and approval status. An uploaded asset may remain private or pending until the applicable checks pass.',
+                'Follow review requirements' => 'Check the supported file types and sizes, then attach the media to your listing. The upload stays private until the listing is published.',
             ]),
             self::article('Understanding creator listing review and visibility', 'creators', 'Know why a submitted or edited listing may not appear in the public marketplace.', [
                 'Save versus publish' => 'Creator Studio may distinguish draft, submitted, approved and rejected work. A saved listing is not automatically available to customers.',
