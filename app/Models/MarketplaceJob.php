@@ -40,5 +40,10 @@ class MarketplaceJob extends Model
 
     public function client(): BelongsTo { return $this->belongsTo(User::class, 'client_id'); }
     public function proposals(): HasMany { return $this->hasMany(JobProposal::class, 'marketplace_job_id'); }
+    public function getCategoryLabelAttribute(): string
+    {
+        return \App\Support\BambodiaTaxonomy::jobLabel($this->category);
+    }
+
     public function publicUrl(): string { return route('jobs.show', $this->public_id.'-'.$this->slug); }
 }
