@@ -86,6 +86,9 @@
             <dialog class="config-dialog wide-dialog" id="license-view-{{ $license->id }}" aria-labelledby="license-heading-{{ $license->id }}">
               <h2 id="license-heading-{{ $license->id }}">{{ $license->name }}</h2>
               <p>{{ $license->public_id }} · {{ $license->tierLabel() }} · v{{ $license->version }} · {{ ucfirst($license->status) }}</p>
+              @if($definitionLocked && !$archiveFixture && $license->status !== 'archived')
+                <p class="hint">Removal is unavailable while this definition is in use. Layout-test definitions can be archived when all references are verified demo products without releases or issued licenses.</p>
+              @endif
               <h3>Permissions granted</h3>
               <div class="license-terms-copy">{!! $license->permissionsMarkup() !!}</div>
               <h3>Restrictions and prohibited uses</h3>

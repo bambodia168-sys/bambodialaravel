@@ -101,6 +101,51 @@ class LicenseManagerTabsAndTermsTest extends TestCase
         $this->assertTrue(AuditEvent::query()->where('event', 'license.definition.archived')->exists());
     }
 
+    public function test_deployed_layout_fixture_can_be_archived_after_creator_account_changes(): void
+    {
+        $admin = $this->member('admin');
+        $owner = $this->member('freelancer');
+        $license = LicenseDefinition::query()->create([
+            'name' => 'Layout Test Only — No Commercial License',
+            'code' => 'LAYOUT_TEST_ONLY',
+            'tier' => 'regular',
+            'version' => '1.0.0',
+            'status' => 'active',
+            'created_by' => $admin->id,
+            'permissions' => 'This preview is only available for layout testing.',
+            'restrictions' => 'No purchase, download or commercial rights are granted.',
+        ]);
+
+        $license->forceFill(['public_id' => '184752080'])->save();
+        $product = MarketplaceListing::query()->create([
+            'type' => 'product',
+            'user_id' => $owner->id,
+            'title' => '[LAYOUT TEST] Responsive Portfolio UI Kit',
+            'description' => 'LAYOUT TEST ONLY — an original public layout sample.',
+            'license_definition_id' => $license->id,
+            'status' => 'published',
+        ]);
+        $product->forceFill(['public_id' => '487948714'])->save();
+
+        $extra = $product->replicate(['public_id', 'slug']);
+        $extra->title = '[LAYOUT TEST] Unverified product';
+        $extra->save();
+        $this->actingAs($admin);
+        $url = route('dashboard.licenses.destroy', $license);
+        $this->delete($url, ['confirm_remove' => '1'])->assertConflict();
+
+        $extra->delete();
+        $product->update(['description' => 'A real product description.']);
+        $this->delete($url, ['confirm_remove' => '1'])->assertConflict();
+
+        $product->update(['description' => 'LAYOUT TEST ONLY — an original public layout sample.']);
+        $this->get('/dashboard/license-manager?tab=definitions&search=184752080')
+            ->assertSee('Archive layout-test definition');
+        $this->delete($url, ['confirm_remove' => '1'])->assertRedirect();
+        $this->assertSame('archived', $license->fresh()->status);
+        $this->assertSame($license->id, $product->fresh()->license_definition_id);
+    }
+
     private function member(string $role, ?string $email = null): User
     {
         return User::query()->create([

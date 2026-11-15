@@ -11,6 +11,9 @@ class LicenseDefinition extends Model
 {
     public const TIERS = ['regular'=>'Regular License','extended'=>'Extended License'];
 
+    private const LIVE_LAYOUT_DEFINITION = '184752080';
+    private const LIVE_LAYOUT_PRODUCTS = ['487948714', '673785514', '381502999', '792285328', '140274590'];
+
     protected $fillable = [
         'code', 'tier', 'name', 'version', 'permissions', 'restrictions',
         'permissions_html', 'restrictions_html',
@@ -74,13 +77,22 @@ class LicenseDefinition extends Model
             return false;
         }
 
-        // Match the original layout fixture owner and title marker before withdrawing the terms.
         $listings = $this->listings();
-        if ((clone $listings)->where(fn ($query) => $query
-            ->where('type', '!=', 'product')
-            ->orWhere('title', 'not like', '[LAYOUT TEST] %')
-            ->orWhereDoesntHave('creator', fn ($creator) => $creator->where('email', 'layout-preview-creator@bambodia.invalid'))
-        )->exists()) {
+        $unverified = (clone $listings)->where(function ($query): void {
+            $query->where('type', '!=', 'product')
+                ->orWhere('title', 'not like', '[LAYOUT TEST] %')
+                ->orWhere(function ($fixture): void {
+                    // Match the original production products even when their creator account changes.
+                    if ((string) $this->public_id === self::LIVE_LAYOUT_DEFINITION) {
+                        $fixture->whereNotIn('public_id', self::LIVE_LAYOUT_PRODUCTS)
+                            ->orWhere('description', 'not like', 'LAYOUT TEST ONLY%');
+                    } else {
+                        $fixture->whereDoesntHave('creator', fn ($creator) =>
+                            $creator->where('email', 'layout-preview-creator@bambodia.invalid'));
+                    }
+                });
+        });
+        if ($unverified->exists()) {
             return false;
         }
 
