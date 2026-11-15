@@ -13,6 +13,11 @@ return new class extends Migration
         Schema::table('marketplace_categories', function (Blueprint $table): void {
             $table->string('type', 32)->change();
         });
+        // Preserve all six legacy Job codes while allowing the new category slugs.
+        // The original Job schema may be an ENUM or a shorter VARCHAR.
+        Schema::table('marketplace_jobs', function (Blueprint $table): void {
+            $table->string('category', 64)->change();
+        });
         Schema::table('marketplace_categories', function (Blueprint $table): void {
             $table->foreignId('parent_id')->nullable()->after('id')
                 ->constrained('marketplace_categories')->restrictOnDelete();
