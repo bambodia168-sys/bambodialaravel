@@ -88,8 +88,10 @@ class SharedRowActionMenuTest extends TestCase
         $this->assertStringContainsString('Self-review prohibited', $source);
         $source = file_get_contents(resource_path('views/dashboard/contract-disputes.blade.php'));
         $this->assertStringContainsString('Conflict of interest', $source);
-        $source = file_get_contents(resource_path('views/dashboard/licenses.blade.php'));
-        $this->assertStringContainsString('data-license-focus', $source);
-        $this->assertStringContainsString('data-row-action-menu', $source);
+        foreach (['license-issued', 'license-definitions'] as $partial) {
+            $source = file_get_contents(resource_path('views/dashboard/partials/'.$partial.'.blade.php'));
+            $this->assertStringContainsString('data-license-focus', $source);
+            $this->assertStringContainsString('data-row-action-menu', $source);
+        }
     }
 }

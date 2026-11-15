@@ -439,6 +439,8 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/license-manager', [LicenseManagerController::class, 'index'])->name('dashboard.licenses.index');
             Route::post('/license-manager', [LicenseManagerController::class, 'store'])->name('dashboard.licenses.store');
             Route::patch('/license-manager/{license}', [LicenseManagerController::class, 'update'])->name('dashboard.licenses.update');
+            Route::delete('/license-manager/{license}', [LicenseManagerController::class, 'destroy'])
+                ->name('dashboard.licenses.destroy')->middleware('throttle:10,1');
             Route::post('/license-manager/issue', [IssuedLicenseController::class,'issue'])
                 ->name('dashboard.licenses.issue')->middleware('throttle:5,1');
             Route::patch('/license-manager/issued/{license}/status', [IssuedLicenseController::class,'status'])

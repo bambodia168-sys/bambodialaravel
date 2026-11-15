@@ -91,7 +91,7 @@ try {
       throw Error(name+' Policy Builder did not open');
     checks++;
 
-    const licenseResponse = await page.goto(origin+'/dashboard/license-manager',{waitUntil:'networkidle'});
+    const licenseResponse = await page.goto(origin+'/dashboard/license-manager?tab=definitions',{waitUntil:'networkidle'});
     if(licenseResponse?.status()!==200) throw Error(name+' license manager unavailable');
     const license = page.locator('[data-row-action-menu][id^="license-actions-"]').first();
     const licenseAnchor = await license.getAttribute('data-row-action-anchor');

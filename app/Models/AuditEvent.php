@@ -74,6 +74,8 @@ class AuditEvent extends Model
         'license.definition.created',
         'license.definition.updated',
         'license.definition.activated',
+        'license.definition.archived',
+        'license.definition.deleted',
         'license.instance.issued',
         'license.instance.status.changed',
         'license.instance.upgraded',

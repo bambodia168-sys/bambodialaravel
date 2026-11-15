@@ -5,29 +5,57 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
 use App\Models\LicenseDefinition;
-use App\Models\MarketplaceListing;
-use App\Models\ProductLicense;
 use App\Models\ProductEntitlement;
+use App\Models\ProductLicense;
 use App\Models\ProductLicenseSupportRequest;
+use App\Support\LicenseTerms;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class LicenseManagerController extends Controller
 {
     public function index(Request $request): View
     {
-        $search = mb_substr(trim((string) $request->query('search', '')), 0, 120);
-        $licenses = LicenseDefinition::query()
-            ->withCount(['listings','extendedListings','issuedLicenses'])
-            ->when($search !== '', fn ($q) => $q->where(function ($q) use ($search): void {
-                $q->where('name', 'like', '%'.$search.'%')->orWhere('code', 'like', '%'.$search.'%');
-            }))
-            ->latest()->paginate(10)->withQueryString();
+        $tab = $request->query('tab', $request->has('search') ? 'definitions' : ($request->has('support_page') ? 'renewals' : 'products'));
+        abort_unless(in_array($tab, ['products', 'renewals', 'definitions'], true), 404);
 
-        $issuedSearch = mb_substr(trim((string) $request->query('issued_search', '')), 0, 120);
-        $issuedSort = (string) $request->query('issued_sort', 'recent');
+        $data = match ($tab) {
+            'definitions' => $this->definitions($request),
+            'renewals' => ['supportRenewals' => ProductLicenseSupportRequest::query()
+                ->with(['license.product:id,title,public_id,type', 'requester:id,public_id'])
+                ->latest()->orderByDesc('id')->paginate(10, ['*'], 'support_page')->appends('tab', 'renewals')],
+            'products' => $this->issued($request),
+        };
+
+        return view('dashboard.licenses', ['tab' => $tab, ...$data]);
+    }
+
+    private function definitions(Request $request): array
+    {
+        $search = mb_substr(trim($request->string('search')->toString()), 0, 120);
+        $archived = $request->boolean('archived');
+        $licenses = LicenseDefinition::query()
+            ->withCount(['listings', 'extendedListings', 'issuedLicenses'])
+            ->when($archived, fn ($query) => $query->where('status', 'archived'),
+                fn ($query) => $query->where('status', '!=', 'archived'))
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search): void {
+                $query->where('name', 'like', '%'.$search.'%')->orWhere('code', 'like', '%'.$search.'%')
+                    ->orWhere('public_id', $search);
+            }))
+            ->latest()->orderByDesc('id')->paginate(10)
+            ->appends(['tab' => 'definitions', 'search' => $search, 'archived' => $archived ? '1' : null]);
+
+        return compact('licenses', 'search', 'archived');
+    }
+
+    private function issued(Request $request): array
+    {
+        $issuedSearch = mb_substr(trim($request->string('issued_search')->toString()), 0, 120);
+        $issuedSort = $request->string('issued_sort', 'recent')->toString();
         if (! in_array($issuedSort, ['recent', 'oldest', 'updated', 'status'], true)) {
             $issuedSort = 'recent';
         }
@@ -59,10 +87,7 @@ class LicenseManagerController extends Controller
             ->when($issuedSort === 'oldest',fn ($q) => $q->orderBy('id'))
             ->when($issuedSort === 'updated',fn ($q) => $q->orderByDesc('updated_at')->orderByDesc('id'))
             ->when($issuedSort === 'status',fn ($q) => $q->orderBy('status')->orderByDesc('id'))
-            ->paginate(10,['*'],'issued_page')->withQueryString();
-        $supportRenewals=ProductLicenseSupportRequest::query()
-            ->with(['license.product:id,title,public_id,type','license.customer:id,public_id','requester:id,public_id'])
-            ->latest()->paginate(10,['*'],'support_page')->withQueryString();
+            ->paginate(10, ['*'], 'issued_page')->appends(['tab' => 'products', 'issued_search' => $issuedSearch, 'issued_sort' => $issuedSort]);
         $issuable = $request->user()->role === 'super_admin'
             ? ProductEntitlement::query()->where('status','active')
                 ->whereDoesntHave('license')
@@ -73,15 +98,15 @@ class LicenseManagerController extends Controller
                 ->latest()->limit(100)->get()
             : collect();
 
-        return view('dashboard.licenses', compact('licenses', 'search','issued','issuable','supportRenewals','issuedSearch','issuedSort'));
+        return compact('issued', 'issuable', 'issuedSearch', 'issuedSort');
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $values = $this->validated($request, false);
+        $values = $this->validated($request);
 
         if ($values['status'] === 'active' && ! $request->boolean('confirm_review')) {
-            return back()->withErrors(['status' => 'An administrator must confirm license review before publication.']);
+            return back()->withInput()->withErrors(['status' => 'An administrator must confirm license review before publication.']);
         }
 
         $license = LicenseDefinition::query()->create([
@@ -95,51 +120,95 @@ class LicenseManagerController extends Controller
             AuditEvent::record('license.definition.activated', $request->user(), $request);
         }
 
-        return back()->with('status', 'License definition created.');
+        return $this->definitionsPage()->with('status', 'License definition created.');
     }
 
     public function update(Request $request, LicenseDefinition $license): RedirectResponse
     {
-        $values = $this->validated($request, true, $license);
-
-        if ($license->listings()->exists()
-            || MarketplaceListing::query()->where('extended_license_definition_id',$license->id)->exists()
-            || ProductLicense::query()->where('license_definition_id',$license->id)->exists()) {
-            abort(409, 'This license is already referenced by listings. Create a new version instead of modifying existing terms.');
-        }
+        $values = $this->validated($request, $license);
 
         if ($values['status'] === 'active' && ! $request->boolean('confirm_review')) {
-            return back()->withErrors(['status' => 'Confirm administrator legal review before activation.']);
+            return back()->withInput()->withErrors(['status' => 'Confirm administrator legal review before activation.']);
         }
 
-        $wasActive = $license->status === 'active';
-        $license->update([
-            ...$values,
-            'published_at' => $values['status'] === 'active' ? ($license->published_at ?? now()) : null,
-        ]);
-        AuditEvent::record('license.definition.updated', $request->user(), $request);
-        if (! $wasActive && $license->status === 'active') {
-            AuditEvent::record('license.definition.activated', $request->user(), $request);
-        }
+        DB::transaction(function () use ($request, $license, $values): void {
+            $locked = LicenseDefinition::query()->lockForUpdate()->findOrFail($license->id);
+            abort_if($locked->status === 'archived' || $locked->hasReferences(), 409,
+                'This definition is archived or in use. Create a new definition for revised terms.');
 
-        return back()->with('status', 'License definition updated.');
+            $wasActive = $locked->status === 'active';
+            $locked->update([
+                ...$values,
+                'published_at' => $values['status'] === 'active' ? ($locked->published_at ?? now()) : null,
+            ]);
+            AuditEvent::record('license.definition.updated', $request->user(), $request);
+            if (! $wasActive && $locked->status === 'active') {
+                AuditEvent::record('license.definition.activated', $request->user(), $request);
+            }
+        }, 3);
+
+        return $this->definitionsPage()->with('status', 'License definition updated.');
     }
 
-    private function validated(Request $request, bool $updating, ?LicenseDefinition $license = null): array
+    public function destroy(Request $request, LicenseDefinition $license): RedirectResponse
+    {
+        $request->validate(['confirm_remove' => ['accepted']]);
+
+        $archived = DB::transaction(function () use ($request, $license): bool {
+            $locked = LicenseDefinition::query()->lockForUpdate()->findOrFail($license->id);
+            $inUse = $locked->hasReferences();
+            if ($inUse) {
+                abort_unless($locked->canArchiveLayoutTest(), 409,
+                    'This definition is referenced by products or issued licenses and must be retained.');
+                $locked->update(['status' => 'archived']);
+            } else {
+                $locked->delete();
+            }
+            AuditEvent::record($inUse ? 'license.definition.archived' : 'license.definition.deleted', $request->user(), $request);
+
+            return $inUse;
+        }, 3);
+
+        return $this->definitionsPage()->with('status', $archived
+            ? 'Layout-test definition archived and removed from the public license page.'
+            : 'License definition deleted.');
+    }
+
+    private function definitionsPage(): RedirectResponse
+    {
+        return redirect()->route('dashboard.licenses.index', ['tab' => 'definitions']);
+    }
+
+    private function validated(Request $request, ?LicenseDefinition $license = null): array
     {
         $unique = Rule::unique('license_definitions', 'code');
-        if ($updating && $license) {
+        if ($license) {
             $unique->ignore($license->id);
         }
 
-        return $request->validate([
+        $values = $request->validate([
             'code' => ['required', 'string', 'regex:/^[A-Z0-9_]{3,32}$/', $unique],
             'tier' => ['required', Rule::in(array_keys(LicenseDefinition::TIERS))],
             'name' => ['required', 'string', 'min:3', 'max:120'],
             'version' => ['required', 'string', 'regex:/^[0-9]+\.[0-9]+\.[0-9]+$/', 'max:30'],
-            'permissions' => ['required', 'string', 'min:30', 'max:50000'],
-            'restrictions' => ['required', 'string', 'min:30', 'max:50000'],
+            'permissions' => ['nullable', 'string', 'max:50000', 'required_without:permissions_html'],
+            'permissions_html' => ['nullable', 'string', 'max:150000'],
+            'restrictions' => ['nullable', 'string', 'max:50000', 'required_without:restrictions_html'],
+            'restrictions_html' => ['nullable', 'string', 'max:150000'],
             'status' => ['required', Rule::in(['draft', 'active'])],
         ]);
+
+        foreach (['permissions', 'restrictions'] as $field) {
+            $htmlField = $field.'_html';
+            $html = filled($values[$htmlField] ?? null) ? LicenseTerms::sanitize($values[$htmlField]) : null;
+            $plain = $html !== null ? LicenseTerms::plain($html) : trim($values[$field] ?? '');
+            if (mb_strlen($plain) < 30 || mb_strlen($plain) > 50000) {
+                throw ValidationException::withMessages([$field => 'Enter between 30 and 50,000 characters of license terms.']);
+            }
+            $values[$field] = $plain;
+            $values[$htmlField] = $html ?? ($license && $license->$field === $plain ? $license->$htmlField : null);
+        }
+
+        return $values;
     }
 }

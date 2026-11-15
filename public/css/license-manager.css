@@ -1,0 +1,119 @@
+.license-manager-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px 24px;
+}
+
+.license-manager-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 5px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface-2);
+}
+
+.license-manager-tabs a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    color: var(--muted);
+    font-size: .875rem;
+    font-weight: 650;
+    text-decoration: none;
+}
+
+.license-manager-tabs a[aria-current="page"] {
+    border-color: var(--line);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 2px 6px rgb(0 0 0 / 6%);
+}
+
+.license-manager-tabs a:hover {
+    color: var(--text);
+    background: var(--surface);
+}
+
+.license-manager-tabs a:focus-visible,
+.license-terms-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.license-terms-field textarea[hidden],
+.license-terms-editor[hidden] {
+    display: none;
+}
+
+.license-terms-editor {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-2);
+}
+
+.license-terms-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+    border-bottom: 1px solid var(--line);
+}
+
+.license-terms-tools button {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.license-terms-tools button:hover {
+    border-color: var(--line);
+    background: var(--surface);
+}
+
+.license-terms-input {
+    min-height: 144px;
+    max-height: 360px;
+    overflow: auto;
+    padding: 12px 14px;
+    border-radius: 0 0 12px 12px;
+}
+
+.license-terms-input[aria-invalid="true"] {
+    outline: 2px solid var(--danger);
+}
+
+.license-terms-copy {
+    overflow-wrap: anywhere;
+    line-height: 1.65;
+    white-space: normal;
+}
+
+.license-terms-copy :is(p, div, ul, ol, h3) {
+    margin: 0 0 .75em;
+}
+
+.license-terms-copy :is(ul, ol) {
+    padding-inline-start: 1.6em;
+}
+
+.license-terms-copy :last-child {
+    margin-bottom: 0;
+}
+
+@media (max-width: 560px) {
+    .license-manager-tabs { width: 100%; }
+    .license-manager-tabs a { flex: 1 1 auto; justify-content: center; }
+}

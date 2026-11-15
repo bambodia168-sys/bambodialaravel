@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\LicenseTerms;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
@@ -12,6 +13,7 @@ class LicenseDefinition extends Model
 
     protected $fillable = [
         'code', 'tier', 'name', 'version', 'permissions', 'restrictions',
+        'permissions_html', 'restrictions_html',
         'status', 'published_at', 'created_by',
     ];
 
@@ -55,6 +57,41 @@ class LicenseDefinition extends Model
         return $this->hasMany(ProductLicense::class, 'license_definition_id');
     }
 
+    public function hasReferences(): bool
+    {
+        return $this->listings()->exists() || $this->extendedListings()->exists() || $this->issuedLicenses()->exists();
+    }
+
+    public function isLayoutTest(): bool
+    {
+        return $this->code === 'LAYOUT_TEST_ONLY' && $this->name === 'Layout Test Only — No Commercial License';
+    }
+
+    public function canArchiveLayoutTest(): bool
+    {
+        if (! $this->isLayoutTest() || $this->status === 'archived'
+            || $this->issuedLicenses()->exists() || $this->extendedListings()->exists()) {
+            return false;
+        }
+
+        // Match the original layout fixture owner and title marker before withdrawing the terms.
+        return ! $this->listings()->where(fn ($query) => $query
+            ->where('type', '!=', 'product')
+            ->orWhere('title', 'not like', '[LAYOUT TEST] %')
+            ->orWhereDoesntHave('creator', fn ($creator) => $creator->where('email', 'layout-preview-creator@bambodia.invalid'))
+        )->exists();
+    }
+
+    public function permissionsMarkup(): string
+    {
+        return LicenseTerms::render($this->permissions, $this->permissions_html);
+    }
+
+    public function restrictionsMarkup(): string
+    {
+        return LicenseTerms::render($this->restrictions, $this->restrictions_html);
+    }
+
     /** Existing unclassified definitions remain usable until administrators classify them.
      * The label is guidance, not an inferred grant of extra commercial rights. */
     public function tierLabel(): string
@@ -73,7 +110,7 @@ class LicenseDefinition extends Model
     {
         // Legacy definitions predating tier classification retain their existing
         // references; new typed definitions are never interchangeable.
-        return $this->tier === null || $this->tier === $tier;
+        return $this->status !== 'archived' && ($this->tier === null || $this->tier === $tier);
     }
 
     public function publicUrl(): string
