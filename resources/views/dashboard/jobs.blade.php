@@ -7,7 +7,7 @@
 @foreach(['pending'=>'Pending','published'=>'Published','rejected'=>'Rejected','closed'=>'Closed','withdrawn'=>'Withdrawn','all'=>'All'] as $value=>$name)<option value="{{ $value }}" @selected($status===$value)>{{ $name }}</option>@endforeach
 </select><button class="btn subtle" type="submit">Filter</button></form></div>
 <div class="table-scroll"><table class="data-table"><thead><tr><th>Job ID</th><th>Title</th><th>Client</th><th>Category</th><th>Budget</th><th>Status</th><th>Action</th></tr></thead><tbody>
-@forelse($jobs as $job)<tr><td class="mono">{{ $job->public_id }}</td><td><strong>{{ $job->title }}</strong></td><td>{{ $job->client?->name }}</td><td>{{ ucfirst($job->category) }}</td><td>{{ $job->budget===null?'—':'$'.number_format((float)$job->budget,2) }}</td><td><span class="role-pill">{{ ucfirst($job->status) }}</span></td>
+@forelse($jobs as $job)<tr><td class="mono">{{ $job->public_id }}</td><td><strong>{{ $job->title }}</strong></td><td>{{ $job->client?->name }}</td><td>{{ $job->category_label }}</td><td>{{ $job->budget===null?'—':'$'.number_format((float)$job->budget,2) }}</td><td><span class="role-pill">{{ ucfirst($job->status) }}</span></td>
 <td><x-row-action-menu :id="'job-'.$job->id" :label="$job->title">
 <button type="button" data-modal-open="admin-job-{{ $job->id }}"><x-icon name="settings" size="16"/> Configure</button>
 </x-row-action-menu>
