@@ -8,7 +8,9 @@ use Illuminate\Support\Str;
 
 class MarketplaceCategory extends Model
 {
-    protected $fillable = ['type','name','description','is_active','sort_order','created_by'];
+    public const TYPES = ['product', 'project', 'freelance', 'service', 'job'];
+
+    protected $fillable = ['type','name','description','is_active','sort_order','created_by','parent_id'];
 
     protected function casts(): array
     {
@@ -33,6 +35,21 @@ class MarketplaceCategory extends Model
                 $category->slug=Str::slug($category->name) ?: 'category-'.$category->public_id;
             }
         });
+    }
+
+    public function parent(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id');
+    }
+
+    public function jobs(): HasMany
+    {
+        return $this->hasMany(MarketplaceJob::class, 'category', 'slug');
     }
 
     public function listings(): HasMany
