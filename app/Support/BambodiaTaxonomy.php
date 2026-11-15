@@ -31,7 +31,12 @@ final class BambodiaTaxonomy
     /** Include old codes only for searching or editing existing jobs. */
     public static function jobFilterChoices(): array
     {
-        return self::jobChoices() + self::LEGACY_JOB;
+        // Inactive Job categories remain searchable for already-published jobs.
+        $historical = MarketplaceCategory::query()
+            ->where('type', 'job')->orderBy('sort_order')->orderBy('name')
+            ->pluck('name', 'slug')->all();
+
+        return self::jobChoices() + $historical + self::LEGACY_JOB;
     }
 
     public static function jobEditorChoices(?string $current): array
