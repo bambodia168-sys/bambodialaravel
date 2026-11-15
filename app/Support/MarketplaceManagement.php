@@ -145,10 +145,11 @@ final class MarketplaceManagement
         $kind = $isJob ? 'job' : 'listing';
         AuditEvent::record($kind.'.review.'.$target, $request->user(), $request);
         if ($isDecision) {
+            $isProduct = !$isJob && $record->type === 'product';
             AccountNotification::deliver(
                 (int) ($isJob ? $record->client_id : $record->user_id),
                 $kind.'.reviewed',
-                $isJob ? 'Job review completed' : 'Marketplace listing reviewed',
+                $isJob ? 'Job review completed' : ($isProduct ? 'Digital product reviewed' : 'Marketplace listing reviewed'),
                 'Your submission was '.$target.' after review.',
                 $isJob ? '/my-jobs' : ($record->type === 'product' ? '/studio/products' : '/studio/listings'),
             );

@@ -73,9 +73,20 @@ try{
   await visit(moderator,'/dashboard/product-manager?status=pending&search=UAT');
   const prodRow=moderator.locator('tr').filter({hasText:'UAT Original Product for Review'}).first();
   assert(await prodRow.count()===1,'Submitted product is absent from moderation queue');
-  const action=await prodRow.locator('form[action*="/dashboard/product-manager/"]').getAttribute('action');
-  assert(Boolean(action),'Product review action is not present');
-  await post(moderator,new URL(action,origin).pathname,{decision:'published'},'PATCH');
+  const image=prodRow.locator('img.media-thumb');
+  assert(await image.count()===1,'Product cover is missing from the dashboard');
+  await image.scrollIntoViewIfNeeded();
+  await moderator.waitForFunction((src)=>Array.from(document.images)
+    .some(img=>img.src===src && img.complete && img.naturalWidth>0),await image.getAttribute('src'));
+  await image.click();
+  await moderator.waitForURL('**/builder?**mode=preview');
+  await textOn(moderator,'Read-only preview.');
+  await visit(moderator,'/dashboard/product-manager?status=pending&search=UAT');
+  await prodRow.getByRole('button',{name:'Actions for UAT Original Product for Review'}).click();
+  await prodRow.getByRole('menuitem',{name:'Publish',exact:true}).click();
+  const publish=prodRow.getByRole('dialog',{name:'Publish listing'});
+  await publish.getByRole('button',{name:'Publish',exact:true}).click();
+  await moderator.waitForURL('**/dashboard/product-manager');
   await visit(creator,'/studio/products?status=published');
   const publishedRow=creator.locator('tr').filter({hasText:'UAT Original Product for Review'}).first();
   assert(await publishedRow.count()===1,'Creator cannot see published product');
