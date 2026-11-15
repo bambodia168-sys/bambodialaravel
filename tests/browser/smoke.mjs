@@ -47,7 +47,7 @@ try {
         throw new Error(device.name+' 404 content overflows in '+theme+' mode');
       colors.push(layout.background);
     }
-    if(colors[0]===colors[1] || await page.getByRole('link',{name:'Search marketplace'}).getAttribute('href')!=='/search')
+    if(colors[0]===colors[1] || new URL(await page.getByRole('link',{name:'Search marketplace',exact:true}).getAttribute('href'),origin).pathname!=='/search')
       throw new Error(device.name+' 404 theme or recovery link is broken');
     if(device.name==='desktop') await page.screenshot({path:out+'/bambodia-404-desktop.png'});
     if(device.name==='iphone-emulation') await page.screenshot({path:out+'/bambodia-404-mobile.png'});
