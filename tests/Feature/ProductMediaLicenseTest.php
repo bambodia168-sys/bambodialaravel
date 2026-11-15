@@ -57,6 +57,53 @@ class ProductMediaLicenseTest extends TestCase
         return LicenseDefinition::query()->where('code', 'REGULAR')->firstOrFail();
     }
 
+    public function test_public_license_directory_links_only_active_definitions_in_numbered_order(): void
+    {
+        $admin = $this->member('admin');
+        $records = [
+            ['DIRECTORY_MEDIA', 'Media License', 'media', 'active'],
+            ['DIRECTORY_ARCHIVED', 'Archived directory fixture', 'regular', 'archived'],
+            ['DIRECTORY_EXTENDED', 'Extended License', 'extended', 'active'],
+            ['DIRECTORY_DRAFT', 'Draft directory fixture', 'evaluation', 'draft'],
+            ['DIRECTORY_REGULAR', 'Regular License', 'regular', 'active'],
+            ['DIRECTORY_AGENCY', 'Agency License', 'agency', 'active'],
+        ];
+
+        $licenses = collect($records)->mapWithKeys(function (array $record) use ($admin): array {
+            [$code, $name, $tier, $status] = $record;
+
+            return [$code => LicenseDefinition::query()->create([
+                'code' => $code,
+                'name' => $name,
+                'tier' => $tier,
+                'status' => $status,
+                'version' => '1.0.0',
+                'created_by' => $admin->id,
+                'permissions' => 'These are the permissions for '.$code.'.',
+                'restrictions' => 'These are the restrictions for '.$code.'.',
+                'published_at' => $status === 'active' ? now() : null,
+            ])];
+        });
+
+        $regular = $licenses['DIRECTORY_REGULAR'];
+        $extended = $licenses['DIRECTORY_EXTENDED'];
+        $orderedLinks = collect([$regular, $extended, $licenses['DIRECTORY_AGENCY'], $licenses['DIRECTORY_MEDIA']])
+            ->map(fn (LicenseDefinition $license): string => 'href="'.$license->publicUrl().'"')
+            ->all();
+        foreach ([$regular, $extended] as $current) {
+            $this->get($current->publicUrl())->assertOk()
+                ->assertSeeInOrder($orderedLinks, false)
+                ->assertSeeInOrder(['>01</span>', '>02</span>', '>03</span>', '>04</span>'], false)
+                ->assertSee('href="'.$current->publicUrl().'" aria-current="page"', false)
+                ->assertSee($current->permissions)
+                ->assertDontSee('Draft directory fixture')
+                ->assertDontSee('Archived directory fixture');
+        }
+
+        $this->get($licenses['DIRECTORY_DRAFT']->publicUrl())->assertNotFound();
+        $this->get($licenses['DIRECTORY_ARCHIVED']->publicUrl())->assertNotFound();
+    }
+
     private function uploadImage(User $creator): MediaAsset
     {
         $this->actingAs($creator)->post('/studio/media-library', [
