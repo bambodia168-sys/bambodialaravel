@@ -218,7 +218,7 @@ final class UserManagerCrudTest extends TestCase
             'cover_message'=>'An independent proposal for the job',
             'status'=>'submitted',
         ]);
-        $this->actingAs($admin)->post(route('dashboard.users.transfer.store',$client1),[
+        $this->actingAs($admin)->postJson(route('dashboard.users.transfer.store',$client1),[
             'type'=>'job','id'=>$job->id,'recipient'=>$client2->public_id,
             'reason'=>'Administrative reassignment request','rights_confirmed'=>1,
             'confirmation'=>'TRANSFER',

@@ -17,7 +17,7 @@
         <div><dt>Status</dt><dd>{{ ucfirst($item->status) }}</dd></div>
         <div><dt>Current owner</dt><dd>{{ $member->name }} ({{ $member->public_id }})</dd></div>
       </dl>
-      <div class="user-manager-note"><x-icon name="shield-alert" size="18"/> Exclusive media owned by the current publisher can move with the resource. Shared or licensed media, private product versions, issued licenses, proposals and private inquiries require separate review. Unsafe transfers are blocked rather than partly applied.</div>
+      <div class="user-manager-note"><x-icon name="shield-alert" size="18"/> Media owned by the current publisher and used only on this record can move with it. Customer activity, private product files, licenses and shared media may require review.</div>
     </section>
     <section class="panel">
       <div class="panel-head"><h2>New owner</h2></div>
@@ -25,13 +25,24 @@
         @csrf
         <input type="hidden" name="type" value="{{ $type }}">
         <input type="hidden" name="id" value="{{ $item->id }}">
+        @error('transfer')
+          <div class="user-manager-note" role="alert" style="margin:0"><x-icon name="shield-alert" size="18"/> {{ $message }}</div>
+        @enderror
         <label>Recipient's exact public ID or email
-          <input name="recipient" value="{{ old('recipient') }}" maxlength="255" required placeholder="8-digit ID or account email">
-          <small>{{ $type==='job'?'Eligible: customer, subscriber or super administrator.':'Eligible: freelancer or super administrator.' }} The recipient must be active.</small>
+          <input name="recipient" value="{{ old('recipient') }}" maxlength="255" required placeholder="8-digit ID or account email"
+            aria-describedby="transfer-recipient-hint @error('recipient') transfer-recipient-error @enderror" @error('recipient') aria-invalid="true" @enderror>
+          <small id="transfer-recipient-hint">{{ $type==='job'?'Eligible: customer, subscriber or super administrator.':'Eligible: freelancer or super administrator.' }} The recipient must be active.</small>
+          @error('recipient')<small id="transfer-recipient-error" role="alert">{{ $message }}</small>@enderror
         </label>
         <label>Reason / evidence
           <textarea name="reason" rows="4" minlength="20" maxlength="500" required placeholder="Why this transfer is authorized">{{ old('reason') }}</textarea>
         </label>
+        @if($type === 'product' && $item->status === 'draft')
+          <label class="user-manager-inline-check">
+            <input name="leave_media" type="checkbox" value="1" @checked(old('leave_media')) aria-describedby="leave-media-hint">
+            <span>Transfer draft without attached media<br><small id="leave-media-hint">Leaves all media files with their current owners and clears the cover, gallery and featured file from this draft. The new owner can add replacement media in Builder Studio.</small></span>
+          </label>
+        @endif
         <label class="user-manager-inline-check"><input name="rights_confirmed" type="checkbox" value="1" required> I confirm the reassignment and any attached owned-media access transfer are authorized. Existing copyright claims, unrelated contracts and purchases are not transferred.</label>
         <label>Type TRANSFER to confirm <input name="confirmation" required pattern="TRANSFER" placeholder="TRANSFER" autocomplete="off"></label>
         <button type="submit" class="btn primary"><x-icon name="arrow-left-right" size="16"/> Transfer ownership</button>

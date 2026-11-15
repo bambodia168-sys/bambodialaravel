@@ -6,6 +6,7 @@ use App\Models\MarketplaceCategory;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\MediaAsset;
+use App\Models\SavedListing;
 use App\Models\User;
 use App\Support\MarketplaceManagement;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -134,6 +135,140 @@ class MarketplaceManagerActionsTest extends TestCase
             'resource_type' => 'service', 'resource_public_id' => $record->public_id,
         ]);
         $this->post($post, $data)->assertNotFound();
+    }
+
+    public function test_published_layout_test_listing_can_transfer_with_its_owned_media(): void
+    {
+        $admin = $this->member('super_admin');
+        $recipient = $this->member('freelancer');
+        Storage::fake('local');
+        $asset = $this->asset($admin);
+        $listing = $this->record('freelance', $admin, $asset);
+        $listing->update(['title' => '[LAYOUT TEST] Freelance example', 'status' => 'published']);
+        $originalUrl = $listing->publicUrl();
+        $url = route('dashboard.marketplace.transfer', ['user' => $admin, 'type' => 'freelance', 'id' => $listing->id]);
+        $this->actingAs($admin)->get($url)->assertOk()->assertSee($listing->title);
+
+        $this->post(route('dashboard.marketplace.transfer.store', $admin), $this->transferData($listing, $recipient->email))
+            ->assertRedirect(MarketplaceManagement::indexUrl('freelance'));
+
+        $this->assertSame($recipient->id, $listing->fresh()->user_id);
+        $this->assertSame($recipient->id, $asset->fresh()->user_id);
+        $this->assertSame('published', $listing->fresh()->status);
+        $this->assertSame($originalUrl, $listing->fresh()->publicUrl());
+        $this->assertDatabaseHas('user_ownership_transfers', [
+            'resource_id' => $listing->id, 'from_user_id' => $admin->id, 'to_user_id' => $recipient->id,
+        ]);
+        $this->assertDatabaseHas('audit_events', ['actor_id' => $admin->id, 'event' => 'user.resource.transferred']);
+    }
+
+    public function test_conflict_returns_to_the_selected_listing_and_preserves_input(): void
+    {
+        $admin = $this->member('super_admin');
+        $owner = $this->member('freelancer');
+        $recipient = $this->member('freelancer');
+        $listing = $this->record('project', $owner);
+        SavedListing::query()->create([
+            'user_id' => $this->member('customer')->id, 'marketplace_listing_id' => $listing->id,
+        ]);
+        $params = ['user' => $owner, 'type' => 'project', 'id' => $listing->id];
+        $form = route('dashboard.marketplace.transfer', $params);
+        $post = route('dashboard.marketplace.transfer.store', $owner);
+        $localizedPost = route('localized.en.dashboard.marketplace.transfer.store', $owner);
+        $data = $this->transferData($listing, $recipient->public_id);
+
+        $this->actingAs($admin)->get(route('localized.en.dashboard.marketplace.transfer', $params))
+            ->assertOk()->assertSee('action="'.$localizedPost.'"', false);
+        $this->postJson($localizedPost, $data)->assertConflict();
+        $this->get(route('dashboard.marketplace.transfer', $owner))
+            ->assertRedirect(MarketplaceManagement::indexUrl('freelance'));
+        $this->post($post, [...$data, 'recipient' => $owner->public_id])
+            ->assertRedirect($form)->assertSessionHasErrors(['recipient' => 'The new owner must be a different user.']);
+        $this->followingRedirects()->post($post, $data)->assertOk()
+            ->assertSee('This record has customer activity')
+            ->assertSee($recipient->public_id)->assertSee($data['reason']);
+        $this->postJson($post, $data)->assertConflict();
+        $this->assertSame($owner->id, $listing->fresh()->user_id);
+        $this->assertDatabaseCount('user_ownership_transfers', 0);
+    }
+
+    public function test_shared_media_stays_with_its_owner_when_a_transfer_is_blocked(): void
+    {
+        $admin = $this->member('super_admin');
+        $owner = $this->member('freelancer');
+        $recipient = $this->member('freelancer');
+        Storage::fake('local');
+        $asset = $this->asset($owner);
+        $listing = $this->record('service', $owner, $asset);
+        $this->record('project', $owner, $asset);
+        $form = route('dashboard.marketplace.transfer', ['user' => $owner, 'type' => 'service', 'id' => $listing->id]);
+
+        $this->actingAs($admin)->post(route('dashboard.marketplace.transfer.store', $owner), $this->transferData($listing, $recipient->public_id))
+            ->assertRedirect($form)
+            ->assertSessionHasErrors(['transfer' => 'This media is also used by another record and cannot be reassigned automatically.']);
+        $this->assertSame($owner->id, $listing->fresh()->user_id);
+        $this->assertSame($owner->id, $asset->fresh()->user_id);
+        $this->assertDatabaseCount('user_ownership_transfers', 0);
+    }
+
+    private function transferData(MarketplaceListing $listing, string $recipient): array
+    {
+        return [
+            'type' => $listing->type, 'id' => $listing->id, 'recipient' => $recipient,
+            'reason' => 'Authorized ownership reassignment requested by the creator.',
+            'rights_confirmed' => '1', 'confirmation' => 'TRANSFER',
+        ];
+    }
+
+    public function test_draft_product_can_transfer_without_reassigning_any_attached_media(): void
+    {
+        $admin = $this->member('super_admin');
+        $recipient = $this->member('freelancer');
+        Storage::fake('local');
+        $cover = $this->asset($this->member('freelancer'));
+        $gallery = $this->asset($admin);
+        $draft = $this->record('product', $admin, $cover);
+        $draft->update(['gallery_media_ids' => [$gallery->id]]);
+        $url = $draft->publicUrl();
+        $form = route('dashboard.marketplace.transfer', ['user' => $admin, 'type' => 'product', 'id' => $draft->id]);
+        $post = route('dashboard.marketplace.transfer.store', $admin);
+        $data = $this->transferData($draft, $recipient->public_id);
+
+        $this->actingAs($admin)->get($form)->assertOk()->assertSee('Transfer draft without attached media');
+        $this->post($post, $data)->assertRedirect($form)->assertSessionHasErrors('transfer');
+        $this->post($post, [...$data, 'leave_media' => '1'])->assertRedirect(MarketplaceManagement::indexUrl('product'));
+
+        $draft->refresh();
+        $this->assertSame($recipient->id, $draft->user_id);
+        $this->assertSame('draft', $draft->status);
+        $this->assertSame($url, $draft->publicUrl());
+        $this->assertNull($draft->cover_media_id);
+        $this->assertNull($draft->featured_media_id);
+        $this->assertSame('none', $draft->featured_kind);
+        $this->assertSame([], $draft->gallery_media_ids);
+        $this->assertSame($cover->user_id, $cover->fresh()->user_id);
+        $this->assertSame($admin->id, $gallery->fresh()->user_id);
+        Storage::disk('local')->assertExists([$cover->storage_path, $gallery->storage_path]);
+        $this->assertDatabaseHas('user_ownership_transfers', [
+            'resource_id' => $draft->id, 'to_user_id' => $recipient->id,
+        ]);
+    }
+
+    public function test_leave_media_cannot_be_used_to_modify_a_published_product(): void
+    {
+        $admin = $this->member('super_admin');
+        $recipient = $this->member('freelancer');
+        Storage::fake('local');
+        $cover = $this->asset($admin);
+        $product = $this->record('product', $admin, $cover);
+        $product->update(['status' => 'published']);
+        $data = $this->transferData($product, $recipient->public_id);
+
+        $this->actingAs($admin)->postJson(route('dashboard.marketplace.transfer.store', $admin), [...$data, 'leave_media' => '1'])
+            ->assertConflict();
+        $this->assertSame($admin->id, $product->fresh()->user_id);
+        $this->assertSame($cover->id, $product->fresh()->cover_media_id);
+        $this->assertDatabaseCount('user_ownership_transfers', 0);
     }
 
     private function member(string $role): User
