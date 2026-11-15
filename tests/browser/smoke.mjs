@@ -1168,6 +1168,40 @@ try {
            !(await page.locator('a[data-detail-license-terms]').isVisible()) ||
            await page.getByRole('button',{name:/buy now/i}).count())
           throw new Error(device.name+' product license selector or checkout safety regression');
+        const licenseUrl=await page.locator('a[data-detail-license-terms]').getAttribute('href');
+        const licensePage=await context.newPage();
+        try {
+          const response=await licensePage.goto(new URL(licenseUrl,origin).href,{waitUntil:'networkidle'});
+          if(response?.status()!==200)
+            throw new Error(device.name+' public license terms did not load');
+          for(const theme of ['light','dark']){
+            const layout=await licensePage.evaluate(theme=>{
+              document.documentElement.dataset.theme=theme;
+              const directory=document.querySelector('.license-directory');
+              const article=document.querySelector('.license-reading article');
+              const current=directory?.querySelector('a[aria-current="page"]');
+              return {
+                directory:directory?.getBoundingClientRect().toJSON(),
+                article:article?.getBoundingClientRect().toJSON(),
+                current:current?.href,
+                numbers:[...document.querySelectorAll('.license-directory-number')].map(node=>node.textContent.trim()),
+                viewport:window.innerWidth,
+                pageWidth:document.documentElement.scrollWidth,
+              };
+            },theme);
+            if(!layout.directory || !layout.article || layout.current!==licensePage.url() ||
+               layout.numbers.length===0 || layout.numbers.some((number,index)=>number!==String(index+1).padStart(2,'0')) ||
+               layout.pageWidth>layout.viewport+2)
+              throw new Error(device.name+' '+theme+' license directory validation failed: '+JSON.stringify(layout));
+            const desktop=device.viewport.width>760;
+            if((desktop && layout.directory.right>=layout.article.left) ||
+               (!desktop && layout.directory.bottom>=layout.article.top))
+              throw new Error(device.name+' '+theme+' license directory placement failed: '+JSON.stringify(layout));
+            checks+=2;
+          }
+        } finally {
+          await licensePage.close();
+        }
         const card=page.locator('.premium-offer-v3');
         if(!(await card.isVisible()) ||
            !(await card.locator('.premium-feature-checklist li').count() >= 3) ||

@@ -1,8 +1,22 @@
 @extends('layouts.main')
 @section('title',$license->name)
 @section('content')
-<link rel="stylesheet" href="{{ asset('css/license-manager.css') }}?v=1">
-<div class="container inner-page">
+<link rel="stylesheet" href="{{ asset('css/license-manager.css') }}?v=2">
+<div class="container inner-page license-reading">
+  <nav class="panel license-directory" aria-labelledby="license-directory-heading">
+    <h2 id="license-directory-heading">License directory</h2>
+    <ol class="license-directory-list" role="list">
+      @foreach($directory as $definition)
+        <li>
+          <a href="{{ $definition->publicUrl() }}"@if($definition->id === $license->id) aria-current="page"@endif>
+            <span class="license-directory-number" aria-hidden="true">{{ str_pad((string) $loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
+            <span>{{ $definition->name }}</span>
+          </a>
+        </li>
+      @endforeach
+    </ol>
+  </nav>
+
   <article class="panel editorial-page">
     <div class="eyebrow">Bambodia · Digital Product License</div>
     <h1>{{ $license->name }}</h1>
