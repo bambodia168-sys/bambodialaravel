@@ -209,15 +209,15 @@
                   <label for="studio-category">{{ $isJob ? 'Job category' : 'Marketplace category' }}</label>
                   @if($isJob)
                     <select name="category" id="studio-category" required @disabled(!$canEdit)>
-                      @foreach(['development','design','writing','marketing','business','other'] as $category)
-                        <option value="{{ $category }}" @selected(old('category',$record?->category)===$category)>{{ ucfirst($category) }}</option>
+                      @foreach($jobCategoryChoices as $categoryValue => $categoryLabel)
+                        <option value="{{ $categoryValue }}" @selected(old('category',$record?->category)===$categoryValue)>{{ $categoryLabel }}</option>
                       @endforeach
                     </select>
                   @else
                     <select name="category_id" id="studio-category" @disabled(!$canEdit)>
                       <option value="">Uncategorized</option>
                       @foreach($categories as $category)
-                        <option value="{{ $category->id }}" @selected((string)old('category_id',$record?->category_id)===(string)$category->id)>{{ $category->name }}</option>
+                        <option value="{{ $category->id }}" @selected((string)old('category_id',$record?->category_id)===(string)$category->id)>{{ $category->parent ? $category->parent->name.' / ' : '' }}{{ $category->name }}</option>
                       @endforeach
                     </select>
                   @endif

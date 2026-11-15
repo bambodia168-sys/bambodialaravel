@@ -6,6 +6,7 @@ use App\Support\BuilderContent;
 use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
+use App\Support\BambodiaTaxonomy;
 use App\Models\AuditEvent;
 use App\Models\AccountNotification;
 use App\Models\FreelancerResume;
@@ -24,7 +25,8 @@ class JobBoardController extends Controller
     {
         $search = mb_substr(trim((string)$request->query('q','')),0,120);
         $category=(string)$request->query('category','');
-        abort_unless($category==='' || in_array($category,['development','design','writing','marketing','business','other'],true),404);
+        $categoryChoices = BambodiaTaxonomy::jobFilterChoices();
+        abort_unless($category === '' || array_key_exists($category, $categoryChoices), 404);
         $sort=(string)$request->query('sort','recent');
         abort_unless(in_array($sort,['recent','budget_low','budget_high'],true),404);
         $jobs = MarketplaceJob::query()->with(['client:id,name,public_id','featuredAsset'])->withCount('proposals')
@@ -43,7 +45,7 @@ class JobBoardController extends Controller
                 ->whereIn('marketplace_job_id',$jobs->pluck('id'))
                 ->pluck('marketplace_job_id')->map(fn($id)=>(int)$id)->all()
             : [];
-        return view('jobs.index',compact('jobs','search','category','sort','savedJobIds'));
+        return view('jobs.index',compact('jobs','search','category','categoryChoices','sort','savedJobIds'));
     }
 
     public function show(Request $request, string $job): View
@@ -100,7 +102,7 @@ class JobBoardController extends Controller
             ...BuilderFeaturedMedia::rules(),
             ...BuilderGallery::rules(),
             'description_html'=>['nullable','string','max:60000'],
-            'category'=>['required',Rule::in(['development','design','writing','marketing','business','other'])],
+            'category'=>['required',Rule::in(array_keys(BambodiaTaxonomy::jobChoices()))],
             'budget'=>['nullable','numeric','min:0','max:9999999999.99'],
         ]);
         BuilderFeaturedMedia::check($data,(int)$request->user()->id);

@@ -31,7 +31,10 @@ class ListingController extends Controller
         abort_if($minPrice!=='' && $maxPrice!=='' && (float)$minPrice>(float)$maxPrice,404);
 
         $categories=MarketplaceCategory::query()->where('is_active',true)
-            ->orderBy('type')->orderBy('sort_order')->orderBy('name')->get(['id','public_id','type','name']);
+            ->whereIn('type', MarketplaceListing::TYPES)
+            ->with('parent:id,name')
+            ->orderBy('type')->orderBy('sort_order')->orderBy('name')
+            ->get(['id','public_id','type','name','parent_id']);
         abort_if($type !== '' && ! in_array($type, MarketplaceListing::TYPES, true), 404);
 
         $listings = MarketplaceListing::query()
@@ -39,8 +42,12 @@ class ListingController extends Controller
                 'coverAsset:id,public_id,alt_text', 'featuredAsset:id,public_id,alt_text', 'category:id,name,type'])
             ->publiclyAvailable()
             ->when($type !== '', fn ($builder) => $builder->where('type', $type))
-            ->when($selectedCategory!=='',fn($builder)=>$builder->whereHas('category',fn($q)=>
-                $q->where('public_id',$selectedCategory)->where('is_active',true)))
+            ->when($selectedCategory !== '', fn ($builder) => $builder->whereHas('category', fn ($q) =>
+                $q->where('is_active', true)->where(function ($categoryQuery) use ($selectedCategory): void {
+                    $categoryQuery->where('public_id', $selectedCategory)
+                        ->orWhereHas('parent', fn ($parent) => $parent
+                            ->where('public_id', $selectedCategory)->where('is_active', true));
+                })))
             ->when($query !== '', fn ($builder) => $builder->where(function ($builder) use ($query): void {
                 $builder->where('title', 'like', '%'.$query.'%')
                     ->orWhere('description', 'like', '%'.$query.'%');

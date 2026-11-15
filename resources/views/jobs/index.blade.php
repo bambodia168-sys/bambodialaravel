@@ -15,8 +15,8 @@
         <label for="jobs-category">Category</label>
         <select id="jobs-category" name="category">
           <option value="">All categories</option>
-          @foreach(['development','design','writing','marketing','business','other'] as $value)
-            <option value="{{ $value }}" @selected($category===$value)>{{ ucfirst($value) }}</option>
+          @foreach($categoryChoices as $value => $label)
+            <option value="{{ $value }}" @selected($category===$value)>{{ $label }}</option>
           @endforeach
         </select>
       </div>
