@@ -6,6 +6,7 @@ use App\Support\BuilderContent;
 use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
+use App\Support\BambodiaTaxonomy;
 use App\Models\AuditEvent;
 use App\Models\AiDraftProvider;
 use App\Models\FeatureFlag;
@@ -24,8 +25,6 @@ use Illuminate\View\View;
 
 class BuilderController extends Controller
 {
-    private const JOB_CATEGORIES = ['development', 'design', 'writing', 'marketing', 'business', 'other'];
-
     public function show(Request $request): View
     {
         $allowedTypes = $this->allowedTypes($request);
@@ -64,9 +63,13 @@ class BuilderController extends Controller
                 ? in_array($record->status, ['pending', 'rejected'], true)
                 : in_array($record->status, ['draft', 'rejected'], true));
 
+        $jobCategoryChoices = $type === 'job'
+            ? BambodiaTaxonomy::jobEditorChoices($record?->category)
+            : [];
         $categories = $type !== null && $type !== 'job'
             ? MarketplaceCategory::query()->where('type', $type)->where('is_active', true)
-                ->orderBy('sort_order')->orderBy('name')->get(['id', 'type', 'name'])
+                ->with('parent:id,name')->orderBy('sort_order')->orderBy('name')
+                ->get(['id', 'type', 'name', 'parent_id'])
             : collect();
         $publishedLegalPolicies = Policy::query()->where('status', 'published')
             ->whereIn('title', ['Regular License', 'Extended License', 'Terms of Service', 'Privacy Policy', 'Creator and Seller Agreement', 'Refund and Cancellation Policy'])
@@ -93,7 +96,7 @@ class BuilderController extends Controller
         $aiDraftReady = AiDraftProvider::configured()?->ready() ?? false;
 
         return view('builder.index', compact(
-            'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'licenses', 'regularLicenses', 'extendedLicenses', 'assets',
+            'type', 'record', 'canEdit', 'allowedTypes', 'categories', 'jobCategoryChoices', 'licenses', 'regularLicenses', 'extendedLicenses', 'assets',
             'termsPublications', 'termsSha256', 'suggestedTerms', 'productVersions', 'publishedLegalPolicies', 'aiDraftReady'
         ));
     }
@@ -128,7 +131,7 @@ class BuilderController extends Controller
             'description_html' => ['nullable', 'string', 'max:60000'],
             ...BuilderFeaturedMedia::rules(),
             ...BuilderGallery::rules(),
-            'category' => ['required', Rule::in(self::JOB_CATEGORIES)],
+            'category' => ['required', Rule::in(array_keys(BambodiaTaxonomy::jobFilterChoices()))],
             'budget' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
         ]);
 
