@@ -490,12 +490,14 @@ class ProductLicenseLifecycleTest extends TestCase
         $regular=LicenseDefinition::query()->where('code','BAM_REG')->sole();
         $extended=LicenseDefinition::query()->where('code','BAM_EXT')->sole();
         $response=$this->actingAs($this->admin)->get('/dashboard/license-manager')->assertOk();
-        $response->assertSee('popovertarget="license-actions-'.$regular->id.'"',false)
-            ->assertSee('data-license-action-menu',false)
+        $response->assertSee('data-license-action-menu',false)
             ->assertSee('data-license-focus="issued-'.$license->id.'-history"',false)
             ->assertSee('data-license-select="suspend"',false)
             ->assertSee('data-license-select="revoke"',false)
             ->assertSee('data-license-focus="issued-'.$license->id.'-rotate"',false)
+            ->assertDontSee('popovertarget="license-actions-'.$regular->id.'"',false);
+        $this->get('/dashboard/license-manager?tab=definitions')->assertOk()
+            ->assertSee('popovertarget="license-actions-'.$regular->id.'"',false)
             ->assertSee('Published terms')
             ->assertDontSee('data-license-focus="license-code-'.$extended->id.'"',false);
 

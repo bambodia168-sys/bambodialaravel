@@ -1357,6 +1357,10 @@ try {
       const tableWidth=await admin.locator('.license-issued-scroll').evaluate(el=>({viewport:el.clientWidth,table:el.scrollWidth}));
       if(tableWidth.table<=tableWidth.viewport)
         throw new Error('Issued licenses table does not support horizontal scrolling');
+      const licenseTabs=admin.getByRole('navigation',{name:'License Manager sections'});
+      await licenseTabs.getByRole('link',{name:'Support Renewals'}).click();
+      await admin.locator('#support-renewal-requests').waitFor({state:'visible'});
+      await licenseTabs.getByRole('link',{name:'License Definitions'}).click();
       // Both legal starter definitions are draft-only and differentiated by type.
       const regularPreset=admin.locator('[data-license-preset="regular"]');
       await regularPreset.click();
@@ -1365,12 +1369,16 @@ try {
         throw new Error('Regular License draft preset did not populate');
       if(await definitionDialog.locator('#license-new-status').inputValue()!=='draft')
         throw new Error('Regular License preset should not publish without review');
+      const terms=definitionDialog.getByRole('textbox',{name:'Permissions granted'});
+      if(!(await terms.isVisible()) || !(await terms.textContent()).includes('Proposed starting terms'))
+        throw new Error('The permissions editor did not load the legal starter copy');
       await definitionDialog.locator('[data-modal-close]').click();
       await admin.locator('[data-license-preset="extended"]').click();
       if(await definitionDialog.locator('#license-new-tier').inputValue()!=='extended')
         throw new Error('Extended License draft preset did not populate');
       await definitionDialog.locator('[data-modal-close]').click();
       checks+=2;
+      await licenseTabs.getByRole('link',{name:'Product Licenses'}).click();
       await issueTrigger.click();
       const issuanceDialog=admin.locator('#license-issue-dialog');
       if(!(await issuanceDialog.isVisible()) || !(await issuanceDialog.evaluate(el=>el.open)))
