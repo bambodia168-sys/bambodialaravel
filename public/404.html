@@ -24,9 +24,6 @@
       --accent: #b93808;
       --accent-hover: #942c06;
       --on-accent: #fff;
-      --tint: #fff0e7;
-      --wash: #e5effd;
-      --shadow: 0 24px 72px rgb(29 52 91 / 10%);
     }
 
     :root[data-theme="dark"] {
@@ -39,9 +36,6 @@
       --accent: #ffad72;
       --accent-hover: #ffbf94;
       --on-accent: #261608;
-      --tint: #392c2e;
-      --wash: #142944;
-      --shadow: 0 24px 72px rgb(0 0 0 / 26%);
     }
 
     @media (prefers-color-scheme: dark) {
@@ -55,9 +49,6 @@
         --accent: #ffad72;
         --accent-hover: #ffbf94;
         --on-accent: #261608;
-        --tint: #392c2e;
-        --wash: #142944;
-        --shadow: 0 24px 72px rgb(0 0 0 / 26%);
       }
     }
 
@@ -120,33 +111,19 @@
 
     main {
       display: grid;
-      place-items: center;
-      align-content: center;
-      min-height: calc(100vh - 4.5rem);
-      min-height: calc(100svh - 4.5rem);
-      padding: clamp(2rem, 7vw, 5rem) 1.25rem;
-      background: radial-gradient(ellipse at 50% 10%, var(--wash), transparent 65%);
-    }
-
-    .error-panel {
-      width: min(100%, 44rem);
-      padding: clamp(1.5rem, 7vw, 4.5rem);
-      border: 1px solid var(--line);
-      border-radius: clamp(1rem, 3vw, 1.75rem);
-      background: var(--surface);
-      box-shadow: var(--shadow);
+      align-items: center;
+      justify-items: center;
+      min-height: 52vh;
+      padding: clamp(48px, 8vw, 104px) 1.25rem;
       text-align: center;
     }
 
-    .error-code {
-      display: inline-block;
-      padding: .25rem .8rem;
-      border-radius: .55rem;
-      background: var(--tint);
-      color: var(--accent);
-      font-size: .875rem;
-      font-weight: 750;
-      font-variant-numeric: tabular-nums;
+    .error-mark {
+      display: block;
+      width: clamp(150px, 48vw, 332px);
+      max-width: 100%;
+      height: auto;
+      margin-inline: auto;
     }
 
     h1 {
@@ -202,8 +179,13 @@
     </div>
   </header>
   <main>
-    <section class="error-panel" aria-labelledby="page-title">
-      <span class="error-code">404</span>
+    <section aria-labelledby="page-title">
+      <svg class="error-mark" width="332" height="130" viewBox="0 0 332 130" role="img" aria-label="404"
+           fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M72 17 15 86h83M72 17v96"/>
+        <ellipse cx="166" cy="65" rx="37" ry="48" style="stroke: var(--accent)"/>
+        <path d="M291 17 234 86h83M291 17v96"/>
+      </svg>
       <h1 id="page-title">Page not found</h1>
       <p>The page you’re looking for may have moved, or the link may be incomplete.</p>
       <nav class="recovery-links" aria-label="Where to go next">
