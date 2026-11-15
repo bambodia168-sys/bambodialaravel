@@ -141,7 +141,10 @@ with open(sys.argv[1]) as response:
     routes = {row['name']: row for row in json.load(response)}
 for name, verb in [('studio.listings', 'GET'), ('studio.listings.status', 'PATCH'), ('studio.listings.destroy', 'DELETE')]:
     assert verb in routes[name]['method'].split('|')
-    assert 'auth' in ' '.join(routes[name]['middleware']).lower()
+    middleware = routes[name]['middleware']
+    if isinstance(middleware, list):
+        middleware = ' '.join(middleware)
+    assert 'auth' in middleware.lower()
 print('CREATOR_LISTING_ROUTES=PASS')
 PY
 
