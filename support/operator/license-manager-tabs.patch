@@ -1,0 +1,1677 @@
+diff --git a/app/Http/Controllers/Account/ProductLicenseController.php b/app/Http/Controllers/Account/ProductLicenseController.php
+index f492a8a..bc647ae 100644
+--- a/app/Http/Controllers/Account/ProductLicenseController.php
++++ b/app/Http/Controllers/Account/ProductLicenseController.php
+@@ -23,7 +23,7 @@ public function index(Request $request): View
+         $licenses=ProductLicense::query()->where('user_id',$request->user()->id)
+             ->with(['product:id,title,type,user_id,public_id,status',
+                 'version:id,marketplace_listing_id,version,status',
+-                'definition:id,name,code,tier,version,status,public_id,slug,permissions,restrictions','entitlement:id,status,expires_at,revoked_at',
++                'definition:id,name,code,tier,version,status,public_id,slug,permissions,restrictions,permissions_html,restrictions_html','entitlement:id,status,expires_at,revoked_at',
+                 'activations','events.actor:id,name','supportRequests:id,product_license_id,term,status,created_at'])
+             ->latest()->paginate(10);
+         return view('account.licenses',compact('licenses'));
+diff --git a/app/Http/Controllers/Creator/ProductLicensesController.php b/app/Http/Controllers/Creator/ProductLicensesController.php
+index 69685f0..92ae944 100644
+--- a/app/Http/Controllers/Creator/ProductLicensesController.php
++++ b/app/Http/Controllers/Creator/ProductLicensesController.php
+@@ -48,7 +48,7 @@ public function index(Request $request): View
+             ->whereHas('product',fn($q)=>$q->where('user_id',$request->user()->id)->where('type','product'))
+             ->with(['product:id,title,public_id,type,user_id',
+                 'version:id,marketplace_listing_id,version',
+-                'definition:id,name,code,tier,version,status,public_id,slug,permissions,restrictions',
++                'definition:id,name,code,tier,version,status,public_id,slug,permissions,restrictions,permissions_html,restrictions_html',
+                 'customer:id,public_id',
+                 'activations:id,product_license_id,domain,status,activated_at',
+                 'events:id,product_license_id,action,domain,created_at',
+diff --git a/app/Http/Controllers/Dashboard/LicenseManagerController.php b/app/Http/Controllers/Dashboard/LicenseManagerController.php
+index 41a3e80..3a4f684 100644
+--- a/app/Http/Controllers/Dashboard/LicenseManagerController.php
++++ b/app/Http/Controllers/Dashboard/LicenseManagerController.php
+@@ -5,29 +5,57 @@
+ use App\Http\Controllers\Controller;
+ use App\Models\AuditEvent;
+ use App\Models\LicenseDefinition;
+-use App\Models\MarketplaceListing;
+-use App\Models\ProductLicense;
+ use App\Models\ProductEntitlement;
++use App\Models\ProductLicense;
+ use App\Models\ProductLicenseSupportRequest;
++use App\Support\LicenseTerms;
+ use Illuminate\Http\RedirectResponse;
+ use Illuminate\Http\Request;
++use Illuminate\Support\Facades\DB;
+ use Illuminate\Validation\Rule;
++use Illuminate\Validation\ValidationException;
+ use Illuminate\View\View;
+ 
+ class LicenseManagerController extends Controller
+ {
+     public function index(Request $request): View
+     {
+-        $search = mb_substr(trim((string) $request->query('search', '')), 0, 120);
++        $tab = $request->query('tab', $request->has('search') ? 'definitions' : ($request->has('support_page') ? 'renewals' : 'products'));
++        abort_unless(in_array($tab, ['products', 'renewals', 'definitions'], true), 404);
++
++        $data = match ($tab) {
++            'definitions' => $this->definitions($request),
++            'renewals' => ['supportRenewals' => ProductLicenseSupportRequest::query()
++                ->with(['license.product:id,title,public_id,type', 'requester:id,public_id'])
++                ->latest()->orderByDesc('id')->paginate(10, ['*'], 'support_page')->appends('tab', 'renewals')],
++            'products' => $this->issued($request),
++        };
++
++        return view('dashboard.licenses', ['tab' => $tab, ...$data]);
++    }
++
++    private function definitions(Request $request): array
++    {
++        $search = mb_substr(trim($request->string('search')->toString()), 0, 120);
++        $archived = $request->boolean('archived');
+         $licenses = LicenseDefinition::query()
+-            ->withCount(['listings','extendedListings','issuedLicenses'])
+-            ->when($search !== '', fn ($q) => $q->where(function ($q) use ($search): void {
+-                $q->where('name', 'like', '%'.$search.'%')->orWhere('code', 'like', '%'.$search.'%');
++            ->withCount(['listings', 'extendedListings', 'issuedLicenses'])
++            ->when($archived, fn ($query) => $query->where('status', 'archived'),
++                fn ($query) => $query->where('status', '!=', 'archived'))
++            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search): void {
++                $query->where('name', 'like', '%'.$search.'%')->orWhere('code', 'like', '%'.$search.'%')
++                    ->orWhere('public_id', $search);
+             }))
+-            ->latest()->paginate(10)->withQueryString();
++            ->latest()->orderByDesc('id')->paginate(10)
++            ->appends(['tab' => 'definitions', 'search' => $search, 'archived' => $archived ? '1' : null]);
+ 
+-        $issuedSearch = mb_substr(trim((string) $request->query('issued_search', '')), 0, 120);
+-        $issuedSort = (string) $request->query('issued_sort', 'recent');
++        return compact('licenses', 'search', 'archived');
++    }
++
++    private function issued(Request $request): array
++    {
++        $issuedSearch = mb_substr(trim($request->string('issued_search')->toString()), 0, 120);
++        $issuedSort = $request->string('issued_sort', 'recent')->toString();
+         if (! in_array($issuedSort, ['recent', 'oldest', 'updated', 'status'], true)) {
+             $issuedSort = 'recent';
+         }
+@@ -59,10 +87,7 @@ public function index(Request $request): View
+             ->when($issuedSort === 'oldest',fn ($q) => $q->orderBy('id'))
+             ->when($issuedSort === 'updated',fn ($q) => $q->orderByDesc('updated_at')->orderByDesc('id'))
+             ->when($issuedSort === 'status',fn ($q) => $q->orderBy('status')->orderByDesc('id'))
+-            ->paginate(10,['*'],'issued_page')->withQueryString();
+-        $supportRenewals=ProductLicenseSupportRequest::query()
+-            ->with(['license.product:id,title,public_id,type','license.customer:id,public_id','requester:id,public_id'])
+-            ->latest()->paginate(10,['*'],'support_page')->withQueryString();
++            ->paginate(10, ['*'], 'issued_page')->appends(['tab' => 'products', 'issued_search' => $issuedSearch, 'issued_sort' => $issuedSort]);
+         $issuable = $request->user()->role === 'super_admin'
+             ? ProductEntitlement::query()->where('status','active')
+                 ->whereDoesntHave('license')
+@@ -73,15 +98,15 @@ public function index(Request $request): View
+                 ->latest()->limit(100)->get()
+             : collect();
+ 
+-        return view('dashboard.licenses', compact('licenses', 'search','issued','issuable','supportRenewals','issuedSearch','issuedSort'));
++        return compact('issued', 'issuable', 'issuedSearch', 'issuedSort');
+     }
+ 
+     public function store(Request $request): RedirectResponse
+     {
+-        $values = $this->validated($request, false);
++        $values = $this->validated($request);
+ 
+         if ($values['status'] === 'active' && ! $request->boolean('confirm_review')) {
+-            return back()->withErrors(['status' => 'An administrator must confirm license review before publication.']);
++            return back()->withInput()->withErrors(['status' => 'An administrator must confirm license review before publication.']);
+         }
+ 
+         $license = LicenseDefinition::query()->create([
+@@ -95,51 +120,95 @@ public function store(Request $request): RedirectResponse
+             AuditEvent::record('license.definition.activated', $request->user(), $request);
+         }
+ 
+-        return back()->with('status', 'License definition created.');
++        return $this->definitionsPage()->with('status', 'License definition created.');
+     }
+ 
+     public function update(Request $request, LicenseDefinition $license): RedirectResponse
+     {
+-        $values = $this->validated($request, true, $license);
+-
+-        if ($license->listings()->exists()
+-            || MarketplaceListing::query()->where('extended_license_definition_id',$license->id)->exists()
+-            || ProductLicense::query()->where('license_definition_id',$license->id)->exists()) {
+-            abort(409, 'This license is already referenced by listings. Create a new version instead of modifying existing terms.');
+-        }
++        $values = $this->validated($request, $license);
+ 
+         if ($values['status'] === 'active' && ! $request->boolean('confirm_review')) {
+-            return back()->withErrors(['status' => 'Confirm administrator legal review before activation.']);
++            return back()->withInput()->withErrors(['status' => 'Confirm administrator legal review before activation.']);
+         }
+ 
+-        $wasActive = $license->status === 'active';
+-        $license->update([
+-            ...$values,
+-            'published_at' => $values['status'] === 'active' ? ($license->published_at ?? now()) : null,
+-        ]);
+-        AuditEvent::record('license.definition.updated', $request->user(), $request);
+-        if (! $wasActive && $license->status === 'active') {
+-            AuditEvent::record('license.definition.activated', $request->user(), $request);
+-        }
++        DB::transaction(function () use ($request, $license, $values): void {
++            $locked = LicenseDefinition::query()->lockForUpdate()->findOrFail($license->id);
++            abort_if($locked->status === 'archived' || $locked->hasReferences(), 409,
++                'This definition is archived or in use. Create a new definition for revised terms.');
++
++            $wasActive = $locked->status === 'active';
++            $locked->update([
++                ...$values,
++                'published_at' => $values['status'] === 'active' ? ($locked->published_at ?? now()) : null,
++            ]);
++            AuditEvent::record('license.definition.updated', $request->user(), $request);
++            if (! $wasActive && $locked->status === 'active') {
++                AuditEvent::record('license.definition.activated', $request->user(), $request);
++            }
++        }, 3);
++
++        return $this->definitionsPage()->with('status', 'License definition updated.');
++    }
+ 
+-        return back()->with('status', 'License definition updated.');
++    public function destroy(Request $request, LicenseDefinition $license): RedirectResponse
++    {
++        $request->validate(['confirm_remove' => ['accepted']]);
++
++        $archived = DB::transaction(function () use ($request, $license): bool {
++            $locked = LicenseDefinition::query()->lockForUpdate()->findOrFail($license->id);
++            $inUse = $locked->hasReferences();
++            if ($inUse) {
++                abort_unless($locked->canArchiveLayoutTest(), 409,
++                    'This definition is referenced by products or issued licenses and must be retained.');
++                $locked->update(['status' => 'archived']);
++            } else {
++                $locked->delete();
++            }
++            AuditEvent::record($inUse ? 'license.definition.archived' : 'license.definition.deleted', $request->user(), $request);
++
++            return $inUse;
++        }, 3);
++
++        return $this->definitionsPage()->with('status', $archived
++            ? 'Layout-test definition archived and removed from the public license page.'
++            : 'License definition deleted.');
+     }
+ 
+-    private function validated(Request $request, bool $updating, ?LicenseDefinition $license = null): array
++    private function definitionsPage(): RedirectResponse
++    {
++        return redirect()->route('dashboard.licenses.index', ['tab' => 'definitions']);
++    }
++
++    private function validated(Request $request, ?LicenseDefinition $license = null): array
+     {
+         $unique = Rule::unique('license_definitions', 'code');
+-        if ($updating && $license) {
++        if ($license) {
+             $unique->ignore($license->id);
+         }
+ 
+-        return $request->validate([
++        $values = $request->validate([
+             'code' => ['required', 'string', 'regex:/^[A-Z0-9_]{3,32}$/', $unique],
+             'tier' => ['required', Rule::in(array_keys(LicenseDefinition::TIERS))],
+             'name' => ['required', 'string', 'min:3', 'max:120'],
+             'version' => ['required', 'string', 'regex:/^[0-9]+\.[0-9]+\.[0-9]+$/', 'max:30'],
+-            'permissions' => ['required', 'string', 'min:30', 'max:50000'],
+-            'restrictions' => ['required', 'string', 'min:30', 'max:50000'],
++            'permissions' => ['nullable', 'string', 'max:50000', 'required_without:permissions_html'],
++            'permissions_html' => ['nullable', 'string', 'max:150000'],
++            'restrictions' => ['nullable', 'string', 'max:50000', 'required_without:restrictions_html'],
++            'restrictions_html' => ['nullable', 'string', 'max:150000'],
+             'status' => ['required', Rule::in(['draft', 'active'])],
+         ]);
++
++        foreach (['permissions', 'restrictions'] as $field) {
++            $htmlField = $field.'_html';
++            $html = filled($values[$htmlField] ?? null) ? LicenseTerms::sanitize($values[$htmlField]) : null;
++            $plain = $html !== null ? LicenseTerms::plain($html) : trim($values[$field] ?? '');
++            if (mb_strlen($plain) < 30 || mb_strlen($plain) > 50000) {
++                throw ValidationException::withMessages([$field => 'Enter between 30 and 50,000 characters of license terms.']);
++            }
++            $values[$field] = $plain;
++            $values[$htmlField] = $html ?? ($license && $license->$field === $plain ? $license->$htmlField : null);
++        }
++
++        return $values;
+     }
+ }
+diff --git a/app/Models/AuditEvent.php b/app/Models/AuditEvent.php
+index 17e28df..998c163 100644
+--- a/app/Models/AuditEvent.php
++++ b/app/Models/AuditEvent.php
+@@ -74,6 +74,8 @@ class AuditEvent extends Model
+         'license.definition.created',
+         'license.definition.updated',
+         'license.definition.activated',
++        'license.definition.archived',
++        'license.definition.deleted',
+         'license.instance.issued',
+         'license.instance.status.changed',
+         'license.instance.upgraded',
+diff --git a/app/Models/LicenseDefinition.php b/app/Models/LicenseDefinition.php
+index 1bd229e..9b3dadf 100644
+--- a/app/Models/LicenseDefinition.php
++++ b/app/Models/LicenseDefinition.php
+@@ -2,6 +2,7 @@
+ 
+ namespace App\Models;
+ 
++use App\Support\LicenseTerms;
+ use Illuminate\Database\Eloquent\Model;
+ use Illuminate\Database\Eloquent\Relations\HasMany;
+ use Illuminate\Support\Str;
+@@ -12,6 +13,7 @@ class LicenseDefinition extends Model
+ 
+     protected $fillable = [
+         'code', 'tier', 'name', 'version', 'permissions', 'restrictions',
++        'permissions_html', 'restrictions_html',
+         'status', 'published_at', 'created_by',
+     ];
+ 
+@@ -55,6 +57,49 @@ public function issuedLicenses(): HasMany
+         return $this->hasMany(ProductLicense::class, 'license_definition_id');
+     }
+ 
++    public function hasReferences(): bool
++    {
++        return $this->listings()->exists() || $this->extendedListings()->exists() || $this->issuedLicenses()->exists();
++    }
++
++    public function isLayoutTest(): bool
++    {
++        return $this->code === 'LAYOUT_TEST_ONLY' && $this->name === 'Layout Test Only — No Commercial License';
++    }
++
++    public function canArchiveLayoutTest(): bool
++    {
++        if (! $this->isLayoutTest() || $this->status === 'archived'
++            || $this->issuedLicenses()->exists() || $this->extendedListings()->exists()) {
++            return false;
++        }
++
++        // Match the original layout fixture owner and title marker before withdrawing the terms.
++        $listings = $this->listings();
++        if ((clone $listings)->where(fn ($query) => $query
++            ->where('type', '!=', 'product')
++            ->orWhere('title', 'not like', '[LAYOUT TEST] %')
++            ->orWhereDoesntHave('creator', fn ($creator) => $creator->where('email', 'layout-preview-creator@bambodia.invalid'))
++        )->exists()) {
++            return false;
++        }
++
++        // The original layout samples have no downloadable release or license history.
++        $ids = $listings->select('marketplace_listings.id');
++        return ! ProductFileVersion::query()->whereIn('marketplace_listing_id', $ids)->exists()
++            && ! ProductLicense::query()->whereIn('marketplace_listing_id', $ids)->exists();
++    }
++
++    public function permissionsMarkup(): string
++    {
++        return LicenseTerms::render($this->permissions, $this->permissions_html);
++    }
++
++    public function restrictionsMarkup(): string
++    {
++        return LicenseTerms::render($this->restrictions, $this->restrictions_html);
++    }
++
+     /** Existing unclassified definitions remain usable until administrators classify them.
+      * The label is guidance, not an inferred grant of extra commercial rights. */
+     public function tierLabel(): string
+@@ -73,7 +118,7 @@ public function allowsTier(string $tier): bool
+     {
+         // Legacy definitions predating tier classification retain their existing
+         // references; new typed definitions are never interchangeable.
+-        return $this->tier === null || $this->tier === $tier;
++        return $this->status !== 'archived' && ($this->tier === null || $this->tier === $tier);
+     }
+ 
+     public function publicUrl(): string
+diff --git a/app/Support/LicenseTerms.php b/app/Support/LicenseTerms.php
+new file mode 100644
+index 0000000..697426e
+--- /dev/null
++++ b/app/Support/LicenseTerms.php
+@@ -0,0 +1,30 @@
++<?php
++
++namespace App\Support;
++
++final class LicenseTerms
++{
++    public static function sanitize(string $html): string
++    {
++        return PolicyContent::sanitize($html);
++    }
++
++    public static function plain(string $html): string
++    {
++        return PolicyContent::plain($html);
++    }
++
++    public static function render(string $plain, ?string $html): string
++    {
++        if ($html !== null) {
++            return self::sanitize($html);
++        }
++
++        // Existing plain terms retain literal punctuation and line breaks.
++        $plain = str_replace(["\r\n", "\r"], "\n", $plain);
++        return implode('', array_map(
++            fn (string $paragraph): string => '<p>'.nl2br(e($paragraph)).'</p>',
++            preg_split('/\n[ \t]*\n+/', $plain)
++        ));
++    }
++}
+diff --git a/database/migrations/2026_11_15_130000_add_formatted_license_terms.php b/database/migrations/2026_11_15_130000_add_formatted_license_terms.php
+new file mode 100644
+index 0000000..3ac7938
+--- /dev/null
++++ b/database/migrations/2026_11_15_130000_add_formatted_license_terms.php
+@@ -0,0 +1,22 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration {
++    public function up(): void
++    {
++        Schema::table('license_definitions', function (Blueprint $table): void {
++            $table->longText('permissions_html')->nullable();
++            $table->longText('restrictions_html')->nullable();
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::table('license_definitions', function (Blueprint $table): void {
++            $table->dropColumn(['permissions_html', 'restrictions_html']);
++        });
++    }
++};
+diff --git a/public/css/license-manager.css b/public/css/license-manager.css
+new file mode 100644
+index 0000000..d22ccce
+--- /dev/null
++++ b/public/css/license-manager.css
+@@ -0,0 +1,119 @@
++.license-manager-heading {
++    display: flex;
++    align-items: flex-end;
++    justify-content: space-between;
++    flex-wrap: wrap;
++    gap: 16px 24px;
++}
++
++.license-manager-tabs {
++    display: flex;
++    flex-wrap: wrap;
++    gap: 4px;
++    padding: 5px;
++    border: 1px solid var(--line);
++    border-radius: 14px;
++    background: var(--surface-2);
++}
++
++.license-manager-tabs a {
++    display: inline-flex;
++    align-items: center;
++    gap: 8px;
++    padding: 10px 12px;
++    border: 1px solid transparent;
++    border-radius: 9px;
++    color: var(--muted);
++    font-size: .875rem;
++    font-weight: 650;
++    text-decoration: none;
++}
++
++.license-manager-tabs a[aria-current="page"] {
++    border-color: var(--line);
++    background: var(--surface);
++    color: var(--text);
++    box-shadow: 0 2px 6px rgb(0 0 0 / 6%);
++}
++
++.license-manager-tabs a:hover {
++    color: var(--text);
++    background: var(--surface);
++}
++
++.license-manager-tabs a:focus-visible,
++.license-terms-input:focus-visible {
++    outline: 2px solid var(--accent);
++    outline-offset: 2px;
++}
++
++.license-terms-field textarea[hidden],
++.license-terms-editor[hidden] {
++    display: none;
++}
++
++.license-terms-editor {
++    border: 1px solid var(--line);
++    border-radius: 12px;
++    background: var(--surface-2);
++}
++
++.license-terms-tools {
++    display: flex;
++    flex-wrap: wrap;
++    gap: 4px;
++    padding: 8px;
++    border-bottom: 1px solid var(--line);
++}
++
++.license-terms-tools button {
++    display: grid;
++    width: 34px;
++    height: 34px;
++    place-items: center;
++    border: 1px solid transparent;
++    border-radius: 7px;
++    background: transparent;
++    color: var(--text);
++    cursor: pointer;
++}
++
++.license-terms-tools button:hover {
++    border-color: var(--line);
++    background: var(--surface);
++}
++
++.license-terms-input {
++    min-height: 144px;
++    max-height: 360px;
++    overflow: auto;
++    padding: 12px 14px;
++    border-radius: 0 0 12px 12px;
++}
++
++.license-terms-input[aria-invalid="true"] {
++    outline: 2px solid var(--danger);
++}
++
++.license-terms-copy {
++    overflow-wrap: anywhere;
++    line-height: 1.65;
++    white-space: normal;
++}
++
++.license-terms-copy :is(p, div, ul, ol, h3) {
++    margin: 0 0 .75em;
++}
++
++.license-terms-copy :is(ul, ol) {
++    padding-inline-start: 1.6em;
++}
++
++.license-terms-copy :last-child {
++    margin-bottom: 0;
++}
++
++@media (max-width: 560px) {
++    .license-manager-tabs { width: 100%; }
++    .license-manager-tabs a { flex: 1 1 auto; justify-content: center; }
++}
+diff --git a/public/js/license-terms-editor.js b/public/js/license-terms-editor.js
+new file mode 100644
+index 0000000..974914c
+--- /dev/null
++++ b/public/js/license-terms-editor.js
+@@ -0,0 +1,73 @@
++document.querySelectorAll('[data-license-terms]').forEach((field) => {
++    const plain = field.querySelector('[data-license-terms-plain]');
++    const html = field.querySelector('[data-license-terms-html]');
++    const editor = field.querySelector('[data-license-editor]');
++    const surface = field.querySelector('[data-license-terms-surface]');
++    const label = field.querySelector('label');
++    const dialog = field.closest('dialog');
++    const error = field.querySelector('[data-license-terms-error]');
++    if (!plain || !html || !editor || !surface || !label || !dialog || !error || !document.execCommand) return;
++
++    const sync = () => {
++        plain.value = surface.innerText.trim();
++        html.value = surface.innerHTML.trim();
++        surface.removeAttribute('aria-invalid');
++        error.hidden = true;
++    };
++
++    const loadPlain = () => {
++        surface.replaceChildren();
++        const parts = plain.value.replace(/\r\n?/g, '\n').split(/\n[ \t]*\n+/);
++        parts.forEach((part) => {
++            const paragraph = document.createElement('p');
++            part.split('\n').forEach((line, index) => {
++                if (index) paragraph.append(document.createElement('br'));
++                paragraph.append(line);
++            });
++            surface.append(paragraph);
++        });
++        sync();
++    };
++
++    plain.hidden = true;
++    plain.required = false;
++    html.disabled = false;
++    editor.hidden = false;
++    label.removeAttribute('for');
++    label.addEventListener('click', () => surface.focus());
++    surface.addEventListener('input', sync);
++    surface.addEventListener('paste', (event) => {
++        if (!event.clipboardData) return;
++        event.preventDefault();
++        document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
++        sync();
++    });
++
++    editor.querySelectorAll('[data-license-command]').forEach((button) => {
++        button.addEventListener('mousedown', (event) => event.preventDefault());
++        button.addEventListener('click', () => {
++            surface.focus();
++            document.execCommand(button.dataset.licenseCommand, false, button.dataset.licenseArgument);
++            sync();
++        });
++    });
++
++    // The shared draft presets populate the original textareas during the click.
++    document.addEventListener('click', (event) => {
++        if (dialog.id === 'license-create' && event.target.closest('[data-license-preset]')) {
++            queueMicrotask(loadPlain);
++        }
++    });
++
++    field.closest('form').addEventListener('submit', (event) => {
++        sync();
++        if (!/\S/.test(plain.value) || plain.value.length < 30 || plain.value.length > 50000) {
++            event.preventDefault();
++            surface.setAttribute('aria-invalid', 'true');
++            error.hidden = false;
++            if (!dialog.querySelector('[aria-invalid="true"]:focus')) surface.focus();
++        }
++    });
++});
++
++document.querySelector('dialog[data-license-reopen]')?.showModal();
+diff --git a/resources/views/components/license-definition-readonly.blade.php b/resources/views/components/license-definition-readonly.blade.php
+index 7e19ef1..470f1c1 100644
+--- a/resources/views/components/license-definition-readonly.blade.php
++++ b/resources/views/components/license-definition-readonly.blade.php
+@@ -1,14 +1,15 @@
+ @props(['definition'=>null,'label'=>null])
+ @if($definition)
++  @once<link rel="stylesheet" href="{{ asset('css/license-manager.css') }}?v=1">@endonce
+   <details class="license-definition-readonly">
+     <summary><x-icon name="file-check" size="16"/> {{ $label ?: $definition->tierLabel() }} · Definition v{{ $definition->version }}</summary>
+     <div class="license-definition-readonly-body">
+       <p>These are the usage rights tied to this product license. Support duration is managed separately.</p>
+       @if($definition->tier === null)<p>This legacy definition predates explicit type classification. Its issued terms remain unchanged.</p>@endif
+       <h4>Permissions granted</h4>
+-      <div class="license-definition-readonly-copy">{{ $definition->permissions }}</div>
++      <div class="license-definition-readonly-copy license-terms-copy">{!! $definition->permissionsMarkup() !!}</div>
+       <h4>Restrictions and prohibited uses</h4>
+-      <div class="license-definition-readonly-copy">{{ $definition->restrictions }}</div>
++      <div class="license-definition-readonly-copy license-terms-copy">{!! $definition->restrictionsMarkup() !!}</div>
+       @if($definition->status === 'active')
+         <a class="btn subtle compact" href="{{ $definition->publicUrl() }}" target="_blank" rel="noopener noreferrer"><x-icon name="external-link" size="15"/> Read published license definition</a>
+       @endif
+diff --git a/resources/views/components/license-terms-editor.blade.php b/resources/views/components/license-terms-editor.blade.php
+new file mode 100644
+index 0000000..6619dd2
+--- /dev/null
++++ b/resources/views/components/license-terms-editor.blade.php
+@@ -0,0 +1,28 @@
++@props(['id', 'field', 'label', 'value' => '', 'html' => null])
++@php($html = is_string($html) ? $html : null)
++<div class="license-terms-field" data-license-terms>
++  <label for="{{ $id }}" id="{{ $id }}-label">{{ $label }}</label>
++  <textarea id="{{ $id }}" name="{{ $field }}" minlength="30" maxlength="50000" rows="6" required data-license-terms-plain>{{ $value }}</textarea>
++  <input type="hidden" name="{{ $field }}_html" disabled data-license-terms-html>
++  <div class="license-terms-editor" hidden data-license-editor>
++    <div class="license-terms-tools" role="group" aria-label="{{ $label }} formatting">
++      @foreach([
++        ['formatBlock', 'p', 'align-left', 'Paragraph'],
++        ['formatBlock', 'h3', 'bold', 'Heading'],
++        ['bold', '', 'bold', 'Bold'],
++        ['italic', '', 'italic', 'Italic'],
++        ['insertUnorderedList', '', 'list', 'Bulleted list'],
++        ['insertOrderedList', '', 'list-ordered', 'Numbered list'],
++        ['undo', '', 'undo', 'Undo'],
++        ['redo', '', 'redo', 'Redo'],
++      ] as [$command, $argument, $icon, $name])
++        <button type="button" data-license-command="{{ $command }}" data-license-argument="{{ $argument }}"
++          aria-label="{{ $name }}" title="{{ $name }}"><x-icon :name="$icon" size="16"/></button>
++      @endforeach
++    </div>
++    <div id="{{ $id }}-editor" aria-describedby="{{ $id }}-error" class="license-terms-copy license-terms-input" data-license-terms-surface
++      role="textbox" aria-labelledby="{{ $id }}-label" aria-multiline="true" aria-required="true"
++      contenteditable="true" spellcheck="true">{!! \App\Support\LicenseTerms::render($value, $html) !!}</div>
++  </div>
++  <p id="{{ $id }}-error" class="builder-field-error" data-license-terms-error hidden role="alert">Enter between 30 and 50,000 characters of license terms.</p>
++</div>
+diff --git a/resources/views/dashboard/licenses.blade.php b/resources/views/dashboard/licenses.blade.php
+index 3f8b32c..cb4bf56 100644
+--- a/resources/views/dashboard/licenses.blade.php
++++ b/resources/views/dashboard/licenses.blade.php
+@@ -1,447 +1,30 @@
+ @extends('layouts.dashboard')
+ @section('title','License Manager')
+ @section('content')
+-<div class="page-intro"><div class="eyebrow">Marketplace Governance</div><h1>License Manager</h1><p>Manage reusable Regular and Extended license terms and the unique product licenses issued to customers.</p></div>
+-<section class="license-definition-guide" aria-labelledby="license-definitions-guide">
+-  <div class="license-definition-guide-header">
+-    <div><span class="eyebrow">License Definitions</span>
+-      <h2 id="license-definitions-guide">Regular & Extended License</h2>
+-      <p>Define the product usage rights before a creator can attach them in Builder Studio. These definitions are not customer keys.</p>
+-    </div>
++<link rel="stylesheet" href="{{ asset('css/license-manager.css') }}?v=1">
++<div class="page-intro license-manager-heading">
++  <div>
++    <div class="eyebrow">Marketplace Governance</div>
++    <h1>License Manager</h1>
+   </div>
+-  <div class="license-definition-guide-grid">
+-    <article class="license-definition-guide-card">
+-      <h3><x-icon name="file-check" size="20"/> Regular License</h3>
+-      <p>{{ \App\Models\LicenseDefinition::tierDescription('regular') }}</p>
+-      <p class="hint">The customer's product license is lifetime; included standard support is six months, separately renewable.</p>
+-      <button type="button" class="btn subtle compact" data-license-preset="regular" data-modal-open="license-create"><x-icon name="plus" size="16"/> Draft Regular terms</button>
+-    </article>
+-    <article class="license-definition-guide-card">
+-      <h3><x-icon name="shield" size="20"/> Extended License</h3>
+-      <p>{{ \App\Models\LicenseDefinition::tierDescription('extended') }}</p>
+-      <p class="hint">Expanded permissions exist only when expressly written and approved; Extended does not transfer ownership of source code.</p>
+-      <button type="button" class="btn subtle compact" data-license-preset="extended" data-modal-open="license-create"><x-icon name="plus" size="16"/> Draft Extended terms</button>
+-    </article>
+-  </div>
+-  <p class="license-definition-guide-footer"><x-icon name="shield" size="16"/> Starter language is editable guidance, not an automatically approved legal policy. Review and publish each definition before products use it.</p>
+-</section>
+-<section class="panel">
+-  <div class="panel-head">
+-    <div><h2>License definitions <span class="count">{{ $licenses->total() }}</span></h2>
+-      <p>These are reusable usage rights for digital products—not customer license keys.</p></div>
+-    <div class="toolbar-actions">
+-      <form method="get" class="table-search"><x-icon name="search" size="17"/><input name="search" value="{{ $search }}" aria-label="Search licenses" placeholder="Code or license name"><button class="btn subtle" type="submit">Search</button></form>
+-      <button class="btn primary" type="button" data-modal-open="license-create">New license</button>
+-    </div>
+-  </div>
+-  <div class="table-scroll"><table class="data-table">
+-    <thead><tr><th>Public ID</th><th>License</th><th>Type</th><th>Code</th><th>Version</th><th>Status</th><th>Products</th><th>Action</th></tr></thead>
+-    <tbody>
+-      @forelse($licenses as $license)
+-        @php($definitionLocked = $license->listings_count > 0 || $license->extended_listings_count > 0 || $license->issued_licenses_count > 0)
+-        <tr>
+-          <td class="mono">{{ $license->public_id }}</td><td><strong>{{ $license->name }}</strong></td>
+-          <td><span class="role-pill">{{ $license->tierLabel() }}</span></td>
+-          <td class="mono">{{ $license->code }}</td><td>{{ $license->version }}</td>
+-          <td><span class="role-pill">{{ ucfirst($license->status) }}</span></td><td>{{ $license->listings_count + $license->extended_listings_count }}</td>
+-          <td>
+-            <button class="row-action-trigger license-action-trigger" type="button"
+-              id="license-action-trigger-{{ $license->id }}" popovertarget="license-actions-{{ $license->id }}"
+-              aria-haspopup="menu" aria-expanded="false" aria-label="Actions for {{ $license->name }}">
+-              <x-icon name="ellipsis-vertical" size="19"/>
+-            </button>
+-            <div id="license-actions-{{ $license->id }}" popover="auto"
+-              class="row-action-popover license-action-popover" data-row-action-menu data-license-action-menu data-row-action-anchor="license-action-trigger-{{ $license->id }}"
+-              aria-label="Actions for {{ $license->name }}">
+-              <button type="button" data-license-action data-modal-open="license-{{ $license->id }}"
+-                data-license-focus="license-heading-{{ $license->id }}"><x-icon name="eye" size="16"/> View definition</button>
+-              @unless($definitionLocked)
+-                <button type="button" data-license-action data-modal-open="license-{{ $license->id }}"
+-                  data-license-focus="license-code-{{ $license->id }}"><x-icon name="pencil" size="16"/> Edit terms</button>
+-                <button type="button" data-license-action data-modal-open="license-{{ $license->id }}"
+-                  data-license-focus="license-status-{{ $license->id }}"
+-                  data-license-select="{{ $license->status === 'active' ? 'draft' : 'active' }}">
+-                  <x-icon name="{{ $license->status === 'active' ? 'pause-circle' : 'play-circle' }}" size="16"/>
+-                  {{ $license->status === 'active' ? 'Deactivate' : 'Activate' }}
+-                </button>
+-              @endunless
+-              @if($license->status === 'active')
+-                <a href="{{ $license->publicUrl() }}" target="_blank" rel="noopener noreferrer"
+-                  data-license-action><x-icon name="external-link" size="16"/> Published terms</a>
+-              @endif
+-            </div>
+-            <dialog class="config-dialog wide-dialog" id="license-{{ $license->id }}">
+-              <form method="post" action="{{ route('dashboard.licenses.update',$license) }}">
+-                @csrf @method('PATCH')
+-                <h2 id="license-heading-{{ $license->id }}">{{ $license->name }}</h2>
+-                <p>Public license ID {{ $license->public_id }} · {{ $license->tierLabel() }} · {{ $license->listings_count + $license->extended_listings_count }} referenced products</p>
+-                @if($definitionLocked)
+-                  <div class="notice">This definition is already referenced by a product or issued license. Its rights are locked; create a new definition for changed terms.</div>
+-                  @if($license->status === 'active')<a href="{{ $license->publicUrl() }}" class="btn subtle" target="_blank" rel="noopener noreferrer">Read published license</a>@endif
+-                  <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Close</button></div>
+-                @else
+-                  <label for="license-tier-{{ $license->id }}">License definition type</label>
+-                  <select id="license-tier-{{ $license->id }}" name="tier" required>
+-                    @foreach(\App\Models\LicenseDefinition::TIERS as $tier=>$label)
+-                      <option value="{{ $tier }}" @selected($license->tier===$tier)>{{ $label }}</option>
+-                    @endforeach
+-                  </select>
+-                  @if(!$license->tier)<p class="hint">This older definition is unclassified. Assign its type before saving; existing issued licenses keep their terms.</p>@endif
+-                  <label for="license-code-{{ $license->id }}">License code (A–Z, 0–9, underscore)</label><input id="license-code-{{ $license->id }}" name="code" value="{{ $license->code }}" required maxlength="32">
+-                  <label for="license-name-{{ $license->id }}">Display name</label><input id="license-name-{{ $license->id }}" name="name" value="{{ $license->name }}" required maxlength="120">
+-                  <label for="license-version-{{ $license->id }}">Version</label><input id="license-version-{{ $license->id }}" name="version" value="{{ $license->version }}" required placeholder="1.0.0">
+-                  <label for="license-permissions-{{ $license->id }}">Permissions granted</label><textarea id="license-permissions-{{ $license->id }}" name="permissions" minlength="30" rows="6" required>{{ $license->permissions }}</textarea>
+-                  <label for="license-restrictions-{{ $license->id }}">Restrictions and prohibited uses</label><textarea id="license-restrictions-{{ $license->id }}" name="restrictions" minlength="30" rows="6" required>{{ $license->restrictions }}</textarea>
+-                  <label for="license-status-{{ $license->id }}">Status</label><select id="license-status-{{ $license->id }}" name="status"><option value="draft" @selected($license->status==='draft')>Draft</option><option value="active" @selected($license->status==='active')>Active</option></select>
+-                  <label class="check-label"><input type="checkbox" name="confirm_review" value="1"> I have reviewed these license terms and authorize their publication</label>
+-                  <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit">Save license</button></div>
+-                @endif
+-              </form>
+-            </dialog>
+-          </td>
+-        </tr>
+-      @empty<tr><td class="empty-cell" colspan="8">No license definitions have been created. Use Draft Regular terms or Draft Extended terms to prepare them for review.</td></tr>@endforelse
+-    </tbody>
+-  </table></div>
+-  <x-pagination :paginator="$licenses"/>
+-</section>
+-<dialog class="config-dialog wide-dialog" id="license-create">
+-  <form method="post" action="{{ route('dashboard.licenses.store') }}">
+-    @csrf
+-    <h2>Create a license definition</h2>
+-    <p>Define the rights granted to buyers and the prohibited uses for one license type. Review the draft wording before publishing it.</p>
+-    <label for="license-new-tier">License definition type</label>
+-    <select id="license-new-tier" name="tier" required>
+-      <option value="regular" @selected(old('tier','regular')==='regular')>Regular License</option>
+-      <option value="extended" @selected(old('tier')==='extended')>Extended License</option>
+-    </select>
+-    <label for="license-new-code">License code</label><input id="license-new-code" name="code" placeholder="REGULAR" maxlength="32" required>
+-    <label for="license-new-name">License name</label><input id="license-new-name" name="name" maxlength="120" required>
+-    <label for="license-new-version">Version</label><input id="license-new-version" name="version" value="1.0.0" required>
+-    <label for="license-new-permissions">Permissions granted</label><textarea id="license-new-permissions" name="permissions" minlength="30" rows="6" required></textarea>
+-    <label for="license-new-restrictions">Restrictions and prohibited uses</label><textarea id="license-new-restrictions" name="restrictions" minlength="30" rows="6" required></textarea>
+-    <label for="license-new-status">Publication status</label><select id="license-new-status" name="status"><option value="draft">Draft</option><option value="active">Active</option></select>
+-    <label class="check-label"><input type="checkbox" name="confirm_review" value="1"> I have reviewed these license terms and authorize their publication</label>
+-    <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit">Create license</button></div>
+-  </form>
+-</dialog>
+-
+-
+-<section class="panel license-issued-panel" id="issued-product-licenses">
+-  <div class="panel-head license-issued-heading">
+-    <div class="license-issued-heading-text">
+-      <h2>Issued Product Licenses <span class="count">{{ $issued->total() }}</span></h2>
+-      <p>Licenses for verified downloadable products. License definitions do not create customer keys.</p>
+-    </div>
+-    @if(auth()->user()->role === 'super_admin')
+-      <button class="btn primary license-issue-trigger" type="button" data-modal-open="license-issue-dialog">
+-        <x-icon name="key-round" size="17"/> Manual License
+-      </button>
+-    @endif
+-  </div>
+-  <div class="license-issued-controls">
+-    <form class="license-issued-search" method="get" action="{{ route('dashboard.licenses.index') }}#issued-product-licenses" role="search">
+-      @foreach(request()->except(['issued_search','issued_sort','issued_page','page','support_page']) as $key=>$value)
+-        @if(is_scalar($value))<input type="hidden" name="{{ $key }}" value="{{ $value }}">@endif
+-      @endforeach
+-      <label class="sr-only" for="issued-license-search">Search issued product licenses</label>
+-      <span class="license-issued-search-field"><x-icon name="search" size="17"/>
+-        <input id="issued-license-search" name="issued_search" type="search" value="{{ $issuedSearch }}"
+-          maxlength="120" placeholder="License, product, customer, domain..." autocomplete="off"></span>
+-      <label class="sr-only" for="issued-license-sort">Sort issued product licenses</label>
+-      <select id="issued-license-sort" name="issued_sort" aria-label="Sort issued product licenses">
+-        <option value="recent" @selected($issuedSort==='recent')>Recent (newest first)</option>
+-        <option value="oldest" @selected($issuedSort==='oldest')>Oldest first</option>
+-        <option value="updated" @selected($issuedSort==='updated')>Recently updated</option>
+-        <option value="status" @selected($issuedSort==='status')>Status A–Z</option>
+-      </select>
+-      <button type="submit" class="btn subtle"><x-icon name="search" size="16"/> Search</button>
+-      @if($issuedSearch !== '' || $issuedSort !== 'recent')
+-        <a class="btn subtle" href="{{ route('dashboard.licenses.index',request()->except(['issued_search','issued_sort','issued_page'])) }}#issued-product-licenses">Reset</a>
+-      @endif
+-    </form>
+-  </div>
+-  @if(auth()->user()->role === 'super_admin')
+-    <dialog class="config-dialog wide-dialog license-issue-dialog" id="license-issue-dialog" aria-labelledby="license-issue-heading">
+-      <div class="license-issue-modal-head">
+-        <div><span class="eyebrow">Product licensing</span>
+-          <h2 id="license-issue-heading">Issue Manual License</h2>
+-          <p>Assign a complimentary license to an eligible product and customer.</p></div>
+-        <button class="btn subtle compact" type="button" data-modal-close aria-label="Close manual license dialog"><x-icon name="x" size="18"/></button>
+-      </div>
+-      <form method="post" action="{{ route('dashboard.licenses.issue') }}" class="license-workflow-form">
+-        @csrf
+-        <label for="issued-entitlement">Approved product / release / recipient</label>
+-        <select id="issued-entitlement" name="product_entitlement_id" required>
+-          <option value="">Choose an active entitlement with an approved downloadable original</option>
+-          @foreach($issuable as $grant)
+-            <option value="{{ $grant->id }}" @selected((string)old('product_entitlement_id')===(string)$grant->id)>
+-              {{ $grant->version?->product?->title }} · {{ $grant->version?->version }}
+-              · Customer {{ $grant->recipient?->public_id }} · Entitlement #{{ $grant->id }}
+-            </option>
+-          @endforeach
+-        </select>
+-        @if($issuable->isEmpty())
+-          <p class="hint">No eligible entitlements yet. Approve the downloadable product and its file entitlement before issuing a key.</p>
+-        @endif
+-        <p class="hint">Product rights, malware screening, license terms and file integrity are checked again on the server.</p>
+-        <div class="license-issue-fields">
+-          <div><label for="issued-tier">License tier</label>
+-            <select id="issued-tier" name="tier" required>
+-              <option value="regular" @selected(old('tier','regular')==='regular')>Regular License</option>
+-              <option value="extended" @selected(old('tier')==='extended')>Extended License (when offered)</option>
+-            </select></div>
+-          <div><label for="initial-support-term">Product support period</label>
+-            <select name="support_term" id="initial-support-term" required>
+-              @foreach(\App\Support\ProductLicenseSupport::TERMS as $term=>$label)
+-                <option value="{{ $term }}" @selected(old('support_term',\App\Support\ProductLicenseSupport::DEFAULT_TERM)===$term)>{{ $label }}</option>
+-              @endforeach
+-            </select></div>
+-        </div>
+-        <p class="hint">License validity is lifetime. Standard support starts at 6 months; an authorized administrator can assign longer complimentary support.</p>
+-        <label for="issued-reason">Reason and authorization</label>
+-        <textarea id="issued-reason" name="reason" rows="3" minlength="15" maxlength="500" required
+-          placeholder="Explain this complimentary issuance.">{{ old('reason') }}</textarea>
+-        <label class="check-label"><input type="checkbox" name="confirm_complimentary" value="1" required>
+-          I confirm this manually issued license is complimentary and backed by an approved downloadable product and entitlement.</label>
+-        <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Cancel</button>
+-          <button type="submit" class="btn primary" @disabled($issuable->isEmpty())><x-icon name="key-round" size="17"/> Issue License</button>
+-        </div>
+-      </form>
+-    </dialog>
+-  @endif
+-  <div class="table-scroll license-issued-scroll" tabindex="0" role="region" aria-label="Issued product license table; scroll horizontally to see all columns">
+-    <table class="data-table license-issued-table">
+-    <thead><tr><th scope="col">No</th><th scope="col">License</th><th scope="col">Product</th><th scope="col">Customer</th><th scope="col">Terms</th><th scope="col">Period</th><th scope="col">Support</th><th scope="col">Status</th><th scope="col">Domain</th><th scope="col">Action</th></tr></thead>
+-    <tbody>
+-    @forelse($issued as $item)
+-      <tr>
+-        <td class="mono">{{ $issued->firstItem() + $loop->index }}</td>
+-        <td>
+-          <button class="license-table-link mono" type="button" data-modal-open="issued-{{ $item->id }}"
+-            aria-label="View license {{ $item->public_id }}">{{ $item->public_id }}</button>
+-          <div class="text-muted mono">{{ $item->maskedKey() }}</div>
+-        </td>
+-        <td>
+-          @if($item->product)
+-            <button class="license-table-link" type="button" data-modal-open="issued-product-{{ $item->id }}"
+-              aria-label="View product {{ $item->product->title }}">{{ $item->product->title }}</button>
+-            <div class="license-issued-subrow">
+-              <span class="mono">#{{ $item->product->public_id }}</span>
+-              <button type="button" class="license-copy-button" data-license-copy-url="{{ $item->product->publicUrl() }}"
+-                aria-label="Copy full product URL"><x-icon name="copy" size="15"/> Copy URL</button>
+-            </div>
+-          @else
+-            <span class="text-muted">Unavailable product</span>
+-          @endif
+-          <div class="text-muted">File v{{ $item->version?->version }}</div>
+-        </td>
+-        <td class="mono">{{ $item->customer?->public_id }}</td>
+-        <td>{{ ucfirst($item->tier) }}<div class="text-muted">{{ $item->definition?->name }} v{{ $item->definition?->version }}</div></td>
+-        <td><strong>Lifetime</strong></td>
+-        <td>
+-          <span class="role-pill {{ $item->supportStatus() === 'Expired' ? 'license-support-expired' : '' }}">{{ $item->supportStatus() }}</span>
+-          <span class="license-table-secondary">{{ $item->supportName() }}</span>
+-          @if($item->support_expires_at)<span class="license-table-secondary">Until {{ $item->support_expires_at->format('d M Y') }}</span>@endif
+-        </td>
+-        <td><span class="role-pill">{{ ucfirst($item->status) }}</span>
+-          @unless($item->isActive())<small class="text-muted">Not currently valid</small>@endunless</td>
+-        <td><span class="license-domain-cell">{{ $item->activations->where('status','active')->pluck('domain')->implode(', ') ?: 'Not activated' }}</span></td>
+-        <td>
+-          @if($item->product)
+-            <dialog class="config-dialog wide-dialog license-product-dialog" id="issued-product-{{ $item->id }}"
+-              aria-labelledby="issued-product-heading-{{ $item->id }}">
+-              <h2 id="issued-product-heading-{{ $item->id }}">{{ $item->product->title }}</h2>
+-              <p>Product #{{ $item->product->public_id }} · {{ ucfirst($item->product->status) }} · Downloadable product</p>
+-              <div class="license-product-summary">
+-                <div><small>Product</small><strong>{{ $item->product->title }}</strong></div>
+-                <div><small>Release</small><strong>v{{ $item->version?->version ?? 'Unavailable' }}</strong></div>
+-                <div><small>License</small><strong>{{ $item->public_id }}</strong></div>
+-                <div><small>Customer</small><strong>{{ $item->customer?->public_id }}</strong></div>
+-              </div>
+-              <div class="license-product-description">
+-                <h3>Product description</h3>
+-                <p>{{ $item->product->description ?: 'No product description available.' }}</p>
+-              </div>
+-              <label class="license-product-url-label" for="issued-product-url-{{ $item->id }}">Full product URL</label>
+-              <div class="license-product-url-row">
+-                <input id="issued-product-url-{{ $item->id }}" type="text" readonly value="{{ $item->product->publicUrl() }}">
+-                <button class="btn subtle compact" type="button" data-license-copy-url="{{ $item->product->publicUrl() }}">
+-                  <x-icon name="copy" size="16"/> Copy URL</button>
+-              </div>
+-              <div class="dialog-actions">
+-                <button class="btn subtle" type="button" data-modal-open="issued-{{ $item->id }}" data-modal-close>License details</button>
+-                @if($item->product->status === 'published')
+-                  <a class="btn subtle" href="{{ $item->product->publicUrl() }}" target="_blank" rel="noopener noreferrer">
+-                    <x-icon name="external-link" size="16"/> Open product</a>
+-                @endif
+-                <button type="button" class="btn primary" data-modal-close>Close</button>
+-              </div>
+-            </dialog>
+-          @endif
+-          <button class="row-action-trigger license-action-trigger" type="button"
+-            id="issued-action-trigger-{{ $item->id }}" popovertarget="issued-actions-{{ $item->id }}"
+-            aria-haspopup="menu" aria-expanded="false" aria-label="Actions for product license {{ $item->public_id }}">
+-            <x-icon name="ellipsis-vertical" size="19"/>
+-          </button>
+-          <div id="issued-actions-{{ $item->id }}" popover="auto"
+-            class="row-action-popover license-action-popover" data-row-action-menu data-license-action-menu data-row-action-anchor="issued-action-trigger-{{ $item->id }}"
+-            aria-label="Product license actions">
+-            <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+-              data-license-focus="issued-{{ $item->id }}-heading"><x-icon name="eye" size="16"/> License details</button>
+-            <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+-              data-license-focus="issued-{{ $item->id }}-history"><x-icon name="history" size="16"/> Activation history</button>
+-            @if($item->status !== 'revoked')
+-              <div class="license-action-separator"></div>
+-              @if($item->status === 'active')
+-                <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+-                  data-license-focus="issued-{{ $item->id }}-status" data-license-select="suspend">
+-                  <x-icon name="pause-circle" size="16"/> Suspend license</button>
+-              @else
+-                <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+-                  data-license-focus="issued-{{ $item->id }}-status" data-license-select="activate">
+-                  <x-icon name="play-circle" size="16"/> Activate license</button>
+-              @endif
+-              @if($item->tier === 'regular' && $item->product?->extended_price !== null)
+-                <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+-                  data-license-focus="issued-{{ $item->id }}-upgrade"><x-icon name="shield" size="16"/> Upgrade to Extended</button>
+-              @endif
+-              <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+-                data-license-focus="issued-{{ $item->id }}-domain"><x-icon name="globe" size="16"/> Change domain</button>
+-              <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+-                data-license-focus="issued-{{ $item->id }}-rotate"><x-icon name="refresh-cw" size="16"/> Rotate license key</button>
+-              <div class="license-action-separator"></div>
+-              <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
+-                data-license-focus="issued-{{ $item->id }}-status" data-license-select="revoke"
+-                class="is-danger"><x-icon name="ban" size="16"/> Revoke license</button>
+-            @endif
+-          </div>
+-          <dialog class="config-dialog wide-dialog" id="issued-{{ $item->id }}">
+-            <h2 id="issued-{{ $item->id }}-heading">Manage issued product license</h2>
+-            <p>License {{ $item->public_id }} · {{ $item->product?->title }} · {{ ucfirst($item->tier) }} · {{ ucfirst($item->status) }}</p>
+-            <p class="hint">The full secret key is available only to its authenticated customer after password confirmation. Domains and administrative changes are recorded below.</p>
+-            <div class="license-admin-actions">
+-              @if($item->status !== 'revoked')
+-                <form id="issued-{{ $item->id }}-status" method="post" action="{{ route('dashboard.licenses.issued.status',$item) }}">
+-                  @csrf @method('PATCH')
+-                  <label for="status-action-{{ $item->id }}">License status</label>
+-                  <select id="status-action-{{ $item->id }}" name="action" required>
+-                    @if($item->status==='active')<option value="suspend">Deactivate / suspend</option>@endif
+-                    @if($item->status==='suspended')<option value="activate">Reactivate</option>@endif
+-                    <option value="revoke">Revoke permanently (not deletable)</option>
+-                  </select>
+-                  <label>Reason <textarea name="reason" rows="2" minlength="12" maxlength="500" required></textarea></label>
+-                  <label class="check-label"><input type="checkbox" name="confirm_change" value="1" required> Confirm this administrative action</label>
+-                  <button class="btn primary compact" type="submit">Update status</button>
+-                </form>
+-                @if($item->tier==='regular' && $item->product?->extended_price !== null)
+-                  <form id="issued-{{ $item->id }}-upgrade" method="post" action="{{ route('dashboard.licenses.issued.upgrade',$item) }}">
+-                    @csrf @method('PATCH')
+-                    <label>Upgrade reason <textarea name="reason" rows="2" minlength="12" maxlength="500" required placeholder="Administrative entitlement to Extended License"></textarea></label>
+-                    <label class="check-label"><input type="checkbox" name="confirm_manual_upgrade" value="1" required> Approve manual upgrade to reviewed Extended License (no payment)</label>
+-                    <button class="btn subtle compact" type="submit">Upgrade to Extended</button>
+-                  </form>
+-                @endif
+-                <form id="issued-{{ $item->id }}-domain" method="post" action="{{ route('dashboard.licenses.issued.domain',$item) }}">
+-                  @csrf @method('PATCH')
+-                  <label>Replacement domain (optional; leave blank to deactivate all)</label>
+-                  <input name="domain" placeholder="new.example.com" maxlength="253">
+-                  <label>Reason <textarea name="reason" rows="2" minlength="12" maxlength="500" required></textarea></label>
+-                  <button class="btn subtle compact" type="submit">Release current domain</button>
+-                  <p class="hint">The replacement domain is not auto-activated. The installed script must authenticate with the license key.</p>
+-                </form>
+-                <form id="issued-{{ $item->id }}-rotate" method="post" action="{{ route('dashboard.licenses.issued.rotate',$item) }}">
+-                  @csrf
+-                  <label>Key rotation reason <textarea name="reason" rows="2" minlength="12" maxlength="500" required></textarea></label>
+-                  <label class="check-label"><input type="checkbox" name="confirm_rotate" value="1" required> Invalidate the old license key permanently</label>
+-                  <button class="btn subtle compact" type="submit">Rotate key</button>
+-                </form>
+-              @else
+-                <p class="hint">This key has been permanently revoked. Its event history is retained for accountability.</p>
+-              @endif
+-            </div>
+-            <h3>Domain activation & action history</h3>
+-            <div class="license-history" id="issued-{{ $item->id }}-history">
+-              @forelse($item->events->take(30) as $event)
+-                <div><strong>{{ ucfirst(str_replace('.',' ',$event->action)) }}</strong>
+-                <span>{{ $event->previous_domain ? $event->previous_domain.' → ' : '' }}{{ $event->domain }}
+-                  · {{ $event->created_at->format('d M Y H:i') }}
+-                  · {{ $event->actor?->name ?? 'Installer API' }}
+-                  @if($event->reason) · {{ $event->reason }} @endif</span></div>
+-              @empty <p class="hint">No events recorded.</p> @endforelse
+-            </div>
+-            <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Close</button></div>
+-          </dialog>
+-        </td>
+-      </tr>
+-    @empty<tr><td colspan="10" class="empty-cell">{{ $issuedSearch !== '' ? 'No issued licenses match your search.' : 'No issued product licenses yet. An approved downloadable product and entitlement are required.' }}</td></tr>@endforelse
+-    </tbody>
+-  </table></div>
+-  <x-pagination :paginator="$issued"/>
+-</section>
++  <nav class="license-manager-tabs" aria-label="License Manager sections">
++    @foreach(['products' => ['key-round', 'Product Licenses'], 'renewals' => ['history', 'Support Renewals'], 'definitions' => ['file-check', 'License Definitions']] as $key => [$icon, $label])
++      <a href="{{ route('dashboard.licenses.index', ['tab' => $key]) }}" @if($tab === $key) aria-current="page" @endif>
++        <x-icon :name="$icon" size="16"/> {{ $label }}
++      </a>
++    @endforeach
++  </nav>
++</div>
+ 
+-<section class="panel" id="support-renewal-requests">
+-  <div class="panel-head">
+-    <div>
+-      <h2>Support renewals <span class="count">{{ $supportRenewals->total() }}</span></h2>
+-      <p>Support periods renew independently from lifetime product licenses.</p>
+-    </div>
+-  </div>
+-  <div class="table-scroll">
+-    <table class="data-table">
+-      <thead><tr><th>Product / License</th><th>Customer</th><th>Requested support</th><th>Status</th><th>Requested on</th><th>Action</th></tr></thead>
+-      <tbody>
+-        @forelse($supportRenewals as $renewal)
+-          <tr>
+-            <td>
+-              <strong>{{ $renewal->license?->product?->title ?? 'Unavailable product' }}</strong>
+-              <span class="license-table-secondary mono">{{ $renewal->license?->public_id }}</span>
+-              <span class="license-table-secondary">License period: Lifetime</span>
+-            </td>
+-            <td class="mono">{{ $renewal->requester?->public_id }}</td>
+-            <td>{{ \App\Support\ProductLicenseSupport::TERMS[$renewal->term] ?? 'Unknown' }}</td>
+-            <td><span class="role-pill">{{ ucfirst($renewal->status) }}</span></td>
+-            <td>{{ $renewal->created_at?->format('d M Y') }}</td>
+-            <td>
+-              @if($renewal->status==='pending' && auth()->user()->role==='super_admin')
+-                <button type="button" class="btn subtle compact" data-modal-open="support-review-{{ $renewal->id }}"><x-icon name="settings" size="16"/> Review</button>
+-                <dialog class="config-dialog wide-dialog" id="support-review-{{ $renewal->id }}">
+-                  <h2>Support renewal review</h2>
+-                  <p>{{ $renewal->license?->product?->title }} · {{ \App\Support\ProductLicenseSupport::TERMS[$renewal->term] ?? 'Unknown' }}</p>
+-                  <p class="hint">An approved renewal extends the support period only. It does not charge the customer or alter lifetime licensing.</p>
+-                  <form method="post" action="{{ route('dashboard.licenses.support.review',$renewal) }}" class="license-workflow-form">
+-                    @csrf
+-                    <label for="review-decision-{{ $renewal->id }}">Decision</label>
+-                    <select id="review-decision-{{ $renewal->id }}" name="decision" required>
+-                      <option value="approve">Approve complimentary support period</option>
+-                      <option value="reject">Reject request</option>
+-                    </select>
+-                    <label for="review-note-{{ $renewal->id }}">Reason and authorization</label>
+-                    <textarea id="review-note-{{ $renewal->id }}" name="reason" rows="3" minlength="15" maxlength="500" required></textarea>
+-                    <label class="check-label">
+-                      <input type="checkbox" name="confirm_manual" value="1" required>
+-                      Confirm this manual decision. No verified payment or financial transaction is recorded.
+-                    </label>
+-                    <div class="dialog-actions">
+-                      <button type="button" class="btn subtle" data-modal-close>Cancel</button>
+-                      <button class="btn primary" type="submit">Save decision</button>
+-                    </div>
+-                  </form>
+-                </dialog>
+-              @elseif($renewal->reviewed_at)
+-                <span class="license-table-secondary">{{ $renewal->reviewed_at->format('d M Y') }}</span>
+-                @if($renewal->review_note)<span class="license-table-secondary">{{ $renewal->review_note }}</span>@endif
+-              @else
+-                <span class="text-muted">Pending review</span>
+-              @endif
+-            </td>
+-          </tr>
+-        @empty
+-          <tr><td colspan="6" class="empty-cell">No support renewal requests yet.</td></tr>
+-        @endforelse
+-      </tbody>
+-    </table>
+-  </div>
+-  <x-pagination :paginator="$supportRenewals"/>
+-</section>
++@switch($tab)
++  @case('definitions')
++    @include('dashboard.partials.license-definitions')
++    <script defer src="{{ asset('js/license-terms-editor.js') }}?v=1"></script>
++    @break
++  @case('renewals')
++    @include('dashboard.partials.license-renewals')
++    @break
++  @default
++    @include('dashboard.partials.license-issued')
++@endswitch
+ @endsection
+diff --git a/resources/views/dashboard/partials/license-definitions.blade.php b/resources/views/dashboard/partials/license-definitions.blade.php
+new file mode 100644
+index 0000000..4729e35
+--- /dev/null
++++ b/resources/views/dashboard/partials/license-definitions.blade.php
+@@ -0,0 +1,168 @@
++<section class="license-definition-guide" aria-labelledby="license-definitions-guide">
++  <div class="license-definition-guide-header">
++    <div><span class="eyebrow">License Definitions</span>
++      <h2 id="license-definitions-guide">Regular & Extended License</h2>
++      <p>Define the product usage rights before a creator can attach them in Builder Studio. These definitions are not customer keys.</p>
++    </div>
++  </div>
++  <div class="license-definition-guide-grid">
++    <article class="license-definition-guide-card">
++      <h3><x-icon name="file-check" size="20"/> Regular License</h3>
++      <p>{{ \App\Models\LicenseDefinition::tierDescription('regular') }}</p>
++      <p class="hint">The customer's product license is lifetime; included standard support is six months, separately renewable.</p>
++      <button type="button" class="btn subtle compact" data-license-preset="regular" data-modal-open="license-create"><x-icon name="plus" size="16"/> Draft Regular terms</button>
++    </article>
++    <article class="license-definition-guide-card">
++      <h3><x-icon name="shield" size="20"/> Extended License</h3>
++      <p>{{ \App\Models\LicenseDefinition::tierDescription('extended') }}</p>
++      <p class="hint">Expanded permissions exist only when expressly written and approved; Extended does not transfer ownership of source code.</p>
++      <button type="button" class="btn subtle compact" data-license-preset="extended" data-modal-open="license-create"><x-icon name="plus" size="16"/> Draft Extended terms</button>
++    </article>
++  </div>
++  <p class="license-definition-guide-footer"><x-icon name="shield" size="16"/> Starter language is editable guidance, not an automatically approved legal policy. Review and publish each definition before products use it.</p>
++</section>
++<section class="panel">
++  <div class="panel-head">
++    <div><h2>{{ $archived ? 'Archived definitions' : 'License definitions' }} <span class="count">{{ $licenses->total() }}</span></h2>
++      <p>These are reusable usage rights for digital products—not customer license keys.</p></div>
++    <div class="toolbar-actions">
++      <form method="get" class="table-search">
++        <input type="hidden" name="tab" value="definitions">
++        @if($archived)<input type="hidden" name="archived" value="1">@endif
++        <x-icon name="search" size="17"/>
++        <input name="search" value="{{ $search }}" aria-label="Search licenses" placeholder="ID, code or license name">
++        <button class="btn subtle" type="submit">Search</button>
++      </form>
++      <a class="btn subtle" href="{{ route('dashboard.licenses.index', ['tab' => 'definitions', 'archived' => $archived ? null : 1]) }}">{{ $archived ? 'Current definitions' : 'Archived definitions' }}</a>
++      <button class="btn primary" type="button" data-modal-open="license-create">New license</button>
++    </div>
++  </div>
++  <div class="table-scroll"><table class="data-table">
++    <thead><tr><th>Public ID</th><th>License</th><th>Type</th><th>Code</th><th>Version</th><th>Status</th><th>Products</th><th>Action</th></tr></thead>
++    <tbody>
++      @forelse($licenses as $license)
++        @php
++          $definitionLocked = $license->listings_count > 0 || $license->extended_listings_count > 0 || $license->issued_licenses_count > 0;
++          $editable = !$definitionLocked && $license->status !== 'archived';
++          $archiveFixture = $definitionLocked && $license->canArchiveLayoutTest();
++          $removable = !$definitionLocked || $archiveFixture;
++        @endphp
++        <tr>
++          <td class="mono">{{ $license->public_id }}</td><td><strong>{{ $license->name }}</strong></td>
++          <td><span class="role-pill">{{ $license->tierLabel() }}</span></td>
++          <td class="mono">{{ $license->code }}</td><td>{{ $license->version }}</td>
++          <td><span class="role-pill">{{ ucfirst($license->status) }}</span></td><td>{{ $license->listings_count + $license->extended_listings_count }}</td>
++          <td>
++            <button class="row-action-trigger license-action-trigger" type="button"
++              id="license-action-trigger-{{ $license->id }}" popovertarget="license-actions-{{ $license->id }}"
++              aria-haspopup="menu" aria-expanded="false" aria-label="Actions for {{ $license->name }}">
++              <x-icon name="ellipsis-vertical" size="19"/>
++            </button>
++            <div id="license-actions-{{ $license->id }}" popover="auto"
++              class="row-action-popover license-action-popover" data-row-action-menu data-license-action-menu data-row-action-anchor="license-action-trigger-{{ $license->id }}"
++              aria-label="Actions for {{ $license->name }}">
++              <button type="button" data-license-action data-modal-open="license-view-{{ $license->id }}"><x-icon name="eye" size="16"/> View definition</button>
++              @if($editable)
++                <button type="button" data-license-action data-modal-open="license-{{ $license->id }}"
++                  data-license-focus="license-code-{{ $license->id }}"><x-icon name="pencil" size="16"/> Edit terms</button>
++                <button type="button" data-license-action data-modal-open="license-{{ $license->id }}"
++                  data-license-focus="license-status-{{ $license->id }}"
++                  data-license-select="{{ $license->status === 'active' ? 'draft' : 'active' }}">
++                  <x-icon name="{{ $license->status === 'active' ? 'pause-circle' : 'play-circle' }}" size="16"/>
++                  {{ $license->status === 'active' ? 'Deactivate' : 'Activate' }}
++                </button>
++              @endif
++              <button type="button" data-modal-open="license-create"><x-icon name="plus" size="16"/> New definition</button>
++              @if($removable)
++                <button type="button" class="is-danger" data-modal-open="license-remove-{{ $license->id }}">
++                  <x-icon name="trash-2" size="16"/> {{ $archiveFixture ? 'Archive layout-test definition' : 'Delete definition' }}
++                </button>
++              @endif
++              @if($license->status === 'active')
++                <a href="{{ $license->publicUrl() }}" target="_blank" rel="noopener noreferrer"
++                  data-license-action><x-icon name="external-link" size="16"/> Published terms</a>
++              @endif
++            </div>
++            <dialog class="config-dialog wide-dialog" id="license-view-{{ $license->id }}" aria-labelledby="license-heading-{{ $license->id }}">
++              <h2 id="license-heading-{{ $license->id }}">{{ $license->name }}</h2>
++              <p>{{ $license->public_id }} · {{ $license->tierLabel() }} · v{{ $license->version }} · {{ ucfirst($license->status) }}</p>
++              <h3>Permissions granted</h3>
++              <div class="license-terms-copy">{!! $license->permissionsMarkup() !!}</div>
++              <h3>Restrictions and prohibited uses</h3>
++              <div class="license-terms-copy">{!! $license->restrictionsMarkup() !!}</div>
++              <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Close</button></div>
++            </dialog>
++            @if($removable)
++              <dialog class="config-dialog wide-dialog" id="license-remove-{{ $license->id }}">
++                <h2>{{ $archiveFixture ? 'Archive layout-test definition' : 'Delete definition' }}</h2>
++                <p>{{ $license->name }} · {{ $license->public_id }}</p>
++                @if($archiveFixture)
++                  <p>Archiving removes these terms from the public license page and makes the linked layout-test products unavailable in the public marketplace.</p>
++                @else
++                  <p>Delete this unused definition permanently.</p>
++                @endif
++                <form method="post" action="{{ route('dashboard.licenses.destroy', $license) }}">
++                  @csrf @method('DELETE')
++                  <label class="check-label"><input type="checkbox" name="confirm_remove" value="1" required> Confirm removal</label>
++                  <div class="dialog-actions">
++                    <button class="btn subtle" type="button" data-modal-close>Cancel</button>
++                    <button class="btn danger" type="submit">{{ $archiveFixture ? 'Archive definition' : 'Delete definition' }}</button>
++                  </div>
++                </form>
++              </dialog>
++            @endif
++            @if($editable)
++            @php($restoreEdit = $errors->any() && old('definition_form') === 'edit-'.$license->id)
++            <dialog class="config-dialog wide-dialog" id="license-{{ $license->id }}" @if($restoreEdit) data-license-reopen @endif>
++              <form method="post" action="{{ route('dashboard.licenses.update',$license) }}">
++                @csrf @method('PATCH')
++                <input type="hidden" name="definition_form" value="edit-{{ $license->id }}">
++                <h2>Edit {{ $license->name }}</h2>
++                <p>Public license ID {{ $license->public_id }} · {{ $license->tierLabel() }} · {{ $license->listings_count + $license->extended_listings_count }} referenced products</p>
++                  <label for="license-tier-{{ $license->id }}">License definition type</label>
++                  <select id="license-tier-{{ $license->id }}" name="tier" required>
++                    @foreach(\App\Models\LicenseDefinition::TIERS as $tier=>$label)
++                      <option value="{{ $tier }}" @selected(($restoreEdit ? old('tier') : $license->tier) === $tier)>{{ $label }}</option>
++                    @endforeach
++                  </select>
++                  @if(!$license->tier)<p class="hint">This older definition is unclassified. Assign its type before saving; existing issued licenses keep their terms.</p>@endif
++                  <label for="license-code-{{ $license->id }}">License code (A–Z, 0–9, underscore)</label><input id="license-code-{{ $license->id }}" name="code" value="{{ $restoreEdit ? old('code') : $license->code }}" required maxlength="32">
++                  <label for="license-name-{{ $license->id }}">Display name</label><input id="license-name-{{ $license->id }}" name="name" value="{{ $restoreEdit ? old('name') : $license->name }}" required maxlength="120">
++                  <label for="license-version-{{ $license->id }}">Version</label><input id="license-version-{{ $license->id }}" name="version" value="{{ $restoreEdit ? old('version') : $license->version }}" required placeholder="1.0.0">
++                  <x-license-terms-editor id="license-permissions-{{ $license->id }}" field="permissions" label="Permissions granted" :value="$restoreEdit ? (string) old('permissions') : $license->permissions" :html="$restoreEdit ? old('permissions_html') : $license->permissions_html"/>
++                  <x-license-terms-editor id="license-restrictions-{{ $license->id }}" field="restrictions" label="Restrictions and prohibited uses" :value="$restoreEdit ? (string) old('restrictions') : $license->restrictions" :html="$restoreEdit ? old('restrictions_html') : $license->restrictions_html"/>
++                  <label for="license-status-{{ $license->id }}">Status</label><select id="license-status-{{ $license->id }}" name="status"><option value="draft" @selected(($restoreEdit ? old('status') : $license->status) === 'draft')>Draft</option><option value="active" @selected(($restoreEdit ? old('status') : $license->status) === 'active')>Active</option></select>
++                  <label class="check-label"><input type="checkbox" name="confirm_review" value="1"> I have reviewed these license terms and authorize their publication</label>
++                  <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit">Save license</button></div>
++              </form>
++            </dialog>
++            @endif
++          </td>
++        </tr>
++      @empty<tr><td class="empty-cell" colspan="8">{{ $archived ? 'No archived definitions match.' : 'No license definitions match.' }}</td></tr>@endforelse
++    </tbody>
++  </table></div>
++  <x-pagination :paginator="$licenses"/>
++</section>
++@php($restoreCreate = $errors->any() && old('definition_form') === 'create')
++<dialog class="config-dialog wide-dialog" id="license-create" @if($restoreCreate) data-license-reopen @endif>
++  <form method="post" action="{{ route('dashboard.licenses.store') }}">
++    @csrf
++    <input type="hidden" name="definition_form" value="create">
++    <h2>Create a license definition</h2>
++    <p>Define the rights granted to buyers and the prohibited uses for one license type. Review the draft wording before publishing it.</p>
++    <label for="license-new-tier">License definition type</label>
++    <select id="license-new-tier" name="tier" required>
++      <option value="regular" @selected(!$restoreCreate || old('tier') === 'regular')>Regular License</option>
++      <option value="extended" @selected($restoreCreate && old('tier') === 'extended')>Extended License</option>
++    </select>
++    <label for="license-new-code">License code</label><input id="license-new-code" name="code" value="{{ $restoreCreate ? old('code') : '' }}" placeholder="REGULAR" maxlength="32" required>
++    <label for="license-new-name">License name</label><input id="license-new-name" name="name" value="{{ $restoreCreate ? old('name') : '' }}" maxlength="120" required>
++    <label for="license-new-version">Version</label><input id="license-new-version" name="version" value="{{ $restoreCreate ? old('version') : '1.0.0' }}" required>
++    <x-license-terms-editor id="license-new-permissions" field="permissions" label="Permissions granted" :value="$restoreCreate ? (string) old('permissions') : ''" :html="$restoreCreate ? old('permissions_html') : null"/>
++    <x-license-terms-editor id="license-new-restrictions" field="restrictions" label="Restrictions and prohibited uses" :value="$restoreCreate ? (string) old('restrictions') : ''" :html="$restoreCreate ? old('restrictions_html') : null"/>
++    <label for="license-new-status">Publication status</label><select id="license-new-status" name="status"><option value="draft">Draft</option><option value="active" @selected($restoreCreate && old('status') === 'active')>Active</option></select>
++    <label class="check-label"><input type="checkbox" name="confirm_review" value="1"> I have reviewed these license terms and authorize their publication</label>
++    <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn primary" type="submit">Create license</button></div>
++  </form>
++</dialog>
+diff --git a/resources/views/dashboard/partials/license-issued.blade.php b/resources/views/dashboard/partials/license-issued.blade.php
+new file mode 100644
+index 0000000..0c8faa9
+--- /dev/null
++++ b/resources/views/dashboard/partials/license-issued.blade.php
+@@ -0,0 +1,250 @@
++<section class="panel license-issued-panel" id="issued-product-licenses">
++  <div class="panel-head license-issued-heading">
++    <div class="license-issued-heading-text">
++      <h2>Issued Product Licenses <span class="count">{{ $issued->total() }}</span></h2>
++      <p>Licenses for verified downloadable products. License definitions do not create customer keys.</p>
++    </div>
++    @if(auth()->user()->role === 'super_admin')
++      <button class="btn primary license-issue-trigger" type="button" data-modal-open="license-issue-dialog">
++        <x-icon name="key-round" size="17"/> Manual License
++      </button>
++    @endif
++  </div>
++  <div class="license-issued-controls">
++    <form class="license-issued-search" method="get" action="{{ route('dashboard.licenses.index') }}#issued-product-licenses" role="search">
++      <input type="hidden" name="tab" value="products">
++      <label class="sr-only" for="issued-license-search">Search issued product licenses</label>
++      <span class="license-issued-search-field"><x-icon name="search" size="17"/>
++        <input id="issued-license-search" name="issued_search" type="search" value="{{ $issuedSearch }}"
++          maxlength="120" placeholder="License, product, customer, domain..." autocomplete="off"></span>
++      <label class="sr-only" for="issued-license-sort">Sort issued product licenses</label>
++      <select id="issued-license-sort" name="issued_sort" aria-label="Sort issued product licenses">
++        <option value="recent" @selected($issuedSort==='recent')>Recent (newest first)</option>
++        <option value="oldest" @selected($issuedSort==='oldest')>Oldest first</option>
++        <option value="updated" @selected($issuedSort==='updated')>Recently updated</option>
++        <option value="status" @selected($issuedSort==='status')>Status A–Z</option>
++      </select>
++      <button type="submit" class="btn subtle"><x-icon name="search" size="16"/> Search</button>
++      @if($issuedSearch !== '' || $issuedSort !== 'recent')
++        <a class="btn subtle" href="{{ route('dashboard.licenses.index',['tab' => 'products']) }}#issued-product-licenses">Reset</a>
++      @endif
++    </form>
++  </div>
++  @if(auth()->user()->role === 'super_admin')
++    <dialog class="config-dialog wide-dialog license-issue-dialog" id="license-issue-dialog" aria-labelledby="license-issue-heading">
++      <div class="license-issue-modal-head">
++        <div><span class="eyebrow">Product licensing</span>
++          <h2 id="license-issue-heading">Issue Manual License</h2>
++          <p>Assign a complimentary license to an eligible product and customer.</p></div>
++        <button class="btn subtle compact" type="button" data-modal-close aria-label="Close manual license dialog"><x-icon name="x" size="18"/></button>
++      </div>
++      <form method="post" action="{{ route('dashboard.licenses.issue') }}" class="license-workflow-form">
++        @csrf
++        <label for="issued-entitlement">Approved product / release / recipient</label>
++        <select id="issued-entitlement" name="product_entitlement_id" required>
++          <option value="">Choose an active entitlement with an approved downloadable original</option>
++          @foreach($issuable as $grant)
++            <option value="{{ $grant->id }}" @selected((string)old('product_entitlement_id')===(string)$grant->id)>
++              {{ $grant->version?->product?->title }} · {{ $grant->version?->version }}
++              · Customer {{ $grant->recipient?->public_id }} · Entitlement #{{ $grant->id }}
++            </option>
++          @endforeach
++        </select>
++        @if($issuable->isEmpty())
++          <p class="hint">No eligible entitlements yet. Approve the downloadable product and its file entitlement before issuing a key.</p>
++        @endif
++        <p class="hint">Product rights, malware screening, license terms and file integrity are checked again on the server.</p>
++        <div class="license-issue-fields">
++          <div><label for="issued-tier">License tier</label>
++            <select id="issued-tier" name="tier" required>
++              <option value="regular" @selected(old('tier','regular')==='regular')>Regular License</option>
++              <option value="extended" @selected(old('tier')==='extended')>Extended License (when offered)</option>
++            </select></div>
++          <div><label for="initial-support-term">Product support period</label>
++            <select name="support_term" id="initial-support-term" required>
++              @foreach(\App\Support\ProductLicenseSupport::TERMS as $term=>$label)
++                <option value="{{ $term }}" @selected(old('support_term',\App\Support\ProductLicenseSupport::DEFAULT_TERM)===$term)>{{ $label }}</option>
++              @endforeach
++            </select></div>
++        </div>
++        <p class="hint">License validity is lifetime. Standard support starts at 6 months; an authorized administrator can assign longer complimentary support.</p>
++        <label for="issued-reason">Reason and authorization</label>
++        <textarea id="issued-reason" name="reason" rows="3" minlength="15" maxlength="500" required
++          placeholder="Explain this complimentary issuance.">{{ old('reason') }}</textarea>
++        <label class="check-label"><input type="checkbox" name="confirm_complimentary" value="1" required>
++          I confirm this manually issued license is complimentary and backed by an approved downloadable product and entitlement.</label>
++        <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Cancel</button>
++          <button type="submit" class="btn primary" @disabled($issuable->isEmpty())><x-icon name="key-round" size="17"/> Issue License</button>
++        </div>
++      </form>
++    </dialog>
++  @endif
++  <div class="table-scroll license-issued-scroll" tabindex="0" role="region" aria-label="Issued product license table; scroll horizontally to see all columns">
++    <table class="data-table license-issued-table">
++    <thead><tr><th scope="col">No</th><th scope="col">License</th><th scope="col">Product</th><th scope="col">Customer</th><th scope="col">Terms</th><th scope="col">Period</th><th scope="col">Support</th><th scope="col">Status</th><th scope="col">Domain</th><th scope="col">Action</th></tr></thead>
++    <tbody>
++    @forelse($issued as $item)
++      <tr>
++        <td class="mono">{{ $issued->firstItem() + $loop->index }}</td>
++        <td>
++          <button class="license-table-link mono" type="button" data-modal-open="issued-{{ $item->id }}"
++            aria-label="View license {{ $item->public_id }}">{{ $item->public_id }}</button>
++          <div class="text-muted mono">{{ $item->maskedKey() }}</div>
++        </td>
++        <td>
++          @if($item->product)
++            <button class="license-table-link" type="button" data-modal-open="issued-product-{{ $item->id }}"
++              aria-label="View product {{ $item->product->title }}">{{ $item->product->title }}</button>
++            <div class="license-issued-subrow">
++              <span class="mono">#{{ $item->product->public_id }}</span>
++              <button type="button" class="license-copy-button" data-license-copy-url="{{ $item->product->publicUrl() }}"
++                aria-label="Copy full product URL"><x-icon name="copy" size="15"/> Copy URL</button>
++            </div>
++          @else
++            <span class="text-muted">Unavailable product</span>
++          @endif
++          <div class="text-muted">File v{{ $item->version?->version }}</div>
++        </td>
++        <td class="mono">{{ $item->customer?->public_id }}</td>
++        <td>{{ ucfirst($item->tier) }}<div class="text-muted">{{ $item->definition?->name }} v{{ $item->definition?->version }}</div></td>
++        <td><strong>Lifetime</strong></td>
++        <td>
++          <span class="role-pill {{ $item->supportStatus() === 'Expired' ? 'license-support-expired' : '' }}">{{ $item->supportStatus() }}</span>
++          <span class="license-table-secondary">{{ $item->supportName() }}</span>
++          @if($item->support_expires_at)<span class="license-table-secondary">Until {{ $item->support_expires_at->format('d M Y') }}</span>@endif
++        </td>
++        <td><span class="role-pill">{{ ucfirst($item->status) }}</span>
++          @unless($item->isActive())<small class="text-muted">Not currently valid</small>@endunless</td>
++        <td><span class="license-domain-cell">{{ $item->activations->where('status','active')->pluck('domain')->implode(', ') ?: 'Not activated' }}</span></td>
++        <td>
++          @if($item->product)
++            <dialog class="config-dialog wide-dialog license-product-dialog" id="issued-product-{{ $item->id }}"
++              aria-labelledby="issued-product-heading-{{ $item->id }}">
++              <h2 id="issued-product-heading-{{ $item->id }}">{{ $item->product->title }}</h2>
++              <p>Product #{{ $item->product->public_id }} · {{ ucfirst($item->product->status) }} · Downloadable product</p>
++              <div class="license-product-summary">
++                <div><small>Product</small><strong>{{ $item->product->title }}</strong></div>
++                <div><small>Release</small><strong>v{{ $item->version?->version ?? 'Unavailable' }}</strong></div>
++                <div><small>License</small><strong>{{ $item->public_id }}</strong></div>
++                <div><small>Customer</small><strong>{{ $item->customer?->public_id }}</strong></div>
++              </div>
++              <div class="license-product-description">
++                <h3>Product description</h3>
++                <p>{{ $item->product->description ?: 'No product description available.' }}</p>
++              </div>
++              <label class="license-product-url-label" for="issued-product-url-{{ $item->id }}">Full product URL</label>
++              <div class="license-product-url-row">
++                <input id="issued-product-url-{{ $item->id }}" type="text" readonly value="{{ $item->product->publicUrl() }}">
++                <button class="btn subtle compact" type="button" data-license-copy-url="{{ $item->product->publicUrl() }}">
++                  <x-icon name="copy" size="16"/> Copy URL</button>
++              </div>
++              <div class="dialog-actions">
++                <button class="btn subtle" type="button" data-modal-open="issued-{{ $item->id }}" data-modal-close>License details</button>
++                @if($item->product->status === 'published')
++                  <a class="btn subtle" href="{{ $item->product->publicUrl() }}" target="_blank" rel="noopener noreferrer">
++                    <x-icon name="external-link" size="16"/> Open product</a>
++                @endif
++                <button type="button" class="btn primary" data-modal-close>Close</button>
++              </div>
++            </dialog>
++          @endif
++          <button class="row-action-trigger license-action-trigger" type="button"
++            id="issued-action-trigger-{{ $item->id }}" popovertarget="issued-actions-{{ $item->id }}"
++            aria-haspopup="menu" aria-expanded="false" aria-label="Actions for product license {{ $item->public_id }}">
++            <x-icon name="ellipsis-vertical" size="19"/>
++          </button>
++          <div id="issued-actions-{{ $item->id }}" popover="auto"
++            class="row-action-popover license-action-popover" data-row-action-menu data-license-action-menu data-row-action-anchor="issued-action-trigger-{{ $item->id }}"
++            aria-label="Product license actions">
++            <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
++              data-license-focus="issued-{{ $item->id }}-heading"><x-icon name="eye" size="16"/> License details</button>
++            <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
++              data-license-focus="issued-{{ $item->id }}-history"><x-icon name="history" size="16"/> Activation history</button>
++            @if($item->status !== 'revoked')
++              <div class="license-action-separator"></div>
++              @if($item->status === 'active')
++                <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
++                  data-license-focus="issued-{{ $item->id }}-status" data-license-select="suspend">
++                  <x-icon name="pause-circle" size="16"/> Suspend license</button>
++              @else
++                <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
++                  data-license-focus="issued-{{ $item->id }}-status" data-license-select="activate">
++                  <x-icon name="play-circle" size="16"/> Activate license</button>
++              @endif
++              @if($item->tier === 'regular' && $item->product?->extended_price !== null)
++                <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
++                  data-license-focus="issued-{{ $item->id }}-upgrade"><x-icon name="shield" size="16"/> Upgrade to Extended</button>
++              @endif
++              <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
++                data-license-focus="issued-{{ $item->id }}-domain"><x-icon name="globe" size="16"/> Change domain</button>
++              <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
++                data-license-focus="issued-{{ $item->id }}-rotate"><x-icon name="refresh-cw" size="16"/> Rotate license key</button>
++              <div class="license-action-separator"></div>
++              <button type="button" data-license-action data-modal-open="issued-{{ $item->id }}"
++                data-license-focus="issued-{{ $item->id }}-status" data-license-select="revoke"
++                class="is-danger"><x-icon name="ban" size="16"/> Revoke license</button>
++            @endif
++          </div>
++          <dialog class="config-dialog wide-dialog" id="issued-{{ $item->id }}">
++            <h2 id="issued-{{ $item->id }}-heading">Manage issued product license</h2>
++            <p>License {{ $item->public_id }} · {{ $item->product?->title }} · {{ ucfirst($item->tier) }} · {{ ucfirst($item->status) }}</p>
++            <p class="hint">The full secret key is available only to its authenticated customer after password confirmation. Domains and administrative changes are recorded below.</p>
++            <div class="license-admin-actions">
++              @if($item->status !== 'revoked')
++                <form id="issued-{{ $item->id }}-status" method="post" action="{{ route('dashboard.licenses.issued.status',$item) }}">
++                  @csrf @method('PATCH')
++                  <label for="status-action-{{ $item->id }}">License status</label>
++                  <select id="status-action-{{ $item->id }}" name="action" required>
++                    @if($item->status==='active')<option value="suspend">Deactivate / suspend</option>@endif
++                    @if($item->status==='suspended')<option value="activate">Reactivate</option>@endif
++                    <option value="revoke">Revoke permanently (not deletable)</option>
++                  </select>
++                  <label>Reason <textarea name="reason" rows="2" minlength="12" maxlength="500" required></textarea></label>
++                  <label class="check-label"><input type="checkbox" name="confirm_change" value="1" required> Confirm this administrative action</label>
++                  <button class="btn primary compact" type="submit">Update status</button>
++                </form>
++                @if($item->tier==='regular' && $item->product?->extended_price !== null)
++                  <form id="issued-{{ $item->id }}-upgrade" method="post" action="{{ route('dashboard.licenses.issued.upgrade',$item) }}">
++                    @csrf @method('PATCH')
++                    <label>Upgrade reason <textarea name="reason" rows="2" minlength="12" maxlength="500" required placeholder="Administrative entitlement to Extended License"></textarea></label>
++                    <label class="check-label"><input type="checkbox" name="confirm_manual_upgrade" value="1" required> Approve manual upgrade to reviewed Extended License (no payment)</label>
++                    <button class="btn subtle compact" type="submit">Upgrade to Extended</button>
++                  </form>
++                @endif
++                <form id="issued-{{ $item->id }}-domain" method="post" action="{{ route('dashboard.licenses.issued.domain',$item) }}">
++                  @csrf @method('PATCH')
++                  <label>Replacement domain (optional; leave blank to deactivate all)</label>
++                  <input name="domain" placeholder="new.example.com" maxlength="253">
++                  <label>Reason <textarea name="reason" rows="2" minlength="12" maxlength="500" required></textarea></label>
++                  <button class="btn subtle compact" type="submit">Release current domain</button>
++                  <p class="hint">The replacement domain is not auto-activated. The installed script must authenticate with the license key.</p>
++                </form>
++                <form id="issued-{{ $item->id }}-rotate" method="post" action="{{ route('dashboard.licenses.issued.rotate',$item) }}">
++                  @csrf
++                  <label>Key rotation reason <textarea name="reason" rows="2" minlength="12" maxlength="500" required></textarea></label>
++                  <label class="check-label"><input type="checkbox" name="confirm_rotate" value="1" required> Invalidate the old license key permanently</label>
++                  <button class="btn subtle compact" type="submit">Rotate key</button>
++                </form>
++              @else
++                <p class="hint">This key has been permanently revoked. Its event history is retained for accountability.</p>
++              @endif
++            </div>
++            <h3>Domain activation & action history</h3>
++            <div class="license-history" id="issued-{{ $item->id }}-history">
++              @forelse($item->events->take(30) as $event)
++                <div><strong>{{ ucfirst(str_replace('.',' ',$event->action)) }}</strong>
++                <span>{{ $event->previous_domain ? $event->previous_domain.' → ' : '' }}{{ $event->domain }}
++                  · {{ $event->created_at->format('d M Y H:i') }}
++                  · {{ $event->actor?->name ?? 'Installer API' }}
++                  @if($event->reason) · {{ $event->reason }} @endif</span></div>
++              @empty <p class="hint">No events recorded.</p> @endforelse
++            </div>
++            <div class="dialog-actions"><button type="button" class="btn subtle" data-modal-close>Close</button></div>
++          </dialog>
++        </td>
++      </tr>
++    @empty<tr><td colspan="10" class="empty-cell">{{ $issuedSearch !== '' ? 'No issued licenses match your search.' : 'No issued product licenses yet. An approved downloadable product and entitlement are required.' }}</td></tr>@endforelse
++    </tbody>
++  </table></div>
++  <x-pagination :paginator="$issued"/>
++</section>
+diff --git a/resources/views/dashboard/partials/license-renewals.blade.php b/resources/views/dashboard/partials/license-renewals.blade.php
+new file mode 100644
+index 0000000..a9a8b92
+--- /dev/null
++++ b/resources/views/dashboard/partials/license-renewals.blade.php
+@@ -0,0 +1,64 @@
++<section class="panel" id="support-renewal-requests">
++  <div class="panel-head">
++    <div>
++      <h2>Support renewals <span class="count">{{ $supportRenewals->total() }}</span></h2>
++      <p>Support periods renew independently from lifetime product licenses.</p>
++    </div>
++  </div>
++  <div class="table-scroll">
++    <table class="data-table">
++      <thead><tr><th>Product / License</th><th>Customer</th><th>Requested support</th><th>Status</th><th>Requested on</th><th>Action</th></tr></thead>
++      <tbody>
++        @forelse($supportRenewals as $renewal)
++          <tr>
++            <td>
++              <strong>{{ $renewal->license?->product?->title ?? 'Unavailable product' }}</strong>
++              <span class="license-table-secondary mono">{{ $renewal->license?->public_id }}</span>
++              <span class="license-table-secondary">License period: Lifetime</span>
++            </td>
++            <td class="mono">{{ $renewal->requester?->public_id }}</td>
++            <td>{{ \App\Support\ProductLicenseSupport::TERMS[$renewal->term] ?? 'Unknown' }}</td>
++            <td><span class="role-pill">{{ ucfirst($renewal->status) }}</span></td>
++            <td>{{ $renewal->created_at?->format('d M Y') }}</td>
++            <td>
++              @if($renewal->status==='pending' && auth()->user()->role==='super_admin')
++                <button type="button" class="btn subtle compact" data-modal-open="support-review-{{ $renewal->id }}"><x-icon name="settings" size="16"/> Review</button>
++                <dialog class="config-dialog wide-dialog" id="support-review-{{ $renewal->id }}">
++                  <h2>Support renewal review</h2>
++                  <p>{{ $renewal->license?->product?->title }} · {{ \App\Support\ProductLicenseSupport::TERMS[$renewal->term] ?? 'Unknown' }}</p>
++                  <p class="hint">An approved renewal extends the support period only. It does not charge the customer or alter lifetime licensing.</p>
++                  <form method="post" action="{{ route('dashboard.licenses.support.review',$renewal) }}" class="license-workflow-form">
++                    @csrf
++                    <label for="review-decision-{{ $renewal->id }}">Decision</label>
++                    <select id="review-decision-{{ $renewal->id }}" name="decision" required>
++                      <option value="approve">Approve complimentary support period</option>
++                      <option value="reject">Reject request</option>
++                    </select>
++                    <label for="review-note-{{ $renewal->id }}">Reason and authorization</label>
++                    <textarea id="review-note-{{ $renewal->id }}" name="reason" rows="3" minlength="15" maxlength="500" required></textarea>
++                    <label class="check-label">
++                      <input type="checkbox" name="confirm_manual" value="1" required>
++                      Confirm this manual decision. No verified payment or financial transaction is recorded.
++                    </label>
++                    <div class="dialog-actions">
++                      <button type="button" class="btn subtle" data-modal-close>Cancel</button>
++                      <button class="btn primary" type="submit">Save decision</button>
++                    </div>
++                  </form>
++                </dialog>
++              @elseif($renewal->reviewed_at)
++                <span class="license-table-secondary">{{ $renewal->reviewed_at->format('d M Y') }}</span>
++                @if($renewal->review_note)<span class="license-table-secondary">{{ $renewal->review_note }}</span>@endif
++              @else
++                <span class="text-muted">Pending review</span>
++              @endif
++            </td>
++          </tr>
++        @empty
++          <tr><td colspan="6" class="empty-cell">No support renewal requests yet.</td></tr>
++        @endforelse
++      </tbody>
++    </table>
++  </div>
++  <x-pagination :paginator="$supportRenewals"/>
++</section>
+diff --git a/resources/views/licenses/show.blade.php b/resources/views/licenses/show.blade.php
+index 91fab7e..3c948e7 100644
+--- a/resources/views/licenses/show.blade.php
++++ b/resources/views/licenses/show.blade.php
+@@ -1,6 +1,7 @@
+ @extends('layouts.main')
+ @section('title',$license->name)
+ @section('content')
++<link rel="stylesheet" href="{{ asset('css/license-manager.css') }}?v=1">
+ <div class="container inner-page">
+   <article class="panel editorial-page">
+     <div class="eyebrow">Bambodia · Digital Product License</div>
+@@ -8,9 +9,9 @@
+     <p class="text-muted">{{ $license->tierLabel() }} · Code {{ $license->code }} · Version {{ $license->version }} · Published {{ $license->published_at?->format('d M Y') }}</p>
+     <p>{{ $license->tier ? \App\Models\LicenseDefinition::tierDescription($license->tier) : 'This definition predates license-type classification. Its published permissions and restrictions govern actual usage rights.' }}</p>
+     <h2>Licensed permissions</h2>
+-    <div class="policy-copy">{!! nl2br(e($license->permissions)) !!}</div>
++    <div class="policy-copy license-terms-copy">{!! $license->permissionsMarkup() !!}</div>
+     <h2>Restrictions</h2>
+-    <div class="policy-copy">{!! nl2br(e($license->restrictions)) !!}</div>
++    <div class="policy-copy license-terms-copy">{!! $license->restrictionsMarkup() !!}</div>
+     <p class="hint">Rights apply according to the published license text for the relevant product. The marketplace has not enabled checkout or license delivery.</p>
+   </article>
+ </div>
+diff --git a/routes/web.php b/routes/web.php
+index 59881d8..dfb5436 100644
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -439,6 +439,8 @@
+             Route::get('/license-manager', [LicenseManagerController::class, 'index'])->name('dashboard.licenses.index');
+             Route::post('/license-manager', [LicenseManagerController::class, 'store'])->name('dashboard.licenses.store');
+             Route::patch('/license-manager/{license}', [LicenseManagerController::class, 'update'])->name('dashboard.licenses.update');
++            Route::delete('/license-manager/{license}', [LicenseManagerController::class, 'destroy'])
++                ->name('dashboard.licenses.destroy')->middleware('throttle:10,1');
+             Route::post('/license-manager/issue', [IssuedLicenseController::class,'issue'])
+                 ->name('dashboard.licenses.issue')->middleware('throttle:5,1');
+             Route::patch('/license-manager/issued/{license}/status', [IssuedLicenseController::class,'status'])
