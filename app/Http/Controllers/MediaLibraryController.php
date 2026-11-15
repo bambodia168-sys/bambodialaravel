@@ -22,8 +22,8 @@ class MediaLibraryController extends Controller
 {
     public function index(Request $request): View
     {
-        $studio = $request->routeIs('studio.media.*', 'account.media.*');
-        $accountMedia = $request->routeIs('account.media.*');
+        $accountMedia = $request->routeIs('account.media.*', 'localized.*.account.media.*');
+        $studio = $accountMedia || $request->routeIs('studio.media.*', 'localized.*.studio.media.*');
         $routePrefix = $accountMedia ? 'account.media' : ($studio ? 'studio.media' : 'dashboard.media');
         $assets = MediaAsset::query()
             ->with('owner:id,name,public_id')
@@ -270,7 +270,7 @@ class MediaLibraryController extends Controller
 
     private function authorizeAsset(Request $request, MediaAsset $asset): void
     {
-        if ($request->routeIs('studio.media.*', 'account.media.*')) {
+        if ($request->routeIs('studio.media.*', 'account.media.*', 'localized.*.studio.media.*', 'localized.*.account.media.*')) {
             abort_unless((int) $asset->user_id === (int) $request->user()->id, 404);
             return;
         }
