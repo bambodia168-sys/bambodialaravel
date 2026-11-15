@@ -1,0 +1,31 @@
+name: Media upload workspace
+on:
+  pull_request:
+    paths:
+      - 'app/Http/Controllers/MediaLibraryController.php'
+      - 'resources/views/media/**'
+      - 'public/js/media-upload.js'
+      - 'public/css/media-upload.css'
+      - 'tests/Feature/MediaUploadWorkspaceTest.php'
+      - 'support/operator/media-multiple-upload-aapanel.sh'
+      - '.github/workflows/media-upload.yml'
+permissions:
+  contents: read
+jobs:
+  media-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, pdo_sqlite, fileinfo, xml, curl, zip
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan test --filter='MediaUploadWorkspaceTest|MediaLibraryPrivateVideoTest|ProductMediaLicenseTest'
+          php artisan view:cache
+          bash -n support/operator/media-multiple-upload-aapanel.sh
+          node --check public/js/media-upload.js

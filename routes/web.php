@@ -257,6 +257,7 @@ Route::middleware('auth')->group(function (): void {
         ->name('account.licenses.support.request')->middleware('throttle:3,1');
     // Every signed-in member can manage only their own Media Library.
     Route::get('/account/media-library', [MediaLibraryController::class, 'index'])->name('account.media.index');
+    Route::get('/account/media-library/upload', [MediaLibraryController::class, 'create'])->name('account.media.create');
     Route::post('/account/media-library', [MediaLibraryController::class, 'store'])
         ->name('account.media.store')->middleware('throttle:10,1');
     Route::patch('/account/media-library/{asset}', [MediaLibraryController::class, 'update'])->name('account.media.update');
@@ -315,6 +316,7 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/products', [CreatorProductController::class, 'store'])->name('studio.products.store')->middleware('throttle:10,1');
         Route::patch('/products/{product}', [CreatorProductController::class, 'update'])->name('studio.products.update')->middleware('throttle:10,1');
         Route::get('/media-library', [MediaLibraryController::class, 'index'])->name('studio.media.index');
+        Route::get('/media-library/upload', [MediaLibraryController::class, 'create'])->name('studio.media.create');
         Route::post('/media-library', [MediaLibraryController::class, 'store'])->name('studio.media.store')->middleware('throttle:10,1');
         Route::patch('/media-library/{asset}', [MediaLibraryController::class, 'update'])->name('studio.media.update');
         Route::delete('/media-library/{asset}', [MediaLibraryController::class, 'destroy'])->name('studio.media.destroy');
@@ -443,6 +445,7 @@ Route::middleware('auth')->group(function (): void {
                 Route::delete('/cloud-storage', [CloudStorageController::class, 'destroy'])->name('dashboard.cloud-storage.destroy')->middleware('throttle:3,1');
             });
             Route::get('/media-library', [MediaLibraryController::class, 'index'])->name('dashboard.media.index');
+            Route::get('/media-library/upload', [MediaLibraryController::class, 'create'])->name('dashboard.media.create');
             Route::post('/media-library', [MediaLibraryController::class, 'store'])->name('dashboard.media.store')->middleware('throttle:10,1');
             Route::patch('/media-library/{asset}', [MediaLibraryController::class, 'update'])->name('dashboard.media.update');
             Route::delete('/media-library/{asset}', [MediaLibraryController::class, 'destroy'])->name('dashboard.media.destroy');
