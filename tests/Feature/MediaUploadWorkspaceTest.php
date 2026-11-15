@@ -74,4 +74,66 @@ final class MediaUploadWorkspaceTest extends TestCase
         $this->get('/account/media-library/upload')->assertRedirect('/login');
         $this->actingAs($this->member('customer'))->get('/dashboard/media-library/upload')->assertForbidden();
     }
+
+    public function test_unused_media_can_be_edited_and_deleted_in_every_workspace(): void
+    {
+        Storage::fake('local');
+        foreach (['dashboard' => 'admin', 'studio' => 'freelancer', 'account' => 'customer'] as $prefix => $role) {
+            $owner = $this->member($role);
+            $this->actingAs($owner)->postJson("/$prefix/media-library", ['image' => $this->image()])->assertCreated();
+            $asset = MediaAsset::query()->where('user_id', $owner->id)->firstOrFail();
+            $url = "/$prefix/media-library/".$asset->id;
+            $this->get($url)->assertOk()->assertSee('Delete unused media');
+            $this->patch($url, ['alt_text' => 'Updated description', 'rights_basis' => '', 'rights_holder' => '', 'rights_note' => ''])
+                ->assertRedirect($url)->assertSessionHasNoErrors();
+            $this->assertSame('Updated description', $asset->fresh()->alt_text);
+            $this->assertSame('', $asset->fresh()->rights_holder);
+            $this->delete($url)->assertRedirect("/$prefix/media-library");
+            $this->assertModelMissing($asset);
+            Storage::disk('local')->assertMissing($asset->storage_path);
+        }
+    }
+
+    public function test_gallery_references_match_ui_and_return_useful_html_error_while_allowing_edits(): void
+    {
+        Storage::fake('local');
+        $owner = $this->member('customer');
+        $this->actingAs($owner)->postJson('/account/media-library', ['image' => $this->image()])->assertCreated();
+        $asset = MediaAsset::query()->firstOrFail();
+        $listing = \App\Models\MarketplaceListing::query()->create([
+            'user_id' => $owner->id, 'type' => 'service', 'title' => 'Gallery example',
+            'description' => 'Example gallery', 'status' => 'draft', 'gallery_media_ids' => [$asset->id],
+        ]);
+        $url = '/account/media-library/'.$asset->id;
+        $this->get('/account/media-library')->assertOk()->assertSee('1 listing(s), including galleries')->assertDontSee('Delete unused media');
+        $this->get($url)->assertOk()->assertDontSee('Delete unused media')->assertSee('Save media details');
+        $this->delete($url)->assertRedirect($url)->assertSessionHasErrors('media');
+        Storage::disk('local')->assertExists($asset->storage_path);
+        $this->patch($url, ['alt_text' => 'Edited while linked'])->assertRedirect($url)->assertSessionHasNoErrors();
+        $this->assertSame('Edited while linked', $asset->fresh()->alt_text);
+        $listing->update(['gallery_media_ids' => [(string) $asset->id]]);
+        $this->deleteJson($url)->assertStatus(409);
+        $listing->update(['gallery_media_ids' => []]);
+        $this->delete($url)->assertRedirect('/account/media-library');
+        $this->assertModelMissing($asset);
+    }
+
+    public function test_blog_reference_blocks_deletion_and_other_owners_cannot_edit_or_delete(): void
+    {
+        Storage::fake('local');
+        $owner = $this->member('customer');
+        $this->actingAs($owner)->postJson('/account/media-library', ['image' => $this->image()])->assertCreated();
+        $asset = MediaAsset::query()->firstOrFail();
+        \App\Models\ContentEntry::query()->create([
+            'author_id' => $owner->id, 'type' => 'post', 'title' => 'Media post', 'body' => 'Body',
+            'status' => 'draft', 'featured_media_id' => $asset->id,
+        ]);
+        $url = '/account/media-library/'.$asset->id;
+        $this->get($url)->assertOk()->assertSee('1 content entry/entries')->assertDontSee('Delete unused media');
+        $this->delete($url)->assertRedirect($url)->assertSessionHasErrors('media');
+        $this->actingAs($this->member('customer'))->get($url)->assertNotFound();
+        $this->patch($url, ['alt_text' => 'Unauthorized'])->assertNotFound();
+        $this->delete($url)->assertNotFound();
+        $this->assertModelExists($asset);
+    }
 }

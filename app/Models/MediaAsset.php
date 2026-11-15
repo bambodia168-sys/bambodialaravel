@@ -55,6 +55,27 @@ class MediaAsset extends Model
         return $this->hasMany(MarketplaceListing::class, 'cover_media_id');
     }
 
+    /** Use the same reference checks in the library and delete action. */
+    public function usageSummary(): array
+    {
+        $uses = [];
+        $listingCount = MarketplaceListing::query()->where(function ($query): void {
+            $query->where('cover_media_id', $this->id)->orWhere('featured_media_id', $this->id)
+                ->orWhereJsonContains('gallery_media_ids', (int) $this->id)
+                ->orWhereJsonContains('gallery_media_ids', (string) $this->id);
+        })->count();
+        $jobCount = MarketplaceJob::query()->where(function ($query): void {
+            $query->where('featured_media_id', $this->id)
+                ->orWhereJsonContains('gallery_media_ids', (int) $this->id)
+                ->orWhereJsonContains('gallery_media_ids', (string) $this->id);
+        })->count();
+        $postCount = ContentEntry::query()->where('featured_media_id', $this->id)->count();
+        if ($listingCount) $uses[] = $listingCount.' listing(s), including galleries';
+        if ($jobCount) $uses[] = $jobCount.' job(s), including galleries';
+        if ($postCount) $uses[] = $postCount.' content entry/entries';
+        return $uses;
+    }
+
     public function isApproved(): bool
     {
         return $this->review_status === 'approved';

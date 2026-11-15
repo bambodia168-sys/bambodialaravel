@@ -145,36 +145,61 @@ class MediaLibraryController extends Controller
                 ->with('status', 'Media uploaded to your private library.');
     }
 
+    public function edit(Request $request, MediaAsset $asset): View
+    {
+        $this->authorizeAsset($request, $asset);
+        $accountMedia = $request->routeIs('account.media.*');
+        $studio = $accountMedia || $request->routeIs('studio.media.*');
+        $routePrefix = $accountMedia ? 'account.media' : ($studio ? 'studio.media' : 'dashboard.media');
+        return view('media.edit', compact('asset', 'accountMedia', 'studio', 'routePrefix'));
+    }
+
+    private function libraryRoutePrefix(Request $request): string
+    {
+        return $request->routeIs('account.media.*') ? 'account.media'
+            : ($request->routeIs('studio.media.*') ? 'studio.media' : 'dashboard.media');
+    }
+
     public function update(Request $request, MediaAsset $asset): RedirectResponse
     {
         $this->authorizeAsset($request, $asset);
         $values = $this->validateMetadata($request);
         $asset->update($values);
 
-        return back()->with('status', 'Media details updated.');
+        return redirect()->route($this->libraryRoutePrefix($request).'.edit', $asset)
+            ->with('status', 'Media details updated.');
     }
 
     public function destroy(Request $request, MediaAsset $asset): RedirectResponse
     {
         $this->authorizeAsset($request, $asset);
 
-        $fileLocation = DB::transaction(function () use ($asset): array {
+        $blockedUsage = [];
+        $fileLocation = DB::transaction(function () use ($asset, &$blockedUsage): ?array {
             $asset = MediaAsset::query()->lockForUpdate()->findOrFail($asset->id);
-            abort_if($asset->coverListings()->exists() || $asset->featuredListings()->exists()
-                || $asset->featuredJobs()->exists()
-                || MarketplaceListing::query()->whereJsonContains('gallery_media_ids', $asset->id)->exists()
-                || MarketplaceJob::query()->whereJsonContains('gallery_media_ids', $asset->id)->exists()
-                || ContentEntry::query()->where('type', 'post')->where('featured_media_id', $asset->id)->exists(),
-                409, 'This media is attached to a listing or job and cannot be deleted.');
+            $blockedUsage = $asset->usageSummary();
+            if ($blockedUsage !== []) {
+                return null;
+            }
             $path = $asset->storage_path;
             $asset->delete();
             return [$asset->storage_disk ?: 'local', $path];
         });
 
+        if ($fileLocation === null) {
+            $message = 'This media is used by '.implode('; ', $blockedUsage).'. Remove those references before deleting it. You can still edit its details.';
+            if ($request->expectsJson()) {
+                abort(409, $message);
+            }
+            return redirect()->route($this->libraryRoutePrefix($request).'.edit', $asset)
+                ->withErrors(['media' => $message]);
+        }
+
         Storage::disk($fileLocation[0])->delete($fileLocation[1]);
         AuditEvent::record('media.deleted', $request->user(), $request);
 
-        return back()->with('status', 'Unlinked media item deleted.');
+        return redirect()->route($this->libraryRoutePrefix($request).'.index')
+            ->with('status', 'Unused media deleted.');
     }
 
     public function review(Request $request, MediaAsset $asset): RedirectResponse
