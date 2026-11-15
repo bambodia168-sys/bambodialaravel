@@ -9,6 +9,7 @@ on:
       - 'public/js/media-upload.js'
       - 'public/css/media-upload.css'
       - 'tests/Feature/MediaUploadWorkspaceTest.php'
+      - 'tests/Feature/PostBuilderExperienceTest.php'
       - 'support/operator/media-multiple-upload-aapanel.sh'
       - '.github/workflows/media-upload.yml'
 permissions:
@@ -31,7 +32,7 @@ jobs:
       - run: |
           cp .env.example .env
           php artisan key:generate
-          php artisan test --filter='MediaUploadWorkspaceTest|MediaLibraryPrivateVideoTest|ProductMediaLicenseTest'
+          php artisan test --filter='MediaUploadWorkspaceTest|MediaLibraryPrivateVideoTest|ProductMediaLicenseTest|PostBuilderExperienceTest'
           php artisan view:cache
           bash -n support/operator/media-multiple-upload-aapanel.sh
           bash -n support/operator/media-edit-delete-aapanel.sh

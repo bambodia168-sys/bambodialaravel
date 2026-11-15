@@ -165,7 +165,12 @@ class PostBuilderExperienceTest extends TestCase
         $this->assertSame($media->id, $post->featured_media_id);
         $this->get($post->publicUrl())->assertOk()->assertSee($media->previewUrl());
         $this->get($media->previewUrl())->assertOk();
-        $this->delete(route('dashboard.media.destroy', $media))->assertStatus(409);
+        $this->delete(route('dashboard.media.destroy', $media))
+            ->assertRedirect(route('dashboard.media.edit', $media))
+            ->assertSessionHasErrors('media');
+        $this->assertDatabaseHas('media_assets', ['id' => $media->id]);
+        Storage::disk('local')->assertExists($media->storage_path);
+        $this->deleteJson(route('dashboard.media.destroy', $media))->assertStatus(409);
         $this->delete(route('dashboard.posts.destroy', $post), ['confirm_title'=>'incorrect title'])
             ->assertSessionHasErrors('confirm_title');
         $this->assertDatabaseHas('content_entries', ['id'=>$post->id]);
