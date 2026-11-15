@@ -65,10 +65,10 @@ class SharedRowActionMenuTest extends TestCase
     public function test_row_menus_share_one_component_across_existing_action_tables(): void
     {
         $required = [
-            'dashboard/policies', 'dashboard/knowledge-index', 'dashboard/jobs',
-            'dashboard/products', 'dashboard/reviews', 'dashboard/users',
+            'dashboard/policies', 'dashboard/knowledge-index', 'dashboard/partials/marketplace-actions',
+            'dashboard/reviews', 'dashboard/users',
             'dashboard/contracts', 'dashboard/contract-disputes', 'dashboard/support',
-            'dashboard/marketplace', 'dashboard/creator-applications',
+            'dashboard/creator-applications',
             'dashboard/categories', 'dashboard/features', 'dashboard/entitlements',
             'dashboard/privacy-requests', 'dashboard/vault-versions',
             'dashboard/contents', 'dashboard/site-settings',

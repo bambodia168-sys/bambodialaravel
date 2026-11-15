@@ -8,6 +8,8 @@ use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\MediaAsset;
 use App\Models\User;
+use App\Support\MarketplaceManagement;
+use App\Support\PreviewContentReview;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +29,7 @@ class UserOwnershipTransferController extends Controller
         $item=$this->ownedItem($user,$data['type'],(int)$data['id']);
         return view('dashboard.user-transfer',[
             'member'=>$user,'item'=>$item,'type'=>$data['type'],
+            'fromManager'=>$request->routeIs('dashboard.marketplace.transfer'),
         ]);
     }
 
@@ -55,8 +58,15 @@ class UserOwnershipTransferController extends Controller
         DB::transaction(function()use($user,$target,$data,$request){
             // Lock all participating accounts before the resource to serialize admin changes.
             User::query()->whereIn('id',[$user->id,$target->id])->orderBy('id')->lockForUpdate()->get();
-            abort_unless(User::query()->whereKey($target->id)->where('account_status','active')->exists(),409);
+            $recipient = User::query()->findOrFail($target->id);
+            abort_unless($recipient->account_status === 'active' && $recipient->role === $target->role, 409,
+                'The recipient account changed. Check the recipient and try again.');
             $item=$this->ownedItem($user,$data['type'],(int)$data['id'],true);
+            if ($request->routeIs('dashboard.marketplace.transfer.store')) {
+                abort_if(PreviewContentReview::isPreviewTitle($item->title)
+                    || PreviewContentReview::hasCustomerActivity($item), 409,
+                    'This record requires case review before ownership can be transferred.');
+            }
             if($data['type']==='job'){
                 abort_if(DB::table('job_proposals')->where('marketplace_job_id',$item->id)->exists(),409,
                     'This job has proposals; transfer requires case review.');
@@ -89,7 +99,11 @@ class UserOwnershipTransferController extends Controller
             AuditEvent::record('user.resource.transferred',$request->user(),$request);
         },3);
 
-        return redirect()->route('dashboard.users.show',$user)
+        $destination = $request->routeIs('dashboard.marketplace.transfer.store')
+            ? MarketplaceManagement::indexUrl($data['type'])
+            : route('dashboard.users.show', $user);
+
+        return redirect($destination)
             ->with('status','Ownership transfer completed and recorded in the audit trail.');
     }
 

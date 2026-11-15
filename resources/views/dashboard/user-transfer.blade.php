@@ -5,7 +5,7 @@
   <div class="page-intro user-manager-header"><div>
     <div class="eyebrow">User Manager / Ownership</div><h1>Transfer {{ ucfirst($type) }}</h1>
     <p>Move an eligible marketplace record to another active user without changing its public reference.</p>
-  </div><a class="btn subtle" href="{{ route('dashboard.users.show',$member) }}"><x-icon name="arrow-left" size="16"/> Back to user</a></div>
+  </div><a class="btn subtle" href="{{ $fromManager ? \App\Support\MarketplaceManagement::indexUrl($type) : route('dashboard.users.show', $member) }}"><x-icon name="arrow-left" size="16"/> {{ $fromManager ? 'Back to manager' : 'Back to user' }}</a></div>
 
   <div class="user-manager-two-cols">
     <section class="panel">
@@ -21,7 +21,7 @@
     </section>
     <section class="panel">
       <div class="panel-head"><h2>New owner</h2></div>
-      <form method="post" action="{{ route('dashboard.users.transfer.store',$member) }}" class="user-manager-transfer-form">
+      <form method="post" action="{{ route($fromManager ? 'dashboard.marketplace.transfer.store' : 'dashboard.users.transfer.store', $member) }}" class="user-manager-transfer-form">
         @csrf
         <input type="hidden" name="type" value="{{ $type }}">
         <input type="hidden" name="id" value="{{ $item->id }}">

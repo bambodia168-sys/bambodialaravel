@@ -9,6 +9,7 @@ use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Support\MarketplaceManagement;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -34,14 +35,14 @@ class DashboardController extends Controller
                  'count' => CreatorApplication::query()->where('status', 'pending')->count(),
                  'route' => 'dashboard.creator-applications', 'icon' => 'user-round-check'],
                 ['label' => 'All listings awaiting review',
-                 'count' => MarketplaceListing::query()->where('status', 'pending')->count(),
+                 'count' => MarketplaceListing::query()->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)->count(),
                  'route' => 'dashboard.reviews', 'icon' => 'layers'],
                 ['label' => 'Digital products awaiting review',
-                 'count' => MarketplaceListing::query()->where('status', 'pending')->where('type', 'product')->count(),
-                 'route' => 'dashboard.products.index', 'params' => ['status' => 'pending'], 'icon' => 'package'],
+                 'count' => MarketplaceListing::query()->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)->where('type', 'product')->count(),
+                 'route' => 'dashboard.products.index', 'params' => ['status' => 'review_queue'], 'icon' => 'package'],
                 ['label' => 'Job posts awaiting review',
-                 'count' => MarketplaceJob::query()->where('status', 'pending')->count(),
-                 'route' => 'dashboard.jobs.index', 'icon' => 'briefcase'],
+                 'count' => MarketplaceJob::query()->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)->count(),
+                 'route' => 'dashboard.jobs.index', 'params' => ['status' => 'review_queue'], 'icon' => 'briefcase'],
                 ['label' => 'Unresolved contract disputes',
                  'count' => ContractDispute::query()->whereIn('status', ['open', 'under_review'])->count(),
                  'route' => 'dashboard.contracts.disputes', 'icon' => 'shield'],
@@ -52,7 +53,7 @@ class DashboardController extends Controller
         $recent = $isStaff
             ? SupportTicket::query()->whereIn('status', ['open', 'in_progress'])
                 ->latest('updated_at')->limit(5)->get(['id', 'public_id', 'subject', 'status', 'updated_at'])
-            : MarketplaceListing::query()->where('status', 'pending')
+            : MarketplaceListing::query()->whereIn('status', MarketplaceManagement::REVIEW_STATUSES)
                 ->latest()->limit(5)->get(['id', 'type', 'title', 'status', 'created_at']);
 
         return view('dashboard.index', compact('isStaff', 'stats', 'queues', 'recent'));

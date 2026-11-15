@@ -2,6 +2,8 @@
 @section('title', 'Builder Studio')
 @section('content')
 @php
+  use App\Support\MarketplaceManagement;
+
   $types = [
     'product'=>['label'=>'Product','icon'=>'package','text'=>'Licensed digital products and original source files'],
     'project'=>['label'=>'Project','icon'=>'layers','text'=>'Present your project with scope and deliverables'],
@@ -12,14 +14,20 @@
   $editing = $record !== null;
   $isProduct = $type === 'product';
   $isJob = $type === 'job';
-  $back = $isJob ? route('jobs.mine') : ($isProduct ? route('studio.products.index') : route('studio.listings'));
-  $action = $isJob
+  $managed = $managerMode !== null;
+  $back = $managed ? MarketplaceManagement::indexUrl($type) : ($isJob ? route('jobs.mine') : ($isProduct ? route('studio.products.index') : route('studio.listings')));
+  $action = $managed ? route('builder.manage.update', ['type' => $type, 'publicId' => $record->public_id]) : ($isJob
     ? ($editing ? url('/builder?='.$record->public_id) : route('jobs.store'))
     : ($isProduct
       ? ($editing ? route('studio.products.update',$record) : route('studio.products.store'))
-      : ($editing ? route('studio.listings.update',$record) : route('studio.listings.store')));
+      : ($editing ? route('studio.listings.update',$record) : route('studio.listings.store'))));
+  $mediaUrl = fn ($asset) => $managerMode === 'preview'
+    ? route('dashboard.marketplace.asset', ['type' => $type, 'publicId' => $record->public_id, 'mediaId' => $asset->public_id])
+    : $asset->previewUrl();
+  $productCover = $managed && $isProduct ? $assets->firstWhere('id', $record->cover_media_id) : null;
+  $statusLabel = $editing ? (MarketplaceManagement::STATUSES[$record->status] ?? ucfirst($record->status)) : null;
   $shareUrl = $editing
-    ? ($record->status === 'published' ? $record->publicUrl() : url('/builder?='.$record->public_id))
+    ? ($record->status === 'published' ? $record->publicUrl() : ($managed ? MarketplaceManagement::builderUrl($record, true) : url('/builder?='.$record->public_id)))
     : null;
   $selectedKind = old('featured_kind', $record?->featured_kind ?? 'none');
   $selectedMedia = old('featured_media_id', $record?->featured_media_id);
@@ -37,7 +45,7 @@
       <div class="studio-landing-hero-content">
         <span class="studio-landing-eyebrow"><x-icon name="shield" size="16"/> Creative workspace</span>
         <h1 id="studio-editor-heading">Builder Studio</h1>
-        <p>{{ $editing ? 'Review and manage your '.$types[$type]['label'].' submission.' : 'Create a professional '.$types[$type]['label'].' in one focused workspace.' }}</p>
+        <p>{{ $managed ? 'Manage this listing from the '.$types[$type]['label'].' Manager.' : ($editing ? 'Review and manage your '.$types[$type]['label'].' submission.' : 'Create a professional '.$types[$type]['label'].' in one focused workspace.') }}</p>
       </div>
     </section>
   @else
@@ -54,7 +62,7 @@
 
   <nav class="studio-types" aria-label="Builder content type">
     @foreach($types as $key=>$meta)
-      @continue(!in_array($key, $allowedTypes, true))
+      @continue($managed || !in_array($key, $allowedTypes, true))
       <a class="studio-type {{ $type===$key?'is-active':'' }}"
          href="{{ route('builder',['type'=>$key]) }}"
          @if($type===$key)aria-current="page"@endif>
@@ -67,7 +75,7 @@
       </a>
     @else
       <div class="studio-type-actions" role="group" aria-label="Builder tools">
-        @if($canEdit)
+        @if($canEdit && !$managed)
           <button type="button" class="studio-tool-action" data-modal-open="studio-ai-draft" @disabled(!$aiDraftReady)
                   title="{{ $aiDraftReady ? 'Write a draft with AI; review before applying' : 'AI provider not enabled by administrator' }}">
             <x-icon name="sparkles" size="17"/> AI Draft
@@ -76,7 +84,7 @@
         <button type="button" class="studio-tool-action" data-builder-preview-toggle>
           <x-icon name="eye" size="17"/> Preview
         </button>
-        <a class="studio-tool-action" href="{{ $back }}"><x-icon name="folders" size="17"/> My Content</a>
+        <a class="studio-tool-action" href="{{ $back }}"><x-icon name="folders" size="17"/> {{ $managed ? 'Back to manager' : 'My Content' }}</a>
         <a class="studio-tool-action" href="{{ route('home') }}"><x-icon name="globe" size="17"/> Website</a>
       </div>
     @endif
@@ -166,24 +174,37 @@
     <div class="studio-section-heading">
       <div>
         <span class="eyebrow">{{ $types[$type]['label'] }} / {{ $editing ? 'Management' : 'New submission' }}</span>
-        <h2>{{ $editing ? 'Edit '.$types[$type]['label'] : 'Create '.$types[$type]['label'] }}</h2>
-        @if($editing)<p>Public ID <span class="mono">{{ $record->public_id }}</span> · {{ ucfirst($record->status) }}</p>@endif
+        <h2>{{ $editing ? ($canEdit ? 'Edit ' : 'Preview ').$types[$type]['label'] : 'Create '.$types[$type]['label'] }}</h2>
+        @if($editing)<p>Public ID <span class="mono">{{ $record->public_id }}</span> · {{ $statusLabel }}</p>@endif
       </div>
-      @if($editing)<span class="studio-status">{{ ucfirst($record->status) }}</span>@endif
+      @if($editing)<span class="studio-status">{{ $statusLabel }}</span>@endif
     </div>
 
+    @if($managed && $errors->any())
+      @foreach($errors->all() as $error)<p class="notice" role="alert">{{ $error }}</p>@endforeach
+    @endif
     @if(!$canEdit)
-      <div class="notice">This {{ strtolower($types[$type]['label']) }} is {{ $record->status }}. You can inspect its content but cannot change it directly. Administrator review and publication safeguards remain active.</div>
+      <div class="notice">{{ $managed ? 'Read-only preview.' : 'You can inspect this submission but cannot change it directly.' }}</div>
     @endif
 
     <div class="studio-columns">
       <div class="studio-primary">
+        @if($managerMode === 'preview' && $productCover)
+          <section class="studio-card" aria-label="Product cover">
+            <img class="media-dialog-preview" src="{{ $mediaUrl($productCover) }}" alt="{{ $productCover->alt_text }}">
+          </section>
+        @endif
         <form data-builder-form method="post" action="{{ $action }}" class="studio-form">
           @csrf
           @if($editing)@method('PATCH')@endif
           <input type="hidden" name="builder_mode" value="1">
           @if(!$editing && !$isJob && !$isProduct)<input type="hidden" name="type" value="{{ $type }}">@endif
-          <input type="hidden" name="terms_sha256" value="{{ $termsSha256 }}">
+          @if($managed)
+            <input type="hidden" name="expected_owner" value="{{ $ownerId }}">
+            <input type="hidden" name="expected_revision" value="{{ MarketplaceManagement::revision($record) }}">
+          @else
+            <input type="hidden" name="terms_sha256" value="{{ $termsSha256 }}">
+          @endif
           <fieldset>
             <section class="studio-card" aria-labelledby="studio-basic-title">
               <div class="studio-card-heading">
@@ -356,14 +377,14 @@
                     <option value="">Choose media</option>
                     @foreach($assets as $asset)
                       
-                      <option value="{{ $asset->id }}" data-media-mime="{{ $asset->mime_type }}" data-media-url="{{ $asset->previewUrl() }}"
+                      <option value="{{ $asset->id }}" data-media-mime="{{ $asset->mime_type }}" data-media-url="{{ $mediaUrl($asset) }}"
                               data-media-alt="{{ $asset->alt_text }}" @selected((string)$selectedMedia===(string)$asset->id)>
                         {{ $asset->alt_text }} · {{ $asset->public_id }} ({{ strtoupper(explode('/',$asset->mime_type)[1] ?? 'media') }})
                       </option>
                     @endforeach
                   </select>
                 </div>
-                @if($canEdit)<button class="studio-tool-action" type="button" data-modal-open="studio-media-upload"><x-icon name="upload" size="16"/> Upload new media</button>@endif
+                @if($canEdit && !$managed)<button class="studio-tool-action" type="button" data-modal-open="studio-media-upload"><x-icon name="upload" size="16"/> Upload new media</button>@endif
                 <small class="hint">Files uploaded here must pass rights review before they can be selected.</small>
               </div>
               <div class="studio-field studio-media-youtube" data-featured-youtube-wrap hidden>
@@ -393,7 +414,7 @@
                     <h4>Images & screenshots</h4>
                     <p class="hint">Choose up to eight images from your Media Library. Upload screenshots here without leaving the builder. New uploads can be used immediately.</p>
                   </div>
-                  @if($canEdit)<button type="button" class="studio-tool-action" data-modal-open="studio-media-upload"><x-icon name="upload" size="17"/> Upload screenshots</button>@endif
+                  @if($canEdit && !$managed)<button type="button" class="studio-tool-action" data-modal-open="studio-media-upload"><x-icon name="upload" size="17"/> Upload screenshots</button>@endif
                 </div>
                 <div class="studio-gallery-grid" data-gallery-grid>
                   @if($assets->whereIn('mime_type',['image/jpeg','image/png','image/webp','image/gif'])->isEmpty())
@@ -405,7 +426,7 @@
                       <input type="checkbox" name="gallery_media_ids[]" value="{{ $asset->id }}"
                         @checked(in_array((int)$asset->id, array_map('intval', old('gallery_media_ids', $record?->gallery_media_ids ?? []))))
                         @disabled(!$canEdit)>
-                      <img src="{{ $asset->previewUrl() }}" alt="{{ $asset->alt_text }}" loading="lazy">
+                      <img src="{{ $mediaUrl($asset) }}" alt="{{ $asset->alt_text }}" loading="lazy">
                       <span>{{ $asset->alt_text }}</span>
                       
                     </label>
@@ -526,7 +547,7 @@
               </section>
             @endunless
 
-            @if($isProduct)
+            @if($isProduct && !$managed)
               <section class="studio-final-action">
                 <label for="studio-next-status">Next action</label>
                 <select id="studio-next-status" name="status" @disabled(!$canEdit)>
@@ -536,7 +557,7 @@
               </section>
             @endif
           </fieldset>
-          @if($canEdit)
+          @if($canEdit && !$managed)
             <div class="studio-accept-block">
               <label class="studio-accept-check">
                 <input type="checkbox" name="accept_terms" value="1" data-builder-terms-check required>
@@ -551,14 +572,14 @@
           <div class="studio-submit-bar">
             <span><x-icon name="shield-check" size="17"/> Your work is protected by account ownership and content review.</span>
             <div class="studio-submit-actions">
-              <a class="studio-tool-action" href="{{ $back }}">Cancel</a>
+              <a class="studio-tool-action" href="{{ $back }}">{{ $canEdit ? 'Cancel' : 'Close preview' }}</a>
               @if($canEdit)
                 <button class="btn primary" type="submit"><x-icon name="save" size="17"/> {{ $isProduct ? 'Save product' : ($editing ? 'Save changes' : 'Submit for review') }}</button>
               @endif
             </div>
           </div>
         </form>
-        @if($isProduct)
+        @if($isProduct && !$managed)
           <section class="studio-card studio-product-original" aria-labelledby="studio-original-title">
             <div class="studio-card-heading">
               <div><span class="studio-step">06</span><h3 id="studio-original-title">Original downloadable product</h3></div>
@@ -604,7 +625,7 @@
           <h3>{{ $editing ? $record->title : 'New '.$types[$type]['label'] }}</h3>
           <dl class="studio-summary">
             <div><dt>Type</dt><dd>{{ $types[$type]['label'] }}</dd></div>
-            <div><dt>Status</dt><dd>{{ $editing ? ucfirst($record->status) : 'Not saved' }}</dd></div>
+            <div><dt>Status</dt><dd>{{ $statusLabel ?? 'Not saved' }}</dd></div>
             <div><dt>Visibility</dt><dd>Private until approved</dd></div>
           </dl>
           @if($editing && $record->status === 'published')<a class="studio-tool-action" href="{{ $record->publicUrl() }}"><x-icon name="external-link" size="16"/> View published page</a>@endif
@@ -620,10 +641,10 @@
           </div>
           <p class="hint">Creating a listing or job does not charge a customer, enable checkout or fund escrow.</p>
         </section>
-        @if($editing && $isProduct && $record->status==='published')
+        @if(!$managed && $editing && $isProduct && $record->status==='published')
           <a class="studio-tool-action" href="{{ route('studio.vault.index',$record) }}"><x-icon name="archive" size="17"/> Manage secure file releases</a>
         @endif
-        @if($editing && $isJob)
+        @if(!$managed && $editing && $isJob)
           <a class="studio-tool-action" href="{{ route('jobs.proposals',$record) }}"><x-icon name="users" size="17"/> Review job proposals</a>
         @endif
       </aside>
@@ -668,7 +689,7 @@
         <button type="button" class="btn primary" data-builder-terms-accept><x-icon name="check-circle" size="17"/> Accept terms</button>
       </div>
     </dialog>
-    @if($canEdit)
+    @if($canEdit && !$managed)
       @include('builder.ai-draft-dialog')
       <script defer src="{{ asset('js/ai-draft-studio.js') }}?v=2"></script>
     @endif

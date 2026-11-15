@@ -26,7 +26,7 @@ class ProductController extends Controller
     public function index(Request $request): View
     {
         $status = (string)$request->query('status','all');
-        abort_unless(in_array($status,['all','draft','pending','published','rejected'],true),404);
+        abort_unless(in_array($status,['all','draft','pending','in_review','published','rejected'],true),404);
         $search = trim((string)$request->query('q',''));
         abort_unless(mb_strlen($search)<=120,404);
         $owned = MarketplaceListing::query()->where('type','product')
@@ -111,8 +111,9 @@ class ProductController extends Controller
         return back()->with('status', 'Product changes saved.');
     }
 
-    private function validated(Request $request): array
+    public function validated(Request $request, ?int $ownerId = null): array
     {
+        $ownerId ??= (int) $request->user()->id;
         BuilderContent::prepare($request);
         $data = $request->validate([
             'title' => ['required', 'string', 'min:4', 'max:180'],
@@ -138,7 +139,7 @@ class ProductController extends Controller
         // A draft must never be allowed to reference a different creator's private asset.
         if (! empty($data['cover_media_id'])
             && ! MediaAsset::query()->whereKey($data['cover_media_id'])
-                ->where('user_id', $request->user()->id)->exists()) {
+                ->where('user_id', $ownerId)->exists()) {
             throw ValidationException::withMessages([
                 'cover_media_id' => 'Select a preview image from your own Media Library.',
             ]);
@@ -148,8 +149,8 @@ class ProductController extends Controller
             ->whereKey($data['category_id'])->where('type','product')->where('is_active',true)->exists()){
             throw ValidationException::withMessages(['category_id'=>'Select an active product category.']);
         }
-        BuilderFeaturedMedia::check($data, (int)$request->user()->id);
-        BuilderGallery::check($data, $request);
+        BuilderFeaturedMedia::check($data, $ownerId);
+        BuilderGallery::check($data, $request, $ownerId);
         // Keep existing preview links when older product forms do not send this field.
         if (array_key_exists('preview_url',$data)) {
             $rawPreview=trim((string)($data['preview_url'] ?? ''));

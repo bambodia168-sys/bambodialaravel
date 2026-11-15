@@ -93,6 +93,15 @@
         ['route'=>'dashboard.notifications.index','label'=>'Notification Analytics','icon'=>'bell'],
       ]];
     }
+    if ($user->role === 'staff' && \App\Support\UserManagementAccess::allows($user, 'marketplace_transfer')) {
+      $groups[] = ['heading'=>'Marketplace Management','items'=>[
+        ['route'=>'dashboard.products.index','label'=>'Digital Products','icon'=>'package'],
+        ['route'=>'dashboard.jobs.index','label'=>'Job Manager','icon'=>'briefcase'],
+        ['route'=>'dashboard.marketplace.index','label'=>'Projects','icon'=>'folders','params'=>['type'=>'project']],
+        ['route'=>'dashboard.marketplace.index','label'=>'Freelance','icon'=>'user-check','params'=>['type'=>'freelance']],
+        ['route'=>'dashboard.marketplace.index','label'=>'Services','icon'=>'wrench','params'=>['type'=>'service']],
+      ]];
+    }
     $groups[] = ['heading'=>'Assistance','items'=>[
       ['route'=>'dashboard.support','label'=>'Support Center','icon'=>'life-buoy'],
     ]];

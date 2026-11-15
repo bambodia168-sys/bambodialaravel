@@ -41,7 +41,7 @@
       @php
         $itemUrl = $isStaff
           ? route('dashboard.support.show', $item->public_id)
-          : ($item->type === 'product' ? route('dashboard.products.index',['status'=>'pending','search'=>$item->title]) : route('dashboard.reviews'));
+          : ($item->type === 'product' ? route('dashboard.products.index',['status'=>$item->status,'search'=>$item->title]) : route('dashboard.reviews'));
       @endphp
       <a class="workspace-overview-row" href="{{ $itemUrl }}">
         <span class="workspace-overview-row-main">

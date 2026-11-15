@@ -223,6 +223,12 @@ class MediaLibraryController extends Controller
         );
 
         abort_unless($owner || $admin || $public, 404);
+
+        return self::servePreview($request, $asset);
+    }
+
+    public static function servePreview(Request $request, MediaAsset $asset): Response
+    {
         abort_unless(in_array($asset->mime_type, MediaAsset::ALLOWED_MIME, true), 404);
         $storageDisk = $asset->storage_disk ?: 'local';
         abort_unless(in_array($storageDisk, ['local', 'r2'], true), 404);
