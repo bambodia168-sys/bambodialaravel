@@ -25,7 +25,7 @@
     </div>
     <div class="bambodia-job-meta">
       <span><x-icon name="user" size="15"/> {{ $clientName }}</span>
-      <span><x-icon name="briefcase" size="15"/> {{ ucfirst($job->category) }}</span>
+      <span><x-icon name="briefcase" size="15"/> {{ $job->category_label }}</span>
       <span><x-icon name="clock" size="15"/> Created {{ $job->created_at->diffForHumans() }}</span>
     </div>
   </div>
