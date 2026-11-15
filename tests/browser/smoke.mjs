@@ -21,6 +21,39 @@ try {
       isMobile:device.mobile,hasTouch:device.mobile,
     });
     const page=await context.newPage();
+    const missing=await page.goto(origin+'/licenses',{waitUntil:'networkidle'});
+    if(missing?.status()!==404 || !(await page.getByRole('heading',{name:'Page not found'}).isVisible()))
+      throw new Error(device.name+' did not show the branded 404 for an incomplete license URL');
+    if(!(await page.locator('header.site-header .profile-trigger').isVisible()) ||
+       !(await page.locator('footer.site-footer .footer-columns').isVisible()))
+      throw new Error(device.name+' 404 did not render the global layout');
+    const colors=[];
+    for(const theme of ['light','dark']){
+      const layout=await page.evaluate(theme=>{
+        document.documentElement.dataset.theme=theme;
+        const main=document.querySelector('main');
+        const content=document.querySelector('.site-not-found');
+        const mark=document.querySelector('.site-not-found-mark');
+        return {
+          background:getComputedStyle(document.body).backgroundColor,
+          transparent:getComputedStyle(content).backgroundColor==='rgba(0, 0, 0, 0)' && getComputedStyle(content).backgroundImage==='none',
+          overflow:document.documentElement.scrollWidth>window.innerWidth,
+          contentFits:content.getBoundingClientRect().width<=main.clientWidth,
+          markWidth:mark.getBoundingClientRect().width,
+          markAboveHeading:mark.getBoundingClientRect().bottom<document.querySelector('#page-title').getBoundingClientRect().top,
+        };
+      },theme);
+      if(layout.overflow || !layout.contentFits || !layout.transparent || layout.markWidth<145 || !layout.markAboveHeading)
+        throw new Error(device.name+' 404 content overflows in '+theme+' mode');
+      colors.push(layout.background);
+    }
+    if(colors[0]===colors[1] || new URL(await page.getByRole('link',{name:'Search marketplace',exact:true}).getAttribute('href'),origin).pathname!=='/search')
+      throw new Error(device.name+' 404 theme or recovery link is broken');
+    if(device.name==='desktop') await page.screenshot({path:out+'/bambodia-404-desktop.png'});
+    if(device.name==='iphone-emulation') await page.screenshot({path:out+'/bambodia-404-mobile.png'});
+    await page.getByRole('link',{name:'Back to homepage'}).click();
+    await page.waitForURL(origin+'/');
+    checks+=4;
     for(const path of paths){
       const response=await page.goto(origin+path,{waitUntil:'networkidle',timeout:30000});
       if(!response || response.status()!==200)
