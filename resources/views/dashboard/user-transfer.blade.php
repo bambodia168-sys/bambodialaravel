@@ -37,6 +37,12 @@
         <label>Reason / evidence
           <textarea name="reason" rows="4" minlength="20" maxlength="500" required placeholder="Why this transfer is authorized">{{ old('reason') }}</textarea>
         </label>
+        @if($type === 'product' && $item->status === 'draft')
+          <label class="user-manager-inline-check">
+            <input name="leave_media" type="checkbox" value="1" @checked(old('leave_media')) aria-describedby="leave-media-hint">
+            <span>Transfer draft without attached media<br><small id="leave-media-hint">Leaves all media files with their current owners and clears the cover, gallery and featured file from this draft. The new owner can add replacement media in Builder Studio.</small></span>
+          </label>
+        @endif
         <label class="user-manager-inline-check"><input name="rights_confirmed" type="checkbox" value="1" required> I confirm the reassignment and any attached owned-media access transfer are authorized. Existing copyright claims, unrelated contracts and purchases are not transferred.</label>
         <label>Type TRANSFER to confirm <input name="confirmation" required pattern="TRANSFER" placeholder="TRANSFER" autocomplete="off"></label>
         <button type="submit" class="btn primary"><x-icon name="arrow-left-right" size="16"/> Transfer ownership</button>
