@@ -1,8 +1,8 @@
 <section class="license-definition-guide" aria-labelledby="license-definitions-guide">
   <div class="license-definition-guide-header">
-    <div><span class="eyebrow">License Definitions</span>
-      <h2 id="license-definitions-guide">Regular & Extended License</h2>
-      <p>Define the product usage rights before a creator can attach them in Builder Studio. These definitions are not customer keys.</p>
+    <div>
+      <h2 id="license-definitions-guide">License Definitions</h2>
+      <p>Manage reusable product license terms. Builder Studio and automatic license issuance support Regular and Extended.</p>
     </div>
   </div>
   <div class="license-definition-guide-grid">
@@ -156,8 +156,9 @@
     <p>Define the rights granted to buyers and the prohibited uses for one license type. Review the draft wording before publishing it.</p>
     <label for="license-new-tier">License definition type</label>
     <select id="license-new-tier" name="tier" required>
-      <option value="regular" @selected(!$restoreCreate || old('tier') === 'regular')>Regular License</option>
-      <option value="extended" @selected($restoreCreate && old('tier') === 'extended')>Extended License</option>
+      @foreach(\App\Models\LicenseDefinition::TIERS as $tier => $label)
+        <option value="{{ $tier }}" @selected(($restoreCreate ? old('tier') : 'regular') === $tier)>{{ $label }}</option>
+      @endforeach
     </select>
     <label for="license-new-code">License code</label><input id="license-new-code" name="code" value="{{ $restoreCreate ? old('code') : '' }}" placeholder="REGULAR" maxlength="32" required>
     <label for="license-new-name">License name</label><input id="license-new-name" name="name" value="{{ $restoreCreate ? old('name') : '' }}" maxlength="120" required>

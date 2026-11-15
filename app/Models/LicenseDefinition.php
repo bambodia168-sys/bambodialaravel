@@ -9,7 +9,14 @@ use Illuminate\Support\Str;
 
 class LicenseDefinition extends Model
 {
-    public const TIERS = ['regular'=>'Regular License','extended'=>'Extended License'];
+    public const TIERS = [
+        'regular' => 'Regular License',
+        'extended' => 'Extended License',
+        'agency' => 'Agency / Multi-Site License',
+        'evaluation' => 'Evaluation / Trial License',
+        'media' => 'Media / Broadcast License',
+        'oem' => 'OEM / Redistribution License',
+    ];
 
     private const LIVE_LAYOUT_DEFINITION = '184752080';
     private const LIVE_LAYOUT_PRODUCTS = ['487948714', '673785514', '381502999', '792285328', '140274590'];
@@ -121,16 +128,24 @@ class LicenseDefinition extends Model
 
     public static function tierDescription(string $tier): string
     {
-        return $tier === 'extended'
-            ? 'May provide additional commercial or monetized usage only when the published Extended License explicitly allows it. Original files remain protected.'
-            : 'Typically intended for a single end project or installation, strictly subject to the approved Regular License terms and restrictions.';
+        return match ($tier) {
+            'regular' => 'Typically intended for a single end project or installation, strictly subject to the approved Regular License terms and restrictions.',
+            'extended' => 'May provide additional commercial or monetized usage only when the published Extended License explicitly allows it. Original files remain protected.',
+            'agency' => 'Covers a stated number of independent projects under the license tier specified for each project.',
+            'evaluation' => 'Allows time-limited, private testing under an evaluation grant.',
+            'media' => 'Covers the approved use of a media asset in a production, with distribution limited to the agreed scope.',
+            'oem' => 'Sets the conditions for distributing approved components as part of a specified product under a separate written agreement.',
+            default => '',
+        };
     }
 
     public function allowsTier(string $tier): bool
     {
         // Legacy definitions predating tier classification retain their existing
         // references; new typed definitions are never interchangeable.
-        return $this->status !== 'archived' && ($this->tier === null || $this->tier === $tier);
+        return in_array($tier, ['regular', 'extended'], true)
+            && $this->status !== 'archived'
+            && ($this->tier === null || $this->tier === $tier);
     }
 
     public function publicUrl(): string

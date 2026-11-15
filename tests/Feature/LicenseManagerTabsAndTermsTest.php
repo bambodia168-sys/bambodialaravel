@@ -65,6 +65,45 @@ class LicenseManagerTabsAndTermsTest extends TestCase
         $this->assertTrue(AuditEvent::query()->where('event', 'license.definition.deleted')->exists());
     }
 
+    public function test_specialty_drafts_are_formatted_and_safe_to_import_again(): void
+    {
+        $admin = $this->member('admin');
+        $codes = [
+            'BAM_AGENCY_5' => 'agency',
+            'BAM_EVALUATION' => 'evaluation',
+            'BAM_MEDIA_BROADCAST' => 'media',
+            'BAM_OEM_REDISTRIBUTION' => 'oem',
+        ];
+
+        $this->artisan('licenses:add-specialty-drafts')->assertFailed();
+        $this->assertSame(0, LicenseDefinition::query()->count());
+        $options = ['--admin' => $admin->public_id];
+        $this->artisan('licenses:add-specialty-drafts', $options)->assertSuccessful();
+
+        $this->actingAs($admin);
+        foreach ($codes as $code => $tier) {
+            $license = LicenseDefinition::query()->where('code', $code)->sole();
+            $this->assertSame($tier, $license->tier);
+            $this->assertSame('draft', $license->status);
+            $this->assertNull($license->published_at);
+            $this->assertSame($admin->id, $license->created_by);
+            $this->assertStringContainsString('<p><strong>', $license->permissions_html);
+            $this->assertStringContainsString('<p><strong>', $license->restrictions_html);
+            $this->assertFalse($license->allowsTier('regular'));
+            $this->assertFalse($license->allowsTier('extended'));
+            $this->get($license->publicUrl())->assertNotFound();
+            $this->get(route('dashboard.licenses.index', ['tab' => 'definitions', 'search' => $code]))
+                ->assertOk()->assertSee($license->name)->assertSee($code);
+        }
+
+        $agency = LicenseDefinition::query()->where('code', 'BAM_AGENCY_5')->sole();
+        $agency->update(['name' => 'Reviewed agency draft']);
+        $this->artisan('licenses:add-specialty-drafts', $options)->assertSuccessful();
+        $this->assertSame('Reviewed agency draft', $agency->fresh()->name);
+        $this->assertSame(4, LicenseDefinition::query()->count());
+        $this->assertSame(4, AuditEvent::query()->where('event', 'license.definition.created')->count());
+    }
+
     public function test_only_verified_layout_fixture_can_be_archived_with_listings_attached(): void
     {
         $admin = $this->member('super_admin');
