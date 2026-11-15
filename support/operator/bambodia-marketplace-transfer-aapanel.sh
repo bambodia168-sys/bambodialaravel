@@ -3,7 +3,7 @@ set -Eeuo pipefail
 umask 077
 
 REPO=bambodia168-sys/bambodialaravel
-RELEASE=8e2ada302f85b7796a203408a9e784e53998029d
+RELEASE=e05e8e896ef82957aa8b51d27576b2faa1ddf928
 APP=/www/wwwroot/bambodia-staging-qa
 PHP=/www/server/php/85/bin/php
 DOMAIN=bambodia.com
@@ -67,8 +67,8 @@ stage() {
     STAGED+=("$path")
 }
 
-stage 'app/Http/Controllers/Dashboard/UserOwnershipTransferController.php' '0d0b1c3e8fe4aee52980140496069814b81b5e55' '9358a0b856e6fd3f602a5020455e282d65c74f72'
-stage 'resources/views/dashboard/user-transfer.blade.php' 'ebc5e465bd1c6489ac7d2bb88cea94c6ffe1b3ce' 'e3d58f6382c2d8ec8e80dbe24d15717312c0c352'
+stage 'app/Http/Controllers/Dashboard/UserOwnershipTransferController.php' '9358a0b856e6fd3f602a5020455e282d65c74f72' 'd2abb238ad56a501dc870e8d9e67e2b998bc3a4d'
+stage 'resources/views/dashboard/user-transfer.blade.php' 'e3d58f6382c2d8ec8e80dbe24d15717312c0c352' 'fbc23a84e14c23c5fbebb98bb2c4aa97846c261a'
 
 if (( ${#STAGED[@]} > 0 )); then
     BACKUP="$(mktemp -d /root/bambodia-marketplace-transfer-backup.XXXXXXXX)"
