@@ -146,6 +146,88 @@ class MarketplaceManagerActionsTest extends TestCase
         ]);
     }
 
+    public function test_managers_can_archive_restore_and_delete_all_marketplace_types(): void
+    {
+        $admin = $this->member('super_admin');
+        $owner = $this->member('super_admin');
+        $this->actingAs($admin);
+
+        foreach (['product', 'project', 'job', 'freelance', 'service'] as $type) {
+            $record = $this->record($type, $owner);
+            $url = route('dashboard.marketplace.status', ['type' => $type, 'publicId' => $record->public_id]);
+            $this->get(MarketplaceManagement::indexUrl($type))->assertOk()
+                ->assertSee('View details')->assertSee('Archive')->assertSee('Delete');
+            $this->patch($url, ['status' => 'archived', 'expected_status' => 'draft'])
+                ->assertRedirect(MarketplaceManagement::indexUrl($type, ['status' => 'archived']));
+            $this->get(MarketplaceManagement::indexUrl($type))->assertDontSee($record->title);
+            $this->get(MarketplaceManagement::indexUrl($type, ['status' => 'archived']))->assertSee($record->title);
+            $this->patch($url, ['status' => 'draft', 'expected_status' => 'archived', 'open_editor' => 1])
+                ->assertRedirect(MarketplaceManagement::builderUrl($record));
+            $this->patch($url, ['status' => 'deleted', 'expected_status' => 'draft'])
+                ->assertRedirect(MarketplaceManagement::indexUrl($type, ['status' => 'deleted']));
+            $this->assertSame('deleted', $record->fresh()->status);
+        }
+    }
+
+    public function test_job_owner_can_archive_restore_submit_and_delete_but_another_user_cannot(): void
+    {
+        $owner = $this->member('customer');
+        $job = $this->record('job', $owner);
+        $job->update(['status' => 'published']);
+        $route = route('jobs.status', $job);
+        $this->actingAs($this->member('customer'))->patch($route, ['status' => 'archived', 'expected_status' => 'published'])
+            ->assertNotFound();
+        $this->actingAs($owner)->get(route('jobs.mine'))->assertOk()->assertSee('View published job')
+            ->assertSee('Archive')->assertSee('Delete');
+        $this->patch($route, ['status' => 'archived', 'expected_status' => 'published'])
+            ->assertRedirect(route('jobs.mine', ['status' => 'archived']));
+        $this->get($job->publicUrl())->assertNotFound();
+        $this->patch($route, ['status' => 'draft', 'expected_status' => 'archived'])->assertRedirect();
+        $this->patch('/builder?='.$job->public_id, [
+            'title' => 'Updated owner job posting', 'description' => self::DESCRIPTION, 'category' => 'development',
+            'status' => 'pending', 'accept_terms' => 1, 'terms_sha256' => \App\Support\BuilderSubmissionTerms::digest(),
+        ])->assertRedirect();
+        $this->assertSame('pending', $job->fresh()->status);
+        $this->patch($route, ['status' => 'deleted', 'expected_status' => 'pending'])->assertRedirect(route('jobs.mine'));
+        $this->assertSame('deleted', $job->fresh()->status);
+        $this->get('/builder?='.$job->public_id)->assertNotFound();
+    }
+
+    public function test_product_edit_keeps_attached_media_from_another_library(): void
+    {
+        $admin = $this->member('super_admin');
+        $creator = $this->member('freelancer');
+        $other = $this->member('freelancer');
+        Storage::fake('local');
+        $attached = $this->asset($other);
+        $unrelated = $this->asset($other);
+        $product = $this->record('product', $creator, $attached);
+        $product->update(['gallery_media_ids' => [$attached->id]]);
+        $url = route('builder.manage.update', ['type' => 'product', 'publicId' => $product->public_id]);
+        $data = [
+            'expected_owner' => $creator->id, 'expected_revision' => MarketplaceManagement::revision($product->fresh()),
+            'title' => 'Updated product with attached media', 'description' => self::DESCRIPTION,
+            'featured_kind' => 'image', 'featured_media_id' => $attached->id,
+            'cover_media_id' => $attached->id, 'gallery_media_ids' => [$attached->id],
+        ];
+
+        $this->actingAs($admin)->get(MarketplaceManagement::builderUrl($product))->assertOk()
+            ->assertSee($attached->alt_text)->assertDontSee($unrelated->alt_text);
+        $this->get($this->mediaUrl($product, $attached))->assertOk();
+        $this->patchJson($url, [...$data, 'featured_media_id' => $unrelated->id])
+            ->assertUnprocessable()->assertJsonValidationErrors('featured_media_id');
+        $this->patch($url, $data)->assertRedirect(MarketplaceManagement::builderUrl($product));
+        $this->assertSame($attached->id, $product->fresh()->cover_media_id);
+        $this->assertSame($attached->id, $product->fresh()->featured_media_id);
+        $this->assertSame([$attached->id], $product->fresh()->gallery_media_ids);
+
+        $ownerPreview = route('media.preview', [
+            'publicId' => $attached->public_id, 'listing_type' => 'product', 'listing' => $product->public_id,
+        ]);
+        $this->actingAs($creator)->get($ownerPreview)->assertOk();
+        $this->actingAs($this->member('freelancer'))->get($ownerPreview)->assertNotFound();
+    }
+
     private function record(string $type, User $owner, ?MediaAsset $asset = null): MarketplaceJob|MarketplaceListing
     {
         $details = [

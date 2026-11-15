@@ -44,7 +44,7 @@ class AccountController extends Controller
             $stats['proposals']=JobProposal::query()->where('freelancer_id',$user->id)->count();
         }
         if($user->isCreator()){
-            $stats['listings']=MarketplaceListing::query()->where('user_id',$user->id)->count();
+            $stats['listings']=MarketplaceListing::query()->inCreatorStudio()->where('user_id',$user->id)->count();
             $stats['client_inquiries']=ServiceInquiry::query()->where('creator_id',$user->id)->where('status','open')->count();
         }
         $activity=AccountNotification::query()->where('user_id',$user->id)->latest()->limit(5)->get();
@@ -100,7 +100,7 @@ class AccountController extends Controller
                 ->where('type','!=','product')->where('status','pending')->count(),
             'inquiries'=>ServiceInquiry::query()->where('creator_id',$user->id)->where('status','open')->count(),
         ];
-        $stats['products']=MarketplaceListing::query()->where('user_id',$user->id)
+        $stats['products']=MarketplaceListing::query()->inCreatorStudio()->where('user_id',$user->id)
             ->where('type','product')->count();
         $stats['drafts']=MarketplaceListing::query()->where('user_id',$user->id)
             ->where('type','!=','product')->whereIn('status',['draft','rejected'])->count();
@@ -108,8 +108,8 @@ class AccountController extends Controller
             ->where('type','product')->whereIn('status',['draft','rejected'])->count();
         $stats['product_pending']=MarketplaceListing::query()->where('user_id',$user->id)
             ->where('type','product')->where('status','pending')->count();
-        $recentListings=MarketplaceListing::query()->where('user_id',$user->id)
-            ->latest()->limit(5)->get(['id','type','title','status','updated_at']);
+        $recentListings=MarketplaceListing::query()->inCreatorStudio()->where('user_id',$user->id)
+            ->latest()->orderByDesc('id')->limit(5)->get(['id','public_id','type','title','status','updated_at']);
         $openInquiries=ServiceInquiry::query()->where('creator_id',$user->id)
             ->where('status','open')->latest('updated_at')->limit(4)
             ->get(['id','subject','updated_at']);

@@ -75,6 +75,8 @@ jobs:
           node tests/browser/creator-badge-manager.mjs
           node tests/browser/badge-tooltip-viewport.mjs
           node tests/browser/post-builder.mjs
+          # The isolated journeys share a loopback IP and its login throttle.
+          php artisan cache:clear
           node tests/browser/ai-draft-dialog-format.mjs
           # Each suite uses its own test-only login. Reset isolated cache-based
           # login throttles before a final independent browser session.

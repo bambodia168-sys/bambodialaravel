@@ -43,7 +43,7 @@
         <a class="btn subtle compact" href="{{ route('studio.listings') }}">View all</a></div>
       <div class="workspace-overview-list">
         @forelse($recentListings as $listing)
-          <a class="workspace-overview-row" href="{{ url('/builder?='.$listing->public_id) }}">
+          <a class="workspace-overview-row" href="{{ $listing->builderUrl() }}">
             <span class="workspace-overview-row-main"><strong>{{ $listing->title }}</strong>
             <small>{{ ucfirst($listing->type) }} · {{ ucfirst($listing->status) }}</small></span>
             <span class="workspace-overview-row-action">Manage</span>

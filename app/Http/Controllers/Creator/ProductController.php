@@ -26,10 +26,10 @@ class ProductController extends Controller
     public function index(Request $request): View
     {
         $status = (string)$request->query('status','all');
-        abort_unless(in_array($status,['all','draft','pending','in_review','published','rejected'],true),404);
+        abort_unless(in_array($status,['all','draft','pending','in_review','published','rejected','archived'],true),404);
         $search = trim((string)$request->query('q',''));
         abort_unless(mb_strlen($search)<=120,404);
-        $owned = MarketplaceListing::query()->where('type','product')
+        $owned = MarketplaceListing::query()->inCreatorStudio()->where('type','product')
             ->where('user_id',$request->user()->id);
         $counts = (clone $owned)->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')->pluck('total','status');
@@ -38,6 +38,7 @@ class ProductController extends Controller
                     'extendedLicenseDefinition:id,name,version,tier,status,public_id,slug',
                     'coverAsset:id,public_id,alt_text,review_status'])
             ->when($status!=='all',fn($q)=>$q->where('status',$status))
+            ->when($status==='all',fn($q)=>$q->where('status','!=','archived'))
             ->when($search!=='',fn($q)=>$q->where(function($inner)use($search){
                 $inner->where('title','like','%'.$search.'%')
                     ->orWhere('public_id','like','%'.$search.'%');
@@ -88,18 +89,18 @@ class ProductController extends Controller
     {
         abort_unless(FeatureFlag::isEnabled('creator_submissions'), 403);
         $termsHash = BuilderSubmissionTerms::requireAcceptance($request);
-        $data = $this->validated($request);
-
-        DB::transaction(function () use ($request, $product, $data, $termsHash): void {
+        DB::transaction(function () use ($request, $product, $termsHash): void {
             $record = MarketplaceListing::query()->lockForUpdate()->findOrFail($product->id);
             abort_unless($record->type === 'product' && (int) $record->user_id === (int) $request->user()->id, 404);
             abort_unless(in_array($record->status, ['draft', 'rejected'], true), 409, 'Submitted or published products cannot be edited directly.');
 
+            $data = $this->validated($request, (int) $record->user_id, $record);
             if ($data['status'] === 'pending') {
                 ProductReadiness::assertReady(
                     (int) $record->user_id,
-                    $data['license_definition_id'] ?? null,
-                    $data['cover_media_id'] ?? null
+                    array_key_exists('license_definition_id', $data) ? $data['license_definition_id'] : $record->license_definition_id,
+                    array_key_exists('cover_media_id', $data) ? $data['cover_media_id'] : $record->cover_media_id,
+                    $record->cover_media_id,
                 );
             }
 
@@ -111,7 +112,7 @@ class ProductController extends Controller
         return back()->with('status', 'Product changes saved.');
     }
 
-    public function validated(Request $request, ?int $ownerId = null): array
+    public function validated(Request $request, ?int $ownerId = null, ?MarketplaceListing $record = null): array
     {
         $ownerId ??= (int) $request->user()->id;
         BuilderContent::prepare($request);
@@ -136,8 +137,8 @@ class ProductController extends Controller
             'status' => ['required', Rule::in(['draft', 'pending'])],
         ]);
 
-        // A draft must never be allowed to reference a different creator's private asset.
         if (! empty($data['cover_media_id'])
+            && (int) $data['cover_media_id'] !== (int) $record?->cover_media_id
             && ! MediaAsset::query()->whereKey($data['cover_media_id'])
                 ->where('user_id', $ownerId)->exists()) {
             throw ValidationException::withMessages([
@@ -149,8 +150,8 @@ class ProductController extends Controller
             ->whereKey($data['category_id'])->where('type','product')->where('is_active',true)->exists()){
             throw ValidationException::withMessages(['category_id'=>'Select an active product category.']);
         }
-        BuilderFeaturedMedia::check($data, $ownerId);
-        BuilderGallery::check($data, $request, $ownerId);
+        BuilderFeaturedMedia::check($data, $ownerId, $record?->featured_media_id);
+        BuilderGallery::check($data, $request, $ownerId, $record ? ($record->gallery_media_ids ?? []) : null);
         // Keep existing preview links when older product forms do not send this field.
         if (array_key_exists('preview_url',$data)) {
             $rawPreview=trim((string)($data['preview_url'] ?? ''));

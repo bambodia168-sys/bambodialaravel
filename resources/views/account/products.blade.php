@@ -15,10 +15,10 @@
     </div>
     <div class="workspace-queue-toolbar">
       <nav class="workspace-queue-tabs" aria-label="Your products by status">
-        @foreach(['all'=>'All','draft'=>'Draft','pending'=>'Pending','in_review'=>'In Review','published'=>'Published','rejected'=>'Rejected'] as $value=>$label)
+        @foreach(['all'=>'All','draft'=>'Draft','pending'=>'Pending','in_review'=>'In Review','published'=>'Published','rejected'=>'Rejected','archived'=>'Archived'] as $value=>$label)
           <a href="{{ route('studio.products.index',array_merge(request()->except('status','page'),$value==='all'?[]:['status'=>$value])) }}"
              class="{{ $status===$value?'is-active':'' }}" @if($status===$value)aria-current="page"@endif>
-            {{ $label }} <span>{{ $value==='all'?$counts->sum():(int)$counts->get($value,0) }}</span>
+            {{ $label }} <span>{{ $value==='all'?$counts->sum()-(int)$counts->get('archived',0):(int)$counts->get($value,0) }}</span>
           </a>
         @endforeach
       </nav>
@@ -58,7 +58,9 @@
                   <a href="{{ $product->publicUrl() }}"><x-icon name="eye" size="16"/> View</a>
                   <a href="{{ route('studio.vault.index', $product) }}"><x-icon name="archive" size="16"/> Releases</a>
                 @endif
+                <x-marketplace-owner-lifecycle :record="$product" :menu-id="'creator-product-'.$product->id" manager="products" :triggers="true"/>
               </x-row-action-menu>
+              <x-marketplace-owner-lifecycle :record="$product" :menu-id="'creator-product-'.$product->id" manager="products"/>
             </td>
           </tr>
         @empty<tr><td class="empty-cell" colspan="7">No digital products have been created.</td></tr>@endforelse
