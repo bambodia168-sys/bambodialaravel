@@ -157,7 +157,7 @@ class MarketplaceManagerActionsTest extends TestCase
             return MarketplaceJob::query()->create([...$details, 'client_id' => $owner->id, 'category' => 'development']);
         }
         $category = MarketplaceCategory::query()->create([
-            'type' => $type, 'name' => 'Category '.Str::random(8), 'slug' => Str::random(10), 'is_active' => true,
+            'type' => $type, 'name' => 'Category '.Str::random(8), 'created_by' => $owner->id, 'is_active' => true,
         ]);
 
         return MarketplaceListing::query()->create([
