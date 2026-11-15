@@ -24,7 +24,7 @@ final class LicenseTerms
         $plain = str_replace(["\r\n", "\r"], "\n", $plain);
         return implode('', array_map(
             fn (string $paragraph): string => '<p>'.nl2br(e($paragraph)).'</p>',
-            preg_split('/\n[ \t]*\n+/', trim($plain))
+            preg_split('/\n[ \t]*\n+/', $plain)
         ));
     }
 }
