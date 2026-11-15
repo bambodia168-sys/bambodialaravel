@@ -14,9 +14,10 @@
       <a class="btn primary" href="{{ route($routePrefix.'.create') }}"><x-icon name="upload" size="17"/> Drag &amp; Drop | Upload</a>
     </div>
     <div class="table-scroll">
-      <table class="data-table"><thead><tr><th>Preview</th><th>Public ID</th><th>Asset / description</th>@unless($studio)<th>Owner</th>@endunless<th>Rights</th><th>Products</th><th>Action</th></tr></thead>
+      <table class="data-table"><thead><tr><th>Preview</th><th>Public ID</th><th>Asset / description</th>@unless($studio)<th>Owner</th>@endunless<th>Rights</th><th>Used in</th><th>Action</th></tr></thead>
         <tbody>
           @forelse($assets as $asset)
+          @php($usage = $asset->usageSummary())
           <tr>
             <td>
               @if(str_starts_with($asset->mime_type,'video/'))
@@ -38,9 +39,9 @@
             <td><strong>{{ $asset->original_name }}</strong><div class="text-muted">{{ $asset->alt_text }}</div><div class="text-muted">{{ $asset->width && $asset->height ? $asset->width.' × '.$asset->height.' · ' : '' }}{{ number_format($asset->bytes / 1024) }} KB</div></td>
             @unless($studio)<td>{{ $asset->owner?->name }}</td>@endunless
             <td>{{ ucfirst($asset->rights_basis) }}<div class="text-muted">{{ $asset->rights_holder }}</div></td>
-            <td>{{ $asset->cover_listings_count }}</td>
+            <td>{{ $usage ? implode('; ', $usage) : 'Unused' }}</td>
             <td>
-              <x-row-action-menu :id="'media-'.$asset->id" :label="$asset->original_name"><button type="button" data-modal-open="media-{{ $asset->id }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
+              <x-row-action-menu :id="'media-'.$asset->id" :label="$asset->original_name"><a href="{{ route($routePrefix.'.edit', $asset) }}"><x-icon name="settings" size="16"/> Edit media</a></x-row-action-menu>
               <dialog id="media-{{ $asset->id }}" class="config-dialog wide-dialog media-editor-dialog">
                 <div class="dialog-heading"><h2>{{ $asset->original_name }}</h2><p>ID {{ $asset->public_id }} · {{ $asset->mime_type }}</p></div>
                 @if(str_starts_with($asset->mime_type,'video/'))
@@ -103,13 +104,13 @@
                   </details><div class="dialog-actions"><button class="btn primary" type="submit">Save media details</button></div>
                 </form>
                 @endif
-                @if($asset->cover_listings_count === 0 && !$asset->featuredListings()->exists() && !$asset->featuredJobs()->exists())
+                @if($usage === [])
                   <form method="post" action="{{ route($routePrefix.'.destroy', $asset) }}">
                     @csrf @method('DELETE')
                     <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Cancel</button><button class="btn danger" type="submit">Delete unused media</button></div>
                   </form>
                 @else
-                  <p class="hint">This media is linked to a product, listing or job; deletion is disabled.</p>
+                  <p class="hint">Used by {{ implode('; ', $usage) }}. Remove those references before deleting.</p>
                   <div class="dialog-actions"><button class="btn subtle" type="button" data-modal-close>Close</button></div>
                 @endif
               </dialog>

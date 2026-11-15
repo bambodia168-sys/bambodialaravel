@@ -196,7 +196,7 @@ class ProductMediaLicenseTest extends TestCase
         $this->actingAs($creator)->patch('/studio/products/'.$product->id,
             $this->productForm($license, $asset, 'draft')
         )->assertStatus(409);
-        $this->delete('/studio/media-library/'.$asset->id)->assertStatus(409);
+        $this->deleteJson('/studio/media-library/'.$asset->id)->assertStatus(409);
         Storage::disk('local')->assertExists($asset->storage_path);
     }
 
