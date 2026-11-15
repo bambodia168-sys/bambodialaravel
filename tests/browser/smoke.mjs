@@ -24,15 +24,26 @@ try {
     const missing=await page.goto(origin+'/licenses',{waitUntil:'networkidle'});
     if(missing?.status()!==404 || !(await page.getByRole('heading',{name:'Page not found'}).isVisible()))
       throw new Error(device.name+' did not show the branded 404 for an incomplete license URL');
+    if(!(await page.locator('header.site-header .profile-trigger').isVisible()) ||
+       !(await page.locator('footer.site-footer .footer-columns').isVisible()))
+      throw new Error(device.name+' 404 did not render the global layout');
     const colors=[];
     for(const theme of ['light','dark']){
       const layout=await page.evaluate(theme=>{
         document.documentElement.dataset.theme=theme;
         const main=document.querySelector('main');
-        const panel=document.querySelector('.error-panel');
-        return { background:getComputedStyle(panel).backgroundColor, overflow:document.documentElement.scrollWidth>window.innerWidth, panelFits:panel.getBoundingClientRect().width<=main.clientWidth };
+        const content=document.querySelector('.site-not-found');
+        const mark=document.querySelector('.site-not-found-mark');
+        return {
+          background:getComputedStyle(document.body).backgroundColor,
+          transparent:getComputedStyle(content).backgroundColor==='rgba(0, 0, 0, 0)' && getComputedStyle(content).backgroundImage==='none',
+          overflow:document.documentElement.scrollWidth>window.innerWidth,
+          contentFits:content.getBoundingClientRect().width<=main.clientWidth,
+          markWidth:mark.getBoundingClientRect().width,
+          markAboveHeading:mark.getBoundingClientRect().bottom<document.querySelector('#page-title').getBoundingClientRect().top,
+        };
       },theme);
-      if(layout.overflow || !layout.panelFits)
+      if(layout.overflow || !layout.contentFits || !layout.transparent || layout.markWidth<145 || !layout.markAboveHeading)
         throw new Error(device.name+' 404 content overflows in '+theme+' mode');
       colors.push(layout.background);
     }
