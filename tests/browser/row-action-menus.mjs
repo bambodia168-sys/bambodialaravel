@@ -29,6 +29,26 @@ try {
     });
     const page = await context.newPage();
     await login(page);
+    for (const type of ['product', 'job', 'project', 'freelance', 'service']) {
+      const response = await page.goto(origin+'/dashboard/'+type+'-manager', {waitUntil:'domcontentloaded'});
+      const label = 'Create '+type[0].toUpperCase()+type.slice(1);
+      const button = page.getByRole('link', {name:label,exact:true});
+      if (response?.status() !== 200 || !(await button.isVisible()))
+        throw Error(name+' missing '+label);
+      const target = new URL(await button.getAttribute('href'), origin);
+      if (!target.pathname.endsWith('/builder') || target.searchParams.get('type') !== type)
+        throw Error(name+' '+label+' opens the wrong Builder Studio');
+      const topRight = await button.evaluate(link => {
+        const intro = link.closest('.page-intro');
+        const heading = intro.querySelector('h1').getBoundingClientRect();
+        const button = link.getBoundingClientRect();
+        const header = intro.getBoundingClientRect();
+        return Math.abs(button.right - header.right) < 2 &&
+          Math.abs(button.top - header.top) < 2 && button.left >= heading.right;
+      });
+      if (!topRight) throw Error(name+' '+label+' is outside the top-right header position');
+      checks++;
+    }
     const response = await page.goto(origin+'/dashboard/policy-center',{waitUntil:'networkidle'});
     if (response?.status() !== 200) throw Error(name+' Policy Center unavailable: '+response?.status());
 
