@@ -21,13 +21,19 @@ final class MarketplaceActionController extends Controller
             'expected_status' => ['required', 'string', 'max:20'],
         ]);
 
-        DB::transaction(function () use ($request, $type, $publicId, $data): void {
+        $record = DB::transaction(function () use ($request, $type, $publicId, $data) {
             $record = MarketplaceManagement::record($type, $publicId, true);
             abort_unless($record->status === $data['expected_status'], 409, 'The status changed. Refresh the manager and try again.');
             MarketplaceManagement::changeStatus($record, $data['status'], $request);
+            return $record;
         }, 3);
 
-        return redirect(MarketplaceManagement::indexUrl($type))
+        if ($data['status'] === 'draft' && $request->boolean('open_editor')) {
+            return redirect(MarketplaceManagement::builderUrl($record))->with('status', 'Moved to draft. You can now edit this record.');
+        }
+
+        return redirect(MarketplaceManagement::indexUrl($type, in_array($data['status'], ['archived', 'deleted'], true)
+            ? ['status' => $data['status']] : []))
             ->with('status', 'Listing status set to '.MarketplaceManagement::STATUSES[$data['status']].'.');
     }
 
@@ -37,8 +43,6 @@ final class MarketplaceActionController extends Controller
         $record = MarketplaceManagement::record($type, $publicId);
         $asset = MediaAsset::query()->whereIn('id', MarketplaceManagement::mediaIds($record))
             ->where('public_id', $mediaId)->firstOrFail();
-        abort_unless((int) $asset->user_id === MarketplaceManagement::ownerId($record), 404);
-
         return MediaLibraryController::servePreview($request, $asset);
     }
 }

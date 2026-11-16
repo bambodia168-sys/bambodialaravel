@@ -245,6 +245,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/contracts/{contract}/disputes', [ContractCommunicationController::class,'dispute'])
         ->name('contracts.disputes.store')->middleware('throttle:2,1');
     Route::get('/my-jobs', [JobBoardController::class, 'mine'])->name('jobs.mine');
+    Route::patch('/my-jobs/{job}/status', [JobBoardController::class, 'changeStatus'])
+        ->middleware('throttle:15,1')->name('jobs.status');
     Route::post('/my-jobs', [JobBoardController::class, 'store'])->name('jobs.store')->middleware('throttle:5,1');
     Route::patch('/my-jobs/{job}/close', [JobBoardController::class, 'close'])->name('jobs.close');
     Route::get('/my-jobs/{job}/proposals', [JobBoardController::class, 'proposals'])->name('jobs.proposals');
@@ -307,6 +309,8 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/listings', [CreatorListingController::class, 'index'])->name('studio.listings');
         Route::post('/listings', [CreatorListingController::class, 'store'])->name('studio.listings.store')->middleware('throttle:10,1');
         Route::patch('/listings/{listing}', [CreatorListingController::class, 'update'])->name('studio.listings.update');
+        Route::patch('/listings/{listing}/status', [CreatorListingController::class, 'changeStatus'])->name('studio.listings.status');
+        Route::delete('/listings/{listing}', [CreatorListingController::class, 'destroy'])->name('studio.listings.destroy');
         Route::get('/products/{product}/releases', [ProductVaultController::class, 'index'])->name('studio.vault.index');
         Route::patch('/products/{product}/releases/{version}/rights', [ProductVaultController::class,'evidence'])
             ->name('studio.vault.rights');

@@ -11,7 +11,8 @@ use Illuminate\Support\Str;
 class MarketplaceListing extends Model
 {
     public const TYPES = ['product', 'project', 'freelance', 'service'];
-    public const STATUSES = ['draft', 'pending', 'in_review', 'published', 'rejected', 'withdrawn'];
+    public const STATUSES = ['draft', 'pending', 'in_review', 'published', 'rejected', 'withdrawn', 'archived', 'deleted'];
+    public const CREATOR_MANAGEABLE_STATUSES = ['draft', 'pending', 'in_review', 'published', 'rejected', 'archived'];
 
     protected $fillable = ['user_id', 'type', 'title', 'description', 'description_html', 'featured_kind', 'featured_media_id', 'featured_color', 'featured_youtube_id', 'is_featured', 'preview_url', 'price', 'software_version', 'software_published_on', 'software_updated_on', 'regular_price', 'extended_price', 'extended_license_definition_id', 'gallery_media_ids', 'currency', 'license_terms', 'license_definition_id', 'cover_media_id', 'category_id', 'status'];
 
@@ -48,6 +49,18 @@ class MarketplaceListing extends Model
                         ->whereHas('coverAsset');
                 });
             });
+    }
+
+    public function scopeInCreatorStudio(Builder $query): Builder
+    {
+        return $query->where('status', '!=', 'deleted');
+    }
+
+    public function canCreatorSetStatus(string $status): bool
+    {
+        return $status !== $this->status
+            && in_array($this->status, self::CREATOR_MANAGEABLE_STATUSES, true)
+            && in_array($status, ['archived', 'draft', 'deleted'], true);
     }
 
     public function savedBy(): HasMany
@@ -88,5 +101,10 @@ class MarketplaceListing extends Model
     public function publicUrl(): string
     {
         return url('/'.$this->type).'?='.$this->public_id.'-'.$this->slug;
+    }
+
+    public function builderUrl(): string
+    {
+        return url('/builder?='.$this->public_id);
     }
 }

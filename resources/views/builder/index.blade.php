@@ -21,9 +21,14 @@
     : ($isProduct
       ? ($editing ? route('studio.products.update',$record) : route('studio.products.store'))
       : ($editing ? route('studio.listings.update',$record) : route('studio.listings.store'))));
-  $mediaUrl = fn ($asset) => $managerMode === 'preview'
-    ? route('dashboard.marketplace.asset', ['type' => $type, 'publicId' => $record->public_id, 'mediaId' => $asset->public_id])
-    : $asset->previewUrl();
+  $mediaUrl = function ($asset) use ($managerMode, $editing, $ownerId, $type, $record) {
+    if ($managerMode === 'preview' || ($managerMode === 'manage' && (int) $asset->user_id !== $ownerId)) {
+      return route('dashboard.marketplace.asset', ['type' => $type, 'publicId' => $record->public_id, 'mediaId' => $asset->public_id]);
+    }
+    return $editing && (int) $asset->user_id !== $ownerId
+      ? route('media.preview', ['publicId' => $asset->public_id, 'listing_type' => $type, 'listing' => $record->public_id])
+      : $asset->previewUrl();
+  };
   $productCover = $managed && $isProduct ? $assets->firstWhere('id', $record->cover_media_id) : null;
   $statusLabel = $editing ? (MarketplaceManagement::STATUSES[$record->status] ?? ucfirst($record->status)) : null;
   $shareUrl = $editing
@@ -372,7 +377,7 @@
               </div>
               <div class="studio-media-chooser" data-featured-media-select>
                 <div class="studio-field">
-                  <label for="studio-featured-media">Select media from your library</label>
+                  <label for="studio-featured-media">Select attached media or a file from your library</label>
                   <select id="studio-featured-media" name="featured_media_id" data-featured-media @disabled(!$canEdit)>
                     <option value="">Choose media</option>
                     @foreach($assets as $asset)
@@ -404,9 +409,27 @@
                   <span data-featured-color-label>{{ $selectedColor }}</span>
                 </div>
               </div>
-              <div class="studio-featured-preview" data-featured-preview aria-label="Selected featured media preview">
-                <span><x-icon name="image" size="25"/> Featured media preview</span>
+              <div class="studio-featured-drop" @if($canEdit)
+                data-featured-drop data-upload-url="{{ route('builder.media.store') }}"
+                data-listing-type="{{ $type }}" data-listing-reference="{{ $record?->public_id }}"
+                data-managed="{{ $managed ? '1' : '0' }}"
+              @endif>
+                <div class="studio-featured-preview" data-featured-preview aria-label="Selected featured media preview">
+                  <span><x-icon name="image" size="25"/> Featured media preview</span>
+                </div>
+                @if($canEdit)
+                  <div class="studio-featured-drop-action" data-featured-upload-action hidden>
+                    <span aria-hidden="true">Drag &amp; Drop</span><span aria-hidden="true">|</span>
+                    <button class="studio-tool-action" type="button" data-featured-upload-button aria-label="Upload featured media">
+                      <x-icon name="upload" size="16"/> Upload
+                    </button>
+                    <input type="file" data-featured-upload-input accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" hidden>
+                  </div>
+                @endif
               </div>
+              @if($canEdit)
+                <p class="hint studio-featured-upload-status" data-featured-upload-status role="status" aria-live="polite" hidden></p>
+              @endif
               @error('featured_media_id')<small class="builder-field-error">{{ $message }}</small>@enderror
               <div class="studio-gallery" data-builder-gallery>
                 <div class="studio-gallery-heading">
@@ -417,6 +440,7 @@
                   @if($canEdit && !$managed)<button type="button" class="studio-tool-action" data-modal-open="studio-media-upload"><x-icon name="upload" size="17"/> Upload screenshots</button>@endif
                 </div>
                 <div class="studio-gallery-grid" data-gallery-grid>
+                  @if($canEdit)<input type="hidden" name="gallery_present" value="1">@endif
                   @if($assets->whereIn('mime_type',['image/jpeg','image/png','image/webp','image/gif'])->isEmpty())
                     <p class="studio-gallery-empty" data-gallery-empty>No screenshots yet. Upload original images here and they will remain private until review.</p>
                   @endif
@@ -547,7 +571,7 @@
               </section>
             @endunless
 
-            @if($isProduct && !$managed)
+            @if(!$managed && ($isProduct || ($editing && $isJob && $record->status === 'draft')))
               <section class="studio-final-action">
                 <label for="studio-next-status">Next action</label>
                 <select id="studio-next-status" name="status" @disabled(!$canEdit)>
@@ -689,6 +713,10 @@
         <button type="button" class="btn primary" data-builder-terms-accept><x-icon name="check-circle" size="17"/> Accept terms</button>
       </div>
     </dialog>
+    @if($canEdit)
+      <link rel="stylesheet" href="{{ asset('css/builder-featured-upload.css') }}?v=1">
+      <script defer src="{{ asset('js/builder-featured-upload.js') }}?v=1"></script>
+    @endif
     @if($canEdit && !$managed)
       @include('builder.ai-draft-dialog')
       <script defer src="{{ asset('js/ai-draft-studio.js') }}?v=2"></script>

@@ -7,6 +7,7 @@ use App\Support\BuilderContent;
 use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
+use App\Support\MarketplaceLifecycle;
 use App\Models\MarketplaceListing;
 use App\Models\FeatureFlag;
 use App\Models\MarketplaceCategory;
@@ -22,14 +23,16 @@ class ListingController extends Controller
 {
     public function index(Request $request): View
     {
+        $archived = $request->query('status') === 'archived';
         $listings = MarketplaceListing::query()
+            ->inCreatorStudio()
             ->where('user_id', $request->user()->id)
-            ->latest()->paginate(10);
+            ->where('status', $archived ? '=' : '!=', 'archived')
+            ->latest()->orderByDesc('id')->paginate(10)->withQueryString();
+        $publicListingIds = MarketplaceListing::query()->publiclyAvailable()
+            ->whereKey($listings->getCollection()->modelKeys())->pluck('id')->flip();
 
-        $categories=MarketplaceCategory::query()->where('is_active',true)
-            ->whereIn('type',['project','freelance','service'])
-            ->orderBy('type')->orderBy('sort_order')->get(['id','type','name']);
-        return view('account.listings', ['listings' => $listings,'categories'=>$categories]);
+        return view('account.listings', compact('listings', 'archived', 'publicListingIds'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -61,7 +64,7 @@ class ListingController extends Controller
 
         BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, $listing->type, (int)$listing->id);
         if ($request->boolean('builder_mode')) {
-            return redirect('/builder?='.$listing->public_id)->with('status', 'Listing submitted for review.');
+            return redirect($listing->builderUrl())->with('status', 'Listing submitted for review.');
         }
 
         return redirect()->route('studio.listings')->with('status', 'Listing submitted for review.');
@@ -75,6 +78,7 @@ class ListingController extends Controller
             'title'=>['required','string','min:4','max:180'],
             'description'=>['required','string','min:40','max:10000'],
             ...BuilderFeaturedMedia::rules(),
+            ...BuilderGallery::rules(),
             'description_html'=>['nullable','string','max:60000'],
             'price'=>['nullable','numeric','min:0','max:9999999999.99'],
             'license_terms'=>['nullable','string','max:20000'],
@@ -87,13 +91,56 @@ class ListingController extends Controller
                 && in_array($locked->type,['project','freelance','service'],true),404);
             abort_unless(in_array($locked->status,['draft','rejected'],true),409);
             $this->checkCategory([...$data,'type'=>$locked->type]);
-            BuilderFeaturedMedia::check($data, (int)$request->user()->id);
-            BuilderGallery::check($data, $request);
+            BuilderFeaturedMedia::check($data, (int)$request->user()->id, $locked->featured_media_id);
+            BuilderGallery::check($data, $request, attachedIds: $locked->gallery_media_ids ?? []);
             $locked->update([...$data,'status'=>'pending']);
             BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, $locked->type, (int)$locked->id);
             AuditEvent::record('listing.resubmitted',$request->user(),$request);
         });
         return back()->with('status','Listing changes resubmitted for review.');
+    }
+
+    public function changeStatus(Request $request, MarketplaceListing $listing): RedirectResponse
+    {
+        $data = $request->validate(['status' => ['required', Rule::in(['archived', 'draft'])]]);
+        $status = $data['status'];
+        $this->changeOwnedStatus($request, $listing, $status);
+
+        return $status === 'archived'
+            ? redirect()->route($request->input('manager') === 'products' && $listing->type === 'product'
+                ? 'studio.products.index' : 'studio.listings', ['status' => 'archived'])->with('status', 'Listing archived.')
+            : redirect($listing->builderUrl())->with('status', 'Listing moved to draft.');
+    }
+
+    public function destroy(Request $request, MarketplaceListing $listing): RedirectResponse
+    {
+        $this->changeOwnedStatus($request, $listing, 'deleted');
+
+        $filters = $request->input('from') === 'archived' ? ['status' => 'archived'] : [];
+
+        return redirect()->route($request->input('manager') === 'products' && $listing->type === 'product'
+            ? 'studio.products.index' : 'studio.listings', $filters)->with('status', 'Listing deleted.');
+    }
+
+    private function changeOwnedStatus(Request $request, MarketplaceListing $listing, string $status): void
+    {
+        DB::transaction(function () use ($request, $listing, $status): void {
+            $locked = MarketplaceListing::query()->whereKey($listing->id)
+                ->where('user_id', $request->user()->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status === $status) {
+                return;
+            }
+
+            if ($request->filled('expected_status')) {
+                abort_unless($request->input('expected_status') === $locked->status, 409, 'This listing changed. Reopen the manager and retry.');
+            }
+            MarketplaceLifecycle::assertAvailable($locked, $status);
+
+            // Preserve references from contracts, inquiries, and other historical records.
+            $locked->update(['status' => $status]);
+            AuditEvent::record('listing.creator.'.$status, $request->user(), $request);
+        }, 3);
     }
 
     private function checkCategory(array $data): void

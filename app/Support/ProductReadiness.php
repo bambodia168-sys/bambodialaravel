@@ -10,7 +10,7 @@ use Illuminate\Validation\ValidationException;
 
 final class ProductReadiness
 {
-    public static function assertReady(int $ownerId, ?int $licenseId, ?int $coverId): void
+    public static function assertReady(int $ownerId, ?int $licenseId, ?int $coverId, ?int $attachedCoverId = null): void
     {
         $errors = [];
         $license = $licenseId ? LicenseDefinition::query()->find($licenseId) : null;
@@ -20,7 +20,7 @@ final class ProductReadiness
 
         $cover = $coverId ? MediaAsset::query()->find($coverId) : null;
         $disk = $cover?->storage_disk ?: 'local';
-        if (! $cover || (int) $cover->user_id !== $ownerId
+        if (! $cover || ((int) $cover->user_id !== $ownerId && $coverId !== $attachedCoverId)
             || ! in_array($cover->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true)
             || ! in_array($disk, ['local', 'r2'], true)
             || ! Storage::disk($disk)->exists($cover->storage_path)) {
@@ -48,7 +48,8 @@ final class ProductReadiness
         self::assertReady(
             (int) $listing->user_id,
             $listing->license_definition_id === null ? null : (int) $listing->license_definition_id,
-            $listing->cover_media_id === null ? null : (int) $listing->cover_media_id
+            $listing->cover_media_id === null ? null : (int) $listing->cover_media_id,
+            $listing->cover_media_id === null ? null : (int) $listing->cover_media_id,
         );
     }
 }

@@ -13,9 +13,16 @@
     fn ($value) => $value !== null && $value !== '');
 @endphp
 <div class="page-intro">
-  <div class="eyebrow">Marketplace Governance</div>
-  <h1>{{ $name }} Manager</h1>
-  <p>{{ $isProduct ? 'Products require an active license and a valid creator-owned cover to publish.' : 'Find listings, open their Builder Studio preview, and manage review status.' }}</p>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+    <div style="min-width:0">
+      <div class="eyebrow">Marketplace Governance</div>
+      <h1>{{ $name }} Manager</h1>
+    </div>
+    @if(in_array($type, \App\Support\BuilderAccess::allowedTypes(auth()->user()), true))
+      <a class="btn primary" style="flex:none;max-width:50%" href="{{ route('builder', ['type' => $type]) }}"><x-icon name="plus" size="16"/> Create {{ $name }}</a>
+    @endif
+  </div>
+  <p>{{ $isProduct ? 'Products require an active license and a valid cover to publish.' : 'Find listings, open their Builder Studio preview, and manage review status.' }}</p>
 </div>
 @foreach($errors->all() as $error)
   <p class="notice" role="alert">{{ $error }}</p>

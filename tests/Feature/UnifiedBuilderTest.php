@@ -273,6 +273,34 @@ class UnifiedBuilderTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_inline_featured_upload_uses_the_listing_owner_and_requires_editor_access(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $owner = $this->member('freelancer');
+        $admin = $this->member('super_admin');
+        $listing = MarketplaceListing::query()->create([
+            'user_id' => $owner->id, 'type' => 'service', 'title' => 'Featured upload test',
+            'description' => str_repeat('A service draft for the featured media upload. ', 3),
+            'currency' => 'USD', 'status' => 'draft',
+        ]);
+        $payload = fn (array $context) => [
+            ...$context, 'alt_text' => 'Featured upload example',
+            'image' => \Illuminate\Http\UploadedFile::fake()->image('featured.png'),
+        ];
+        $context = ['featured_type' => 'service', 'featured_listing' => $listing->public_id];
+
+        $this->actingAs($this->member('freelancer'))->postJson('/builder/media', $payload($context))->assertNotFound();
+        $this->postJson('/builder/media', $payload([...$context, 'featured_managed' => '1']))->assertForbidden();
+        $this->actingAs($owner)->postJson('/builder/media', $payload($context))->assertCreated();
+        $uploaded = $this->actingAs($admin)
+            ->postJson('/builder/media', $payload([...$context, 'featured_managed' => '1']))
+            ->assertCreated()->assertJsonPath('mime_type', 'image/png')->json('id');
+        $this->assertDatabaseHas('media_assets', ['id' => $uploaded, 'user_id' => $owner->id]);
+        $this->assertNull($listing->fresh()->featured_media_id);
+        $listing->update(['status' => 'published']);
+        $this->postJson('/builder/media', $payload([...$context, 'featured_managed' => '1']))->assertConflict();
+    }
+
     public function test_rich_editor_preserves_safe_color_alignment_and_rejects_unsafe_css(): void
     {
         $html = '<p style="text-align:center;color:rgb(194, 65, 12);background-color:#fff1a8;position:fixed">'

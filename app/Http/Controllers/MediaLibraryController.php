@@ -7,7 +7,10 @@ use App\Models\ContentEntry;
 use App\Models\MediaAsset;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceJob;
+use App\Support\BuilderAccess;
 use App\Support\Media\PrivateVideoStreamer;
+use App\Support\MarketplaceManagement;
+use App\Support\UserManagementAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,7 +39,7 @@ class MediaLibraryController extends Controller
 
     public function store(Request $request): RedirectResponse|JsonResponse
     {
-        $fromBuilder = $request->routeIs('builder.media.store');
+        $fromBuilder = $request->routeIs('builder.media.store', 'localized.*.builder.media.store');
         $fromPost = $request->routeIs('dashboard.posts.media.store');
         $fromAccount = $request->routeIs('account.media.*');
         $studio = $request->routeIs('studio.media.*') || $fromAccount || $fromBuilder;
@@ -47,14 +50,20 @@ class MediaLibraryController extends Controller
                 'rights_basis' => ['required', Rule::in(['owned'])],
             ]);
         }
+        $featured = $fromBuilder && $request->has('featured_type');
+        $ownerId = (int) $request->user()->id;
         if ($fromBuilder) {
-            abort_unless(in_array($request->user()->role, [
-                'freelancer', 'super_admin', 'customer', 'subscriber',
-            ], true), 403);
+            if ($featured) {
+                $ownerId = $this->featuredUploadOwner($request);
+            } else {
+                abort_unless(in_array($request->user()->role, [
+                    'freelancer', 'super_admin', 'customer', 'subscriber',
+                ], true), 403);
+            }
             $returnTo = (string) $request->input('return_to', '/builder');
             abort_unless(preg_match('~^/builder(?:\?type=(?:product|project|service|freelance|job)|\?=[0-9]{9})?$~D', $returnTo) === 1, 422);
         }
-        $data = $this->validateMetadata($request, true);
+        $data = $this->validateMetadata($request, true, $featured);
         $file = $request->file('image');
         $mime = $file->getMimeType();
         $video = in_array($mime, ['video/mp4', 'video/webm'], true);
@@ -87,7 +96,7 @@ class MediaLibraryController extends Controller
             'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp',
             'image/gif' => 'gif', 'video/mp4' => 'mp4', 'video/webm' => 'webm',
         };
-        $path = 'marketplace/previews/'.$request->user()->id.'/'.bin2hex(random_bytes(24)).'.'.$extension;
+        $path = 'marketplace/previews/'.$ownerId.'/'.bin2hex(random_bytes(24)).'.'.$extension;
         $storageDisk = config('filesystems.media_library_disk', 'local');
         abort_unless(in_array($storageDisk, ['local', 'r2'], true), 500, 'Invalid Media Library disk.');
         if (! Storage::disk($storageDisk)->putFileAs(dirname($path), $file, basename($path))) {
@@ -96,8 +105,9 @@ class MediaLibraryController extends Controller
 
         try {
             $asset = MediaAsset::query()->create([
+                ...($featured ? ['rights_basis' => 'unspecified', 'rights_holder' => ''] : []),
                 ...$data,
-                'user_id' => $request->user()->id,
+                'user_id' => $ownerId,
                 'original_name' => mb_substr(basename(str_replace('\\', '/', $file->getClientOriginalName())), 0, 180),
                 'storage_path' => $path,
                 'storage_disk' => $storageDisk,
@@ -222,9 +232,28 @@ class MediaLibraryController extends Controller
                 ->where('status', 'published')->exists()
         );
 
-        abort_unless($owner || $admin || $public, 404);
+        abort_unless($owner || $admin || $public || $this->ownsAttachedRecord($request, $asset), 404);
 
         return self::servePreview($request, $asset);
+    }
+
+    private function ownsAttachedRecord(Request $request, MediaAsset $asset): bool
+    {
+        $actor = $request->user();
+        $type = $request->query('listing_type');
+        $reference = $request->query('listing');
+        if (! $actor || $actor->account_status !== 'active'
+            || ! in_array($type, [...MarketplaceListing::TYPES, 'job'], true)
+            || ! is_string($reference) || ! preg_match('/^[0-9]{9}$/D', $reference)) {
+            return false;
+        }
+
+        $record = $type === 'job'
+            ? MarketplaceJob::query()->where('client_id', $actor->id)
+            : MarketplaceListing::query()->where('user_id', $actor->id)->where('type', $type)->where('status', '!=', 'deleted');
+        $listing = $record->where('public_id', $reference)->first();
+
+        return $listing && in_array((int) $asset->id, array_map('intval', MarketplaceManagement::mediaIds($listing)), true);
     }
 
     public static function servePreview(Request $request, MediaAsset $asset): Response
@@ -279,7 +308,31 @@ class MediaLibraryController extends Controller
         abort_unless(in_array($request->user()->role, ['super_admin', 'admin'], true), 403);
     }
 
-    private function validateMetadata(Request $request, bool $withFile = false): array
+    private function featuredUploadOwner(Request $request): int
+    {
+        $data = $request->validate([
+            'featured_type' => ['required', Rule::in(BuilderAccess::TYPES)],
+            'featured_listing' => ['nullable', 'string', 'regex:/^[0-9]{9}$/D'],
+            'featured_managed' => ['sometimes', 'boolean'],
+        ]);
+        $actor = $request->user();
+        abort_unless($actor->account_status === 'active', 403);
+        $reference = $data['featured_listing'] ?? null;
+        if ($request->boolean('featured_managed')) {
+            abort_unless(UserManagementAccess::allows($actor, 'marketplace_review'), 403);
+            abort_if($reference === null, 422);
+            $record = MarketplaceManagement::record($data['featured_type'], $reference);
+            abort_unless(MarketplaceManagement::mayEdit($record), 409);
+
+            return MarketplaceManagement::ownerId($record);
+        }
+
+        BuilderAccess::assertEditable($actor, $data['featured_type'], $reference);
+
+        return (int) $actor->id;
+    }
+
+    private function validateMetadata(Request $request, bool $withFile = false, bool $featured = false): array
     {
         $rules = [
             'alt_text' => ['required', 'string', 'min:4', 'max:180'],
@@ -287,6 +340,9 @@ class MediaLibraryController extends Controller
             'rights_holder' => ['required', 'string', 'min:2', 'max:180'],
             'rights_note' => ['nullable', 'string', 'max:3000', 'required_if:rights_basis,licensed'],
         ];
+        if ($featured) {
+            unset($rules['rights_basis'], $rules['rights_holder'], $rules['rights_note']);
+        }
         if ($withFile) {
             $rules['image'] = ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm',
                 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm', 'max:20480'];

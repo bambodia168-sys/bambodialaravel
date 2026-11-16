@@ -17,7 +17,7 @@ final class MarketplaceManagement
 
     public const STATUSES = [
         'draft' => 'Draft', 'pending' => 'Pending', 'in_review' => 'In Review',
-        'published' => 'Published', 'rejected' => 'Rejected',
+        'published' => 'Published', 'rejected' => 'Rejected', 'archived' => 'Archived', 'deleted' => 'Deleted',
     ];
 
     public static function type(MarketplaceJob|MarketplaceListing $record): string
@@ -95,6 +95,7 @@ final class MarketplaceManagement
         $category = $data['category'] ?? null;
 
         $query->when($status === 'review_queue', fn ($q) => $q->whereIn('status', self::REVIEW_STATUSES))
+            ->when($status === 'all', fn ($q) => $q->whereNotIn('status', ['archived', 'deleted']))
             ->when(!in_array($status, ['all', 'review_queue'], true), fn ($q) => $q->where('status', $status))
             ->when($search !== '', fn ($q) => $q->where(fn ($match) => $match
                 ->where('title', 'like', '%'.$search.'%')->orWhere('public_id', 'like', '%'.$search.'%')))
@@ -111,34 +112,34 @@ final class MarketplaceManagement
             'pending' => ['published', 'draft', 'in_review', 'rejected'],
             'in_review' => ['published', 'draft', 'pending', 'rejected'],
             'rejected' => ['draft', 'pending', 'in_review'],
-            'published' => PreviewContentReview::isPreviewTitle($record->title) ? [] : ['draft'],
             default => [],
         };
 
         return array_intersect_key([
             'published' => 'Publish', 'draft' => 'Draft', 'in_review' => 'In Review',
-            'pending' => 'Pending', 'rejected' => 'Rejected',
-        ], array_flip($statuses));
+            'pending' => 'Pending', 'rejected' => 'Reject', 'archived' => 'Archive', 'deleted' => 'Delete',
+        ], array_flip([...$statuses, ...MarketplaceLifecycle::targets($record)]));
     }
 
     public static function changeStatus(
         MarketplaceJob|MarketplaceListing $record, string $target, Request $request
     ): void {
         abort_unless(isset(self::actions($record)[$target]), 409, 'This status change is unavailable for the current record.');
+        if (in_array($target, ['archived', 'deleted', 'draft'], true)) {
+            MarketplaceLifecycle::assertAvailable($record, $target);
+        }
         $isJob = $record instanceof MarketplaceJob;
         if ($target === 'published' && ! $isJob) {
             ProductReadiness::assertListing($record);
         }
-        if ($record->status === 'published') {
-            abort_if(PreviewContentReview::hasCustomerActivity($record), 409,
-                'Active customer records must be resolved before this listing can return to draft.');
-        }
-
         $record->status = $target;
         $isDecision = in_array($target, ['published', 'rejected'], true);
         if ($isJob) {
             $record->reviewed_by = $isDecision || $target === 'in_review' ? $request->user()->id : null;
             $record->reviewed_at = $isDecision ? now() : null;
+            if (in_array($target, ['archived', 'deleted', 'draft'], true)) {
+                $record->closed_at = $target === 'draft' ? null : now();
+            }
         }
         $record->save();
 

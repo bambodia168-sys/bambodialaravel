@@ -7,6 +7,7 @@ use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
 use App\Support\BambodiaTaxonomy;
+use App\Support\MarketplaceLifecycle;
 use App\Models\AuditEvent;
 use App\Models\AccountNotification;
 use App\Models\FreelancerResume;
@@ -60,7 +61,7 @@ class JobBoardController extends Controller
             ? SavedJob::query()->where('user_id',$request->user()->id)
                 ->where('marketplace_job_id',$listing->id)->exists()
             : false;
-        $screenshots = BuilderGallery::approvedFor($listing->gallery_media_ids, (int)$listing->client_id);
+        $screenshots = BuilderGallery::attachedImages($listing->gallery_media_ids);
         $relatedJobs=MarketplaceJob::query()
             ->where('status','published')
             ->whereKeyNot($listing->id)
@@ -86,9 +87,42 @@ class JobBoardController extends Controller
     public function mine(Request $request): View
     {
         abort_unless(in_array($request->user()->role,['customer','subscriber','super_admin'],true),403);
-        $jobs=MarketplaceJob::query()->where('client_id',$request->user()->id)
-            ->withCount('proposals')->latest()->paginate(10);
-        return view('jobs.mine', compact('jobs'));
+        $archived = $request->query('status') === 'archived';
+        $jobs = MarketplaceJob::query()->where('client_id', $request->user()->id)
+            ->where('status', '!=', 'deleted')->where('status', $archived ? '=' : '!=', 'archived')
+            ->withCount('proposals')->latest()->paginate(10)->withQueryString();
+        return view('jobs.mine', compact('jobs', 'archived'));
+    }
+
+    public function changeStatus(Request $request, MarketplaceJob $job): RedirectResponse
+    {
+        abort_unless(in_array($request->user()->role, ['customer', 'subscriber', 'super_admin'], true), 403);
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['draft', 'archived', 'deleted'])],
+            'expected_status' => ['required', 'string', 'max:20'],
+        ]);
+        $target = $data['status'];
+
+        DB::transaction(function () use ($request, $job, $target, $data): void {
+            $locked = MarketplaceJob::query()->whereKey($job->id)
+                ->where('client_id', $request->user()->id)->lockForUpdate()->firstOrFail();
+            if ($locked->status === $target) {
+                return;
+            }
+            abort_unless($locked->status === $data['expected_status'], 409, 'This job changed. Reopen Job Manager and retry.');
+            MarketplaceLifecycle::assertAvailable($locked, $target);
+            $locked->update([
+                'status' => $target, 'reviewed_by' => null, 'reviewed_at' => null,
+                'closed_at' => $target === 'draft' ? null : now(),
+            ]);
+            AuditEvent::record('job.owner.'.$target, $request->user(), $request);
+        }, 3);
+
+        return match ($target) {
+            'draft' => redirect('/builder?='.$job->public_id)->with('status', 'Job moved to draft.'),
+            'archived' => redirect()->route('jobs.mine', ['status' => 'archived'])->with('status', 'Job archived.'),
+            'deleted' => redirect()->route('jobs.mine')->with('status', 'Job deleted.'),
+        };
     }
 
     public function store(Request $request): RedirectResponse
@@ -121,6 +155,7 @@ class JobBoardController extends Controller
         abort_unless((int)$job->client_id === (int)$request->user()->id,404);
         DB::transaction(function()use($job,$request){
             $locked=MarketplaceJob::query()->lockForUpdate()->findOrFail($job->id);
+            abort_unless((int) $locked->client_id === (int) $request->user()->id, 404);
             abort_unless(in_array($locked->status,['published','pending'],true),409);
             $locked->update(['status'=>'closed','closed_at'=>now()]);
             AuditEvent::record('job.closed',$request->user(),$request);

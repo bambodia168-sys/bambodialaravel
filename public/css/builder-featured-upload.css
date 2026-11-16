@@ -1,0 +1,43 @@
+.studio-featured-drop {
+    position: relative;
+}
+
+.studio-featured-drop.is-dragging .studio-featured-preview {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+.studio-featured-drop-action {
+    position: absolute;
+    inset-inline: 12px;
+    inset-block-end: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: var(--muted);
+    font-size: var(--font-helper);
+    pointer-events: none;
+}
+
+.studio-featured-drop-action[hidden] {
+    display: none;
+}
+
+.studio-featured-drop-action .studio-tool-action {
+    background: var(--surface);
+    pointer-events: auto;
+}
+
+.studio-featured-drop:has(img, video, iframe, .studio-color-swatch) .studio-featured-drop-action {
+    inset-inline-start: auto;
+    inset-block: 12px auto;
+    padding: 3px 5px 3px 9px;
+    border-radius: 9px;
+    background: var(--surface);
+}
+
+.studio-featured-upload-status {
+    margin: 8px 0 0;
+}
