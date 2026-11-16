@@ -60,13 +60,6 @@ cat > "$WORK/changes.patch" <<'FEATURED_UPLOAD_PATCH'
 diff --git a/app/Http/Controllers/MediaLibraryController.php b/app/Http/Controllers/MediaLibraryController.php
 --- a/app/Http/Controllers/MediaLibraryController.php
 +++ b/app/Http/Controllers/MediaLibraryController.php
-@@ -9,4 +9,6 @@
- use App\Models\MarketplaceJob;
-+use App\Support\BuilderAccess;
- use App\Support\Media\PrivateVideoStreamer;
- use App\Support\MarketplaceManagement;
-+use App\Support\UserManagementAccess;
- use Illuminate\Http\RedirectResponse;
 @@ -51,5 +52,11 @@
 +        $featured = $fromBuilder && $request->has('featured_type');
 +        $ownerId = (int) $request->user()->id;
@@ -201,6 +194,42 @@ stage_asset public/js/builder-featured-upload.js a294567c3843d9a0852364849ac9e90
         git apply --check changes.patch
         git apply changes.patch
     fi
+    python3 - app/Http/Controllers/MediaLibraryController.php <<'PY_IMPORTS'
+from pathlib import Path
+import re
+import sys
+
+path = Path(sys.argv[1])
+source = path.read_bytes()
+namespace = b'namespace App\\Http\\Controllers;'
+class_marker = b'\nclass MediaLibraryController extends Controller'
+if source.count(namespace) != 1 or source.count(class_marker) != 1:
+    raise SystemExit('FEATURED_UPLOAD_SOURCE_CONFLICT=MediaLibraryController namespace or class')
+begin = source.index(namespace) + len(namespace)
+end = source.index(class_marker, begin)
+header = source[begin:end]
+use_statements = re.findall(rb'^use[ \t]+([^;]+);[ \t]*\r?$', header, re.M)
+pending = []
+for symbol in (b'BuilderAccess', b'MarketplaceManagement', b'UserManagementAccess'):
+    fqcn = b'App\\Support\\' + symbol
+    bindings = []
+    for statement in use_statements:
+        parts = re.split(rb'[ \t]+as[ \t]+', statement.strip(), maxsplit=1, flags=re.I)
+        short_name = parts[-1].rsplit(b'\\', 1)[-1]
+        if short_name.lower() == symbol.lower():
+            bindings.append(parts[0].lstrip(b'\\'))
+    if not bindings:
+        pending.append(b'use ' + fqcn + b';')
+    elif bindings != [fqcn]:
+        raise SystemExit('FEATURED_UPLOAD_SOURCE_CONFLICT=unexpected import for ' + symbol.decode())
+if pending:
+    newline = b'\r\n' if b'\r\n' in header else b'\n'
+    first_import = re.search(rb'^use[ \t]+', header, re.M)
+    if not first_import:
+        raise SystemExit('FEATURED_UPLOAD_SOURCE_CONFLICT=MediaLibraryController imports missing')
+    offset = begin + first_import.start()
+    path.write_bytes(source[:offset] + newline.join(pending) + newline + source[offset:])
+PY_IMPORTS
 )
 for FILE in public/css/builder-featured-upload.css public/js/builder-featured-upload.js app/Http/Controllers/MediaLibraryController.php resources/views/builder/index.blade.php; do
     if ! cmp -s -- "$FILE" "$WORK/$FILE"; then
