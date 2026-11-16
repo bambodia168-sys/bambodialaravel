@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class WorkspaceExperienceTest extends TestCase
@@ -18,6 +19,30 @@ class WorkspaceExperienceTest extends TestCase
             'password'=>'AReallyStrongPassword123!',
             'role'=>$role,
         ]);
+    }
+
+    public static function signInRoles(): array
+    {
+        return [
+            'super admin' => ['super_admin', '/dashboard'],
+            'admin' => ['admin', '/dashboard'],
+            'staff' => ['staff', '/dashboard'],
+            'freelancer' => ['freelancer', '/creator'],
+            'customer' => ['customer', '/account'],
+            'subscriber' => ['subscriber', '/account'],
+        ];
+    }
+
+    #[DataProvider('signInRoles')]
+    public function test_sign_in_opens_the_default_workspace_for_each_role(string $role, string $path): void
+    {
+        $user = $this->account($role);
+        $destination = $path === '/account' ? $path.'?='.$user->public_id : $path;
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'AReallyStrongPassword123!'])
+            ->assertRedirect($destination);
+        $this->get($destination)->assertOk();
+        $this->get('/login')->assertRedirect($destination);
     }
 
     public function test_language_prefixed_public_urls_render_and_preserve_original_routes(): void
@@ -55,12 +80,14 @@ class WorkspaceExperienceTest extends TestCase
 
     public function test_admin_workspace_has_admin_only_nav_and_independently_scrolling_shell(): void
     {
+        config(['commerce.enabled' => true]);
         $admin=$this->account('super_admin');
         $this->actingAs($admin)->get('/en/dashboard')
             ->assertOk()
             ->assertSee('data-workspace="admin"',false)
             ->assertSee('workspace-sidebar')
             ->assertSee('workspace-menu-search')
+            ->assertSeeInOrder(['aria-label="Administration menu"', 'title="Dashboard overview"', 'title="Marketplace Orders"', 'title="Payment Methods"'], false)
             ->assertSee('data-workspace-toggle')
             ->assertSee('workspace-home-link')
             ->assertSee('Download Entitlements')

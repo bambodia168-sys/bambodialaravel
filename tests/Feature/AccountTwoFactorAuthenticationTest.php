@@ -110,6 +110,25 @@ final class AccountTwoFactorAuthenticationTest extends TestCase
         $this->assertNotNull($credential->fresh()->last_counter);
     }
 
+    public function test_two_factor_login_uses_the_studio_default_and_preserves_a_requested_page(): void
+    {
+        $user = $this->member('freelancer');
+        [, $codes] = $this->enrollment($user);
+        $this->post(route('logout'));
+        $credentials = ['email' => $user->email, 'password' => self::PASSWORD];
+
+        $this->post(route('login.store'), $credentials)->assertRedirect(route('login.two-factor'));
+        $this->post(route('login.two-factor.verify'), ['code' => $codes[0]])
+            ->assertRedirect(route('creator'));
+
+        $this->post(route('logout'));
+        $requested = route('account.security');
+        $this->get($requested)->assertRedirect(route('login'));
+        $this->post(route('login.store'), $credentials)->assertRedirect(route('login.two-factor'));
+        $this->post(route('login.two-factor.verify'), ['code' => $codes[1]])
+            ->assertRedirect($requested);
+    }
+
     public function test_recovery_code_can_only_be_used_once(): void
     {
         $user=$this->member();
