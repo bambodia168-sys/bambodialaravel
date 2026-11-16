@@ -24,6 +24,7 @@ final class BuilderSubmissionTerms
     public static function publications(): Collection
     {
         return PolicyPublication::query()
+            ->with('policy:id,public_code,slug')
             ->whereHas('policy', fn ($q) => $q->where('status', 'published'))
             ->whereIn('category', ['terms', 'commerce'])
             ->orderBy('policy_id')
@@ -99,13 +100,5 @@ final class BuilderSubmissionTerms
             'terms_sha256' => $hash,
             'accepted_at' => now(),
         ]);
-    }
-
-    public static function suggestedTerms(?Collection $publications = null): string
-    {
-        $publications ??= self::publications();
-        $text = $publications->map(fn ($p) => trim($p->title)."\n\n".trim($p->body_snapshot))
-            ->filter()->implode("\n\n");
-        return mb_strlen($text) <= 20000 ? $text : '';
     }
 }

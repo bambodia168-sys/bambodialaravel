@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\BuilderTermsAcceptance;
+use App\Models\MarketplaceListing;
 use App\Models\Policy;
 use App\Models\PolicyPublication;
+use App\Models\SiteLanguage;
 use App\Models\User;
 use App\Support\BuilderSubmissionTerms;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -76,8 +78,6 @@ final class BuilderTermsReadableTest extends TestCase
             preg_match('~<dialog\s+id="studio-terms-popup"[^>]*>.*?</dialog>~s', $response->getContent(), $matches);
             $modal = $matches[0] ?? '';
             $this->assertNotSame('', $modal);
-            // The supplemental terms editor may correctly contain escaped
-            // HTML. The acceptance dialog itself must not display raw tags.
             $this->assertStringNotContainsString('&lt;h1&gt;Verified Marketplace Terms', $modal);
             $this->assertStringNotContainsString('&lt;h2&gt;Important responsibilities', $modal);
             $this->assertStringNotContainsString('window.unsafeCall', $modal);
@@ -89,6 +89,70 @@ final class BuilderTermsReadableTest extends TestCase
         $this->assertSame($snapshotBefore, $markup->fresh()->body_snapshot);
         $this->assertSame($digestBefore, BuilderSubmissionTerms::digest());
         $this->assertDatabaseCount('builder_terms_acceptances', 0);
+    }
+
+    public function test_the_template_stays_editable_and_short_when_published_policies_are_large(): void
+    {
+        $regular = $this->publication('Regular License', 'commerce', str_repeat('Long policy body. ', 1500), 'markdown');
+        $newer = $regular->replicate();
+        $newer->revision = 2;
+        $newer->save();
+        $withdrawn = $this->publication('Unpublished policy', 'commerce', 'Removed content.', 'markdown');
+        $withdrawn->policy->update(['status' => 'draft']);
+        $this->actingAs($this->creator());
+
+        foreach (['en', 'km', 'zh'] as $locale) {
+            SiteLanguage::query()->updateOrCreate(['code' => $locale], [
+                'name' => SiteLanguage::CATALOG[$locale], 'is_enabled' => true,
+            ]);
+            $copy = require lang_path($locale.'/builder_terms.php');
+            $response = $this->get("/$locale/builder?type=product")->assertOk()
+                ->assertSee($copy['field'])
+                ->assertSee($copy['policies']['regular-license'] ?? 'Regular License')
+                ->assertSee(str_replace(':revision', '2', $copy['revision']))
+                ->assertDontSee('Unpublished policy');
+            $value = $this->supplementalValue($response->getContent());
+            $this->assertStringContainsString($copy['template']['digital']['heading'], $value);
+            $this->assertStringContainsString("\n\n", $value);
+            $this->assertStringNotContainsString('Long policy body.', $value);
+            $this->assertLessThan(20000, mb_strlen($value));
+        }
+
+        $service = $this->get('/en/builder?type=service')->assertOk();
+        $this->assertStringContainsString('Scope and delivery', $this->supplementalValue($service->getContent()));
+        $this->get('/en/builder?type=job')->assertOk()->assertDontSee('name="license_terms"', false);
+    }
+
+    public function test_existing_terms_and_validation_input_take_precedence_over_the_template(): void
+    {
+        $creator = $this->creator();
+        $listing = MarketplaceListing::query()->create([
+            'user_id' => $creator->id, 'type' => 'service', 'title' => 'Creator’s custom service',
+            'description' => 'Service description', 'status' => 'draft',
+            'license_terms' => "Creator's own terms.\nSecond paragraph.",
+        ]);
+        $url = '/builder?='.$listing->public_id;
+        $this->actingAs($creator);
+
+        $response = $this->get($url)->assertOk();
+        $this->assertSame($listing->license_terms, $this->supplementalValue($response->getContent()));
+
+        $listing->update(['license_terms' => null]);
+        $response = $this->get($url)->assertOk();
+        $this->assertSame('', $this->supplementalValue($response->getContent()));
+
+        $response = $this->withSession(['_old_input' => ['license_terms' => 'Unsaved custom text']])
+            ->get('/builder?type=product')->assertOk();
+        $this->assertSame('Unsaved custom text', $this->supplementalValue($response->getContent()));
+    }
+
+    private function supplementalValue(string $html): string
+    {
+        $document = \Dom\HTMLDocument::createFromString($html, LIBXML_NOERROR);
+        $editor = $document->getElementById('studio-terms');
+        $this->assertNotNull($editor);
+
+        return $editor->textContent;
     }
 
     public function test_legacy_snapshot_with_missing_format_renders_common_safe_html(): void
