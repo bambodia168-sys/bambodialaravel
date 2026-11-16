@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\BuilderContent;
 use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
+use App\Support\BuilderSupplementalTerms;
 use App\Support\BuilderFeaturedMedia;
 use App\Support\BambodiaTaxonomy;
 use App\Support\MarketplaceManagement;
@@ -93,7 +94,8 @@ class BuilderController extends Controller
             ->orderBy('title')->get(['id', 'title', 'public_id', 'slug']);
         $termsPublications = BuilderSubmissionTerms::publications();
         $termsSha256 = BuilderSubmissionTerms::digest($termsPublications);
-        $suggestedTerms = BuilderSubmissionTerms::suggestedTerms($termsPublications);
+        $suggestedTerms = $type !== null && $type !== 'job' ? BuilderSupplementalTerms::template($type) : '';
+        $supplementalSources = $suggestedTerms !== '' ? BuilderSupplementalTerms::sources($termsPublications) : [];
         $licenses = $type === 'product'
             ? LicenseDefinition::query()->where('status', 'active')
                 ->orderBy('name')->get(['id','name','version','tier','public_id','slug','permissions','restrictions'])
@@ -116,7 +118,7 @@ class BuilderController extends Controller
 
         return view('builder.index', compact(
             'type', 'record', 'canEdit', 'managerMode', 'ownerId', 'allowedTypes', 'categories', 'jobCategoryChoices', 'licenses', 'regularLicenses', 'extendedLicenses', 'assets',
-            'termsPublications', 'termsSha256', 'suggestedTerms', 'productVersions', 'publishedLegalPolicies', 'aiDraftReady'
+            'termsPublications', 'termsSha256', 'suggestedTerms', 'supplementalSources', 'productVersions', 'publishedLegalPolicies', 'aiDraftReady'
         ));
     }
 

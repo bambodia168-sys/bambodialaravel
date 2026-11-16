@@ -516,35 +516,7 @@
             @endif
 
             @unless($isJob)
-              <section class="studio-card" aria-labelledby="studio-terms-title">
-                <div class="studio-card-heading">
-                  <div><span class="studio-step">{{ $isProduct ? '05' : '04' }}</span><h3 id="studio-terms-title">Supplemental terms</h3></div>
-                  <span class="studio-step-caption">Optional</span>
-                </div>
-                <div class="studio-field">
-                  <label for="studio-terms">Additional usage and delivery conditions</label>
-                  <p class="hint">Editable starting terms are drawn from Bambodia's current published terms and commerce policies when available. You may revise them or replace them with your own supplemental terms, where allowed by the governing license and platform policies.</p>
-                  <textarea id="studio-terms" name="license_terms" rows="9" maxlength="20000" @readonly(!$canEdit)
-                            placeholder="Describe additional delivery, usage and support conditions">{{ old('license_terms',$record?->license_terms ?? $suggestedTerms) }}</textarea>
-                </div>
-                @if($canEdit)
-                  <div class="studio-terms-helpers">
-                    <button type="button" class="studio-tool-action" data-use-platform-terms @disabled($suggestedTerms==='')><x-icon name="file-check" size="16"/> Use published terms</button>
-                    <button type="button" class="studio-tool-action" data-clear-platform-terms><x-icon name="eraser" size="16"/> Write my own terms</button>
-                  </div>
-                  <script type="application/json" data-suggested-terms>@json($suggestedTerms)</script>
-                @endif
-                @if($termsPublications->isNotEmpty())
-                  <p class="hint">Current policy sources:
-                    @foreach($termsPublications as $publication)
-                      <a href="{{ $publication->policy->publicUrl() }}" target="_blank" rel="noopener noreferrer">{{ $publication->title }} (revision {{ $publication->revision }})</a>@if(!$loop->last), @endif
-                    @endforeach
-                  </p>
-                @else
-                  <p class="hint">No administrator-published Terms or Commerce policy snapshot is available. Write supplemental terms as appropriate; the platform's basic submission rules still apply.</p>
-                @endif
-                @if($isProduct)<p class="hint">Supplemental terms cannot grant rights beyond the selected published license definitions.</p>@endif
-              </section>
+              @include('builder.partials.supplemental-terms')
             @endunless
 
             @if($isProduct && !$managed)
