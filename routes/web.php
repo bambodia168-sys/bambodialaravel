@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\CommerceOrderController;
+use App\Http\Controllers\CommercePaymentMethodController;
 use App\Http\Controllers\ProfileEditorController;
 use App\Http\Controllers\CreatorProfileSectionController;
 use App\Http\Controllers\CreatorProfileItemController;
@@ -200,6 +202,18 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/privacy-requests/{privacyRequest}/close', [PrivacyRequestController::class,'close'])
         ->name('privacy.close')->where('privacyRequest','[0-9]{9}');
     Route::get('/account/policy-receipts', [PolicyAcknowledgementController::class,'index'])->name('account.policy-receipts');
+    Route::prefix('account/orders')->name('account.orders.')->group(function (): void {
+        Route::get('/', [CommerceOrderController::class, 'index'])->name('index');
+        Route::get('/new/{listing}', [CommerceOrderController::class, 'create'])->where('listing', '[0-9]{9}')->name('create');
+        Route::post('/new/{listing}', [CommerceOrderController::class, 'store'])->where('listing', '[0-9]{9}')
+            ->middleware('throttle:10,1')->name('store');
+        Route::get('/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('show');
+        Route::get('/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('receipt');
+        Route::patch('/{number}/cancel', [CommerceOrderController::class, 'cancel'])->whereUuid('number')
+            ->middleware('throttle:10,1')->name('cancel');
+        Route::patch('/{number}/payment-method', [CommerceOrderController::class, 'updatePaymentMethod'])->whereUuid('number')
+            ->middleware('throttle:10,1')->name('payment-method');
+    });
     Route::post('/policies/acknowledgements/{publication}', [PolicyAcknowledgementController::class,'acknowledge'])
         ->name('policy.acknowledge')->middleware('throttle:10,1');
     Route::get('/account/saved-jobs', [SavedJobController::class,'index'])->name('account.saved-jobs');
@@ -300,6 +314,9 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/creator/apply', [CreatorApplicationController::class, 'show'])->name('creator.apply');
     Route::post('/creator/apply', [CreatorApplicationController::class, 'submit'])->name('creator.apply.store')->middleware('throttle:3,1');
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
+        Route::get('/orders', [CommerceOrderController::class, 'index'])->name('studio.orders.index');
+        Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('studio.orders.show');
+        Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('studio.orders.receipt');
         Route::get('/profile', [CreatorProfileController::class,'edit'])->name('studio.profile.edit');
         Route::patch('/profile', [CreatorProfileController::class,'update'])
             ->name('studio.profile.update')->middleware('throttle:10,1');
@@ -327,6 +344,17 @@ Route::middleware('auth')->group(function (): void {
     });
 
     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
+        Route::middleware('capability:commerce_orders')->group(function (): void {
+            Route::get('/orders', [CommerceOrderController::class, 'index'])->name('dashboard.orders.index');
+            Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('dashboard.orders.show');
+            Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('dashboard.orders.receipt');
+        });
+        Route::middleware('role:super_admin')->prefix('payment-methods')->name('dashboard.payment-methods.')->group(function (): void {
+            Route::get('/', [CommercePaymentMethodController::class, 'index'])->name('index');
+            Route::post('/', [CommercePaymentMethodController::class, 'store'])->middleware('throttle:10,1')->name('store');
+            Route::patch('/{method}', [CommercePaymentMethodController::class, 'update'])->whereNumber('method')
+                ->middleware('throttle:10,1')->name('update');
+        });
         Route::get('/{type}-manager', [MarketplaceManagerController::class, 'index'])
             ->where('type','project|freelance|service')->name('dashboard.marketplace.index');
         Route::get('/job-manager', [JobManagerController::class, 'index'])->name('dashboard.jobs.index');

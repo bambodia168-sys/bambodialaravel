@@ -1036,7 +1036,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-    document.querySelectorAll('[data-policy-print]').forEach((button) => {
+    document.querySelectorAll('[data-policy-print], [data-print-page]').forEach((button) => {
         button.addEventListener('click', () => window.print());
     });
     document.querySelectorAll('[data-policy-share]').forEach((button) => {

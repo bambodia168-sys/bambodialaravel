@@ -231,6 +231,9 @@ class UserManagerController extends Controller
     private function savePermissions(User $user,array $permissions): void
     {
         foreach(UserManagementAccess::CAPABILITIES as $key=>$label) {
+            if ($key === 'commerce_orders' && (! config('commerce.enabled') || ! array_key_exists($key, $permissions))) {
+                continue;
+            }
             if ($key === 'marketplace_transfer') {
                 if ($user->role !== 'staff') {
                     DB::table('user_permission_overrides')->where('user_id', $user->id)

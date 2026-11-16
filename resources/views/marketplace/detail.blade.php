@@ -144,6 +144,12 @@
     <aside class="premium-detail-sidebar" aria-label="Listing information and actions">
       <section class="premium-side-card premium-price-card premium-offer-v3" aria-labelledby="detail-offer-heading">
         <div class="premium-side-card-body">
+          @if(config('commerce.enabled') && !\App\Support\PreviewContentReview::isPreviewTitle($listing->title)
+              && $listing->creator?->account_status === 'active' && (int) auth()->id() !== (int) $listing->user_id
+              && ($isProduct ? (($regularPrice !== null && $listing->licenseDefinition?->allowsTier('regular'))
+                  || $extendedLicense?->allowsTier('extended')) : $listing->price !== null))
+            <a class="btn primary premium-full-action" href="{{ route('account.orders.create', $listing->public_id) }}">Review order</a>
+          @endif
           @if($isProduct)
             <div class="premium-offer-heading">
               <div>

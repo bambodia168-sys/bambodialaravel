@@ -105,6 +105,13 @@ svg{flex-shrink:0}
 .data-table :is(.listing-title-link,.listing-row-link){text-decoration:none}
 .data-table :is(.listing-title-link,.listing-row-link):is(:hover,:focus-visible){color:var(--secondary);text-decoration:none}
 .data-table :is(.listing-title-link,.listing-row-link):focus-visible{outline:2px solid var(--secondary);outline-offset:3px}
+@media print{
+  body:has(.commerce-receipt){color:#000;background:#fff}
+  body:has(.commerce-receipt) :is(.workspace-sidebar,.workspace-topbar,.commerce-receipt-actions){display:none!important}
+  body:has(.commerce-receipt) :is(.workspace-shell,.workspace-main,.workspace-content){display:block;height:auto;overflow:visible}
+  .commerce-receipt :is(.panel,.data-table td){color:#000;background:#fff;box-shadow:none}
+  .commerce-receipt .data-table{min-width:0}
+}
 .mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 .role-pill{display:inline-flex;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);text-transform:capitalize;font-size:12px;white-space:nowrap}
 .table-search{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface-2);border-radius:11px;padding:4px 5px 4px 11px;color:var(--muted)}
