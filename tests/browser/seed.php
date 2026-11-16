@@ -147,6 +147,32 @@ $cover=\App\Models\MediaAsset::query()->create([
     'is_featured'=>true,
     'preview_url'=>'https://example.com/original-browser-product-preview',
 ]);
+// An incompatible older file reproduces Chromium's selection change while
+// the chooser filters the saved image's options during page initialization.
+\App\Models\MediaAsset::query()->create([
+    'user_id'=>$creator->id, 'original_name'=>'older-animation.gif',
+    'storage_path'=>'marketplace/previews/'.$creator->id.'/older-animation.gif',
+    'mime_type'=>'image/gif', 'bytes'=>43, 'width'=>1, 'height'=>1,
+    'alt_text'=>'Browser QA older incompatible animation', 'rights_basis'=>'owned',
+    'rights_holder'=>'Browser QA Creator', 'review_status'=>'pending',
+])->update(['created_at'=>now()->subDay()]);
+$cover->update(['created_at'=>now()->addSecond()]);
+foreach (['product','project','service','freelance','job'] as $type) {
+    $draft = [
+        'title'=>'Browser QA Saved Featured '.ucfirst($type),
+        'description'=>str_repeat('A private draft with previously attached featured media. ',3),
+        'currency'=>'USD', 'status'=>'draft', 'featured_kind'=>'image', 'featured_media_id'=>$cover->id,
+    ];
+    if ($type === 'job') {
+        \App\Models\MarketplaceJob::query()->create([
+            ...$draft, 'client_id'=>$creator->id, 'category'=>'development',
+        ]);
+    } else {
+        \App\Models\MarketplaceListing::query()->create([
+            ...$draft, 'user_id'=>$creator->id, 'type'=>$type,
+        ]);
+    }
+}
 $terms=\App\Models\Policy::query()->create([
     'title'=>'Browser QA Terms of Service',
     'category'=>'terms','status'=>'published','jurisdiction'=>'Test environment',
