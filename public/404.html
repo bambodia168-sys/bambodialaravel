@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="light dark">
+  <title>Page not found · Bambodia</title>
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <script>
+    try {
+      const theme = localStorage.getItem('bambodia-theme');
+      if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f4f7fc;
+      --surface: #fff;
+      --text: #17253b;
+      --muted: #52647d;
+      --line: #d7e1ef;
+      --accent: #b93808;
+      --accent-hover: #942c06;
+      --on-accent: #fff;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --page: #0b1424;
+      --surface: #101f36;
+      --text: #f6f9ff;
+      --muted: #afc0d7;
+      --line: #314762;
+      --accent: #ffad72;
+      --accent-hover: #ffbf94;
+      --on-accent: #261608;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) {
+        color-scheme: dark;
+        --page: #0b1424;
+        --surface: #101f36;
+        --text: #f6f9ff;
+        --muted: #afc0d7;
+        --line: #314762;
+        --accent: #ffad72;
+        --accent-hover: #ffbf94;
+        --on-accent: #261608;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--text);
+      font: 1rem/1.6 Inter, "Segoe UI", system-ui, sans-serif;
+    }
+
+    .site-header {
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .header-inner {
+      width: min(100% - 2.5rem, 74rem);
+      min-height: 4.5rem;
+      margin-inline: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: inline-grid;
+      align-content: center;
+      min-height: 44px;
+    }
+
+    .brand img {
+      display: block;
+      width: clamp(7.25rem, 22vw, 10rem);
+      height: auto;
+    }
+
+    .brand .logo-dark { display: none; }
+    :root[data-theme="dark"] .brand .logo-light { display: none; }
+    :root[data-theme="dark"] .brand .logo-dark { display: block; }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) .brand .logo-light { display: none; }
+      :root:not([data-theme]) .brand .logo-dark { display: block; }
+    }
+
+    .support-link {
+      display: inline-grid;
+      align-content: center;
+      min-height: 44px;
+      color: var(--muted);
+      font-size: .875rem;
+      font-weight: 650;
+      text-decoration: none;
+    }
+
+    .support-link:hover { color: var(--accent); }
+
+    main {
+      display: grid;
+      align-items: center;
+      justify-items: center;
+      min-height: 52vh;
+      padding: clamp(48px, 8vw, 104px) 1.25rem;
+      text-align: center;
+    }
+
+    .error-mark {
+      display: block;
+      width: clamp(150px, 48vw, 332px);
+      max-width: 100%;
+      height: auto;
+      margin-inline: auto;
+    }
+
+    h1 {
+      margin: 1rem 0 .7rem;
+      font-size: clamp(2rem, 5.5vw, 3.5rem);
+      line-height: 1.12;
+      letter-spacing: -.04em;
+      text-wrap: balance;
+    }
+
+    p { margin: 0; color: var(--muted); }
+
+    .recovery-links {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: .75rem;
+      margin-top: 1.75rem;
+    }
+
+    .button {
+      display: inline-grid;
+      place-items: center;
+      min-height: 46px;
+      padding: .6rem 1.15rem;
+      border: 1px solid var(--line);
+      border-radius: .7rem;
+      color: var(--text);
+      font-size: .9rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .button:hover { background: var(--page); }
+    .button.primary { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+    .button.primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); }
+
+    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+    @media (max-width: 420px) {
+      .recovery-links { display: grid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="Bambodia home">
+        <img class="logo-light" src="/images/bambodia-logo.webp" alt="" width="550" height="144">
+        <img class="logo-dark" src="/images/bambodia-logo-dark.svg" alt="" width="550" height="144">
+      </a>
+      <a class="support-link" href="/support-center">Support Center</a>
+    </div>
+  </header>
+  <main>
+    <section aria-labelledby="page-title">
+      <svg class="error-mark" width="332" height="130" viewBox="0 0 332 130" role="img" aria-label="404"
+           fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M72 17 15 86h83M72 17v96"/>
+        <ellipse cx="166" cy="65" rx="37" ry="48" style="stroke: var(--accent)"/>
+        <path d="M291 17 234 86h83M291 17v96"/>
+      </svg>
+      <h1 id="page-title">Page not found</h1>
+      <p>The page you’re looking for may have moved, or the link may be incomplete.</p>
+      <nav class="recovery-links" aria-label="Where to go next">
+        <a class="button primary" href="/">Back to homepage</a>
+        <a class="button" href="/search">Search marketplace</a>
+      </nav>
+    </section>
+  </main>
+</body>
+</html>

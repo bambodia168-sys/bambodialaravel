@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureCapability;
 use App\Http\Middleware\AuthenticateApiToken;
 use App\Http\Middleware\SetLocale;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -31,6 +32,22 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+        $exceptions->render(function (AuthenticationException $exception, Request $request) {
+            if (! $request->isMethod('GET') || $request->expectsJson()
+                || ! $request->routeIs('builder', 'localized.*.builder')) {
+                return null;
+            }
+
+            $route = $request->route()->getName();
+            // Builder still accepts legacy links such as /builder?=123456789.
+            // The normalized query string used by Laravel drops that parameter.
+            $query = (string) $request->server('QUERY_STRING', '');
+            redirect()->setIntendedUrl(route($route, absolute: false).($query === '' ? '' : '?'.$query));
+
+            $login = $route === 'builder' ? 'login' : 'localized.'.$request->segment(1).'.login';
+
+            return redirect()->route($login);
+        });
         // A super-admin's manually submitted AI provider probe is throttled to
         // two attempts per minute. Keep the limit, but return a useful message
         // instead of leaving the administrator on the default 429 error page.
