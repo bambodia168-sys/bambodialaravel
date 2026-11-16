@@ -31,9 +31,9 @@
               ], fn ($status) => $listing->canCreatorSetStatus($status), ARRAY_FILTER_USE_KEY);
             @endphp
             <tr>
-              <td class="mono">{{ $listing->public_id }}</td>
+              <td class="mono"><a class="listing-row-link" href="{{ $listing->builderUrl() }}">{{ $listing->public_id }}</a></td>
               <td><a class="listing-title-link" href="{{ $listing->builderUrl() }}">{{ $listing->title }}</a></td>
-              <td>{{ ucfirst($listing->type) }}</td>
+              <td><a class="listing-row-link" href="{{ $listing->builderUrl() }}" aria-label="{{ ucfirst($listing->type) }}: {{ $listing->title }}">{{ ucfirst($listing->type) }}</a></td>
               <td><span class="role-pill">{{ ucfirst(str_replace('_', ' ', $listing->status)) }}</span></td>
               <td>{{ $listing->created_at->format('d M Y') }}</td>
               <td>

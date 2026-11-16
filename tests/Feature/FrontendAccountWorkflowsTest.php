@@ -83,7 +83,8 @@ class FrontendAccountWorkflowsTest extends TestCase
         $this->assertDatabaseCount('saved_listings',1);
         $this->get('/account/saved-listings')->assertOk()
             ->assertSee('<a class="listing-title-link" href="'.$listing->publicUrl().'">'.$listing->title.'</a>', false)
-            ->assertSee($listing->public_id);
+            ->assertSee('<a class="listing-row-link mono" href="'.$listing->publicUrl().'">'.$listing->public_id.'</a>', false)
+            ->assertSee('<a class="listing-row-link" href="'.$listing->publicUrl().'" aria-label="Service: '.$listing->title.'">Service</a>', false);
         $this->get($listing->publicUrl())->assertOk()->assertSee($listing->title);
         $this->assertDatabaseHas('audit_events',['event'=>'listing.saved','actor_id'=>$customer->id]);
 

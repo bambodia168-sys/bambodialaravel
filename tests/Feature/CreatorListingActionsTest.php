@@ -43,9 +43,13 @@ class CreatorListingActionsTest extends TestCase
             $listing->update(['status' => 'draft']);
             $titleLink = '<a class="listing-title-link" href="'.$listing->builderUrl().'">'.$listing->title.'</a>';
 
-            $this->get(route('studio.listings'))->assertOk()->assertSee($titleLink, false);
+            $idLink = '<a class="listing-row-link" href="'.$listing->builderUrl().'">'.$listing->public_id.'</a>';
+            $typeLink = '<a class="listing-row-link" href="'.$listing->builderUrl().'" aria-label="'.ucfirst($type).': '.$listing->title.'">'.ucfirst($type).'</a>';
+            $this->get(route('studio.listings'))->assertOk()->assertSee($titleLink, false)
+                ->assertSee($idLink, false)->assertSee($typeLink, false);
             if ($type === 'product') {
-                $this->get(route('studio.products.index'))->assertOk()->assertSee($titleLink, false);
+                $this->get(route('studio.products.index'))->assertOk()
+                    ->assertSee($titleLink, false)->assertSee($idLink, false);
             }
             $this->get($listing->builderUrl())->assertOk()
                 ->assertSee('data-builder-readonly="0"', false)->assertSee($listing->title);

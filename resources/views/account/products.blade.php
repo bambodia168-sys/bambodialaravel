@@ -34,7 +34,7 @@
       <tbody>
         @forelse($products as $product)
           <tr>
-            <td class="mono">{{ $product->public_id }}</td>
+            <td class="mono"><a class="listing-row-link" href="{{ $product->builderUrl() }}">{{ $product->public_id }}</a></td>
             <td><a class="listing-title-link" href="{{ $product->builderUrl() }}">{{ $product->title }}</a></td>
             <td><div class="creator-product-license-lines">
               @if($product->licenseDefinition)
