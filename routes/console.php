@@ -109,3 +109,34 @@ Artisan::command('marketplace:preview-review {--json : Print a structured review
 
     return $this->option('strict') && $report['status'] !== 'no_preview_markers' ? 2 : 0;
 })->purpose('Read-only review of public preview item ownership, media and customer activity');
+
+Artisan::command('commerce:reconcile-qr', function (): int {
+    if (! config('commerce.enabled') || ! config('commerce.payments_enabled')) {
+        return 0;
+    }
+
+    $controller = app(\App\Http\Controllers\CommercePaymentController::class);
+    $failures = 0;
+    // Prioritize recent bills. Older unresolved cases remain accessible on the order.
+    \App\Models\CommercePayment::query()->whereIn('provider', \App\Models\CommercePayment::QR_PROVIDERS)
+        ->where('status', 'checkout_open')->where('qr_expires_at', '>=', now()->subDay())
+        ->when(app()->environment('production'), fn ($query) => $query->where('live_mode', true))
+        ->oldest('updated_at')->limit(60)->get()->each(function ($payment) use ($controller, &$failures): void {
+            try {
+                $controller->reconcile($payment);
+            } catch (\Throwable) {
+                // The order still awaits verification and will be retried on a later run.
+                $failures++;
+            } finally {
+                \App\Models\CommercePayment::query()->whereKey($payment->id)->where('status', 'checkout_open')
+                    ->update(['updated_at' => now()]);
+            }
+        });
+    if ($failures) {
+        $this->warn("QR reconciliation failures: {$failures}.");
+    }
+
+    return $failures ? 1 : 0;
+})->purpose('Verify open ABA and Bakong bills through the provider');
+
+Schedule::command('commerce:reconcile-qr')->everyMinute()->withoutOverlapping()->runInBackground();

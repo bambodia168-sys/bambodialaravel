@@ -18,6 +18,23 @@ class CommercePaymentMethod extends Model
         return in_array($this->provider, ['stripe', 'paypal'], true);
     }
 
+    public function dynamicQr(): bool
+    {
+        return in_array($this->provider, CommercePayment::QR_PROVIDERS, true);
+    }
+
+    public function usesGateway(): bool
+    {
+        return $this->automatic() || $this->dynamicQr();
+    }
+
+    public function availableForCheckout(bool $live): bool
+    {
+        return $this->usesGateway()
+            ? ($live || ! app()->environment('production')) && \App\Support\CommerceGateway::ready($this->provider, $live)
+            : filled($this->instructions);
+    }
+
     protected function casts(): array
     {
         return ['available' => 'boolean'];
