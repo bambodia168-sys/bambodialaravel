@@ -17,7 +17,7 @@
       @forelse($saved as $entry)
         <tr>
           @if($entry->listing)
-            <td><strong>{{ $entry->listing->title }}</strong>
+            <td><a class="listing-title-link" href="{{ $entry->listing->publicUrl() }}">{{ $entry->listing->title }}</a>
               <div class="text-muted">{{ ucfirst($entry->listing->type) }} · {{ $entry->listing->public_id }}</div></td>
             <td>{{ $entry->listing->category?->name ?? 'Uncategorized' }}</td>
             <td>

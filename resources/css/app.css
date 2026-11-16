@@ -101,6 +101,9 @@ svg{flex-shrink:0}
 .data-table td{padding:16px 22px;border-top:1px solid var(--line);font-size:var(--font-body);vertical-align:middle}
 .data-table tr:hover td{background:color-mix(in srgb,var(--surface-2),transparent 42%)}
 .data-table .empty-cell{text-align:center;padding:60px 20px;color:var(--muted)}
+.data-table .listing-title-link{font-weight:750;text-decoration:underline;text-underline-offset:3px}
+.data-table .listing-title-link:hover,.data-table .listing-title-link:focus-visible{color:var(--secondary)}
+.data-table .listing-title-link:focus-visible{outline:2px solid var(--secondary);outline-offset:3px}
 .mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 .role-pill{display:inline-flex;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);text-transform:capitalize;font-size:12px;white-space:nowrap}
 .table-search{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface-2);border-radius:11px;padding:4px 5px 4px 11px;color:var(--muted)}

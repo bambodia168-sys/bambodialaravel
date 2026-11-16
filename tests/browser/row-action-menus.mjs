@@ -121,6 +121,13 @@ try {
 
     await creator.goto(origin+'/studio/listings', {waitUntil:'networkidle'});
     const row = creator.getByRole('row').filter({hasText:'Browser QA Published Freelance'});
+    const titleLink = row.getByRole('link', {name:'Browser QA Published Freelance', exact:true});
+    await titleLink.focus();
+    await titleLink.press('Enter');
+    await creator.waitForURL(/\/builder\?=\d{9}$/);
+    if (await creator.locator('input[name="title"]').inputValue() !== 'Browser QA Published Freelance')
+      throw Error(name+' Creator Studio title opened a different listing');
+    await creator.goto(origin+'/studio/listings', {waitUntil:'networkidle'});
     const listingTrigger = row.getByRole('button', {name:/Actions for/});
     const listingMenu = row.locator('[data-row-action-menu]');
     await listingTrigger.click();
@@ -138,7 +145,7 @@ try {
     if (!(await row.getByText('Published', {exact:true}).isVisible()))
       throw Error(name+' canceling the Archive dialog changed listing status');
     await creatorContext.close();
-    checks += 8;
+    checks += 9;
   }
   console.log('PASS: '+checks+' responsive row action menu assertions');
 } finally {

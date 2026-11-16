@@ -81,8 +81,10 @@ class FrontendAccountWorkflowsTest extends TestCase
         $this->actingAs($customer)->post($route)->assertRedirect();
         $this->post($route)->assertRedirect();
         $this->assertDatabaseCount('saved_listings',1);
-        $this->get('/account/saved-listings')->assertOk()->assertSee($listing->title)
+        $this->get('/account/saved-listings')->assertOk()
+            ->assertSee('<a class="listing-title-link" href="'.$listing->publicUrl().'">'.$listing->title.'</a>', false)
             ->assertSee($listing->public_id);
+        $this->get($listing->publicUrl())->assertOk()->assertSee($listing->title);
         $this->assertDatabaseHas('audit_events',['event'=>'listing.saved','actor_id'=>$customer->id]);
 
         $this->actingAs($stranger)->get('/account/saved-listings')
@@ -105,6 +107,7 @@ class FrontendAccountWorkflowsTest extends TestCase
         $listing->update(['status'=>'rejected']);
         $this->get('/account/saved-listings')->assertOk()
             ->assertSee('Listing unavailable')
+            ->assertDontSee($listing->publicUrl())
             ->assertDontSee('Secret Listing That Becomes Withdrawn');
         $this->get($listing->publicUrl())->assertNotFound();
         $this->post('/account/saved-listings/'.$listing->id)->assertNotFound();

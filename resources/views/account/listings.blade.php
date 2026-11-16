@@ -32,7 +32,7 @@
             @endphp
             <tr>
               <td class="mono">{{ $listing->public_id }}</td>
-              <td><strong>{{ $listing->title }}</strong></td>
+              <td><a class="listing-title-link" href="{{ $listing->builderUrl() }}">{{ $listing->title }}</a></td>
               <td>{{ ucfirst($listing->type) }}</td>
               <td><span class="role-pill">{{ ucfirst(str_replace('_', ' ', $listing->status)) }}</span></td>
               <td>{{ $listing->created_at->format('d M Y') }}</td>

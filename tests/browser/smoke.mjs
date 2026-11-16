@@ -1264,9 +1264,11 @@ try {
       if(!(await save.isVisible()))throw new Error('Saved-listing action missing for signed-in customer');
       await save.click();
       await page.goto(origin+'/account/saved-listings',{waitUntil:'networkidle'});
-      if(!(await page.getByText('Browser QA Published Service').first().isVisible()))
-        throw new Error('Saved listing not persisted for real browser customer session');
-      checks+=3;
+      await page.getByRole('link',{name:'Browser QA Published Service',exact:true}).click();
+      await page.waitForURL(/\/service\?=\d{9}-browser-qa-published-service$/);
+      if(!(await page.getByRole('heading',{name:'Browser QA Published Service',exact:true}).isVisible()))
+        throw new Error('Saved listing title did not open the matching public listing');
+      checks+=4;
 
       // The Account shell must keep its sidebar and content scroll independent.
       await page.goto(origin+'/en/account/notifications?filter=read',{waitUntil:'networkidle'});

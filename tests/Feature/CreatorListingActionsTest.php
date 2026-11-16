@@ -33,6 +33,27 @@ class CreatorListingActionsTest extends TestCase
         $this->get($other->builderUrl())->assertNotFound();
     }
 
+    public function test_listing_titles_link_to_the_owned_builder_in_studio(): void
+    {
+        $owner = $this->user('freelancer');
+        $this->actingAs($owner);
+
+        foreach (MarketplaceListing::TYPES as $type) {
+            $listing = $this->listing($owner, $type, 'Creator Studio '.$type.' title');
+            $listing->update(['status' => 'draft']);
+            $titleLink = '<a class="listing-title-link" href="'.$listing->builderUrl().'">'.$listing->title.'</a>';
+
+            $this->get(route('studio.listings'))->assertOk()->assertSee($titleLink, false);
+            if ($type === 'product') {
+                $this->get(route('studio.products.index'))->assertOk()->assertSee($titleLink, false);
+            }
+            $this->get($listing->builderUrl())->assertOk()
+                ->assertSee('data-builder-readonly="0"', false)->assertSee($listing->title);
+        }
+
+        $this->actingAs($this->user('customer'))->get($listing->builderUrl())->assertNotFound();
+    }
+
     public function test_creator_can_archive_draft_and_delete_their_published_listing(): void
     {
         $owner = $this->user('freelancer');
@@ -58,7 +79,8 @@ class CreatorListingActionsTest extends TestCase
         $this->patch($statusUrl, ['status' => 'archived'])->assertRedirect($archive);
         $this->get($listing->publicUrl())->assertNotFound();
         $this->get($index)->assertOk()->assertDontSee($listing->title);
-        $this->get($archive)->assertOk()->assertSee($listing->title)
+        $this->get($archive)->assertOk()
+            ->assertSee('<a class="listing-title-link" href="'.$listing->builderUrl().'">'.$listing->title.'</a>', false)
             ->assertDontSee($listing->publicUrl());
         $this->get($listing->builderUrl())->assertOk()->assertSee($listing->title);
 
