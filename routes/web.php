@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CommerceOrderController;
 use App\Http\Controllers\CommercePaymentMethodController;
+use App\Http\Controllers\CommercePaymentController;
 use App\Http\Controllers\ProfileEditorController;
 use App\Http\Controllers\CreatorProfileSectionController;
 use App\Http\Controllers\CreatorProfileItemController;
@@ -213,6 +214,16 @@ Route::middleware('auth')->group(function (): void {
             ->middleware('throttle:10,1')->name('cancel');
         Route::patch('/{number}/payment-method', [CommerceOrderController::class, 'updatePaymentMethod'])->whereUuid('number')
             ->middleware('throttle:10,1')->name('payment-method');
+        Route::post('/{number}/payments/start', [CommercePaymentController::class, 'start'])->whereUuid('number')
+            ->middleware('throttle:10,1')->name('payment.start');
+        Route::post('/{number}/payments/manual', [CommercePaymentController::class, 'submit'])->whereUuid('number')
+            ->middleware('throttle:10,1')->name('payment.submit');
+        Route::get('/{number}/payments/{payment}/return', [CommercePaymentController::class, 'returned'])
+            ->whereUuid(['number', 'payment'])->name('payment.return');
+        Route::post('/{number}/payments/{payment}/verify', [CommercePaymentController::class, 'verify'])
+            ->whereUuid(['number', 'payment'])->middleware('throttle:10,1')->name('payment.verify');
+        Route::get('/{number}/payment-qr/{method}', [CommercePaymentController::class, 'qr'])
+            ->whereUuid('number')->whereNumber('method')->name('payment.qr');
     });
     Route::post('/policies/acknowledgements/{publication}', [PolicyAcknowledgementController::class,'acknowledge'])
         ->name('policy.acknowledge')->middleware('throttle:10,1');
@@ -354,6 +365,12 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/', [CommercePaymentMethodController::class, 'store'])->middleware('throttle:10,1')->name('store');
             Route::patch('/{method}', [CommercePaymentMethodController::class, 'update'])->whereNumber('method')
                 ->middleware('throttle:10,1')->name('update');
+        });
+        Route::middleware('role:super_admin')->group(function (): void {
+            Route::get('/orders/{number}/payments/{payment}/proof', [CommercePaymentController::class, 'proof'])
+                ->whereUuid(['number', 'payment'])->name('dashboard.orders.payment.proof');
+            Route::patch('/orders/{number}/payments/{payment}', [CommercePaymentController::class, 'review'])
+                ->whereUuid(['number', 'payment'])->middleware('throttle:20,1')->name('dashboard.orders.payment.review');
         });
         Route::get('/{type}-manager', [MarketplaceManagerController::class, 'index'])
             ->where('type','project|freelance|service')->name('dashboard.marketplace.index');

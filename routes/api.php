@@ -3,7 +3,11 @@
 use App\Http\Controllers\Api\AccountApiController;
 use App\Http\Controllers\Api\ListingApiController;
 use App\Http\Controllers\Api\ProductLicenseApiController;
+use App\Http\Controllers\CommercePaymentController;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/commerce/webhooks/{provider}', [CommercePaymentController::class, 'webhook'])
+    ->where('provider', 'stripe|paypal')->middleware('throttle:180,1')->name('commerce.webhook');
 
 Route::prefix('v1')->middleware('throttle:30,1')->group(function (): void {
     // External installed scripts send the bearer license secret in POST body over HTTPS.

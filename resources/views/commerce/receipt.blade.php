@@ -16,7 +16,7 @@
         <tr><th scope="row">Buyer</th><td>{{ $order->buyer_name }}</td></tr>
         <tr><th scope="row">Seller</th><td>{{ $order->seller_name }}</td></tr>
         @if($order->license_name)<tr><th scope="row">License selection</th><td>{{ $order->license_name }}</td></tr>@endif
-        <tr><th scope="row">Payment</th><td>No payment required</td></tr>
+        <tr><th scope="row">Payment</th><td>{{ $order->total === '0.00' ? 'No payment required' : $order->payment_method.' · Verified' }}</td></tr>
         <tr><th scope="row">Total</th><td class="mono"><strong>{{ $order->currency }} {{ $order->total }}</strong></td></tr>
       </tbody></table>
     </div>

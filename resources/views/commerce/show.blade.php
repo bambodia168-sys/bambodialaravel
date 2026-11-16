@@ -26,7 +26,11 @@
         </tbody>
       </table>
     </div>
-    @if($section === 'account.orders' && $order->status === 'awaiting_payment' && ($methods->isNotEmpty() || $order->payment_method))
+    @if(config('commerce.payments_enabled'))
+      @include('commerce.payments')
+    @endif
+    @php($paymentOpen = $payments->contains(fn ($payment) => in_array($payment->status, \App\Models\CommercePayment::ACTIVE, true)))
+    @if(!config('commerce.payments_enabled') && !$paymentOpen && $section === 'account.orders' && $order->status === 'awaiting_payment' && ($methods->isNotEmpty() || $order->payment_method))
       <div class="panel-head">
         <form method="post" action="{{ route('account.orders.payment-method', $order->number) }}" class="form-stack">
           @csrf @method('PATCH')
@@ -42,7 +46,7 @@
         </form>
       </div>
     @endif
-    @if($order->receipt_number || ($section === 'account.orders' && $order->status === 'awaiting_payment'))
+    @if($order->receipt_number || (!$paymentOpen && $section === 'account.orders' && $order->status === 'awaiting_payment'))
       <div class="panel-head">
         @if($order->receipt_number)
           <a class="btn primary" href="{{ route($section.'.receipt', $order->number) }}">View receipt</a>

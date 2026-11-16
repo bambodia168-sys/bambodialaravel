@@ -22,7 +22,7 @@
           @if($quote['total'] === '0.00')
             <p>A zero-total order is recorded immediately. Access and delivery are arranged separately.</p>
           @else
-            @if($methods->isNotEmpty())
+            @if(!config('commerce.payments_enabled') && $methods->isNotEmpty())
               <label>Preferred payment method
                 <select name="payment_method">
                   <option value="">Decide later</option>
@@ -32,7 +32,11 @@
                 </select>
               </label>
             @endif
-            <p>This records an unpaid order. You won’t be charged.</p>
+            @if(config('commerce.payments_enabled'))
+              <p>Choose an available payment method after placing your order.</p>
+            @else
+              <p>This records an unpaid order. You won’t be charged.</p>
+            @endif
           @endif
           <button class="btn primary">Place order</button>
         </form>

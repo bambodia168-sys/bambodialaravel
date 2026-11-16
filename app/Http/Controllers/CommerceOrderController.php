@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CommercePaymentMethod;
+use App\Models\CommercePayment;
 use App\Models\AuditEvent;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
@@ -46,7 +47,9 @@ class CommerceOrderController extends Controller
             ? CommercePaymentMethod::query()->where('available', true)->orderBy('name')->get()
             : collect();
 
-        return response()->view('commerce.show', compact('order', 'section', 'workspace', 'methods'))
+        $payments = config('commerce.payments_enabled') ? $order->payments()->latest('id')->get() : collect();
+
+        return response()->view('commerce.show', compact('order', 'section', 'workspace', 'methods', 'payments'))
             ->header('Cache-Control', 'private, no-store');
     }
 
@@ -138,6 +141,7 @@ class CommerceOrderController extends Controller
             $order = $orders->where('number', $number)->lockForUpdate()->firstOrFail();
             if ($order->status !== 'cancelled') {
                 abort_unless($order->status === 'awaiting_payment', 409);
+                abort_if($order->payments()->whereIn('status', CommercePayment::ACTIVE)->exists(), 409, 'An existing payment is still open.');
                 $order->update(['status' => 'cancelled', 'cancelled_at' => now()]);
                 AuditEvent::record('commerce.order.cancelled', $request->user(), $request);
             }
@@ -154,6 +158,7 @@ class CommerceOrderController extends Controller
         DB::transaction(function () use ($orders, $number, $data, $request): void {
             $order = $orders->where('number', $number)->lockForUpdate()->firstOrFail();
             abort_unless($order->status === 'awaiting_payment', 409);
+            abort_if($order->payments()->whereIn('status', CommercePayment::ACTIVE)->exists(), 409, 'An existing payment is still open.');
             $method = $this->availableMethod($data['payment_method'] ?? null);
             $order->update(['payment_method' => $method?->name]);
             if ($order->wasChanged('payment_method')) {

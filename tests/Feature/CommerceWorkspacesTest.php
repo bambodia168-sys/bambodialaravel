@@ -97,7 +97,7 @@ class CommerceWorkspacesTest extends TestCase
         $this->actingAs($this->user('super_admin'))
             ->post(route('dashboard.payment-methods.store'), ['name' => 'Local bank transfer', 'available' => true])
             ->assertRedirect(route('dashboard.payment-methods.index'));
-        $method = CommercePaymentMethod::query()->sole();
+        $method = CommercePaymentMethod::query()->where('name', 'Local bank transfer')->sole();
         $this->assertFalse($method->available);
         $this->get(route('dashboard.payment-methods.index'))->assertOk()->assertSee('Local bank transfer');
         $this->patch(route('dashboard.payment-methods.update', $method), ['available' => true])->assertRedirect();
