@@ -54,6 +54,7 @@ try {
       // Read the live selection after the script has initialized, then submit
       // the form without touching Featured media.
       const featured = page.locator('[data-featured-media]');
+      await page.getByRole('button', {name:'Upload featured media'}).waitFor({state:'visible'});
       const preview = page.locator('[data-featured-preview] img');
       await preview.waitFor({state:'attached',timeout:5000});
       const selected = await featured.locator('option:checked').textContent();
@@ -68,6 +69,33 @@ try {
       await preview.waitFor({state:'attached',timeout:5000});
       if (!(await featured.locator('option:checked').textContent())?.includes('Original approved browser acceptance preview'))
         throw Error(name+' preview lost featured '+type+' media');
+      if (await page.getByRole('button', {name:'Upload featured media'}).count())
+        throw Error(name+' exposes upload controls in a read-only preview');
+      if (type === 'service' && isMobile) {
+        previewAddress.searchParams.set('mode', 'manage');
+        await page.goto(previewAddress.toString(), {waitUntil:'domcontentloaded'});
+        const target = page.locator('[data-featured-drop]');
+        const upload = target.getByRole('button', {name:'Upload featured media'});
+        const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l5cAAAAASUVORK5CYII=', 'base64');
+        const [fileChooser] = await Promise.all([page.waitForEvent('filechooser'), upload.click()]);
+        await fileChooser.setFiles({name:'direct featured image.png',mimeType:'image/png',buffer:png});
+        await page.getByText('Media selected. Save the listing to apply it.', {exact:true}).waitFor();
+        if (!(await featured.locator('option:checked').textContent())?.includes('direct featured image'))
+          throw Error(name+' file picker upload did not select the new image');
+        const dropped = await page.evaluateHandle(bytes => {
+          const data = new DataTransfer();
+          data.items.add(new File([new Uint8Array(bytes)], 'dropped featured image.png', {type:'image/png'}));
+          return data;
+        }, [...png]);
+        await target.dispatchEvent('drop', {dataTransfer:dropped});
+        await page.waitForFunction(() => document.querySelector('[data-featured-media]').selectedOptions[0]?.textContent.includes('dropped featured image'));
+        await page.getByRole('button', {name:'Save changes',exact:true}).click();
+        await page.getByText('Listing changes saved.', {exact:true}).first().waitFor({state:'attached'});
+        await preview.waitFor({state:'attached'});
+        if (!(await featured.locator('option:checked').textContent())?.includes('dropped featured image'))
+          throw Error(name+' did not save the dropped featured image');
+        checks += 3;
+      }
       checks += 3;
     }
     const response = await page.goto(origin+'/dashboard/policy-center',{waitUntil:'networkidle'});
