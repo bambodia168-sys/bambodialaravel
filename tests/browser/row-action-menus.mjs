@@ -47,7 +47,28 @@ try {
           Math.abs(button.top - header.top) < 2 && button.left >= heading.right;
       });
       if (!topRight) throw Error(name+' '+label+' is outside the top-right header position');
-      checks++;
+      const draft = page.getByRole('row').filter({hasText:'Browser QA Saved Featured '+label.slice(7)});
+      const edit = draft.getByRole('button', {name:/Actions for/});
+      await edit.click();
+      await draft.getByRole('menuitem', {name:'Edit',exact:true}).click();
+      // Read the live selection after the script has initialized, then submit
+      // the form without touching Featured media.
+      const featured = page.locator('[data-featured-media]');
+      const preview = page.locator('[data-featured-preview] img');
+      await preview.waitFor({state:'attached',timeout:5000});
+      const selected = await featured.locator('option:checked').textContent();
+      if (!selected?.includes('Original approved browser acceptance preview'))
+        throw Error(name+' did not retain featured '+type+' media');
+      await page.getByRole('button', {name:type==='product'?'Save product':'Save changes',exact:true}).click();
+      await page.getByText('Listing changes saved.', {exact:true}).first().waitFor({state:'attached',timeout:5000});
+      await preview.waitFor({state:'attached',timeout:5000});
+      const previewAddress = new URL(page.url());
+      previewAddress.searchParams.set('mode', 'preview');
+      await page.goto(previewAddress.toString(), {waitUntil:'domcontentloaded'});
+      await preview.waitFor({state:'attached',timeout:5000});
+      if (!(await featured.locator('option:checked').textContent())?.includes('Original approved browser acceptance preview'))
+        throw Error(name+' preview lost featured '+type+' media');
+      checks += 3;
     }
     const response = await page.goto(origin+'/dashboard/policy-center',{waitUntil:'networkidle'});
     if (response?.status() !== 200) throw Error(name+' Policy Center unavailable: '+response?.status());
