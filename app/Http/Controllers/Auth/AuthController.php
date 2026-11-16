@@ -46,6 +46,7 @@ class AuthController extends Controller
         if (UserTwoFactor::query()->whereKey($request->user()->id)->exists()) {
             $pendingId=$request->user()->id;
             $remember=$request->boolean('remember');
+            $intended=$request->session()->get('url.intended');
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -54,6 +55,9 @@ class AuthController extends Controller
                 'twofactor.pending_at'=>now()->timestamp,
                 'twofactor.pending_remember'=>$remember,
             ]);
+            if (is_string($intended) && $intended !== '') {
+                $request->session()->put('url.intended', $intended);
+            }
             return redirect()->route('login.two-factor');
         }
         $request->session()->regenerate();

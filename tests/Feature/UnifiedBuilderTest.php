@@ -93,6 +93,38 @@ class UnifiedBuilderTest extends TestCase
         $this->get('/studio/products')->assertSee('/builder?='.$product->public_id);
     }
 
+    public function test_a_guest_returns_to_the_exact_builder_url_after_signing_in(): void
+    {
+        $admin = $this->member('super_admin');
+        $listing = MarketplaceListing::query()->create([
+            'user_id' => $admin->id,
+            'type' => 'service',
+            'title' => 'Builder deep-link fixture',
+            'description' => 'An isolated fixture for the Builder sign-in workflow.',
+            'status' => 'draft',
+        ]);
+        $manage = '/builder?type=service&item='.$listing->public_id.'&mode=manage';
+        $legacy = '/en/builder?='.$listing->public_id;
+
+        $this->get($legacy)->assertRedirect('/en/login')->assertSessionHas('url.intended', $legacy);
+        $this->getJson($manage)->assertUnauthorized()->assertJsonStructure(['message']);
+        $this->get($manage)->assertRedirect('/login')->assertSessionHas('url.intended', $manage);
+        $this->post('/login', [
+            'email' => $admin->email, 'password' => 'SecureBuilderPassword123!',
+        ])->assertRedirect($manage);
+        $this->get($manage)->assertOk()->assertSee($listing->title);
+
+        $this->post('/logout')->assertRedirect();
+        $this->get($legacy)->assertRedirect('/en/login');
+        $this->post('/en/login', [
+            'email' => $admin->email, 'password' => 'SecureBuilderPassword123!',
+        ])->assertRedirect($legacy);
+        $this->get($legacy)->assertOk()->assertSee($listing->title);
+
+        $this->actingAs($this->member('customer'))->get($manage)
+            ->assertForbidden()->assertSee('Access denied');
+    }
+
     public function test_job_builder_handles_owner_editing_review_and_locked_publication(): void
     {
         $client = $this->member('customer');

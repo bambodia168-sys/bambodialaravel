@@ -9,9 +9,9 @@
     ?: ($requestedDescription!=='' ? $requestedDescription : \App\Models\SiteSetting::setting('seo.default_description'));
   $privatePath=request()->is('login','register','forgot-password','reset-password*',
     'dashboard*','account*','studio*','developer*','checkout*','cart*');
-  $robots=$privatePath ? 'noindex,nofollow'
+  $robots=trim($__env->yieldContent('meta_robots', '')) ?: ($privatePath ? 'noindex,nofollow'
     : ($seoPage ? ($seoPage->is_indexable?'index,follow':'noindex,nofollow')
-        : \App\Models\SiteSetting::setting('seo.default_robots'));
+        : \App\Models\SiteSetting::setting('seo.default_robots')));
   $canonical=$seoPage?->canonical_url ?: url()->current();
   $keywords=$seoPage?->keywords ?: \App\Models\SiteSetting::setting('seo.default_keywords');
   $ogImage=$seoPage?->og_image_url ?: \App\Models\SiteSetting::setting('seo.default_og_image');

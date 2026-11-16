@@ -92,6 +92,8 @@ final class AccountTwoFactorAuthenticationTest extends TestCase
         $user=$this->member();
         [$credential,$recovery,$secret]=$this->enrollment($user);
         $this->post(route('logout'));
+        $builder = '/builder?type=job';
+        $this->get($builder)->assertRedirect('/login');
         $this->post(route('login.store'),[
             'email'=>$user->email,'password'=>self::PASSWORD,'remember'=>'1',
         ])->assertRedirect(route('login.two-factor'));
@@ -104,7 +106,7 @@ final class AccountTwoFactorAuthenticationTest extends TestCase
 
         $this->post(route('login.two-factor.verify'),[
             'code'=>Totp::code($secret,intdiv(now()->timestamp,30)),
-        ])->assertRedirect();
+        ])->assertRedirect($builder);
         $this->assertAuthenticatedAs($user);
         $this->assertDatabaseHas('audit_events',['event'=>'auth.two_factor.challenge.passed']);
         $this->assertNotNull($credential->fresh()->last_counter);
