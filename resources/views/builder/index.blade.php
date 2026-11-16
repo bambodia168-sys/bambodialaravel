@@ -409,9 +409,27 @@
                   <span data-featured-color-label>{{ $selectedColor }}</span>
                 </div>
               </div>
-              <div class="studio-featured-preview" data-featured-preview aria-label="Selected featured media preview">
-                <span><x-icon name="image" size="25"/> Featured media preview</span>
+              <div class="studio-featured-drop" @if($canEdit)
+                data-featured-drop data-upload-url="{{ route('builder.media.store') }}"
+                data-listing-type="{{ $type }}" data-listing-reference="{{ $record?->public_id }}"
+                data-managed="{{ $managed ? '1' : '0' }}"
+              @endif>
+                <div class="studio-featured-preview" data-featured-preview aria-label="Selected featured media preview">
+                  <span><x-icon name="image" size="25"/> Featured media preview</span>
+                </div>
+                @if($canEdit)
+                  <div class="studio-featured-drop-action" data-featured-upload-action hidden>
+                    <span aria-hidden="true">Drag &amp; Drop</span><span aria-hidden="true">|</span>
+                    <button class="studio-tool-action" type="button" data-featured-upload-button aria-label="Upload featured media">
+                      <x-icon name="upload" size="16"/> Upload
+                    </button>
+                    <input type="file" data-featured-upload-input accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" hidden>
+                  </div>
+                @endif
               </div>
+              @if($canEdit)
+                <p class="hint studio-featured-upload-status" data-featured-upload-status role="status" aria-live="polite" hidden></p>
+              @endif
               @error('featured_media_id')<small class="builder-field-error">{{ $message }}</small>@enderror
               <div class="studio-gallery" data-builder-gallery>
                 <div class="studio-gallery-heading">
@@ -695,6 +713,10 @@
         <button type="button" class="btn primary" data-builder-terms-accept><x-icon name="check-circle" size="17"/> Accept terms</button>
       </div>
     </dialog>
+    @if($canEdit)
+      <link rel="stylesheet" href="{{ asset('css/builder-featured-upload.css') }}?v=1">
+      <script defer src="{{ asset('js/builder-featured-upload.js') }}?v=1"></script>
+    @endif
     @if($canEdit && !$managed)
       @include('builder.ai-draft-dialog')
       <script defer src="{{ asset('js/ai-draft-studio.js') }}?v=2"></script>
