@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\MarketplaceOrder;
 use App\Support\CommerceOperations;
+use App\Support\CommerceSettlementReport;
 use App\Support\OrderFulfillment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CommerceOperationsController extends Controller
 {
@@ -17,15 +19,32 @@ class CommerceOperationsController extends Controller
     {
         $this->enabled();
         $creator = $request->routeIs('studio.commerce-operations', 'localized.*.studio.commerce-operations');
-        $query = $request->validate(['order' => ['nullable', 'uuid']]);
-        $number = $query['order'] ?? null;
-        $orders = CommerceOperations::orders()->with(['operations', 'entitlement'])
-            ->when($creator, fn (Builder $orders) => $orders->where('seller_id', $request->user()->id))
-            ->when($number !== null, fn (Builder $orders) => $orders->where('number', $number))
-            ->latest('id')->paginate(15)->withQueryString();
+        $filters = $this->reportFilters($request);
+        $orders = CommerceSettlementReport::orders($filters, $creator ? $request->user()->id : null)
+            ->latest('id')->paginate(15)->appends($filters);
 
-        return response()->view('commerce.operations.index', compact('creator', 'number', 'orders'))
+        return response()->view('commerce.operations.index', compact('creator', 'filters', 'orders'))
             ->header('Cache-Control', 'private, no-store');
+    }
+
+    public function statement(Request $request): StreamedResponse
+    {
+        $this->enabled();
+        $creator = $request->routeIs('studio.commerce-operations.statement', 'localized.*.studio.commerce-operations.statement');
+        $orders = CommerceSettlementReport::orders($this->reportFilters($request), $creator ? $request->user()->id : null);
+
+        return response()->streamDownload(static function () use ($orders): void {
+            $stream = fopen('php://output', 'wb');
+            try {
+                CommerceSettlementReport::writeCsv($stream, $orders);
+            } finally {
+                fclose($stream);
+            }
+        }, $creator ? 'bambodia-sales-settlements.csv' : 'bambodia-commerce-settlements.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function show(Request $request, string $number): Response
@@ -85,5 +104,15 @@ class CommerceOperationsController extends Controller
     private function enabled(): void
     {
         abort_unless(config('commerce.enabled') && config('commerce.operations_enabled'), 404);
+    }
+
+    private function reportFilters(Request $request): array
+    {
+        return array_filter($request->validate([
+            'order' => ['nullable', 'uuid'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', Rule::when($request->filled('from'), ['after_or_equal:from'])],
+            'queue' => ['nullable', Rule::in(array_keys(CommerceSettlementReport::QUEUES))],
+        ]), static fn ($value) => $value !== null);
     }
 }

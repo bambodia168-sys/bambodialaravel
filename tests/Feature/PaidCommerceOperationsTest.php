@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\CommerceCartController;
 use App\Models\CommercePaymentMethod;
 use App\Models\LicenseDefinition;
 use App\Models\MarketplaceListing;
@@ -11,11 +12,14 @@ use App\Models\Policy;
 use App\Models\PolicyPublication;
 use App\Models\ProductFileVersion;
 use App\Models\User;
+use App\Notifications\CheckoutVerification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Mockery;
 use Tests\TestCase;
 
 class PaidCommerceOperationsTest extends TestCase
@@ -140,6 +144,8 @@ class PaidCommerceOperationsTest extends TestCase
         ])->assertRedirect();
         $this->assertSame('refunded', $order->refresh()->status);
         $this->assertTrue($order->operations->recoveryDue());
+        $this->get(route('dashboard.commerce-operations', ['queue' => 'recovery_due']))->assertOk()->assertSee($number);
+        $this->get(route('dashboard.commerce-operations', ['queue' => 'paid_out']))->assertOk()->assertDontSee($number);
         $this->assertSame('revoked', $grant->refresh()->status);
         $this->assertSame('revoked', $grant->license->status);
         $this->actingAs($buyer)->get(route('account.downloads.file', $grant))->assertForbidden();
@@ -149,6 +155,7 @@ class PaidCommerceOperationsTest extends TestCase
             'note' => 'Seller repaid the recorded payout in full.', 'confirmed' => '1',
         ])->assertRedirect();
         $this->assertFalse($order->operations()->sole()->recoveryDue());
+        $this->get(route('dashboard.commerce-operations', ['queue' => 'recovered']))->assertOk()->assertSee($number);
         $this->assertDatabaseCount('commerce_operation_events', 6);
 
         $newOrder = $this->placeAndSubmit($buyer, $product, $this->method());
@@ -177,6 +184,110 @@ class PaidCommerceOperationsTest extends TestCase
         $this->assertDatabaseCount('product_entitlements', 1);
     }
 
+    public function test_settlement_filters_and_exports_use_verified_seller_scoped_orders(): void
+    {
+        $admin = $this->member('super_admin');
+        $seller = $this->member('freelancer');
+        $otherSeller = $this->member('freelancer');
+        $buyer = $this->member('customer');
+        [$product] = $this->product($seller, $admin);
+        [$otherProduct] = $this->product($otherSeller, $admin);
+        $method = $this->method();
+
+        $matched = $this->placeAndSubmit($buyer, $product, $method);
+        $this->approve($matched, $admin);
+        $matched->update(['listing_title' => ' =SUM(1,2)', 'completed_at' => '2026-11-17 23:59:59']);
+        $matched->operations()->create([
+            'commerce_payment_id' => $matched->paidAttempt()->sole()->id,
+            'statement_reference' => 'PRIVATE-STATEMENT-01', 'seller_payable' => '31.25',
+            'reconciled_at' => now(), 'refund_note' => 'Private review details',
+        ]);
+
+        $unmatched = $this->placeAndSubmit($buyer, $product, $method);
+        $this->approve($unmatched, $admin);
+        $unmatched->update(['completed_at' => '2026-11-17 00:00:00']);
+        $outside = $this->placeAndSubmit($buyer, $product, $method);
+        $this->approve($outside, $admin);
+        $outside->update(['completed_at' => '2026-11-18 00:00:00']);
+        $unpaid = $this->placeAndSubmit($this->member('customer'), $product, $method);
+        $foreign = $this->placeAndSubmit($this->member('customer'), $otherProduct, $method);
+        $this->approve($foreign, $admin);
+        $foreign->update(['completed_at' => '2026-11-17 11:00:00']);
+
+        $index = 'studio.commerce-operations';
+        $criteria = ['from' => '2026-11-17', 'to' => '2026-11-17'];
+        $this->actingAs($seller)->get(route($index, $criteria))->assertOk()
+            ->assertSee($matched->number)->assertSee($unmatched->number)->assertSee('Download CSV')
+            ->assertDontSee($foreign->number)->assertDontSee($outside->number)->assertDontSee($unpaid->number);
+        $this->get(route($index, $criteria + ['queue' => 'unmatched']))->assertOk()
+            ->assertSee($unmatched->number)->assertDontSee($matched->number);
+        $this->getJson(route($index, ['from' => '2026-11-18', 'to' => '2026-11-17']))->assertUnprocessable()
+            ->assertJsonValidationErrors('to');
+        $this->getJson(route($index.'.statement', ['queue' => 'not-a-status']))->assertUnprocessable()
+            ->assertJsonValidationErrors('queue');
+
+        $csv = $this->get(route($index.'.statement', $criteria + ['queue' => 'payout_pending', 'page' => 2]))
+            ->assertOk()->assertDownload('bambodia-sales-settlements.csv');
+        $rows = $csv->streamedContent();
+        $this->assertStringContainsString('no-store', $csv->headers->get('Cache-Control'));
+        $this->assertStringContainsString($matched->number.',"\' =SUM(1,2)"', $rows);
+        $this->assertStringContainsString('"Payout pending",31.25', $rows);
+        foreach ([$unmatched->number, $foreign->number, $outside->number, $unpaid->number,
+            'PRIVATE-STATEMENT-01', 'Private review details', $buyer->email] as $private) {
+            $this->assertStringNotContainsString($private, $rows);
+        }
+        $this->assertStringNotContainsString($foreign->number, $this->get(route($index.'.statement', [
+            'order' => $foreign->number,
+        ]))->streamedContent());
+        $this->assertStringNotContainsString($unpaid->number, $this->get(route($index.'.statement', [
+            'order' => $unpaid->number,
+        ]))->streamedContent());
+
+        $adminCsv = route('dashboard.commerce-operations.statement', $criteria);
+        $this->actingAs($seller)->get($adminCsv)->assertForbidden();
+        $this->actingAs($this->member('admin'))->get($adminCsv)->assertForbidden();
+        $this->actingAs($admin)->get(route('dashboard.commerce-operations', $criteria))->assertOk()
+            ->assertSee($foreign->number);
+        $adminRows = $this->get($adminCsv)->assertOk()->assertDownload('bambodia-commerce-settlements.csv')->streamedContent();
+        $this->assertStringContainsString($foreign->number, $adminRows);
+        $this->assertStringContainsString($matched->number, $adminRows);
+        $this->assertStringNotContainsString($outside->number, $adminRows);
+        $matched->paidAttempt()->sole()->update(['live_mode' => false]);
+        $this->app->instance('env', 'production');
+        try {
+            $liveRows = $this->get($adminCsv)->streamedContent();
+            $this->assertStringNotContainsString($matched->number, $liveRows);
+            $this->assertStringContainsString($foreign->number, $liveRows);
+        } finally {
+            $this->app->instance('env', 'testing');
+        }
+
+        config(['commerce.operations_enabled' => false]);
+        $this->get($adminCsv)->assertNotFound();
+        $this->actingAs($seller)->get(route($index.'.statement'))->assertNotFound();
+    }
+
+    public function test_checkout_email_respects_the_effective_mail_transport_in_production(): void
+    {
+        $buyer = $this->member('customer');
+        $buyer->forceFill(['email_verified_at' => null])->save();
+        config(['mail.default' => 'log']);
+        Notification::fake();
+        $this->app->instance('env', 'production');
+        try {
+            CommerceCartController::verificationEmail($buyer);
+            Notification::assertNothingSent();
+
+            $mail = Mockery::mock(\Illuminate\Mail\MailManager::class);
+            $mail->shouldReceive('getDefaultDriver')->once()->andReturn('dashboard-smtp');
+            $this->app->instance('mail.manager', $mail);
+            CommerceCartController::verificationEmail($buyer);
+            Notification::assertSentTo($buyer, CheckoutVerification::class);
+        } finally {
+            $this->app->instance('env', 'testing');
+        }
+    }
+
     private function member(string $role): User
     {
         $user = User::query()->create([
@@ -191,13 +302,14 @@ class PaidCommerceOperationsTest extends TestCase
     private function product(User $seller, User $admin): array
     {
         $definition = LicenseDefinition::query()->create([
-            'name' => 'Regular License', 'code' => 'PAID_TEST', 'version' => '1.0',
+            'name' => 'Regular License', 'code' => 'PAID_TEST_'.$seller->id, 'version' => '1.0',
             'tier' => 'regular', 'permissions' => 'Use on an approved domain.',
             'restrictions' => 'Redistribution is prohibited.', 'status' => 'active', 'created_by' => $admin->id,
         ]);
-        Storage::disk('local')->put('test/cover.png', 'Approved cover fixture');
+        $coverPath = 'test/'.$seller->id.'/cover.png';
+        Storage::disk('local')->put($coverPath, 'Approved cover fixture');
         $cover = MediaAsset::query()->create([
-            'user_id' => $seller->id, 'original_name' => 'cover.png', 'storage_path' => 'test/cover.png',
+            'user_id' => $seller->id, 'original_name' => 'cover.png', 'storage_path' => $coverPath,
             'mime_type' => 'image/png', 'bytes' => 22, 'width' => 10, 'height' => 10, 'rights_basis' => 'owned',
             'alt_text' => 'Product cover', 'rights_holder' => $seller->name, 'review_status' => 'approved',
         ]);

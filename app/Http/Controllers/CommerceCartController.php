@@ -111,7 +111,7 @@ class CommerceCartController extends Controller
             return redirect()->route('cart');
         }
         $response = redirect()->route('checkout.verification');
-        if (app()->environment('production') && in_array(config('mail.default'), ['log', 'array'], true)) {
+        if (app()->environment('production') && in_array(app('mail.manager')->getDefaultDriver(), ['log', 'array', null], true)) {
             return $response->withErrors(['email' => 'Verification email delivery is temporarily unavailable. Your cart is saved.']);
         }
 
