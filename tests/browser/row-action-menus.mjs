@@ -10,13 +10,13 @@ await fs.mkdir(out, { recursive:true });
 const browser = await chromium.launch({ headless:true });
 let checks = 0;
 
-async function login(page) {
+async function login(page, email = 'browser.admin@example.test', destination = /\/dashboard/) {
   const response = await page.goto(origin+'/en/login', { waitUntil:'networkidle' });
   if (response?.status() !== 200) throw Error('QA login page unavailable');
-  await page.locator('input[name="email"]').fill('browser.admin@example.test');
+  await page.locator('input[name="email"]').fill(email);
   await page.locator('input[name="password"]').fill('BrowserOnlyPassword123!');
   await page.locator('form.auth-form button[type="submit"]').click();
-  await page.waitForURL(/\/dashboard/, { timeout:15000 });
+  await page.waitForURL(destination, { timeout:15000 });
 }
 
 try {
@@ -103,6 +103,49 @@ try {
     await page.keyboard.press('Escape');
     checks++;
     await context.close();
+
+    const creatorContext = await browser.newContext({
+      viewport:{ width,height },deviceScaleFactor:1,isMobile,hasTouch:isMobile,
+    });
+    const creator = await creatorContext.newPage();
+    await login(creator, 'browser.creator@example.test', /\/account\?/);
+    await creator.goto(origin+'/creator', {waitUntil:'networkidle'});
+    const recent = creator.locator('[aria-labelledby="creator-recent"] .workspace-overview-row').first();
+    const recentTitle = await recent.locator('strong').innerText();
+    if (!/\/builder\?=\d{9}$/.test(await recent.getAttribute('href') ?? ''))
+      throw Error(name+' recent submission did not include its Builder ID');
+    await recent.getByText('Manage', {exact:true}).click();
+    await creator.waitForURL(/\/builder\?=\d{9}$/);
+    if (!(await creator.locator('input[name="title"]').inputValue()).includes(recentTitle))
+      throw Error(name+' recent submission opened a different listing');
+
+    await creator.goto(origin+'/studio/listings', {waitUntil:'networkidle'});
+    const row = creator.getByRole('row').filter({hasText:'Browser QA Published Freelance'});
+    const titleLink = row.getByRole('link', {name:'Browser QA Published Freelance', exact:true});
+    await titleLink.focus();
+    await titleLink.press('Enter');
+    await creator.waitForURL(/\/builder\?=\d{9}$/);
+    if (await creator.locator('input[name="title"]').inputValue() !== 'Browser QA Published Freelance')
+      throw Error(name+' Creator Studio title opened a different listing');
+    await creator.goto(origin+'/studio/listings', {waitUntil:'networkidle'});
+    const listingTrigger = row.getByRole('button', {name:/Actions for/});
+    const listingMenu = row.locator('[data-row-action-menu]');
+    await listingTrigger.click();
+    await listingMenu.waitFor({state:'visible'});
+    for (const action of ['Details','Views','Archive','Draft','Delete']) {
+      const item = listingMenu.getByRole('menuitem', {name:action,exact:true});
+      if (!(await item.isVisible()) || await item.locator('svg').count() !== 1)
+        throw Error(name+' listing menu missing icon action '+action);
+    }
+    await listingMenu.getByRole('menuitem', {name:'Archive',exact:true}).click();
+    const archiveDialog = creator.getByRole('dialog', {name:'Archive listing'});
+    await archiveDialog.waitFor({state:'visible'});
+    await archiveDialog.getByRole('button', {name:'Cancel',exact:true}).click();
+    await archiveDialog.waitFor({state:'hidden'});
+    if (!(await row.getByText('Published', {exact:true}).isVisible()))
+      throw Error(name+' canceling the Archive dialog changed listing status');
+    await creatorContext.close();
+    checks += 9;
   }
   console.log('PASS: '+checks+' responsive row action menu assertions');
 } finally {

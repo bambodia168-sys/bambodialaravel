@@ -34,7 +34,8 @@
       <tbody>
         @forelse($products as $product)
           <tr>
-            <td class="mono">{{ $product->public_id }}</td><td><strong>{{ $product->title }}</strong></td>
+            <td class="mono"><a class="listing-row-link" href="{{ $product->builderUrl() }}">{{ $product->public_id }}</a></td>
+            <td><a class="listing-title-link" href="{{ $product->builderUrl() }}">{{ $product->title }}</a></td>
             <td><div class="creator-product-license-lines">
               @if($product->licenseDefinition)
                 <span>Regular: {{ $product->licenseDefinition->name }}</span>
@@ -53,7 +54,7 @@
             <td><span class="role-pill">{{ ($product->status === 'in_review' ? 'In Review' : ucfirst($product->status)) }}</span></td><td>{{ $product->created_at->format('d M Y') }}</td>
             <td>
               <x-row-action-menu :id="'creator-product-'.$product->id" :label="$product->title">
-                <a href="{{ url('/builder?='.$product->public_id) }}"><x-icon name="edit" size="16"/> {{ in_array($product->status,['draft','rejected'],true) ? 'Edit in builder' : 'Details' }}</a>
+                <a href="{{ $product->builderUrl() }}"><x-icon name="edit" size="16"/> {{ in_array($product->status,['draft','rejected'],true) ? 'Edit in builder' : 'Details' }}</a>
                 @if($product->status === 'published')
                   <a href="{{ $product->publicUrl() }}"><x-icon name="eye" size="16"/> View</a>
                   <a href="{{ route('studio.vault.index', $product) }}"><x-icon name="archive" size="16"/> Releases</a>

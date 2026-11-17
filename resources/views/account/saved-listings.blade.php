@@ -17,8 +17,11 @@
       @forelse($saved as $entry)
         <tr>
           @if($entry->listing)
-            <td><strong>{{ $entry->listing->title }}</strong>
-              <div class="text-muted">{{ ucfirst($entry->listing->type) }} · {{ $entry->listing->public_id }}</div></td>
+            <td><a class="listing-title-link" href="{{ $entry->listing->publicUrl() }}">{{ $entry->listing->title }}</a>
+              <div class="text-muted">
+                <a class="listing-row-link" href="{{ $entry->listing->publicUrl() }}" aria-label="{{ ucfirst($entry->listing->type) }}: {{ $entry->listing->title }}">{{ ucfirst($entry->listing->type) }}</a>
+                · <a class="listing-row-link mono" href="{{ $entry->listing->publicUrl() }}">{{ $entry->listing->public_id }}</a>
+              </div></td>
             <td>{{ $entry->listing->category?->name ?? 'Uncategorized' }}</td>
             <td>
               @if($entry->listing->creator?->creatorProfile?->is_public)
