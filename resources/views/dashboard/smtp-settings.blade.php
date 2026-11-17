@@ -18,7 +18,7 @@
       @endif
     </div>
     @if($activeSender)
-      <form method="post" action="{{ route('dashboard.smtp.disable') }}">
+      <form class="smtp-settings-actions" method="post" action="{{ route('dashboard.smtp.disable') }}">
         @csrf @method('DELETE')
         <button class="btn subtle compact" type="submit">Use server settings</button>
       </form>
@@ -32,7 +32,9 @@
       <h2>SMTP draft</h2>
       <p>Save your provider details, then send a test email before enabling this draft.</p>
     </div>
-    <button class="btn primary compact" type="submit" form="smtp-draft">Save draft</button>
+    <div class="smtp-settings-actions">
+      <button class="btn primary compact" type="submit" form="smtp-draft">Save draft</button>
+    </div>
   </div>
   <form id="smtp-draft" class="settings-form smtp-settings-grid" method="post" action="{{ route('dashboard.smtp.save') }}">
     @csrf @method('PUT')

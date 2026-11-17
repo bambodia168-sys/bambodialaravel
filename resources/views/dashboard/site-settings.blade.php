@@ -9,7 +9,9 @@
 <section class="panel">
   <div class="panel-head">
     <div><h2>SMTP Setup</h2><p>Configure how Bambodia sends verification emails and other notifications.</p></div>
-    <a class="btn subtle compact" href="{{ route('dashboard.smtp.index') }}"><x-icon name="mail" size="16"/> Open SMTP Setup</a>
+    <div class="smtp-settings-actions">
+      <a class="btn subtle compact" href="{{ route('dashboard.smtp.index') }}"><x-icon name="mail" size="16"/> Open SMTP Setup</a>
+    </div>
   </div>
 </section>
 @endif
