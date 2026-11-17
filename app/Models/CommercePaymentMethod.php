@@ -13,6 +13,11 @@ class CommercePaymentMethod extends Model
 
     protected $fillable = ['name', 'available', 'provider', 'instructions', 'qr_path'];
 
+    public static function manualProviders(): array
+    {
+        return array_diff_key(self::PROVIDERS, CommerceGatewaySetting::FIELDS);
+    }
+
     public function automatic(): bool
     {
         return in_array($this->provider, ['stripe', 'paypal'], true);
