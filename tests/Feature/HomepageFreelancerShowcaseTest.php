@@ -141,7 +141,9 @@ class HomepageFreelancerShowcaseTest extends TestCase
             ->assertSee('Searchable Developer')->assertDontSee('Hidden Skill Developer');
         $this->get('/creators?skill=Laravel&location=Battambang&category='.$categories[0]->public_id)->assertOk()
             ->assertSee('Searchable Developer')->assertDontSee('Hidden Skill Developer')
-            ->assertSee('Public design')->assertDontSee('Unpublished design')->assertSee('Clear filters');
+            ->assertSee('<option value="'.$categories[0]->public_id.'" selected>', false)
+            ->assertDontSee('<option value="'.$categories[1]->public_id.'"', false)
+            ->assertSee('Clear filters');
         $this->get('/creators?category='.$categories[1]->public_id)->assertOk()
             ->assertSee('No public creator profiles match your search.');
         $this->get('/creators?skill=Laravel&location=Elsewhere')->assertOk()
