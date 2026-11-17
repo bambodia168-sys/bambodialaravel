@@ -14,6 +14,7 @@
   $pageSections = [
     ['id'=>'overview','label'=>'Overview'],
     ...($isProduct ? [['id'=>'license','label'=>'License']] : [['id'=>'workflow','label'=>'How it works']]),
+    ...($purchaseReviews ? [['id'=>'reviews','label'=>'Reviews']] : []),
     ['id'=>'publisher','label'=>'Creator'],
     ...($relatedListings->isNotEmpty() ? [['id'=>'related','label'=>'Related']] : []),
   ];
@@ -125,7 +126,7 @@
               <p><a href="{{ $listing->extendedLicenseDefinition->publicUrl() }}">Read the Extended License terms</a></p>
             @endif
             @if($listing->license_terms)<p>{!! nl2br(e($listing->license_terms)) !!}</p>@endif
-            <p class="hint">Licensing rights are governed by the linked published license definition. File delivery requires a verified entitlement; direct checkout and payments are not available yet.</p>
+            <p class="hint">The published license defines your usage rights. After a verified purchase, open your order for the license and download.</p>
           </div>
         </section>
       @else
@@ -140,6 +141,33 @@
       @endif
 
 
+      @if($purchaseReviews)
+        <section class="panel premium-content-section" id="reviews" aria-labelledby="purchase-reviews-heading">
+          <div class="panel-head">
+            <h2 id="purchase-reviews-heading">Verified purchase reviews</h2>
+            @if($rating !== null)<span class="role-pill">{{ number_format((float) $rating, 1) }} out of 5</span>@endif
+          </div>
+          <div class="conversation-thread">
+            @forelse($purchaseReviews as $review)
+              <article class="conversation-message">
+                <div class="conversation-byline">
+                  <strong>Verified buyer · {{ $review->rating }} out of 5</strong>
+                  <time datetime="{{ $review->created_at->toDateString() }}">{{ $review->created_at->format('d M Y') }}</time>
+                </div>
+                @if($review->body)<p class="review-text">{{ $review->body }}</p>@endif
+              </article>
+            @empty
+              <p>No verified purchase reviews yet.</p>
+            @endforelse
+          </div>
+          @if($purchaseReviews->hasPages())
+            <nav class="panel-actions" aria-label="Review pages">
+              @if($purchaseReviews->previousPageUrl())<a class="btn subtle compact" href="{{ $purchaseReviews->previousPageUrl() }}">Previous reviews</a>@endif
+              @if($purchaseReviews->nextPageUrl())<a class="btn subtle compact" href="{{ $purchaseReviews->nextPageUrl() }}">Next reviews</a>@endif
+            </nav>
+          @endif
+        </section>
+      @endif
     </main>
 
     <aside class="premium-detail-sidebar" aria-label="Listing information and actions">

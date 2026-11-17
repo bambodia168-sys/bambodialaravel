@@ -172,6 +172,118 @@ class CommercePaymentsTest extends TestCase
             ->assertSee('receipt was rejected')->assertDontSee('Open service workspace');
     }
 
+    public function test_paid_service_delivery_review_and_order_support_remain_participant_scoped(): void
+    {
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+        Storage::fake('local');
+        [$buyer, $order] = $this->order();
+        $seller = User::query()->findOrFail($order->seller_id);
+        $admin = $this->user('super_admin');
+        $outsider = $this->user('customer');
+        $method = $this->method('bank_transfer');
+        $orderUrl = route('account.orders.show', $order->number);
+        $review = route('account.orders.review.store', $order->number);
+
+        $this->actingAs($buyer)->post($review, ['rating' => 5])->assertConflict();
+        $this->post(route('account.orders.payment.submit', $order->number), [
+            'method' => $method->id, 'reference' => 'SERVICE-TRANSFER',
+            'proof' => UploadedFile::fake()->image('proof.png'),
+        ])->assertRedirect($orderUrl);
+        $this->actingAs($seller)->get(route('studio.commerce-operations'))
+            ->assertOk()->assertDontSee('Receipts awaiting review')->assertDontSee($order->number);
+        $this->actingAs($admin)->get(route('dashboard.commerce-operations'))
+            ->assertOk()->assertSee('Receipts awaiting review')->assertSee($order->number);
+        $this->patch(route('dashboard.orders.payment.review', [$order->number, $order->payments()->sole()->number]), [
+            'decision' => 'approve', 'verified_reference' => 'SERVICE-TRANSFER',
+            'verified_amount' => '25.00', 'note' => 'Verified against the statement.',
+        ])->assertRedirect();
+        $this->get(route('dashboard.commerce-operations'))->assertOk()->assertDontSee('Receipts awaiting review');
+
+        $inquiry = $order->serviceInquiry()->sole();
+        $workspace = route('inquiries.show', $inquiry);
+        $requirements = route('inquiries.delivery.requirements', $inquiry);
+        $submit = route('inquiries.delivery.submit', $inquiry);
+        $decide = route('inquiries.delivery.decide', $inquiry);
+        $this->actingAs($outsider)->get($workspace)->assertNotFound();
+        $this->post($requirements, ['requirements' => 'Unauthorized requirements.'])->assertNotFound();
+        $this->post($review, ['rating' => 5])->assertNotFound();
+        $this->actingAs($seller)->post($submit, ['notes' => 'Premature delivery.'])->assertConflict();
+        $this->post($requirements, ['requirements' => 'Unauthorized requirements.'])->assertForbidden();
+
+        $this->actingAs($buyer)->get($workspace)->assertOk()->assertSee('Send requirements');
+        $this->post($requirements, ['requirements' => 'Install the agreed website package on the staging domain.'])
+            ->assertRedirect($workspace);
+        $this->post($requirements, ['requirements' => 'Duplicate requirements.'])->assertConflict();
+        $this->patch(route('inquiries.close', $inquiry))->assertConflict();
+        $this->post($review, ['rating' => 5])->assertConflict();
+
+        $this->actingAs($seller)->get($workspace)->assertOk()->assertSee('Submit delivery')->assertSee('staging domain');
+        $this->post($submit, ['notes' => 'First delivery for review.', 'artifact' => UploadedFile::fake()->create('unsafe.exe', 1)])
+            ->assertSessionHasErrors('artifact');
+        $artifact = "%PDF-1.4
+Private installation report.
+%%EOF
+";
+        $this->post($submit, [
+            'notes' => 'First delivery for review.',
+            'artifact' => UploadedFile::fake()->createWithContent('installation.pdf', $artifact),
+        ])->assertRedirect($workspace)->assertSessionHasNoErrors();
+        $first = $inquiry->deliveries()->sole();
+        $download = route('inquiries.delivery.download', [$inquiry, $first->id]);
+        $this->actingAs($outsider)->get($download)->assertNotFound();
+        $this->actingAs($buyer)->get($download)->assertDownload('bambodia-delivery-'.$first->id.'.pdf');
+
+        Storage::disk('local')->put($first->storage_path, 'Changed data');
+        $this->get($download)->assertConflict();
+        $this->patch($decide, ['delivery' => $first->id, 'decision' => 'accept'])->assertConflict();
+        Storage::disk('local')->put($first->storage_path, $artifact);
+        $this->patch($decide, ['delivery' => $first->id, 'decision' => 'revise'])->assertSessionHasErrors('feedback');
+        $this->patch($decide, ['delivery' => $first->id, 'decision' => 'revise', 'feedback' => 'Add the setup notes.'])
+            ->assertRedirect($workspace);
+        $this->actingAs($seller)->get($workspace)->assertOk()->assertSee('Add the setup notes.');
+        $this->post($submit, ['notes' => 'Updated delivery and setup notes.'])->assertRedirect($workspace);
+        $latest = $inquiry->deliveries()->latest('id')->firstOrFail();
+        $this->actingAs($buyer)->patch($decide, ['delivery' => $first->id, 'decision' => 'accept'])->assertConflict();
+        $this->patch($decide, ['delivery' => $latest->id, 'decision' => 'accept'])->assertRedirect($workspace);
+        $this->get($workspace)->assertOk()->assertSee('Delivery accepted')->assertSee('Updated delivery and setup notes.');
+        $this->assertDatabaseHas('account_notifications', ['user_id' => $seller->id, 'event' => 'commerce.service.accepted']);
+
+        $this->get($orderUrl)->assertOk()->assertSee('Review your purchase');
+        $this->post($review, ['rating' => 6])->assertSessionHasErrors('rating');
+        $this->post($review, ['rating' => 5, 'body' => 'Installation was completed as agreed.'])->assertRedirect($orderUrl);
+        $this->post($review, ['rating' => 4])->assertConflict();
+        $listingUrl = MarketplaceListing::query()->findOrFail($order->marketplace_listing_id)->publicUrl();
+        $this->actingAs($outsider)->get($listingUrl)->assertOk()->assertSee('Verified buyer')
+            ->assertSee('Installation was completed as agreed.');
+        $this->actingAs($admin)->get(route('dashboard.orders.show', $order->number))->assertOk()->assertSee('Hide review');
+        $this->patch(route('dashboard.orders.review.visibility', $order->number), ['visible' => false])->assertRedirect();
+        $this->get($listingUrl)->assertOk()->assertDontSee('Installation was completed as agreed.');
+
+        $ticket = ['order_number' => $order->number, 'subject' => 'Delivery support', 'message' => 'Please help with access to the final delivery.'];
+        $this->actingAs($outsider)->post(route('support.store'), $ticket)->assertNotFound();
+        $response = $this->actingAs($buyer)->post(route('support.store'), $ticket)->assertRedirect();
+        $this->assertDatabaseHas('support_tickets', ['user_id' => $buyer->id, 'context_type' => 'order', 'context_id' => $order->id]);
+        $this->get($response->headers->get('Location'))->assertOk()->assertSee($order->number);
+    }
+
+    public function test_product_checkout_rejects_missing_download_at_entry_and_submission(): void
+    {
+        Storage::fake('local');
+        $buyer = $this->user('customer');
+        $seller = $this->user('freelancer');
+        [$product, $release] = $this->product($seller, $this->user('super_admin'));
+        $checkout = route('account.orders.create', $product->public_id);
+        $form = $this->actingAs($buyer)->get($checkout)->assertOk();
+
+        Storage::disk('local')->delete($release->storage_path);
+        $this->get($checkout)->assertConflict();
+        $this->post(route('account.orders.store', $product->public_id), [
+            'tier' => 'regular', 'request_key' => $form->viewData('requestKey'),
+            'quote' => $form->viewData('quotes')['regular']['signature'],
+        ])->assertConflict();
+        $this->assertDatabaseCount('marketplace_orders', 0);
+    }
+
     public function test_product_receipt_rejection_grants_nothing_and_a_corrected_approval_delivers_immediately(): void
     {
         Storage::fake('local');
@@ -247,6 +359,8 @@ class CommercePaymentsTest extends TestCase
         $download = route('account.downloads.file', $grant);
         $this->get($download)->assertDownload('bambodia-'.$product->public_id.'-1.0.zip');
         $this->get(route('account.licenses.index'))->assertOk()->assertSee($product->title);
+        $this->get($orderUrl)->assertOk()->assertSee('Review your purchase');
+        $this->post(route('account.orders.review.store', $order->number), ['rating' => 4])->assertRedirect($orderUrl);
         $this->actingAs($this->user('customer'))->get($download)->assertNotFound();
     }
 

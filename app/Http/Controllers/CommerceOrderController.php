@@ -52,8 +52,12 @@ class CommerceOrderController extends Controller
             : collect();
 
         $payments = config('commerce.payments_enabled') ? $order->payments()->latest('id')->get() : collect();
+        if ($section !== 'studio.orders') {
+            $order->load('review');
+        }
+        $canReview = $section === 'account.orders' && $order->review === null && $order->isReviewEligible();
 
-        return response()->view('commerce.show', compact('order', 'section', 'workspace', 'methods', 'payments'))
+        return response()->view('commerce.show', compact('order', 'section', 'workspace', 'methods', 'payments', 'canReview'))
             ->header('Cache-Control', 'private, no-store');
     }
 
@@ -75,6 +79,11 @@ class CommerceOrderController extends Controller
         $quotes = collect($record->type === 'product' ? ['regular', 'extended'] : ['standard'])
             ->mapWithKeys(fn (string $tier) => [$tier => $this->quote($record, $tier)])->filter();
         abort_if($quotes->isEmpty(), 404);
+        if (config('commerce.payments_enabled') && $record->type === 'product'
+            && $quotes->contains(fn (array $quote) => $quote['total'] !== '0.00')) {
+            $definition = isset($quotes['regular']) ? $record->licenseDefinition : $record->extendedLicenseDefinition;
+            OrderFulfillment::ensureOfferReady($record, OrderFulfillment::snapshot($definition, $record, $request->user()));
+        }
         $methods = CommercePaymentMethod::query()->where('available', true)->orderBy('name')->get();
         $requestKey = (string) Str::uuid();
 
@@ -113,6 +122,14 @@ class CommerceOrderController extends Controller
             $method = $noPaymentDue ? null : $this->availableMethod($data['payment_method'] ?? null);
             $definition = $data['tier'] === 'extended' ? $record->extendedLicenseDefinition : $record->licenseDefinition;
 
+            $snapshot = [];
+            if (! $noPaymentDue && $record->type === 'product') {
+                $snapshot = OrderFulfillment::snapshot($definition, $record, $buyer);
+                if (config('commerce.payments_enabled')) {
+                    OrderFulfillment::ensureOfferReady($record, $snapshot);
+                }
+            }
+
             $order = MarketplaceOrder::query()->create([
                 'number' => (string) Str::uuid(),
                 'buyer_id' => $buyer->id,
@@ -130,7 +147,7 @@ class CommerceOrderController extends Controller
                 'status' => $noPaymentDue ? 'completed' : 'awaiting_payment',
                 'receipt_number' => $noPaymentDue ? (string) Str::uuid() : null,
                 'completed_at' => $noPaymentDue ? now() : null,
-                ...($noPaymentDue || $record->type !== 'product' ? [] : OrderFulfillment::snapshot($definition, $record, $buyer)),
+                ...$snapshot,
             ]);
             AuditEvent::record('commerce.order.created', $buyer, $request);
 

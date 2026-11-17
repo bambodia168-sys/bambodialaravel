@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CommerceSettlementController;
 use App\Http\Controllers\CommerceOrderController;
+use App\Http\Controllers\MarketplaceOrderReviewController;
 use App\Http\Controllers\CommercePaymentMethodController;
 use App\Http\Controllers\CommercePaymentController;
 use App\Http\Controllers\ProfileEditorController;
@@ -41,6 +42,7 @@ use App\Http\Controllers\Dashboard\MarketplaceCardFeaturesController;
 use App\Http\Controllers\AccountNotificationController;
 use App\Http\Controllers\Dashboard\NotificationAnalyticsController;
 use App\Http\Controllers\ServiceInquiryController;
+use App\Http\Controllers\ServiceDeliveryController;
 use App\Http\Controllers\Dashboard\ServiceManagerController;
 use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\JobBoardController;
@@ -211,6 +213,8 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/new/{listing}', [CommerceOrderController::class, 'store'])->where('listing', '[0-9]{9}')
             ->middleware('throttle:10,1')->name('store');
         Route::get('/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('show');
+        Route::post('/{number}/review', [MarketplaceOrderReviewController::class, 'store'])->whereUuid('number')
+            ->middleware('throttle:10,1')->name('review.store');
         Route::get('/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('receipt');
         Route::patch('/{number}/cancel', [CommerceOrderController::class, 'cancel'])->whereUuid('number')
             ->middleware('throttle:10,1')->name('cancel');
@@ -251,6 +255,13 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/inquiries/{inquiry}/reply', [ServiceInquiryController::class, 'reply'])
         ->name('inquiries.reply')->middleware('throttle:20,1');
     Route::patch('/inquiries/{inquiry}/close', [ServiceInquiryController::class, 'close'])->name('inquiries.close');
+    Route::prefix('/inquiries/{inquiry}/delivery')->name('inquiries.delivery.')->group(function (): void {
+        Route::post('/requirements', [ServiceDeliveryController::class, 'requirements'])->middleware('throttle:10,1')->name('requirements');
+        Route::post('/', [ServiceDeliveryController::class, 'submit'])->middleware('throttle:10,1')->name('submit');
+        Route::patch('/', [ServiceDeliveryController::class, 'decide'])->middleware('throttle:10,1')->name('decide');
+        Route::get('/{delivery}/download', [ServiceDeliveryController::class, 'download'])
+            ->whereNumber('delivery')->middleware('throttle:30,1')->name('download');
+    });
     Route::get('/resume-builder', [ResumeController::class, 'edit'])->name('resume.edit');
     Route::patch('/resume-builder', [ResumeController::class, 'update'])->name('resume.update');
     Route::get('/contracts', [FreelanceContractController::class,'index'])->name('contracts.index');
@@ -366,6 +377,8 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/orders', [CommerceOrderController::class, 'index'])->name('dashboard.orders.index');
             Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('dashboard.orders.show');
             Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('dashboard.orders.receipt');
+            Route::patch('/orders/{number}/review', [MarketplaceOrderReviewController::class, 'visibility'])->whereUuid('number')
+                ->middleware(['capability:marketplace_review', 'throttle:15,1'])->name('dashboard.orders.review.visibility');
         });
         Route::middleware('role:super_admin')->prefix('payment-methods')->name('dashboard.payment-methods.')->group(function (): void {
             Route::get('/', [CommercePaymentMethodController::class, 'index'])->name('index');

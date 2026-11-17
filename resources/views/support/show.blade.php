@@ -4,6 +4,9 @@
 <div class="{{ $isStaff ? '' : 'container' }} inner-page">
   <div class="page-intro"><div class="eyebrow">Support Ticket {{ $ticket->public_id }}</div><h1>{{ $ticket->subject }}</h1>
     <p>Status: {{ ucwords(str_replace('_',' ',$ticket->status)) }} @if($isStaff) · Opened by {{ $ticket->owner?->name }} ({{ $ticket->owner?->email }}) @endif</p>
+    @if($ticket->context_type === 'order' && ($order = $ticket->order))
+      <p>Related order <span class="mono">{{ $order->number }}</span></p>
+    @endif
   </div>
   <section class="panel ticket-conversation">
     <div class="panel-head"><h2>Conversation</h2><span class="role-pill">{{ ucwords(str_replace('_',' ',$ticket->status)) }}</span></div>

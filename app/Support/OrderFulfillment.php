@@ -33,6 +33,16 @@ final class OrderFulfillment
         ] : [];
     }
 
+    public static function ensureOfferReady(MarketplaceListing $listing, array $snapshot): void
+    {
+        abort_if($snapshot === [], 409, 'This product is not ready for purchase. Its approved download or license is unavailable.');
+        try {
+            ProductReadiness::assertListing($listing);
+        } catch (ValidationException) {
+            abort(409, 'The product needs an approved license and an available cover before purchase.');
+        }
+    }
+
     public static function ensureReady(MarketplaceOrder $order): void
     {
         $listing = MarketplaceListing::query()->findOrFail($order->marketplace_listing_id);

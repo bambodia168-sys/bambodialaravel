@@ -8,6 +8,29 @@
   $statementRoute = $indexRoute.'.statement';
 @endphp
 <div class="container inner-page">
+  @if($pendingReceipts !== null && $pendingReceipts->total() > 0)
+    <section class="panel" id="pending-receipts" aria-labelledby="pending-receipts-heading">
+      <div class="panel-head">
+        <h2 id="pending-receipts-heading">Receipts awaiting review <span class="count">{{ $pendingReceipts->total() }}</span></h2>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead><tr><th scope="col">Order</th><th scope="col">Expected amount</th><th scope="col">Submitted</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            @foreach($pendingReceipts as $pending)
+              <tr>
+                <td><strong>{{ $pending->listing_title }}</strong><div class="text-muted mono">{{ $pending->number }}</div></td>
+                <td>{{ $pending->currency }} {{ $pending->total }}</td>
+                <td>{{ $pending->payments->first()->created_at->toDateTimeString() }} UTC</td>
+                <td><a class="btn subtle compact" href="{{ route('dashboard.orders.show', $pending->number) }}">Review receipt</a></td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+      <x-pagination :paginator="$pendingReceipts"/>
+    </section>
+  @endif
   <section class="panel">
     <header class="panel-head">
       <div>
