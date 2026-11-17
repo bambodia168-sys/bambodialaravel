@@ -7,6 +7,7 @@ use App\Models\CreatorBadgeGrant;
 use App\Models\CreatorProfile;
 use App\Models\MarketplaceListing;
 use App\Models\User;
+use App\Models\UserProfile;
 use App\Support\CreatorBadgeAwards;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -71,7 +72,7 @@ class CreatorBadgePublicDisplayTest extends TestCase
             ->assertSee('Published by')
             ->assertDontSee('About the creator')
             ->assertSee('Bamboo Cambodia')
-            ->assertSee('View creator profile')
+            ->assertSee('freelancer-showcase-portrait')
             ->assertSee('images/badges/top-rated.svg')
             ->assertSee(route('creators.show',$owner->public_id))
             ->getContent();
@@ -95,6 +96,11 @@ class CreatorBadgePublicDisplayTest extends TestCase
             'website_url'=>'https://private.example.test',
             'is_public'=>false,
         ]);
+        UserProfile::query()->create([
+            'user_id'=>$creator->id,
+            'avatar_path'=>'profile-avatars/private-avatar.webp',
+            'public_location'=>'Privateville, Cambodia',
+        ]);
         $badge=CreatorBadge::query()->where('slug','skill-certified')->firstOrFail();
         CreatorBadgeGrant::query()->create([
             'user_id'=>$creator->id,
@@ -109,7 +115,10 @@ class CreatorBadgePublicDisplayTest extends TestCase
             ->assertSee('Skill Certified')
             ->assertDontSee('About the creator')
             ->assertSee(route('creators.show',$creator->public_id))
-            ->assertSee('View creator profile');
+            ->assertSee('freelancer-showcase-portrait')
+            ->assertDontSee('PRIVATE UNPUBLISHED HEADLINE')
+            ->assertDontSee('private-avatar.webp')
+            ->assertDontSee('Privateville, Cambodia');
 
         $this->get(route('creators.show',$creator->public_id))
             ->assertOk()
@@ -157,9 +166,15 @@ class CreatorBadgePublicDisplayTest extends TestCase
             ->assertDontSee('VIP Client Favorite');
     }
 
-    public function test_all_sixteen_awarded_badges_render_once_in_sidebar_with_tooltips(): void
+    public function test_all_sixteen_awarded_badges_render_once_on_all_public_cards(): void
     {
         $creator=$this->creator('Samith QA');
+        CreatorProfile::query()->create([
+            'user_id'=>$creator->id,
+            'headline'=>'Public creative technology consultant',
+            'biography'=>'Experience designing and delivering projects for creative technology teams.',
+            'is_public'=>true,
+        ]);
         $badges=CreatorBadge::query()->where('enabled',true)->orderBy('sort_order')->get();
         $this->assertCount(16,$badges);
         foreach($badges as $badge) {
@@ -184,6 +199,11 @@ class CreatorBadgePublicDisplayTest extends TestCase
         $this->assertStringNotContainsString('class="creator-badge-name"',$html);
         $this->assertStringContainsString('aria-label="VIP Client Favorite:', $html);
         $this->assertStringContainsString('href="'.route('creators.show',$creator->public_id).'"',$html);
+        foreach (['/', route('creators.index')] as $route) {
+            $page=$this->get($route)->assertOk()->assertSee('freelancer-showcase-card')->getContent();
+            $this->assertSame(16,substr_count($page,'class="creator-badge creator-badge--'));
+            $this->assertSame(1,substr_count($page,'images/badges/vip-client-favorite.svg'));
+        }
         $this->get(route('creators.show',$creator->public_id))->assertOk()
             ->assertSee('VIP Client Favorite')
             ->assertSee('Full medal publication QA project')

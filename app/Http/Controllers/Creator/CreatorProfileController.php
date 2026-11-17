@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Creator;
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
 use App\Models\CreatorProfile;
+use App\Models\MarketplaceCategory;
 use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
 use App\Models\User;
@@ -30,28 +31,53 @@ class CreatorProfileController extends Controller
 
     public function directory(Request $request): View
     {
-        $search=mb_substr(trim((string)$request->query('q','')),0,120);
-        $creators=User::query()
-            ->select(['id','public_id','name','email','role','created_at'])
-            ->whereIn('role',['freelancer','super_admin'])
-            ->where(function($query): void {
-                $query->whereHas('creatorProfile',fn($p)=>$p->where('is_public',true))
-                    ->orWhere(fn($owner)=>$owner->where('role','super_admin')
+        [$search, $skill, $location] = array_map(
+            function (string $key) use ($request): string {
+                $value = $request->query($key);
+
+                return is_string($value) ? mb_substr(trim($value), 0, 120) : '';
+            },
+            ['q', 'skill', 'location'],
+        );
+        $category = $request->query('category');
+        $category = is_string($category) && preg_match('/^[0-9]{9}$/D', $category) ? $category : '';
+        $visibleCreators = User::query()
+            ->whereIn('role', ['freelancer', 'super_admin'])
+            ->where(function ($query): void {
+                $query->whereHas('creatorProfile', fn ($profile) => $profile->where('is_public', true))
+                    ->orWhere(fn ($owner) => $owner->where('role', 'super_admin')
                         ->whereRaw('LOWER(email) = ?', [CreatorBadgeAwards::OWNER_EMAIL]));
-            })
-            ->when($search!=='',fn($q)=>$q->where(function($builder)use($search){
-                $builder->where('name','like','%'.$search.'%')
-                    ->orWhereHas('creatorProfile',fn($p)=>$p
-                        ->where('is_public',true)
-                        ->where(function($q)use($search){
-                            $q->where('headline','like','%'.$search.'%')
-                                ->orWhere('biography','like','%'.$search.'%');
-                        }));
+            });
+
+        $categories = MarketplaceCategory::query()->where('is_active', true)
+            ->whereHas('listings', fn ($listings) => $listings->publiclyAvailable()
+                ->whereIn('user_id', (clone $visibleCreators)->select('id')))
+            ->orderBy('name')->orderBy('type')->get(['id', 'name', 'type', 'public_id']);
+        $creators = $visibleCreators
+            ->select(['id', 'public_id', 'name', 'email', 'role', 'created_at'])
+            ->when($search !== '', fn ($query) => $query->where(function ($builder) use ($search) {
+                $builder->whereLike('name', '%'.$search.'%')
+                    ->orWhereHas('publicExpertise', fn ($skills) => $skills->whereLike('label', '%'.$search.'%'))
+                    ->orWhereHas('creatorProfile', fn ($profile) => $profile->where('is_public', true)
+                        ->where(fn ($text) => $text->whereLike('headline', '%'.$search.'%')
+                            ->orWhereLike('biography', '%'.$search.'%')));
             }))
-            ->with('creatorProfile:user_id,headline,biography,is_public')
+            ->when($skill !== '', fn ($query) => $query->whereHas('publicExpertise',
+                fn ($skills) => $skills->whereLike('label', '%'.$skill.'%')))
+            ->when($location !== '', fn ($query) => $query
+                ->whereHas('creatorProfile', fn ($profile) => $profile->where('is_public', true))
+                ->whereHas('userProfile', fn ($profile) => $profile->whereLike('public_location', '%'.$location.'%')))
+            ->when($category !== '', fn ($query) => $query->whereHas('publishedListings.category',
+                fn ($item) => $item->where('public_id', $category)->where('is_active', true)))
+            ->with([
+                'creatorProfile:user_id,headline,biography,is_public',
+                'userProfile:user_id,avatar_path,public_location',
+                'publicExpertise' => fn ($skills) => $skills->select('id', 'user_id', 'label')->limit(3),
+            ])
             ->withCount(['publishedListings as public_listings_count'])
-            ->orderBy('name')->paginate(10)->withQueryString();
-        return view('creators.index',compact('creators','search'));
+            ->orderBy('name')->orderBy('id')->paginate(10)->withQueryString();
+
+        return view('creators.index', compact('creators', 'search', 'skill', 'location', 'category', 'categories'));
     }
 
     public function show(Request $request,string $creator): View

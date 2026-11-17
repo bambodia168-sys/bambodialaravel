@@ -1,0 +1,278 @@
+.freelancer-showcase {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(16px, 2.1vw, 26px);
+}
+
+.freelancer-showcase .freelancer-showcase-heading {
+  margin-bottom: 0;
+}
+
+.freelancer-showcase-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: clamp(14px, 1.8vw, 22px);
+}
+
+.freelancer-showcase-grid--single {
+  width: min(100%, 28rem);
+  justify-self: center;
+}
+
+.freelancer-showcase-card {
+  display: grid;
+  grid-template-columns: minmax(0, min(36%, 11rem)) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 150px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  background: linear-gradient(150deg, var(--surface) 40%, color-mix(in srgb, var(--surface) 58%, var(--surface-2)));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.premium-side-creator > .freelancer-showcase-card {
+  border: 0;
+  border-radius: 0 0 14px 14px;
+  box-shadow: none;
+}
+
+.freelancer-showcase-portrait {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-inline-end: 1px solid var(--line);
+  border-radius: 15px 0 0 15px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 1.9rem;
+  font-weight: 750;
+}
+
+.premium-side-creator > .freelancer-showcase-card .freelancer-showcase-portrait {
+  border-top-left-radius: 0;
+}
+
+.freelancer-showcase-portrait img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 15%;
+}
+
+.freelancer-showcase-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: clamp(9px, 1.2vw, 16px);
+  overflow-wrap: anywhere;
+}
+
+.freelancer-showcase-body h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 750;
+  line-height: 1.25;
+  letter-spacing: -.015em;
+}
+
+.freelancer-showcase-body h3 a:hover,
+.freelancer-showcase-listings:hover {
+  text-decoration: underline;
+  text-underline-offset: .2em;
+}
+
+.freelancer-showcase-headline,
+.freelancer-showcase-biography {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  color: var(--muted);
+  font-size: .83rem;
+  line-height: 1.4;
+}
+
+.freelancer-showcase-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.freelancer-showcase-skills li {
+  max-width: 100%;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: .75rem;
+  font-weight: 650;
+}
+
+.freelancer-showcase-card .creator-badge-row--compact {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 4px;
+  margin: 1px 0;
+}
+
+.freelancer-showcase-card .creator-badge-row--compact > .creator-badge--compact {
+  min-height: 28px;
+  padding: 2px 5px;
+}
+
+.freelancer-showcase-card .creator-badge-row--badge > .creator-badge--compact {
+  flex: 0 0 28px;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 2px;
+}
+
+.freelancer-showcase-card .creator-badge-row--compact .creator-badge-artwork,
+.freelancer-showcase-card .creator-badge-row--compact .creator-badge-fallback {
+  width: 22px;
+  height: 22px;
+}
+
+.freelancer-showcase-card .creator-badge-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.freelancer-showcase-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  margin-top: auto;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+}
+
+.freelancer-showcase-listings {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding-inline: 6px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--accent-text, var(--accent));
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.freelancer-showcase-location {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  margin: 0 0 0 auto;
+  color: var(--muted);
+  font-size: .8rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.freelancer-showcase-location svg,
+.freelancer-showcase-listings svg {
+  flex: none;
+}
+
+.freelancer-showcase-card a:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 3px;
+}
+
+.freelancer-directory-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.freelancer-directory-filters label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.freelancer-directory-filters :is(input, select) {
+  min-width: 0;
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 400;
+}
+
+.freelancer-directory-filter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .freelancer-showcase {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .freelancer-showcase-grid,
+  .freelancer-showcase-empty {
+    grid-column: 1 / -1;
+  }
+
+  .freelancer-showcase > .freelancer-directory-link {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .freelancer-showcase-grid:not(.freelancer-showcase-grid--single),
+  .freelancer-directory-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .freelancer-showcase-grid:not(.freelancer-showcase-grid--single) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .freelancer-directory-filters {
+    grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .freelancer-showcase-grid:not(.freelancer-showcase-grid--single) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+#bambodia-freelancers,
+#published-work {
+  scroll-margin-top: 110px;
+}

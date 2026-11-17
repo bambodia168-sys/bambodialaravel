@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=2">
     <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=2"></script>
   @endif
+  @stack('page-styles')
 </head>
 <body class="site-body">
 <x-flash-feedback :validation-errors="$errors->all()" />

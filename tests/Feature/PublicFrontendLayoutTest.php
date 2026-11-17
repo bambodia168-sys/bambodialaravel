@@ -83,15 +83,15 @@ class PublicFrontendLayoutTest extends TestCase
         ]);
 
         $response=$this->get('/')->assertOk()
-            ->assertSee('class="marketplace-freelancer-avatar" href="'.route('creators.show',$creator->public_id).'"', false)
+            ->assertSee('class="freelancer-showcase-portrait" href="'.route('creators.show',$creator->public_id).'"', false)
             ->assertSee('src="'.Storage::disk('public')->url($path).'"', false)
             ->assertSee('alt="'.$creator->name.' profile photo"', false)
-            ->assertSee('View '.$creator->name.' creator profile')
+            ->assertSee('View '.$creator->name.'’s profile')
             ->assertDontSee('Public profile')
             ->assertDontSee('View portfolio')
             ->assertDontSee('marketplace-freelancer-visibility', false);
 
-        $this->assertSame(1, substr_count($response->getContent(), 'class="marketplace-freelancer-avatar"'));
+        $this->assertSame(1, substr_count($response->getContent(), 'class="freelancer-showcase-portrait"'));
         $this->get(route('creators.show',$creator->public_id))->assertOk()
             ->assertSee(Storage::disk('public')->url($path));
     }
@@ -101,8 +101,8 @@ class PublicFrontendLayoutTest extends TestCase
         $creator=$this->creator();
         $response=$this->get('/')->assertOk();
         $html=$response->getContent();
-        $this->assertStringContainsString('class="marketplace-freelancer-avatar" href="'.route('creators.show',$creator->public_id).'"', $html);
-        $this->assertStringContainsString('aria-hidden="true">O</span>', $html);
+        $this->assertStringContainsString('class="freelancer-showcase-portrait" href="'.route('creators.show',$creator->public_id).'"', $html);
+        $this->assertStringContainsString('aria-hidden="true">OP</span>', $html);
         $this->assertStringNotContainsString('Public profile</span>', $html);
         $this->assertStringNotContainsString('View portfolio', $html);
         $this->assertStringNotContainsString($creator->name.' profile photo', $html);
@@ -144,7 +144,7 @@ class PublicFrontendLayoutTest extends TestCase
                 ->assertSee('premium-detail-below-title')
                 ->assertDontSee('marketplace-breadcrumb')
                 ->assertSee('Original Public Creator')
-                ->assertSee('View creator profile')
+                ->assertSee('freelancer-showcase-portrait')
                 ->assertDontSee('About the creator')
                 ->assertSee('USD')
                 ->assertSee('Information')

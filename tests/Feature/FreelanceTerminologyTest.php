@@ -32,7 +32,7 @@ final class FreelanceTerminologyTest extends TestCase
 
         self::assertStringContainsString('<h2 id="freelancer-section-title">Freelancers</h2>', $home);
         self::assertStringNotContainsString('<h2 id="freelancer-section-title">Freelancer</h2>', $home);
-        self::assertStringContainsString("route('creators.index') }}\">Browse creator profiles</a>", $home);
+        self::assertStringContainsString("route('creators.index') }}\">Browse freelancers</a>", $home);
         self::assertStringContainsString("'type'=>'freelance','title'=>'Freelance'", $home);
         self::assertStringContainsString("__('ui.freelance')", $home);
     }

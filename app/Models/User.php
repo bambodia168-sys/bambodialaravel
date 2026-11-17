@@ -54,6 +54,22 @@ class User extends Authenticatable
         return $this->hasOne(CreatorProfile::class);
     }
 
+    public function publicExpertise(): HasMany
+    {
+        return $this->hasMany(CreatorProfileItem::class)
+            ->where('kind', 'expertise')
+            ->where('is_visible', true)
+            ->whereNull('profile_section_id')
+            ->whereHas('owner.creatorProfile', fn ($profile) => $profile->where('is_public', true))
+            ->whereNotExists(fn ($section) => $section->selectRaw('1')
+                ->from('creator_profile_sections')
+                ->whereColumn('creator_profile_sections.user_id', 'creator_profile_items.user_id')
+                ->where('section_key', 'expertise')
+                ->where('is_visible', false))
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
     public function publishedListings(): HasMany
     {
         return $this->hasMany(MarketplaceListing::class,'user_id')->publiclyAvailable();
