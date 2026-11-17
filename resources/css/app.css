@@ -3900,3 +3900,49 @@ dialog[open]::backdrop{background:rgba(2,10,25,.70);backdrop-filter:blur(3px)}
   width:100%;
   justify-content:center;
 }
+
+.commerce-operation-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-inline-start: auto;
+  max-inline-size: 100%;
+}
+.commerce-operation-toolbar :is(select, input) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  color: var(--text);
+}
+.commerce-operation-toolbar select {
+  border: 0;
+  background: var(--surface-2);
+}
+.commerce-operation-form {
+  display: grid;
+  gap: .9rem;
+  max-inline-size: 48rem;
+  padding: clamp(1rem, 3vw, 1.6rem);
+}
+.commerce-operation-form label {
+  display: grid;
+  gap: .35rem;
+  font-weight: 650;
+}
+.commerce-operation-form label:has(input[type=checkbox]) {
+  display: flex;
+  align-items: baseline;
+  gap: .55rem;
+}
+.commerce-operation-form :is(input:not([type=checkbox]), textarea) {
+  inline-size: 100%;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  padding: .65rem;
+  background: var(--surface-2);
+  color: var(--text);
+}
+.commerce-operation-form textarea { min-block-size: 6rem; }
+.commerce-operation-form p { margin: 0; color: var(--muted); }
+.commerce-operation-message { padding: .75rem 1.5rem; }
+.commerce-operation-message[role=alert] { color: var(--danger); }

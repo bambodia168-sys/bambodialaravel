@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class ProductEntitlement extends Model
 {
     protected $fillable = [
-        'user_id', 'product_file_version_id', 'granted_by', 'grant_reason', 'status',
+        'marketplace_order_id', 'manual_slot', 'user_id', 'product_file_version_id', 'granted_by', 'grant_reason', 'status',
         'expires_at', 'revoked_at', 'revoked_by', 'revocation_reason',
     ];
 

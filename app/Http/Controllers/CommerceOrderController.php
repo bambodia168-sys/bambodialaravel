@@ -10,6 +10,9 @@ use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
 use App\Models\User;
 use App\Support\CommerceOffers;
+use App\Support\CommerceOperations;
+use App\Support\OrderFulfillment;
+use App\Support\ProductVault;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,14 +53,19 @@ class CommerceOrderController extends Controller
 
         $payments = config('commerce.payments_enabled') ? $order->payments()->latest('id')->get() : collect();
 
-        return response()->view('commerce.show', compact('order', 'section', 'workspace', 'methods', 'payments'))
+        $canOperate = config('commerce.operations_enabled') && CommerceOperations::orders()->whereKey($order->id)->exists();
+        if (config('commerce.operations_enabled') || $order->fulfillment_version_id || $order->status === 'refunded') {
+            $order->load(['entitlement', 'operations']);
+        }
+
+        return response()->view('commerce.show', compact('order', 'section', 'workspace', 'methods', 'payments', 'canOperate'))
             ->header('Cache-Control', 'private, no-store');
     }
 
     public function receipt(Request $request, string $number): Response
     {
         [$orders, $section, $workspace] = $this->workspace($request);
-        $order = $orders->where('number', $number)->where('status', 'completed')
+        $order = $orders->where('number', $number)->whereIn('status', ['completed', 'refunded'])
             ->whereNotNull('receipt_number')->firstOrFail();
 
         return response()->view('commerce.receipt', compact('order', 'section', 'workspace'))
@@ -105,7 +113,7 @@ class CommerceOrderController extends Controller
 
         $order = DB::transaction(function () use ($request, $listing, $data, $fromCart): MarketplaceOrder {
             $buyer = User::query()->lockForUpdate()->findOrFail($request->user()->id);
-            abort_unless($buyer->account_status === 'active' && (! $fromCart || $buyer->hasVerifiedEmail()), 403);
+            abort_unless($buyer->account_status === 'active' && (! ($fromCart || config('commerce.operations_enabled')) || $buyer->hasVerifiedEmail()), 403);
             $existing = MarketplaceOrder::query()->where('buyer_id', $buyer->id)
                 ->where('request_key', $data['request_key'])->first();
             if ($existing) {
@@ -128,6 +136,12 @@ class CommerceOrderController extends Controller
             abort_if((int) $record->user_id === (int) $buyer->id, 403);
             $quote = CommerceOffers::quote($record, $data['tier']);
             abort_unless($quote && hash_equals($quote['signature'], $data['quote']), 409, 'The listing price or terms changed. Reopen the order form.');
+            $release = $quote['release'];
+            if ($release) {
+                abort_unless(in_array($buyer->role, OrderFulfillment::BUYER_ROLES, true), 403);
+                abort_unless(ProductVault::verifiedPath($release->storage_path, $release->sha256, (int) $release->byte_size) !== null,
+                    409, 'The approved product file is temporarily unavailable.');
+            }
             $noPaymentDue = $quote['total'] === '0.00';
             if ($fromCart && ! $noPaymentDue) {
                 abort_unless(config('commerce.payments_enabled') && $quote['currency'] === 'USD'
@@ -148,6 +162,11 @@ class CommerceOrderController extends Controller
                 'seller_name' => $record->creator->name,
                 'license_tier' => $record->type === 'product' ? $data['tier'] : null,
                 'license_name' => $quote['license'],
+                ...($release ? [
+                    'fulfillment_version_id' => $release->id,
+                    'fulfillment_definition_id' => $quote['definition']->id,
+                    'fulfillment_terms_hash' => OrderFulfillment::termsHash($quote['definition']),
+                ] : []),
                 'total' => $quote['total'],
                 'currency' => $quote['currency'],
                 'payment_method' => $method?->name,
@@ -160,6 +179,9 @@ class CommerceOrderController extends Controller
                 $cart->update(['items' => $items]);
             }
             AuditEvent::record('commerce.order.created', $buyer, $request);
+            if ($noPaymentDue) {
+                OrderFulfillment::afterCommit($order);
+            }
 
             return $order;
         }, 3);
