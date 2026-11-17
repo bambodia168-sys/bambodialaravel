@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\CloudStorageConnection;
+use App\Support\DashboardMailManager;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
@@ -11,7 +12,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->extend('mail.manager', static fn ($manager, $app) => new DashboardMailManager($app));
     }
 
     public function boot(): void

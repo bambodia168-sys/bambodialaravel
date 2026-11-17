@@ -128,7 +128,7 @@ class PolicyManagerController extends Controller
         if (! $isPublished && ($notifyAccount || $notifyEmail || $showBanner)) {
             return back()->withErrors(['status' => 'Notifications require publishing a reviewed policy revision.'])->withInput();
         }
-        if ($notifyEmail && in_array(config('mail.default'), ['log', 'array', null], true)) {
+        if ($notifyEmail && in_array(app('mail.manager')->getDefaultDriver(), ['log', 'array', null], true)) {
             return back()->withErrors(['notify_email' => 'Configure and verify a transactional mail provider before queueing legal emails.'])->withInput();
         }
         if (($notifyAccount || $notifyEmail || $showBanner) &&
