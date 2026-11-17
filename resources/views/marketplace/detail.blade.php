@@ -1,5 +1,8 @@
 @extends('layouts.main')
 @section('title',$listing->title)
+@push('page-styles')
+  <link rel="stylesheet" href="{{ asset('css/freelancer-discovery.css') }}?v=4">
+@endpush
 @section('content')
 @php
   $kind = $listing->type;
@@ -275,27 +278,17 @@
       </section>
       <section class="premium-side-card premium-side-creator" id="publisher" aria-labelledby="publisher-heading">
         <div class="premium-side-card-heading"><h2 id="publisher-heading">Published by</h2></div>
-        <div class="premium-side-card-body">
-          <div class="premium-side-creator-row">
-            <div class="premium-creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($ownerName,0,1)) }}</div>
-            <div>
-              @if($listing->creator?->isCreator())
-                <a class="premium-side-creator-name" href="{{ route('creators.show',$listing->creator->public_id) }}" aria-label="View {{ $ownerName }}'s public creator profile">{{ $ownerName }}</a>
-              @else
-                <strong>{{ $ownerName }}</strong>
-              @endif
-              <small>Bambodia creator</small>
+        @if($listing->creator?->isCreator())
+          <x-freelancer-card :freelancer="$listing->creator" :badges="$creatorBadges" badge-mode="badge"/>
+        @else
+          <div class="premium-side-card-body">
+            <div class="premium-side-creator-row">
+              <div class="premium-creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($ownerName,0,1)) }}</div>
+              <div><strong>{{ $ownerName }}</strong></div>
             </div>
-          </div>
-          @if($creatorBadges->isNotEmpty())
             <x-creator-badges :badges="$creatorBadges" variant="compact" mode="badge"/>
-          @endif
-          @if($listing->creator?->isCreator())
-            <a class="btn subtle premium-full-action" href="{{ route('creators.show',$listing->creator->public_id) }}">
-              <x-icon name="user-round" size="16"/> View creator profile
-            </a>
-          @endif
-        </div>
+          </div>
+        @endif
       </section>
     </aside>
   </div>

@@ -70,7 +70,7 @@ class HomeController extends Controller
             if ($freelancers->isNotEmpty()) {
                 $badgeCatalog = CreatorBadge::query()->where('enabled', true)->orderBy('sort_order')->get();
                 $freelancerBadges = $freelancers->mapWithKeys(fn (User $creator) => [
-                    $creator->id => CreatorBadgeAwards::earned($creator, $badgeCatalog)->take(2),
+                    $creator->id => CreatorBadgeAwards::earned($creator, $badgeCatalog),
                 ]);
             }
 

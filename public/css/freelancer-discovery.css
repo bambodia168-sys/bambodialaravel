@@ -16,16 +16,15 @@
 }
 
 .freelancer-showcase-grid--single {
-  width: min(100%, 26rem);
+  width: min(100%, 28rem);
   justify-self: center;
 }
 
 .freelancer-showcase-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, min(36%, 11rem)) minmax(0, 1fr);
   min-width: 0;
-  padding: 14px;
+  min-height: 150px;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--surface);
@@ -33,29 +32,27 @@
   box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 6%, transparent);
 }
 
-.freelancer-showcase-identity {
-  display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
-  align-items: start;
-  gap: 11px;
-}
-
-.freelancer-showcase-grid--single .freelancer-showcase-identity {
-  grid-template-columns: clamp(58px, 13vw, 74px) minmax(0, 1fr);
+.premium-side-creator > .freelancer-showcase-card {
+  border: 0;
+  border-radius: 0 0 14px 14px;
+  box-shadow: none;
 }
 
 .freelancer-showcase-portrait {
   position: relative;
   display: grid;
   place-items: center;
-  aspect-ratio: 1;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  border-inline-end: 1px solid var(--line);
+  border-radius: 15px 0 0 15px;
   background: var(--surface-2);
   color: var(--text);
-  font-size: 1.45rem;
+  font-size: 1.9rem;
   font-weight: 750;
+}
+
+.premium-side-creator > .freelancer-showcase-card .freelancer-showcase-portrait {
+  border-top-left-radius: 0;
 }
 
 .freelancer-showcase-portrait img {
@@ -69,8 +66,11 @@
 }
 
 .freelancer-showcase-body {
-  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   min-width: 0;
+  padding: clamp(9px, 1.2vw, 16px);
   overflow-wrap: anywhere;
 }
 
@@ -89,12 +89,13 @@
   text-underline-offset: .2em;
 }
 
-.freelancer-showcase-headline {
+.freelancer-showcase-headline,
+.freelancer-showcase-biography {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  margin: 3px 0 0;
+  margin: 0;
   color: var(--muted);
   font-size: .83rem;
   line-height: 1.4;
@@ -104,7 +105,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin: 6px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -119,29 +120,30 @@
   font-weight: 650;
 }
 
-.freelancer-showcase-card > .creator-badge-row--compact {
-  justify-content: center;
-  gap: 5px;
-  margin: 0;
+.freelancer-showcase-card .creator-badge-row--compact {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 4px;
+  margin: 1px 0;
 }
 
 .freelancer-showcase-card .creator-badge-row--compact > .creator-badge--compact {
-  min-height: 32px;
+  min-height: 28px;
   padding: 2px 5px;
 }
 
 .freelancer-showcase-card .creator-badge-row--badge > .creator-badge--compact {
-  flex: 0 0 32px;
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
+  flex: 0 0 28px;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
   padding: 2px;
 }
 
 .freelancer-showcase-card .creator-badge-row--compact .creator-badge-artwork,
 .freelancer-showcase-card .creator-badge-row--compact .creator-badge-fallback {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
 }
 
 .freelancer-showcase-card .creator-badge-name {
@@ -152,21 +154,22 @@
 }
 
 .freelancer-showcase-footer {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 4px 8px;
   margin-top: auto;
-  padding-top: 6px;
+  padding-top: 7px;
   border-top: 1px solid var(--line);
 }
 
 .freelancer-showcase-listings {
-  display: inline-grid;
-  place-items: center;
-  min-width: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   min-height: 30px;
-  padding-inline: 5px;
+  padding-inline: 6px;
   border-radius: 8px;
   background: var(--surface-2);
   color: var(--accent-text, var(--accent));
@@ -178,20 +181,20 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  justify-self: end;
   min-width: 0;
-  margin: 0;
+  margin: 0 0 0 auto;
   color: var(--muted);
   font-size: .8rem;
   text-align: right;
   overflow-wrap: anywhere;
 }
 
-.freelancer-showcase-location svg {
+.freelancer-showcase-location svg,
+.freelancer-showcase-listings svg {
   flex: none;
 }
 
-.freelancer-showcase a:focus-visible {
+.freelancer-showcase-card a:focus-visible {
   outline: 2px solid var(--secondary);
   outline-offset: 3px;
 }

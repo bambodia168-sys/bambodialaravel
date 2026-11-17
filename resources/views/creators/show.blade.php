@@ -1,7 +1,7 @@
 @extends('layouts.main')
 @section('title',$creator->name.' · Creator Portfolio')
 @push('page-styles')
-  <link rel="stylesheet" href="{{ asset('css/freelancer-discovery.css') }}?v=1">
+  <link rel="stylesheet" href="{{ asset('css/freelancer-discovery.css') }}?v=4">
 @endpush
 @section('content')
 @php

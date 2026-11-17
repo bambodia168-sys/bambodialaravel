@@ -144,7 +144,7 @@ class PublicFrontendLayoutTest extends TestCase
                 ->assertSee('premium-detail-below-title')
                 ->assertDontSee('marketplace-breadcrumb')
                 ->assertSee('Original Public Creator')
-                ->assertSee('View creator profile')
+                ->assertSee('freelancer-showcase-portrait')
                 ->assertDontSee('About the creator')
                 ->assertSee('USD')
                 ->assertSee('Information')

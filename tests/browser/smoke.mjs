@@ -260,6 +260,12 @@ try {
             cardWidth:card.getBoundingClientRect().width,
             right:card.getBoundingClientRect().right,
             portraitWidth:card.querySelector('.freelancer-showcase-portrait')?.getBoundingClientRect().width,
+            portraitHeight:card.querySelector('.freelancer-showcase-portrait')?.getBoundingClientRect().height,
+            cardHeight:card.getBoundingClientRect().height,
+            portraitLeft:card.querySelector('.freelancer-showcase-portrait')?.getBoundingClientRect().left,
+            cardLeft:card.getBoundingClientRect().left,
+            detailsLeft:card.querySelector('.freelancer-showcase-body')?.getBoundingClientRect().left,
+            hasListingIcon:!!card.querySelector('.freelancer-showcase-listings svg'),
             hasBiography:!!card.querySelector('.freelancer-showcase-bio'),
           })),
         }));
@@ -268,7 +274,9 @@ try {
            freelancerGeometry.items.some(c=>!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(c.href??'') ||
              c.href!==c.avatarHref || c.hasProfileCta || c.avatarTag!=='A' ||
              c.workLink!==c.href+'#published-work' || c.right>device.viewport.width+3 ||
-             c.portraitWidth<50 || c.portraitWidth>80 || c.hasBiography ||
+             c.portraitWidth<c.cardWidth*.3 || c.portraitWidth>c.cardWidth*.45 ||
+             Math.abs(c.cardHeight-c.portraitHeight)>3 || Math.abs(c.cardLeft-c.portraitLeft)>2 ||
+             Math.abs(c.detailsLeft-c.portraitLeft-c.portraitWidth)>2 || !c.hasListingIcon || c.hasBiography ||
              !/^\d[\d,]*$/.test(c.listingCount??'') ||
              !new RegExp('^'+c.listingCount+' approved listings?$').test(c.listingTooltip??'')))
           throw new Error(device.name+' freelancer grid regression '+JSON.stringify(freelancerGeometry));
@@ -1110,7 +1118,7 @@ try {
            await page.getByRole('heading',{name:'About the creator'}).count())
           throw new Error(device.name+' project must use a single sidebar creator panel');
         const creatorTab=page.locator('.premium-detail-tabs a[href="#publisher"]');
-        const profileLink=publisher.getByRole('link',{name:'View creator profile'});
+        const profileLink=publisher.locator('a.freelancer-showcase-portrait');
         if(!(await creatorTab.isVisible()) || !(await profileLink.isVisible()))
           throw new Error(device.name+' publisher sidebar or Creator tab has no valid profile link');
         const profileHref=await profileLink.getAttribute('href');

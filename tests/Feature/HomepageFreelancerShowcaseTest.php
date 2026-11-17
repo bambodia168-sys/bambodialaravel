@@ -104,14 +104,21 @@ class HomepageFreelancerShowcaseTest extends TestCase
             ->assertSee('profile-avatars/example.webp')
             ->assertDontSee('freelancer-showcase-profile')
             ->assertSee($profileUrl.'#published-work')
-            ->assertSee('title="0 approved listings" aria-label="0 approved listings">0</a>', false)
-            ->assertSeeInOrder(['class="freelancer-showcase-footer"', '>0</a>', 'Battambang, Cambodia'], false)
+            ->assertSee('title="0 approved listings" aria-label="0 approved listings"', false)
+            ->assertSeeInOrder(['class="freelancer-showcase-listings"', '<svg', '<span>0</span>'], false)
+            ->assertSeeInOrder(['class="freelancer-showcase-footer"', '<span>0</span>', 'Battambang, Cambodia'], false)
             ->assertDontSee('Legacy district')
             ->assertSee('Full-stack developer')
             ->assertDontSee('Platform specialist')
             ->assertSeeInOrder(['<li>Laravel</li>', '<li>PHP</li>', '<li>WordPress</li>'], false)
             ->assertDontSee('Fourth skill')
             ->assertDontSee('Private Expertise');
+        $this->get('/creators')->assertOk()
+            ->assertSee('freelancer-showcase-card')
+            ->assertSee('profile-avatars/example.webp')
+            ->assertSee('Battambang, Cambodia')
+            ->assertSee($profileUrl.'#published-work')
+            ->assertDontSee('View portfolio');
         $this->get($profileUrl)->assertOk()->assertSee('id="published-work"', false);
     }
 

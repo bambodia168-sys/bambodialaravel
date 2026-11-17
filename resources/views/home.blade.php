@@ -1,7 +1,7 @@
 @extends('layouts.main')
 @section('title','Home')
 @push('page-styles')
-  <link rel="stylesheet" href="{{ asset('css/freelancer-discovery.css') }}?v=3">
+  <link rel="stylesheet" href="{{ asset('css/freelancer-discovery.css') }}?v=4">
 @endpush
 @section('content')
 <div class="marketplace-hero-scene">
@@ -91,7 +91,7 @@
   @if($freelancers->isNotEmpty())
     <div @class(['freelancer-showcase-grid', 'freelancer-showcase-grid--single' => $freelancers->count() === 1])>
       @foreach($freelancers as $freelancer)
-        <x-home-freelancer-card :freelancer="$freelancer" :badges="$freelancerBadges->get($freelancer->id)"/>
+        <x-freelancer-card :freelancer="$freelancer" :badges="$freelancerBadges->get($freelancer->id)"/>
       @endforeach
     </div>
   @else

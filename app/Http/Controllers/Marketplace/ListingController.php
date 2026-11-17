@@ -78,8 +78,14 @@ class ListingController extends Controller
         abort_unless(preg_match('/^=(\d{9})-([a-z0-9-]+)$/', $raw, $match) === 1, 404);
 
         $listing = MarketplaceListing::query()
-            ->with(['creator:id,name,public_id,email,role,created_at,account_status','creator.creatorProfile:user_id,is_public,headline',
-                'licenseDefinition','extendedLicenseDefinition','coverAsset','featuredAsset','category:id,name,type'])
+            ->with([
+                'creator' => fn ($creator) => $creator->select('id','name','public_id','email','role','created_at','account_status')
+                    ->withCount(['publishedListings as public_listings_count']),
+                'creator.creatorProfile:user_id,is_public,headline',
+                'creator.userProfile:user_id,avatar_path,public_location',
+                'creator.publicExpertise' => fn ($skills) => $skills->select('id', 'user_id', 'label')->limit(3),
+                'licenseDefinition','extendedLicenseDefinition','coverAsset','featuredAsset','category:id,name,type',
+            ])
             ->where('public_id', $match[1])
             ->where('slug', $match[2])
             ->where('type', $type)

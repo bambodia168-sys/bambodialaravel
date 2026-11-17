@@ -69,7 +69,11 @@ class CreatorProfileController extends Controller
                 ->whereHas('userProfile', fn ($profile) => $profile->whereLike('public_location', '%'.$location.'%')))
             ->when($category !== '', fn ($query) => $query->whereHas('publishedListings.category',
                 fn ($item) => $item->where('public_id', $category)->where('is_active', true)))
-            ->with('creatorProfile:user_id,headline,biography,is_public')
+            ->with([
+                'creatorProfile:user_id,headline,biography,is_public',
+                'userProfile:user_id,avatar_path,public_location',
+                'publicExpertise' => fn ($skills) => $skills->select('id', 'user_id', 'label')->limit(3),
+            ])
             ->withCount(['publishedListings as public_listings_count'])
             ->orderBy('name')->orderBy('id')->paginate(10)->withQueryString();
 
