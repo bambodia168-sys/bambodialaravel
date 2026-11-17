@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CommerceOrderController;
+use App\Http\Controllers\CommerceSettlementController;
 use App\Http\Controllers\CommercePaymentMethodController;
 use App\Http\Controllers\CommercePaymentController;
 use App\Http\Controllers\ProfileEditorController;
@@ -331,6 +332,9 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/orders', [CommerceOrderController::class, 'index'])->name('studio.orders.index');
         Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('studio.orders.show');
         Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('studio.orders.receipt');
+        Route::get('/sales-settlements', [CommerceSettlementController::class, 'index'])->name('studio.commerce-operations');
+        Route::get('/sales-settlements/statement.csv', [CommerceSettlementController::class, 'statement'])
+            ->middleware('throttle:10,1')->name('studio.commerce-operations.statement');
         Route::get('/profile', [CreatorProfileController::class,'edit'])->name('studio.profile.edit');
         Route::patch('/profile', [CreatorProfileController::class,'update'])
             ->name('studio.profile.update')->middleware('throttle:10,1');
@@ -370,6 +374,9 @@ Route::middleware('auth')->group(function (): void {
                 ->middleware('throttle:10,1')->name('update');
         });
         Route::middleware('role:super_admin')->group(function (): void {
+            Route::get('/commerce-operations', [CommerceSettlementController::class, 'index'])->name('dashboard.commerce-operations');
+            Route::get('/commerce-operations/statement.csv', [CommerceSettlementController::class, 'statement'])
+                ->middleware('throttle:10,1')->name('dashboard.commerce-operations.statement');
             Route::get('/orders/{number}/payments/{payment}/proof', [CommercePaymentController::class, 'proof'])
                 ->whereUuid(['number', 'payment'])->name('dashboard.orders.payment.proof');
             Route::patch('/orders/{number}/payments/{payment}', [CommercePaymentController::class, 'review'])

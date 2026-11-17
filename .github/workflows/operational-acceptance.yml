@@ -69,6 +69,7 @@ jobs:
             ContentAndSupportTest \
             ProductMediaLicenseTest \
             SmtpSettingsTest \
+            SettlementStatementsTest \
             ProductVaultFulfillmentTest \
             ServiceInquiriesTest \
             NotificationsTest \
