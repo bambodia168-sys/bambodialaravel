@@ -1,8 +1,8 @@
 @extends('layouts.main')
-@section('title','Private Service Inquiry')
+@section('title', $inquiry->marketplace_order_id ? 'Service Workspace' : 'Private Service Inquiry')
 @section('content')
 <div class="container inner-page creator-onboarding">
-<div class="page-intro"><div class="eyebrow">Private inquiry · {{ $inquiry->public_id }}</div><h1>{{ $inquiry->subject }}</h1>
+<div class="page-intro"><div class="eyebrow">{{ $inquiry->marketplace_order_id ? 'Service workspace' : 'Private inquiry' }} · {{ $inquiry->public_id }}</div><h1>{{ $inquiry->subject }}</h1>
 <p>{{ $inquiry->listing?->title }} · Client {{ $inquiry->client?->name }} · Creator {{ $inquiry->creator?->name }}</p>
 @if($inquiry->proposed_budget!==null)<p><strong>Proposed budget:</strong> USD {{ number_format((float)$inquiry->proposed_budget,2) }} (informational)</p>@endif
 </div>
@@ -22,7 +22,11 @@
 </div>
 @else<p class="hint">This conversation is closed to further replies.</p>@endif
 </section>
-<p class="hint">Messages support pre-contract conversations only. Neither sending a message nor agreeing to a budget transfers funds, funds escrow, or creates an automated platform contract.</p>
-<a class="btn subtle" href="{{ (int)auth()->id()===(int)$inquiry->creator_id ? route('studio.inquiries') : route('account.inquiries') }}">Back to inquiries</a>
+@if($inquiry->marketplace_order_id)
+  <a class="btn subtle" href="{{ route((int) auth()->id() === (int) $inquiry->creator_id ? 'studio.orders.show' : 'account.orders.show', $inquiry->order->number) }}">Back to order</a>
+@else
+  <p class="hint">Messages support pre-contract conversations only. Neither sending a message nor agreeing to a budget transfers funds, funds escrow, or creates an automated platform contract.</p>
+  <a class="btn subtle" href="{{ (int)auth()->id()===(int)$inquiry->creator_id ? route('studio.inquiries') : route('account.inquiries') }}">Back to inquiries</a>
+@endif
 </div>
 @endsection

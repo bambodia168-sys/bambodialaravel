@@ -4,8 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\CommercePaymentMethod;
 use App\Models\CommerceGatewaySetting;
+use App\Models\LicenseDefinition;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
+use App\Models\MediaAsset;
+use App\Models\ProductFileVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -138,13 +141,24 @@ class CommercePaymentsTest extends TestCase
         $review = route('dashboard.orders.payment.review', [$order->number, $attempt->number]);
         $this->get($proof)->assertForbidden();
         $this->get(route('account.orders.receipt', $order->number))->assertNotFound();
+        $this->get(route('account.orders.show', $order->number))->assertOk()
+            ->assertSee('awaiting review')->assertDontSee('Open service workspace');
+        $this->assertDatabaseCount('service_inquiries', 0);
         $approval = ['decision'=>'approve', 'verified_reference'=>'BANK-123', 'verified_amount'=>'25.00', 'note'=>'Reconciled against statement.'];
         $this->actingAs($admin)->get($proof)->assertDownload();
         $this->patch($review, [...$approval, 'verified_amount'=>'24.00'])->assertConflict();
         $this->patch($review, $approval)->assertRedirect();
         $this->assertSame('completed', $order->refresh()->status);
         $this->get(route('dashboard.orders.receipt', $order->number))->assertOk()->assertSee('KHQR · Verified');
+        $service = $order->serviceInquiry()->sole();
+        $serviceUrl = route('inquiries.show', $service);
+        $this->actingAs($buyer)->get(route('account.orders.show', $order->number))->assertOk()->assertSee('Open service workspace');
+        $this->get($serviceUrl)->assertOk()->assertSee('Service workspace');
+        $this->post(route('inquiries.reply', $service), ['body' => 'Please let me know how to start.'])->assertRedirect();
+        $seller = User::query()->findOrFail($order->seller_id);
+        $this->actingAs($seller)->get($serviceUrl)->assertOk()->assertSee('Please let me know how to start.');
         [$secondBuyer, $secondOrder] = $this->order();
+        $this->actingAs($secondBuyer)->get($serviceUrl)->assertNotFound();
         $this->actingAs($secondBuyer)->post(route('account.orders.payment.submit', $secondOrder->number),
             ['method'=>$method->id, 'reference'=>'BANK-123', 'proof'=>UploadedFile::fake()->image('second.png')])->assertRedirect();
         $this->actingAs($admin)->patch(route('dashboard.orders.payment.review', [$secondOrder->number, $secondOrder->payments()->sole()->number]),
@@ -153,6 +167,87 @@ class CommercePaymentsTest extends TestCase
         $this->patch(route('dashboard.orders.payment.review', [$secondOrder->number, $secondOrder->payments()->sole()->number]),
             ['decision'=>'reject','note'=>'Reference already used.'])->assertRedirect();
         $this->assertSame('rejected', $secondOrder->payments()->sole()->status);
+        $this->assertFalse($secondOrder->serviceInquiry()->exists());
+        $this->actingAs($secondBuyer)->get(route('account.orders.show', $secondOrder->number))->assertOk()
+            ->assertSee('receipt was rejected')->assertDontSee('Open service workspace');
+    }
+
+    public function test_product_receipt_rejection_grants_nothing_and_a_corrected_approval_delivers_immediately(): void
+    {
+        Storage::fake('local');
+        $buyer = $this->user('customer');
+        $admin = $this->user('super_admin');
+        $seller = $this->user('freelancer');
+        [$product, $release] = $this->product($seller, $admin);
+        $method = $this->method('bank_transfer');
+        $this->actingAs($buyer);
+        $purchase = route('account.orders.store', $product->public_id);
+        $offer = $this->get(route('account.orders.create', $product->public_id))->assertOk();
+        $this->post($purchase, [
+            'tier' => 'regular', 'request_key' => $offer->viewData('requestKey'),
+            'quote' => $offer->viewData('quotes')['regular']['signature'],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $order = MarketplaceOrder::query()->sole();
+        $this->assertSame($release->id, $order->fulfillment_version_id);
+        $orderUrl = route('account.orders.show', $order->number);
+        $receiptUrl = route('account.orders.receipt', $order->number);
+        $submit = route('account.orders.payment.submit', $order->number);
+
+        $this->get($orderUrl)->assertOk()->assertSee('Transfer to the merchant account.')->assertSee('Payment receipt');
+        $transfer = ['method' => $method->id, 'reference' => 'TRANSFER-FIRST'];
+        $this->post($submit, $transfer)->assertSessionHasErrors('proof');
+        $this->post($submit, $transfer + ['proof' => UploadedFile::fake()->create('receipt.pdf', 12, 'application/pdf')])
+            ->assertRedirect($orderUrl)->assertSessionHasNoErrors();
+        $first = $order->payments()->sole();
+        $this->assertSame('manual_review', $first->status);
+        $this->get($receiptUrl)->assertNotFound();
+        $this->assertDatabaseCount('product_licenses', 0);
+        $review = route('dashboard.orders.payment.review', [$order->number, $first->number]);
+        $this->actingAs($seller)->patch($review, ['decision' => 'reject', 'note' => 'Unauthorized.'])->assertForbidden();
+        $this->actingAs($admin)->get(route('dashboard.orders.payment.proof', [$order->number, $first->number]))
+            ->assertDownload('payment-receipt.pdf');
+        $this->patch($review, ['decision' => 'reject', 'note' => 'No matching transfer.'])->assertRedirect();
+
+        $this->actingAs($buyer)->get($orderUrl)->assertOk()->assertSee('receipt was rejected')
+            ->assertDontSee('Download product')->assertDontSee('My licenses');
+        $this->get($receiptUrl)->assertNotFound();
+        $this->get(route('account.downloads'))->assertOk()->assertDontSee($product->title);
+        $this->get(route('account.licenses.index'))->assertOk()->assertDontSee($product->title);
+        $this->assertDatabaseCount('product_entitlements', 0);
+        $this->assertDatabaseCount('product_licenses', 0);
+        $this->assertDatabaseHas('account_notifications', ['user_id' => $buyer->id, 'event' => 'commerce.payment.rejected']);
+
+        $this->post($submit, [
+            'method' => $method->id, 'reference' => 'TRANSFER-CORRECTED', 'proof' => UploadedFile::fake()->image('receipt.png'),
+        ])->assertRedirect($orderUrl);
+        $retry = $order->payments()->where('status', 'manual_review')->sole();
+        $approval = [
+            'decision' => 'approve', 'verified_reference' => 'TRANSFER-CORRECTED', 'verified_amount' => $order->total,
+            'note' => 'Verified amount and recipient in the bank statement.',
+        ];
+        $approve = route('dashboard.orders.payment.review', [$order->number, $retry->number]);
+        $this->actingAs($admin);
+        $artifact = Storage::disk('local')->get($release->storage_path);
+        Storage::disk('local')->put($release->storage_path, 'mismatched file');
+        $this->patch($approve, $approval)->assertConflict();
+        $this->assertSame('manual_review', $retry->refresh()->status);
+        $this->assertSame('awaiting_payment', $order->refresh()->status);
+        $this->assertDatabaseCount('product_licenses', 0);
+        Storage::disk('local')->put($release->storage_path, $artifact);
+
+        $this->patch($approve, $approval)->assertRedirect();
+        $this->patch($approve, $approval)->assertConflict();
+        $grant = $order->entitlement()->sole();
+        $this->assertSame('verified_purchase', $grant->license()->sole()->source);
+        $this->assertSame($buyer->id, $grant->user_id);
+        $this->assertDatabaseCount('product_licenses', 1);
+        $this->assertDatabaseHas('account_notifications', ['user_id' => $buyer->id, 'event' => 'commerce.payment.approved']);
+        $this->actingAs($buyer)->get($orderUrl)->assertOk()->assertSee('Download product')->assertSee('My licenses');
+        $this->get($receiptUrl)->assertOk();
+        $download = route('account.downloads.file', $grant);
+        $this->get($download)->assertDownload('bambodia-'.$product->public_id.'-1.0.zip');
+        $this->get(route('account.licenses.index'))->assertOk()->assertSee($product->title);
+        $this->actingAs($this->user('customer'))->get($download)->assertNotFound();
     }
 
     public function test_configuration_dialog_stores_secrets_encrypted_and_keeps_them_out_of_responses(): void
@@ -254,6 +349,44 @@ class CommercePaymentsTest extends TestCase
         $this->artisan('commerce:reconcile-qr')->assertSuccessful();
         $this->assertSame('completed', $order->refresh()->status);
         $this->assertSame('aba:'.$attempt->remote_id, $attempt->refresh()->settlement_reference);
+    }
+
+    private function product(User $seller, User $admin): array
+    {
+        $definition = LicenseDefinition::query()->create([
+            'name' => 'Regular License', 'code' => 'MANUAL_PAYMENT_TEST_'.$seller->id, 'version' => '1.0',
+            'tier' => 'regular', 'permissions' => 'Use on an approved domain.',
+            'restrictions' => 'Redistribution is prohibited.', 'status' => 'active', 'created_by' => $admin->id,
+        ]);
+        $coverPath = 'test/'.$seller->id.'/cover.png';
+        Storage::disk('local')->put($coverPath, 'Approved cover fixture');
+        $cover = MediaAsset::query()->create([
+            'user_id' => $seller->id, 'original_name' => 'cover.png', 'storage_path' => $coverPath,
+            'mime_type' => 'image/png', 'bytes' => 22, 'width' => 10, 'height' => 10, 'rights_basis' => 'owned',
+            'alt_text' => 'Product cover', 'rights_holder' => $seller->name, 'review_status' => 'approved',
+        ]);
+        $product = MarketplaceListing::query()->create([
+            'user_id' => $seller->id, 'type' => 'product', 'title' => 'Licensed PHP Toolkit',
+            'description' => 'Original files for a product release.', 'currency' => 'USD',
+            'regular_price' => '39.00', 'cover_media_id' => $cover->id, 'license_definition_id' => $definition->id, 'status' => 'published',
+        ]);
+        $content = 'Isolated approved release artifact.';
+        $sha256 = hash('sha256', $content);
+        $path = 'marketplace/originals/'.$seller->id.'/'.$product->id.'/'.$sha256.'.zip';
+        Storage::disk('local')->put($path, $content);
+        $release = ProductFileVersion::query()->create([
+            'marketplace_listing_id' => $product->id, 'uploaded_by' => $seller->id, 'version' => '1.0',
+            'release_notes' => 'Verified release archive.', 'original_filename' => 'approved.zip',
+            'storage_path' => $path, 'file_type' => 'zip', 'byte_size' => strlen($content),
+            'sha256' => $sha256, 'status' => 'approved', 'reviewed_at' => now(), 'reviewed_by' => $admin->id,
+            'rights_attested_at' => now(), 'rights_evidence' => 'Original work owned by seller.',
+            'rights_review_status' => 'verified', 'rights_reviewed_at' => now(), 'rights_reviewed_by' => $admin->id,
+            'rights_review_note' => 'Original redistribution rights independently reviewed.',
+            'malware_scan_status' => 'clean', 'malware_scanned_sha256' => $sha256,
+            'malware_scan_engine' => 'ClamAV isolated fixture', 'malware_scanned_at' => now(),
+        ]);
+
+        return [$product, $release];
     }
 
     private function method(string $provider): CommercePaymentMethod

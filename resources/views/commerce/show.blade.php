@@ -8,6 +8,27 @@
     <h1>{{ $order->listing_title }}</h1>
     <p class="mono">{{ $order->number }}</p>
   </div>
+  @if($order->relationLoaded('serviceInquiry') && $order->serviceInquiry)
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Service workspace</h2>
+          <p>Use the private conversation to coordinate delivery.</p>
+        </div>
+        <a class="btn primary" href="{{ route('inquiries.show', $order->serviceInquiry) }}">Open service workspace</a>
+      </div>
+    </section>
+  @elseif($section === 'account.orders' && $order->relationLoaded('entitlement') && $order->entitlement?->isActive())
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Product access</h2>
+        <div class="panel-actions">
+          <a class="btn primary" href="{{ route('account.downloads.file', $order->entitlement) }}">Download product</a>
+          <a class="btn subtle" href="{{ route('account.licenses.index') }}">My licenses</a>
+        </div>
+      </div>
+    </section>
+  @endif
   <section class="panel">
     <div class="panel-head">
       <h2>Order details</h2><span class="role-pill">{{ \App\Models\MarketplaceOrder::STATUSES[$order->status] }}</span>

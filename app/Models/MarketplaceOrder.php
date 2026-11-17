@@ -17,6 +17,7 @@ class MarketplaceOrder extends Model
     protected $fillable = [
         'number', 'buyer_id', 'seller_id', 'marketplace_listing_id', 'request_key',
         'listing_title', 'buyer_name', 'seller_name', 'license_tier', 'license_name',
+        'fulfillment_version_id', 'fulfillment_definition_id', 'fulfillment_terms_hash',
         'total', 'currency', 'payment_method', 'status', 'receipt_number', 'completed_at', 'cancelled_at',
     ];
 
@@ -28,6 +29,22 @@ class MarketplaceOrder extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(CommercePayment::class);
+    }
+
+    public function entitlement(): HasOne
+    {
+        return $this->hasOne(ProductEntitlement::class);
+    }
+
+    public function paidAttempt(): HasOne
+    {
+        return $this->hasOne(CommercePayment::class)->where('status', 'paid')->whereNotNull('settlement_reference')
+            ->when(app()->isProduction(), fn ($payment) => $payment->where('live_mode', true));
+    }
+
+    public function serviceInquiry(): HasOne
+    {
+        return $this->hasOne(ServiceInquiry::class);
     }
 
     public function operations(): HasOne
