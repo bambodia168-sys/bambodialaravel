@@ -1,0 +1,43 @@
+# NON-DEPLOYABLE SECURITY REVIEW FIXTURE — DO NOT INSTALL OR ENABLE.
+# This file intentionally has a non-systemd extension and a harmless
+# ExecStart=/usr/bin/false. It is NOT a functional cloudflared unit.
+# Future operational unit needs independent security approval, actual Access
+# policy evidence, credential source and tested restart orchestration.
+[Unit]
+Description=REVIEW ONLY - Bambodia PreviewQA dedicated cloudflared security design
+Documentation=https://developers.cloudflare.com/tunnel/features/locally-managed-tunnels/as-a-service/linux/
+After=network-online.target bambodia-previewqa-http.service
+Wants=network-online.target
+ConditionPathExists=/etc/bambodia-previewqa-connector/REVIEW_APPROVED_BUT_NOT_PROVISIONED
+RefuseManualStart=yes
+RefuseManualStop=yes
+
+[Service]
+Type=simple
+DynamicUser=yes
+User=bambodia_pvconnector
+Group=bambodia_pvconnector
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+RestrictSUIDSGID=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RuntimeDirectory=bambodia-previewqa-connector
+RuntimeDirectoryMode=0700
+BindReadOnlyPaths=/run/bambodia-previewqa-http/http.sock:/run/bambodia-previewqa-connector/http.sock
+LoadCredential=tunnel.json:/etc/bambodia-previewqa-connector/UNPROVISIONED_REVIEW_ONLY
+Restart=no
+# No real connector binary, flags, tokens or credentials are present.
+ExecStart=/usr/bin/false
+
+[Install]
+# Intentionally no WantedBy target: cannot be enabled through a normal preset.

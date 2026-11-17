@@ -1,0 +1,16 @@
+# NON-DEPLOYABLE REVIEW FIXTURE. Access is NOT enabled on Bambodia.
+# DO NOT install/use this file as cloudflared config; the identifiers below
+# are intentionally invalid. There is no tunnel, hostname route or credential.
+tunnel: INVALID_TUNNEL_UNPROVISIONED
+credentials-file: /run/credentials/bambodia-previewqa-connector.service/tunnel.json
+ingress:
+  - hostname: preview-qa.bambodia.com
+    service: unix:/run/bambodia-previewqa-connector/http.sock
+    originRequest:
+      httpHostHeader: preview-qa.bambodia.com
+      access:
+        required: true
+        teamName: INVALID_ACCESS_NOT_ENABLED
+        audTag:
+          - INVALID_APPLICATION_AUDIENCE
+  - service: http_status:404
