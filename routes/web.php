@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CommerceOrderController;
+use App\Http\Controllers\CommerceCartController;
 use App\Http\Controllers\CommercePaymentMethodController;
 use App\Http\Controllers\CommercePaymentController;
 use App\Http\Controllers\ProfileEditorController;
@@ -140,6 +141,22 @@ Route::middleware('auth')->prefix('detail')->group(function (): void {
         ->whereNumber('resource')->middleware('throttle:12,1')->name('detail.support.resources.update');
     Route::delete('/{kind}/{reference}-{slug}/support/resources/{resource}', [DetailDiscussionController::class,'deleteResource'])
         ->whereNumber('resource')->middleware('throttle:12,1')->name('detail.support.resources.destroy');
+});
+
+Route::get('/cart', [CommerceCartController::class, 'cart'])->name('cart');
+Route::post('/cart/{listing}', [CommerceCartController::class, 'add'])->where('listing', '[0-9]{9}')
+    ->middleware('throttle:40,1')->block()->name('cart.add');
+Route::delete('/cart/{listing}', [CommerceCartController::class, 'remove'])->where('listing', '[0-9]{9}')
+    ->middleware('throttle:40,1')->block()->name('cart.remove');
+Route::get('/checkout', [CommerceCartController::class, 'checkout'])->name('checkout');
+Route::middleware('auth')->prefix('checkout')->name('checkout.')->group(function (): void {
+    Route::get('/verify-email', [CommerceCartController::class, 'verification'])->name('verification');
+    Route::post('/verify-email', [CommerceCartController::class, 'sendVerification'])
+        ->middleware('throttle:3,1')->name('verification.send');
+    Route::get('/verify-email/{id}/{hash}', [CommerceCartController::class, 'verify'])
+        ->whereNumber('id')->middleware(['signed', 'throttle:10,1'])->name('verify');
+    Route::post('/{listing}', [CommerceOrderController::class, 'placeFromCart'])->where('listing', '[0-9]{9}')
+        ->middleware('throttle:10,1')->name('place');
 });
 
 Route::middleware('guest')->group(function (): void {
@@ -615,6 +632,9 @@ foreach (\App\Http\Middleware\SetLocale::SUPPORTED as $languageCode) {
             $action
         )->middleware($originalRoute->gatherMiddleware())
             ->name('localized.'.$languageCode.'.'.$name);
+        if ($originalRoute->locksFor() !== null) {
+            $localizedRoute->block($originalRoute->locksFor(), $originalRoute->waitsFor());
+        }
         foreach ($originalRoute->wheres as $parameter => $constraint) {
             $localizedRoute->where($parameter, $constraint);
         }

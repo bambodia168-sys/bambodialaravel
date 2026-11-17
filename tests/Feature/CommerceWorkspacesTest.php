@@ -33,7 +33,7 @@ class CommerceWorkspacesTest extends TestCase
         $buyer = $this->user('customer');
         $seller = $this->user('freelancer');
         $listing = $this->listing($seller, '0.00');
-        $this->actingAs($buyer)->get($listing->publicUrl())->assertOk()->assertSee('Review order');
+        $this->actingAs($buyer)->get($listing->publicUrl())->assertOk()->assertSee('Add to cart');
         $form = $this->orderForm($listing);
         $this->post(route('account.orders.store', $listing->public_id), [...$form, 'total' => '25.00'])->assertRedirect();
         $order = MarketplaceOrder::query()->sole();
