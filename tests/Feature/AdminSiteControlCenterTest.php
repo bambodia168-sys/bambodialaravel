@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\ContentEntry;
+use App\Models\MediaAsset;
 use App\Models\SiteBrandAsset;
 use App\Models\SiteLanguage;
 use App\Models\SiteSeoPage;
@@ -49,6 +51,70 @@ class AdminSiteControlCenterTest extends TestCase
             ->assertJsonPath('description','Products, jobs and freelance services');
         $this->assertSame('Bambodia Creative Hub',SiteSetting::setting('identity.name'));
         $this->assertDatabaseHas('audit_events',['event'=>'site.setting.changed','actor_id'=>$admin->id]);
+    }
+
+    public function test_localized_identity_is_editable_and_defaults_cover_the_language_catalog(): void
+    {
+        $this->actingAs($this->actor())->get(route('dashboard.site-identity'))->assertOk()
+            ->assertSee('Localized site identity')->assertSee('Shared fallback image');
+        $defaults = require lang_path('site-identity.php');
+        $this->assertSame(array_values(array_diff(array_keys(SiteLanguage::CATALOG), ['en'])), array_keys($defaults));
+
+        foreach (SiteLanguage::activeCodes() as $locale) {
+            $identity = \App\Support\SiteIdentity::metadata($locale);
+            $this->get('/'.$locale)->assertOk()->assertSee('<title>'.e($identity['title']).'</title>', false)
+                ->assertSee('content="'.e($identity['description']).'"', false)
+                ->assertSee('images/bambodia-social-sharing.jpg');
+            $this->get('/'.$locale.'/site.webmanifest')->assertOk()->assertJsonPath('lang', $locale)
+                ->assertJsonPath('description', $identity['tagline']);
+        }
+        $change = ['locale'=>'km','tagline'=>'ស្លាកសម្គាល់ថ្មី','title'=>'Bambodia · ចំណងជើងថ្មី',
+            'description'=>'ការពិពណ៌នាថ្មីសម្រាប់គេហទំព័រ'];
+        $this->patch(route('dashboard.site-identity.update'), $change)->assertRedirect()->assertSessionHasNoErrors();
+        $this->get('/km')->assertOk()->assertSee('<title>'.$change['title'].'</title>', false)->assertSee($change['description']);
+        $this->get('/en')->assertOk()->assertDontSee($change['title']);
+        $this->get('/km/site.webmanifest')->assertOk()->assertJsonPath('description', $change['tagline']);
+        $this->patch(route('dashboard.site-identity.update'), ['locale' => 'invalid'])
+            ->assertSessionHasErrors('locale');
+    }
+
+    public function test_featured_image_precedes_language_and_shared_social_fallbacks(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+        $admin = $this->actor();
+        $this->actingAs($admin);
+        $imageRoute = route('dashboard.site-identity.assets.store');
+        $fixture = public_path('images/bambodia-social-sharing.jpg');
+        foreach (['social_shared', 'social_km'] as $slot) {
+            $this->post($imageRoute, ['slot' => $slot,
+                'image' => new UploadedFile($fixture, 'share.jpg', 'image/jpeg', null, true)])
+                ->assertRedirect()->assertSessionHasNoErrors();
+        }
+        $shared = Storage::disk('public')->url(SiteBrandAsset::query()->findOrFail('social_shared')->storage_path);
+        $khmer = Storage::disk('public')->url(SiteBrandAsset::query()->findOrFail('social_km')->storage_path);
+        $tag = fn (string $url) => '<meta property="og:image" content="'.e($url).'">';
+        $this->get('/km')->assertOk()->assertSee($tag($khmer), false);
+        $this->get('/zh')->assertOk()->assertSee($tag($shared), false);
+
+        Storage::disk('local')->put('site-test/featured.jpg', file_get_contents($fixture));
+        $asset = MediaAsset::query()->create([
+            'user_id' => $admin->id, 'original_name' => 'featured.jpg', 'storage_path' => 'site-test/featured.jpg',
+            'mime_type' => 'image/jpeg', 'bytes' => filesize($fixture), 'width' => 1200, 'height' => 630,
+            'alt_text' => 'Featured artwork', 'rights_basis' => 'owned', 'rights_holder' => $admin->name,
+            'review_status' => 'approved',
+        ]);
+        $post = ContentEntry::query()->create(['type'=>'post','title'=>'Social sharing example','body'=>'Public post',
+            'author_id'=>$admin->id,'status'=>'published','published_at'=>now(),
+            'featured_type'=>'image','featured_media_id'=>$asset->id]);
+        $path = '/'.$post->public_id.'_'.$post->slug;
+        $featuredUrl = route('localized.km.media.preview', $asset->public_id);
+        $this->get('/km'.$path)->assertOk()->assertSee($tag($featuredUrl), false)
+            ->assertSee('<meta name="twitter:image" content="'.e($featuredUrl).'">', false);
+        auth()->logout();
+        $this->get($featuredUrl)->assertOk();
+        $this->actingAs($admin)->delete(route('dashboard.site-identity.assets.destroy', 'social_km'))->assertRedirect();
+        $this->get('/km')->assertOk()->assertSee($tag($shared), false);
     }
 
     public function test_brand_asset_upload_replace_and_reset_work_in_public_layout(): void

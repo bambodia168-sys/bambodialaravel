@@ -5,5 +5,5 @@
 <link rel="icon" type="image/png" href="{{ $siteFaviconLight }}" data-site-theme-icon
   data-light-href="{{ $siteFaviconLight }}" data-dark-href="{{ $siteFaviconDark }}">
 <link rel="apple-touch-icon" href="{{ \App\Models\SiteBrandAsset::urlFor('touch_icon') }}">
-<link rel="manifest" href="{{ route('site.manifest') }}">
+<link rel="manifest" href="{{ route('localized.'.app()->getLocale().'.site.manifest') }}">
 <script defer src="{{ asset('js/site-identity-theme-icon.js') }}?v=1"></script>

@@ -1,5 +1,6 @@
 @extends('layouts.main')
 @section('title',$job->title)
+@section('social_image', \App\Support\SiteIdentity::featuredImage(in_array($job->featured_kind, ['image', 'animated'], true) ? $job->featuredAsset : null))
 @section('content')
 @php($layoutSample = str_starts_with($job->title, '[LAYOUT TEST] '))
 <div class="container inner-page listing-detail premium-detail premium-job-detail" data-detail-root>

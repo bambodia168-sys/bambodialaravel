@@ -3,6 +3,7 @@
 @if($entry->type === 'post')
   @section('meta_description', $entry->seo_description ?: $entry->excerpt ?: \Illuminate\Support\Str::limit(\App\Support\PolicyContent::plain($entry->body), 155))
 @endif
+@section('social_image', \App\Support\SiteIdentity::featuredImage(empty($preview) && $entry->type === 'post' && $entry->featured_type === 'image' ? $entry->featuredMedia : null))
 @section('content')
 <div class="container inner-page">
   <div class="{{ $entry->type === 'post' && empty($preview) ? 'blog-article-layout' : '' }}">

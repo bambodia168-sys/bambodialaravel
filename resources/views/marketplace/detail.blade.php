@@ -1,5 +1,6 @@
 @extends('layouts.main')
 @section('title',$listing->title)
+@section('social_image', \App\Support\SiteIdentity::featuredImage(in_array($listing->featured_kind, ['image', 'animated'], true) ? $listing->featuredAsset : null) ?: \App\Support\SiteIdentity::featuredImage($listing->type === 'product' ? $listing->coverAsset : null))
 @section('content')
 @php
   $kind = $listing->type;

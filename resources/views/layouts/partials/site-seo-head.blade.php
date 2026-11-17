@@ -1,12 +1,18 @@
 @php
   $siteName=\App\Models\SiteSetting::setting('identity.name');
+  $locale=app()->getLocale();
+  $identity=\App\Support\SiteIdentity::metadata($locale);
+  $home=request()->routeIs('home', 'localized.*.home');
   $seoPage=\App\Models\SiteSeoPage::forRequest(request());
+  if ($home && $seoPage && $seoPage->locale !== $locale) {
+    $seoPage=null;
+  }
   $requestedTitle=trim($__env->yieldContent('title',''));
   $pageTitle=$seoPage?->title
-    ?: ($requestedTitle!=='' && $requestedTitle!==$siteName ? $requestedTitle.' · '.$siteName : \App\Models\SiteSetting::setting('seo.default_title'));
+    ?: (!$home && $requestedTitle!=='' && $requestedTitle!==$siteName ? $requestedTitle.' · '.$siteName : $identity['title']);
   $requestedDescription=trim($__env->yieldContent('meta_description',''));
   $pageDescription=$seoPage?->description
-    ?: ($requestedDescription!=='' ? $requestedDescription : \App\Models\SiteSetting::setting('seo.default_description'));
+    ?: ($requestedDescription!=='' ? $requestedDescription : $identity['description']);
   $privatePath=request()->is('login','register','forgot-password','reset-password*',
     'dashboard*','account*','studio*','developer*','checkout*','cart*');
   $robots=$privatePath ? 'noindex,nofollow'
@@ -14,7 +20,8 @@
         : \App\Models\SiteSetting::setting('seo.default_robots'));
   $canonical=$seoPage?->canonical_url ?: url()->current();
   $keywords=$seoPage?->keywords ?: \App\Models\SiteSetting::setting('seo.default_keywords');
-  $ogImage=$seoPage?->og_image_url ?: \App\Models\SiteSetting::setting('seo.default_og_image');
+  $ogImage=trim($__env->yieldContent('social_image',''))
+    ?: ($seoPage?->og_image_url ?: \App\Support\SiteIdentity::sharingImage($locale));
 @endphp
 <title>{{ $pageTitle }}</title>
 <meta name="description" content="{{ $pageDescription }}">

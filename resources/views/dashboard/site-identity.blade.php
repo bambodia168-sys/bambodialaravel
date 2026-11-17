@@ -55,4 +55,5 @@
       </table>
     </div>
   </section>
+  @include('dashboard.partials.localized-site-identity')
 @endsection
