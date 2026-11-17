@@ -1,0 +1,32 @@
+name: Bambodia R2 Restic Synthetic Recovery
+on:
+  pull_request:
+    paths:
+      - "tests/security/bambodia-mcp-r2-restic-synthetic-restore-qa.sh"
+      - ".github/workflows/bambodia-mcp-r2-restic-synthetic.yml"
+      - "support/bambodia-mcp-r2-recovery-execution-readiness-readonly-20261114.py"
+      - "docs/integrations/bambodia-mcp-r2-recovery-operator-gates-20261114.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  encrypted-synthetic-backup-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: "true"
+    steps:
+      - name: Checkout without stored credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install distribution-verified Restic on ephemeral runner
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y restic
+      - name: Verify shell syntax
+        run: bash -n tests/security/bambodia-mcp-r2-restic-synthetic-restore-qa.sh
+      - name: Exercise encrypted backup, restore and failed child handling
+        run: bash tests/security/bambodia-mcp-r2-restic-synthetic-restore-qa.sh

@@ -62,7 +62,7 @@ class DeveloperController extends Controller
         $values = $request->validate([
             'name' => ['required', 'string', 'min:3', 'max:80'],
             'days' => ['required', 'integer', Rule::in([7, 30, 90])],
-            'scopes' => ['required', 'array', 'min:1', 'max:2'],
+            'scopes' => ['required', 'array', 'min:1', 'max:4'],
             'scopes.*' => ['required', 'string', 'distinct', Rule::in(ApiToken::SCOPES)],
             'password' => ['required', 'current_password'],
         ]);

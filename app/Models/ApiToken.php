@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ApiToken extends Model
 {
-    public const SCOPES = ['account.read', 'listings.read'];
+    public const SCOPES = ['account.read', 'listings.read', 'mcp.read', 'mcp.write'];
 
     protected $fillable = ['user_id', 'name', 'prefix', 'token_hash', 'scopes', 'expires_at', 'revoked_at', 'last_used_at'];
     protected $hidden = ['token_hash'];

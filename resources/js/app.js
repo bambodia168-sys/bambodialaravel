@@ -108,7 +108,12 @@ function initializeRowActionMenus() {
             if (isOpen) {
                 place(menu);
                 requestAnimationFrame(() => {
-                    if (menu.matches(':popover-open')) menuItems(menu)[0]?.focus({ preventScroll:true });
+                    // Do not overwrite a later keyboard move (for example ArrowDown)
+                    // if the toggle focus frame runs after the user already focused
+                    // an action. This matters on mobile Chromium/dark theme.
+                    if (menu.matches(':popover-open') && !menu.contains(document.activeElement)) {
+                        menuItems(menu)[0]?.focus({ preventScroll:true });
+                    }
                 });
             }
         });

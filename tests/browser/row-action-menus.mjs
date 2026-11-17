@@ -74,6 +74,10 @@ try {
       await page.keyboard.press('ArrowDown');
       const second = await page.evaluate(() => document.activeElement?.textContent?.trim());
       if(second!=='Preview') throw Error(name+'/'+theme+' ArrowDown navigation failed: '+second);
+      // A queued popover focus frame must not reset a keyboard user's choice.
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const settled = await page.evaluate(() => document.activeElement?.textContent?.trim());
+      if(settled!=='Preview') throw Error(name+'/'+theme+' delayed autofocus stole focus: '+settled);
       await page.keyboard.press('Escape');
       await menu.waitFor({state:'hidden'});
       await page.waitForFunction(id => document.querySelector('[aria-controls="'+id+'"]')?.getAttribute('aria-expanded')==='false',menuId);

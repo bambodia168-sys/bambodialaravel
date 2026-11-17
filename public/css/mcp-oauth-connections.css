@@ -1,0 +1,60 @@
+/* Bambodia OAuth Connections — standalone, scoped account UI. */
+.mcp-oauth-page{max-width:1320px;margin:0 auto;min-width:0;color:var(--text)}
+.mcp-oauth-page *{min-width:0}
+.mcp-oauth-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 18px}
+.mcp-oauth-heading__copy{max-width:820px}
+.mcp-oauth-heading h1{font-size:clamp(24px,2.5vw,32px);font-weight:800;letter-spacing:-.022em;margin:5px 0 8px;line-height:1.2}
+.mcp-oauth-heading p{font-size:13px;color:var(--muted);line-height:1.55;margin:0}
+.mcp-oauth-heading__actions{display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:flex-end;flex-shrink:0}
+.mcp-oauth-page .btn{min-height:38px;gap:7px}
+.mcp-oauth-page .btn:focus-visible{outline:2px solid var(--secondary);outline-offset:2px}
+.mcp-oauth-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0 0 18px}
+.mcp-oauth-metric{padding:17px 19px;border:1px solid var(--line);border-radius:16px;background:var(--surface);display:flex;gap:13px;align-items:center;box-shadow:var(--shadow)}
+.mcp-oauth-metric__icon{width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--secondary)}
+.mcp-oauth-metric>div:last-child{display:flex;flex-direction:column;gap:2px;line-height:1.35}
+.mcp-oauth-metric span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:var(--muted)}
+.mcp-oauth-metric strong{font-size:20px;line-height:1.3;color:var(--text)}
+.mcp-oauth-metric small{font-size:12px;color:var(--muted)}
+.mcp-oauth-panel{margin:0 0 18px}
+.mcp-oauth-panel__head{padding:19px 22px}
+.mcp-oauth-panel__head h2{font-size:17px}
+.mcp-oauth-panel__head p{font-size:12px;line-height:1.5}
+.mcp-oauth-empty{text-align:center;display:flex;flex-direction:column;align-items:center;padding:clamp(32px,5vw,65px) 22px;gap:12px}
+.mcp-oauth-empty__icon{display:grid;place-items:center;width:54px;height:54px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line);color:var(--secondary)}
+.mcp-oauth-empty h3{font-size:19px;margin:4px 0 0;line-height:1.3}
+.mcp-oauth-empty p{margin:0;max-width:590px;font-size:13px;line-height:1.65;color:var(--muted)}
+.mcp-oauth-empty .btn{margin-top:6px}
+.mcp-oauth-table{min-width:825px}
+.mcp-oauth-table th,.mcp-oauth-table td{padding:15px 17px;vertical-align:middle}
+.mcp-oauth-table th{white-space:nowrap}
+.mcp-oauth-table td strong{display:block;font-weight:750;font-size:13px}
+.mcp-oauth-table td small{display:block;font-size:11px;color:var(--muted)}
+.mcp-oauth-table__action{text-align:right;white-space:nowrap}
+.mcp-oauth-scopes{display:flex;flex-wrap:wrap;gap:5px;max-width:300px}
+.mcp-oauth-scope{display:inline-flex;align-items:center;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);color:var(--text);font-size:11px;font-weight:650;overflow-wrap:anywhere}
+.mcp-oauth-date{font-size:12px!important;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mcp-oauth-state{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;font-weight:750;font-size:11px;border:1px solid var(--line);white-space:nowrap}
+.mcp-oauth-state--active{color:#148568;border-color:color-mix(in srgb,#148568 48%,var(--line));background:color-mix(in srgb,#148568 9%,var(--surface))}
+.mcp-oauth-state--inactive{color:var(--muted);background:var(--surface-2)}
+.mcp-oauth-pagination{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 22px;border-top:1px solid var(--line)}
+.mcp-oauth-pagination__links{flex:1;min-width:240px}
+.mcp-oauth-pagination .go-form{display:flex;align-items:center;gap:7px}
+.mcp-oauth-pagination .go-form input{width:67px;min-height:36px}
+.mcp-oauth-dialog{max-width:460px}
+.mcp-oauth-dialog input:focus{outline:2px solid var(--secondary);outline-offset:2px}
+.mcp-oauth-alert{display:flex;align-items:center;gap:9px;margin-bottom:16px;padding:11px 14px;border:1px solid var(--danger);border-radius:12px;background:var(--surface);font-size:12px}
+.mcp-oauth-alert svg{color:var(--danger);flex-shrink:0}
+@media(max-width:990px){
+ .mcp-oauth-heading{flex-direction:column}
+ .mcp-oauth-heading__actions{justify-content:flex-start}
+}
+@media(max-width:600px){
+ .mcp-oauth-summary{grid-template-columns:1fr;gap:9px}
+ .mcp-oauth-heading__actions{width:100%}
+ .mcp-oauth-heading__actions .btn{flex:1}
+ .mcp-oauth-panel__head{padding:15px 16px}
+ .mcp-oauth-pagination{padding:14px;align-items:stretch}
+ .mcp-oauth-pagination__links{width:100%}
+ .mcp-oauth-pagination .go-form{justify-content:flex-start}
+}
+@media(prefers-reduced-motion:reduce){.mcp-oauth-page .btn{transition:none}}

@@ -1,0 +1,498 @@
+"""MCP-only production installer: synthetic fail-closed safety contract."""
+import importlib.util
+import json
+import os
+from pathlib import Path
+import stat
+import tempfile
+from unittest import TestCase
+from unittest.mock import patch
+
+ROOT=Path(__file__).resolve().parents[2]
+FILE=ROOT/"support/bambodia-mcp-live-runtime-install-20261114.py"
+spec=importlib.util.spec_from_file_location("bambodia_mcp_only_installer",FILE)
+m=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+
+class McpOnlyInstallerSecurityTest(TestCase):
+    def test_exact_existing_modified_files(self):
+        self.assertEqual(len(m.EXISTING_CHANGED),10)
+        self.assertEqual(len(m.CRITICAL),9)
+        self.assertIn("bootstrap/app.php",m.EXISTING_CHANGED)
+        self.assertIn("routes/web.php",m.CRITICAL)
+        self.assertFalse(any("recovery" in p.lower() or "r2" in p.lower()
+                             for p in m.EXISTING_CHANGED))
+
+    def test_invalid_relative_path_blocks(self):
+        for path in ("../x.php", "/etc/passwd", "a/../b", "\x00secret", "",
+                     "./composer.lock"):
+            self.assertFalse(m.good_relative(path),repr(path))
+        self.assertTrue(m.good_relative("app/Models/User.php"))
+
+    def test_broken_candidate_identity_blocks_unsafe_vendor_swap(self):
+        with patch.object(m.os,"geteuid",return_value=1000):
+            with self.assertRaises(m.Stop):
+                m.safe_patch_inventory()
+
+    def test_no_secret_flag_or_database_operations(self):
+        s=FILE.read_text()
+        for forbidden in (
+            "BAMBODIA_MCP_ENABLED=true",
+            "BAMBODIA_MCP_WRITES_ENABLED=true",
+            'artisan migrate', 'passport:keys',
+            'composer install','composer update', 'restic',
+            "os.system(", "shell=True", "migrate:fresh", 
+        ):
+            self.assertNotIn(forbidden,s)
+
+    def test_lock_compare_helpers_are_exact(self):
+        old=b'{"packages":[{"name":"laravel/framework","version":"v13.40.0"}],"packages-dev":[]}'
+        new=b'{"packages":[{"name":"laravel/framework","version":"v13.42.0"}],"packages-dev":[]}'
+        self.assertEqual(m.lock_versions(old),{"laravel/framework":"v13.40.0"})
+        self.assertEqual(m.lock_versions(new),{"laravel/framework":"v13.42.0"})
+
+    def test_env_flag_guard_preserves_secrets_and_blocks_mutation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            f=root/".env"
+            f.write_text("APP_KEY=private-unchanged\nBAMBODIA_MCP_ENABLED=false\nBAMBODIA_MCP_WRITES_ENABLED=false\n")
+            with patch.object(m,"LIVE",root):
+                m.env_flag_off()
+                self.assertIn("APP_KEY=private-unchanged",f.read_text())
+                f.write_text("BAMBODIA_MCP_ENABLED=true\n")
+                with self.assertRaises(m.Stop):
+                    m.env_flag_off()
+                f.write_text("BAMBODIA_MCP_WRITES_ENABLED=true\n")
+                with self.assertRaises(m.Stop):
+                    m.env_flag_off()
+
+    def test_explicit_rollback_does_not_allow_arbitrary_root_path(self):
+        with tempfile.TemporaryDirectory() as dirname:
+            with self.assertRaises(m.Stop):
+                m.manual_rollback(Path(dirname))
+
+    def test_vendor_root_must_be_private_for_source_stage(self):
+        import stat
+        from types import SimpleNamespace
+        with patch.object(m.Path,"lstat",autospec=True,
+                return_value=SimpleNamespace(st_mode=stat.S_IFDIR|0o755,st_uid=0)):
+            self.assertFalse(m.private_dir(m.STAGE))
+
+    def test_new_laravel_directories_remain_www_readable_with_strict_root_umask(self):
+        with tempfile.TemporaryDirectory() as directory:
+            live=Path(directory)/"application"
+            live.mkdir(mode=0o700)
+            dest=live/"app/Http/Controllers/Developer/NewController.php"
+            with patch.object(m,"LIVE",live):
+                old=os.umask(0o077)
+                try:
+                    m.safe_live_parent(dest)
+                finally:
+                    os.umask(old)
+            for path in (live/"app",live/"app/Http",live/"app/Http/Controllers",
+                         live/"app/Http/Controllers/Developer"):
+                self.assertEqual(stat.S_IMODE(path.stat().st_mode),0o755)
+
+    def test_parent_symlink_never_followed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            live=Path(directory)/"application"
+            live.mkdir()
+            (live/"app").symlink_to(Path(directory),target_is_directory=True)
+            with patch.object(m,"LIVE",live):
+                with self.assertRaises(m.Stop):
+                    m.safe_live_parent(live/"app/Controls/file.php")
+
+    def test_new_vendor_copy_becomes_readable_to_www_without_mutating_original(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as dirname:
+            vendor=Path(dirname)/"vendor"
+            folder=vendor/"laravel/passport"
+            folder.mkdir(parents=True)
+            (vendor/"autoload.php").write_text("<?php")
+            (folder/"Passport.php").write_text("<?php")
+            for path in (vendor,vendor/"laravel",folder):
+                path.chmod(0o700)
+            for path in (vendor/"autoload.php",folder/"Passport.php"):
+                path.chmod(0o600)
+            with patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=0)):
+                m.prepare_vendor_permissions(vendor)
+            self.assertEqual(stat.S_IMODE(vendor.stat().st_mode),0o755)
+            self.assertEqual(stat.S_IMODE(folder.stat().st_mode),0o755)
+            self.assertEqual(stat.S_IMODE((folder/"Passport.php").stat().st_mode),0o644)
+
+    def test_rollback_preserves_existing_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory)
+            live=base/"app"
+            backup=base/"backup"
+            live.mkdir(); (backup/"original").mkdir(parents=True)
+            original=live/"routes/web.php"
+            original.parent.mkdir()
+            original.write_bytes(b"OLD ROUTES\n")
+            copy=backup/"original/routes/web.php"
+            copy.parent.mkdir(parents=True)
+            copy.write_bytes(b"OLD ROUTES\n")
+            oldvend=live/".mcp-previous-vendor"
+            (oldvend/"composer").mkdir(parents=True)
+            (oldvend/"autoload.php").write_text("old")
+            newvend=live/".mcp-next-vendor"
+            vendor=live/"vendor"
+            vendor.mkdir()
+            (vendor/"autoload.php").write_text("installed")
+            original.write_bytes(b"NEW ROUTES\n")
+            entry={"routes/web.php":{
+                "exists":True, "mode":0o644, "uid":os.geteuid(),
+                "gid":os.getegid(), "sha":m.sha(b"OLD ROUTES\n")}}
+            with patch.object(m,"LIVE",live):
+                m.rollback(backup,entry,oldvend,newvend)
+            self.assertEqual(original.read_bytes(),b"OLD ROUTES\n")
+            self.assertEqual((vendor/"autoload.php").read_text(),"old")
+            self.assertFalse(newvend.exists())
+
+
+    def test_interactive_ssh_stdin_stdout_accepts_exact_confirmation(self):
+        import io
+        class FakeTerminal(io.StringIO):
+            def isatty(self):
+                return True
+            def fileno(self):
+                return 0
+        reader=FakeTerminal("INSTALL-BAMBODIA-MCP-RUNTIME\n")
+        writer=FakeTerminal()
+        with patch.object(m.sys,"stdin",reader), \
+             patch.object(m.sys,"stdout",writer), \
+             patch.object(m.os,"isatty",return_value=True):
+            m.require_local_operator_confirmation("INSTALL-BAMBODIA-MCP-RUNTIME")
+        self.assertIn("Type INSTALL-BAMBODIA-MCP-RUNTIME: ",writer.getvalue())
+
+    def test_piped_heredoc_input_never_authorizes_live_mutation(self):
+        import io
+        reader=io.StringIO("INSTALL-BAMBODIA-MCP-RUNTIME\n")
+        writer=io.StringIO()
+        with patch.object(m.sys,"stdin",reader), \
+             patch.object(m.sys,"stdout",writer):
+            with self.assertRaisesRegex(m.Stop,"OPERATOR_INTERACTIVE_TTY_REQUIRED"):
+                m.require_local_operator_confirmation("INSTALL-BAMBODIA-MCP-RUNTIME")
+
+    def test_tty_rejects_wrong_confirmation_and_eof(self):
+        import io
+        class FakeTerminal(io.StringIO):
+            def isatty(self):
+                return True
+            def fileno(self):
+                return 0
+        for input_value, expected_error in [
+            ("ENABLE-BAMBODIA-MCP-RUNTIME\n","OPERATOR_NOT_CONFIRMED"),
+            ("","OPERATOR_TERMINAL_EOF"),
+        ]:
+            with self.subTest(input_value=input_value):
+                with patch.object(m.sys,"stdin",FakeTerminal(input_value)), \
+                     patch.object(m.sys,"stdout",FakeTerminal()), \
+                     patch.object(m.os,"isatty",return_value=True):
+                    with self.assertRaisesRegex(m.Stop,expected_error):
+                        m.require_local_operator_confirmation("INSTALL-BAMBODIA-MCP-RUNTIME")
+
+    def test_same_tty_gate_used_for_runtime_rollback(self):
+        source=FILE.read_text()
+        self.assertIn('require_local_operator_confirmation("ROLLBACK-BAMBODIA-MCP-RUNTIME")',source)
+        self.assertIn('require_local_operator_confirmation("INSTALL-BAMBODIA-MCP-RUNTIME")',source)
+        self.assertNotIn('open("/dev/tty"',source)
+
+    def test_tty_preflight_failure_reports_constant_reason_without_mutation(self):
+        import io
+        from contextlib import redirect_stdout
+        with patch.object(m, "install", side_effect=m.Stop("OPERATOR_LOCAL_TTY_REQUIRED")):
+            with patch("sys.argv", ["operator", "--install"]):
+                stdout=io.StringIO()
+                with redirect_stdout(stdout):
+                    self.assertEqual(m.main(),1)
+        self.assertIn("MCP_ONLY_RUNTIME_BLOCKER=OPERATOR_LOCAL_TTY_REQUIRED",stdout.getvalue())
+        self.assertIn("MCP_ONLY_RUNTIME_ACTION=BLOCKED",stdout.getvalue())
+
+
+    def test_cutover_errors_report_only_a_safe_static_phase(self):
+        source=FILE.read_text()
+        required=[
+            'phase="PREPARE_NEW_VENDOR"',
+            'phase="SNAPSHOT_ORIGINAL_SOURCE"',
+            'phase="REVALIDATE_LIVE_BEFORE_MAINTENANCE"',
+            'phase="ENTER_MAINTENANCE"',
+            'phase="MOVE_ORIGINAL_VENDOR"',
+            'phase="ACTIVATE_NEW_VENDOR"',
+            'phase="INSTALL_MCP_SOURCE_PATCH"',
+            'phase="INSTALL_COMPOSER_MANIFESTS"',
+            'phase="VERIFY_MCP_FLAGS_DISABLED"',
+            'phase="VERIFY_LIVE_PHP85_MCP_OAUTH_ROUTES"',
+            'phase="EXIT_MAINTENANCE"',
+        ]
+        for phase in required:
+            with self.subTest(phase=phase):
+                self.assertIn(phase,source)
+        self.assertIn('print("MCP_ONLY_RUNTIME_FAILURE_PHASE="+phase)',source)
+        self.assertIn('print("MCP_ONLY_SOURCE_VENDOR_ROLLBACK=PASS")',source)
+        self.assertNotIn('print(str(error))',source)
+        self.assertNotIn('traceback.print_exc',source)
+
+    def test_artisan_error_classification_never_reveals_exception_or_keys(self):
+        cases=(
+            (b"SQLSTATE[42S02] secret-token=ABC","DATABASE_SCHEMA_OR_CONNECTION"),
+            (b"PHP Warning: permission denied in private path","FILESYSTEM_ACCESS"),
+            (b"Class Laravel\\Passport\\Passport not found SECRET","PHP_FILE_OR_CLASS_AUTOLOAD"),
+            (b"PHP Parse error: syntax error PRIVATE","PHP_SYNTAX"),
+            (b"Unable to locate the private key SECRET","OAUTH_KEY_CONFIGURATION"),
+            (b"unexpected problem with auth cookie SECRET","UNCLASSIFIED_APPLICATION_FAILURE"),
+        )
+        for stderr,category in cases:
+            with self.subTest(category=category):
+                self.assertEqual(m.classify_artisan_error(stderr),category)
+                self.assertNotIn("SECRET",m.classify_artisan_error(stderr))
+                self.assertNotIn("ABC",m.classify_artisan_error(stderr))
+
+    def test_artisan_execution_failure_reports_only_static_category(self):
+        import io
+        from contextlib import redirect_stdout
+        from types import SimpleNamespace
+        fake=SimpleNamespace(returncode=1,stderr=b"SQLSTATE secret=VALUE",stdout=b"")
+        with patch.object(m.subprocess,"run",return_value=fake), \
+             redirect_stdout(io.StringIO()) as output:
+            with self.assertRaisesRegex(m.Stop,"LIVE_ARTISAN_CHECK_FAILED"):
+                m.as_www("route:list","--json")
+        self.assertIn("MCP_ONLY_ARTISAN_DIAGNOSTIC=DATABASE_SCHEMA_OR_CONNECTION",output.getvalue())
+        self.assertNotIn("VALUE",output.getvalue())
+        self.assertNotIn("secret",output.getvalue().lower())
+
+    def test_live_route_verification_reports_only_constant_missing_endpoint_names(self):
+        import io, json
+        from contextlib import redirect_stdout
+        entries=[{"uri":uri,"method":method} for uri,method in m.ROUTE_CHECK
+                 if uri!="oauth/token"]
+        with patch.object(m,"as_www",return_value=json.dumps(entries).encode()), \
+             redirect_stdout(io.StringIO()) as out:
+            with self.assertRaisesRegex(m.Stop,"MCP_ROUTES_NOT_REGISTERED"):
+                m.verify_routes()
+        self.assertIn("MCP_ONLY_ROUTE_MISSING=OAUTH_TOKEN_POST",out.getvalue())
+        self.assertIn("MCP_ONLY_ROUTE_CHECK_DETAIL=REQUIRED_ROUTES_MISSING",out.getvalue())
+        self.assertNotIn('"uri"',out.getvalue())
+
+    def test_live_route_verification_accepts_all_expected_methods(self):
+        import io,json
+        from contextlib import redirect_stdout
+        entries=[{"uri":"/"+uri,"method":method} for uri,method in m.ROUTE_CHECK]
+        with patch.object(m,"as_www",return_value=json.dumps(entries).encode()), \
+             redirect_stdout(io.StringIO()) as out:
+            self.assertIsNone(m.verify_routes())
+        self.assertIn("MCP_ONLY_ROUTE_CHECK_DETAIL=PASS",out.getvalue())
+
+    def test_live_route_malformed_payload_is_fail_closed_and_non_disclosing(self):
+        import io
+        from contextlib import redirect_stdout
+        for payload,code in ((b'{secret','INVALID_JSON'),
+                             (b'{"private":"value"}','INVALID_JSON_SHAPE'),
+                             (b'[{"uri":33,"method":"POST"}]','INVALID_ROUTE_FIELDS')):
+            with self.subTest(code=code):
+                with patch.object(m,"as_www",return_value=payload), \
+                     redirect_stdout(io.StringIO()) as out:
+                    with self.assertRaisesRegex(m.Stop,"LIVE_ROUTES_INVALID"):
+                        m.verify_routes()
+                self.assertIn("MCP_ONLY_ROUTE_CHECK_DETAIL="+code,out.getvalue())
+                self.assertNotIn("private",out.getvalue())
+                self.assertNotIn("secret",out.getvalue())
+
+    def test_required_route_labels_cover_exact_trusted_set(self):
+        self.assertEqual(set(m.ROUTE_CHECK_LABELS),m.ROUTE_CHECK)
+        self.assertTrue(all(name.isupper() and len(name)<50
+                            for name in m.ROUTE_CHECK_LABELS.values()))
+
+    def test_existing_discovery_cache_bytes_and_metadata_restore_exactly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory)
+            live=base/"live"
+            backup=base/"snapshot"
+            (live/"bootstrap/cache").mkdir(parents=True)
+            (backup/"original").mkdir(parents=True)
+            for path in ("composer.json","composer.lock"):
+                (live/path).write_bytes(b"old original manifest")
+            packages=live/"bootstrap/cache/packages.php"
+            services=live/"bootstrap/cache/services.php"
+            old_packages=b"<?php return ['laravel/framework' => ['providers' => []]];\n"
+            old_services=b"<?php return ['providers' => ['OlderServiceProvider']];\n"
+            packages.write_bytes(old_packages)
+            services.write_bytes(old_services)
+            packages.chmod(0o640)
+            services.chmod(0o644)
+            with patch.object(m,"LIVE",live):
+                original=m.snapshot_originals(backup,{})
+                self.assertEqual(original["bootstrap/cache/packages.php"]["sha"],m.sha(old_packages))
+                self.assertEqual(original["bootstrap/cache/services.php"]["sha"],m.sha(old_services))
+                packages.write_bytes(b"<?php return ['laravel/mcp','laravel/passport'];")
+                services.write_bytes(b"<?php return ['McpServiceProvider','PassportServiceProvider'];")
+                m.rollback(backup,original,live/".absent-oldvendor",live/".absent-newvendor")
+            self.assertEqual(packages.read_bytes(),old_packages)
+            self.assertEqual(services.read_bytes(),old_services)
+            self.assertEqual(stat.S_IMODE(packages.stat().st_mode),0o640)
+            self.assertEqual(stat.S_IMODE(services.stat().st_mode),0o644)
+
+    def test_if_services_cache_was_absent_rollback_unlinks_new_cache(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory)
+            live=base/"live"
+            backup=base/"snapshot"
+            (live/"bootstrap/cache").mkdir(parents=True)
+            for name in ("composer.json","composer.lock"):
+                (live/name).write_bytes(b"original")
+            (live/"bootstrap/cache/packages.php").write_bytes(b"old package manifest")
+            with patch.object(m,"LIVE",live):
+                original=m.snapshot_originals(backup,{})
+                self.assertFalse(original["bootstrap/cache/services.php"]["exists"])
+                (live/"bootstrap/cache/services.php").write_bytes(b"new services manifest")
+                m.rollback(backup,original,live/".absent-oldvendor",live/".absent-newvendor")
+            self.assertFalse((live/"bootstrap/cache/services.php").exists())
+            self.assertEqual((live/"bootstrap/cache/packages.php").read_bytes(),b"old package manifest")
+
+    def test_cache_manifest_verification_requires_both_packages_and_providers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            live=Path(directory)
+            (live/"bootstrap/cache").mkdir(parents=True)
+            packages=live/"bootstrap/cache/packages.php"
+            services=live/"bootstrap/cache/services.php"
+            with patch.object(m,"LIVE",live):
+                packages.write_bytes(b"laravel/mcp laravel/passport")
+                services.write_bytes(b"McpServiceProvider PassportServiceProvider")
+                self.assertIsNone(m.verify_discovery_manifests())
+                services.write_bytes(b"old provider")
+                with self.assertRaisesRegex(m.Stop,"MCP_PROVIDER_DISCOVERY_INCOMPLETE"):
+                    m.verify_discovery_manifests()
+                packages.write_bytes(b"laravel/mcp only")
+                with self.assertRaisesRegex(m.Stop,"MCP_PACKAGE_DISCOVERY_INCOMPLETE"):
+                    m.verify_discovery_manifests()
+
+    def test_custom_package_cache_path_is_fail_closed_without_logging_env(self):
+        with tempfile.TemporaryDirectory() as directory:
+            live=Path(directory)
+            (live/"bootstrap/cache").mkdir(parents=True)
+            env=live/".env"
+            env.write_text("APP_ENV=production\nAPP_PACKAGES_CACHE=/private/secrets\nBAMBODIA_MCP_ENABLED=false\n")
+            with patch.object(m,"LIVE",live), \
+                 patch.dict(m.os.environ,{"APP_PACKAGES_CACHE":"","APP_SERVICES_CACHE":""}):
+                with self.assertRaisesRegex(m.Stop,"CUSTOM_PACKAGE_CACHE_PATH_UNSUPPORTED"):
+                    m.validate_default_package_cache_paths()
+                env.write_text("APP_ENV=production\n")
+                self.assertEqual(m.validate_default_package_cache_paths(),live/"bootstrap/cache")
+                with patch.dict(m.os.environ,{"APP_SERVICES_CACHE":"/private/elsewhere"}):
+                    with self.assertRaisesRegex(m.Stop,"CUSTOM_PACKAGE_CACHE_PATH_UNSUPPORTED"):
+                        m.validate_default_package_cache_paths()
+
+    def test_www_cache_write_preflight_rejects_unwritable_directory(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            live=Path(directory)
+            (live/"bootstrap/cache").mkdir(parents=True)
+            (live/".env").write_text("APP_ENV=production\n")
+            with patch.object(m,"LIVE",live), \
+                 patch.dict(m.os.environ,{"APP_PACKAGES_CACHE":"","APP_SERVICES_CACHE":""}), \
+                 patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=1)) as check:
+                with self.assertRaisesRegex(m.Stop,"WWW_BOOTSTRAP_CACHE_NOT_WRITABLE"):
+                    m.require_www_cache_write_access()
+                self.assertIn("-w",check.call_args.args[0])
+
+    def test_discovery_runs_between_composer_install_and_route_check(self):
+        source=FILE.read_text()
+        composer=source.index('phase="INSTALL_COMPOSER_MANIFESTS"')
+        discovered=source.index('phase="REBUILD_LARAVEL_PACKAGE_DISCOVERY"')
+        routes=source.index('phase="VERIFY_LIVE_PHP85_MCP_OAUTH_ROUTES"')
+        verified=source.index('phase="VERIFY_LARAVEL_DISCOVERY_MANIFESTS"')
+        self.assertLess(composer,discovered)
+        self.assertLess(discovered,routes)
+        self.assertLess(routes,verified)
+        self.assertIn('as_www("package:discover","--no-ansi","--no-interaction")',source)
+        self.assertIn('for rel in list(entries)+["composer.json","composer.lock"]+list(CACHE_REL):',source)
+        self.assertIn('|set(CACHE_REL)',source)
+        self.assertIn('require_www_cache_write_access()',source)
+
+    def test_discovery_readiness_cli_is_read_only_and_never_confirms_install(self):
+        import io
+        from contextlib import redirect_stdout
+        with patch.object(m,"safe_patch_inventory",return_value={"a.php":"test"}), \
+             patch.object(m,"require_www_cache_write_access") as writable, \
+             patch.object(m,"install") as install, \
+             patch.object(m.sys,"argv",["operator","--inspect-discovery-readiness"]), \
+             redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(m.main(),0)
+        writable.assert_called_once()
+        install.assert_not_called()
+        self.assertIn("MCP_ONLY_DISCOVERY_CACHE_READY=PASS",output.getvalue())
+        self.assertIn("MCP_ONLY_DISCOVERY_PRODUCTION_MUTATION=NONE",output.getvalue())
+
+    def test_discovery_readiness_fails_closed_without_exposing_runtime_secrets(self):
+        import io
+        from contextlib import redirect_stdout
+        with patch.object(m,"safe_patch_inventory",return_value={}), \
+             patch.object(m,"require_www_cache_write_access",
+                          side_effect=m.Stop("WWW_BOOTSTRAP_CACHE_NOT_WRITABLE")), \
+             patch.object(m.sys,"argv",["operator","--inspect-discovery-readiness"]), \
+             patch.object(m,"install") as install, \
+             redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(m.main(),1)
+        install.assert_not_called()
+        self.assertIn("MCP_ONLY_RUNTIME_BLOCKER=WWW_BOOTSTRAP_CACHE_NOT_WRITABLE",output.getvalue())
+        self.assertNotIn("APP_KEY",output.getvalue())
+
+    def test_simulated_discovery_failure_rolls_back_vendor_code_caches_and_maintenance(self):
+        import io
+        from contextlib import redirect_stdout
+        import tempfile as tempfile_module
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            live=root/"live";stage=root/"stage";private=root/"private"
+            for folder in (live,stage,private/"source/vendor",
+                           live/"bootstrap/cache",live/"routes",
+                           live/"vendor",live/"storage/framework",stage/"patch/routes"):
+                folder.mkdir(parents=True,exist_ok=True)
+            originals={
+                "routes/web.php":b"<?php // old",
+                "composer.json":b'{"old":true}',
+                "composer.lock":b'{"lock":"old"}',
+                "bootstrap/cache/packages.php":b"<?php // original package manifest",
+                "bootstrap/cache/services.php":b"<?php // original provider manifest",
+            }
+            for path,data in originals.items():
+                p=live/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
+            (stage/"patch/routes/web.php").write_bytes(b"<?php // staged MCP")
+            (stage/"composer.json").write_bytes(b'{"new":true}')
+            (stage/"composer.lock").write_bytes(b'{"lock":"candidate"}')
+            (live/"vendor/autoload.php").write_bytes(b"old vendor")
+            (private/"source/vendor/autoload.php").write_bytes(b"new vendor")
+            original_temp=tempfile_module.mkdtemp
+
+            def fake_artisan(*args):
+                if args[0]=="down":
+                    (live/"storage/framework/down").write_text("private synthetic")
+                elif args[0]=="package:discover":
+                    (live/"bootstrap/cache/packages.php").write_bytes(b"laravel/mcp laravel/passport")
+                    (live/"bootstrap/cache/services.php").write_bytes(b"McpServiceProvider PassportServiceProvider")
+                    raise m.Stop("SYNTHETIC_DISCOVERY_FAILURE")
+                elif args[0]=="up":
+                    (live/"storage/framework/down").unlink()
+                return b""
+
+            with patch.object(m,"LIVE",live),patch.object(m,"STAGE",stage), \
+                 patch.object(m,"PRIVATE",private), \
+                 patch.object(m,"safe_patch_inventory",return_value={
+                     "routes/web.php":m.sha(b"<?php // staged MCP")}), \
+                 patch.object(m,"require_www_cache_write_access"), \
+                 patch.object(m,"require_local_operator_confirmation"), \
+                 patch.object(m,"prepare_vendor_permissions"), \
+                 patch.object(m,"env_flag_off"), \
+                 patch.object(m,"as_www",side_effect=fake_artisan), \
+                 patch.object(m.tempfile,"mkdtemp",
+                     side_effect=lambda prefix,dir:original_temp(prefix=prefix,dir=str(root))), \
+                 redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(m.install(),2)
+
+            for name,expected in originals.items():
+                self.assertEqual((live/name).read_bytes(),expected,name)
+            self.assertEqual((live/"vendor/autoload.php").read_bytes(),b"old vendor")
+            self.assertFalse((live/"storage/framework/down").exists())
+            self.assertIn("MCP_ONLY_RUNTIME_FAILURE_PHASE=REBUILD_LARAVEL_PACKAGE_DISCOVERY",output.getvalue())
+            self.assertIn("MCP_ONLY_SOURCE_VENDOR_ROLLBACK=PASS",output.getvalue())
+            self.assertIn("MCP_ONLY_MAINTENANCE_RECOVERY=PASS",output.getvalue())
