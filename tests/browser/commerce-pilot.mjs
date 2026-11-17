@@ -1,0 +1,149 @@
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import fs from 'node:fs/promises';
+import {chromium} from 'playwright';
+
+const origin = process.env.BASE_URL;
+if (origin !== 'http://127.0.0.1:8097' || process.env.BAMBODIA_UAT_ISOLATED !== '1') {
+  throw new Error('Commerce pilot requires an isolated loopback application.');
+}
+const fixture = JSON.parse(await fs.readFile('storage/framework/commerce-pilot.json', 'utf8'));
+const evidence = {commit: process.env.GITHUB_SHA ?? 'local', checks: [], liveMoney: false};
+let browser;
+const receipt = Buffer.from(fixture.receipt, 'base64');
+const record = name => {
+  evidence.checks.push(name);
+  console.log('PASS '+name);
+};
+
+async function visit(page, path) {
+  const url = new URL(path, origin);
+  assert.equal(url.origin, origin);
+  const response = await page.goto(url.href, {waitUntil: 'domcontentloaded'});
+  assert.equal(response.status(), 200, url.pathname);
+}
+async function login(role, viewport) {
+  const page = await browser.newPage({viewport});
+  await visit(page, '/login');
+  await page.locator('input[name="email"]').fill('commerce-pilot.'+role+'@example.test');
+  await page.locator('input[name="password"]').fill('CommercePilotBrowserOnly123!');
+  await page.locator('form.auth-form button[type="submit"]').click();
+  await page.waitForURL(url => url.pathname !== '/login');
+  return page;
+}
+async function order(page, listing) {
+  await visit(page, listing);
+  await page.getByRole('link', {name: 'Review order', exact: true}).click();
+  await page.getByRole('button', {name: 'Place order', exact: true}).click();
+  await page.waitForURL(/\/account\/orders\/[a-f0-9-]{36}$/);
+  return new URL(page.url()).pathname;
+}
+async function uploadReceipt(page, ref) {
+  await page.getByText('Bank Transfer transfer', {exact: true}).click();
+  await page.getByLabel('Transfer reference').fill(ref);
+  await page.getByLabel('Payment receipt').setInputFiles({name: 'pilot-receipt.png', mimeType: 'image/png', buffer: receipt});
+  await page.getByRole('button', {name: 'Submit receipt', exact: true}).click();
+  await page.getByText('Your payment receipt is awaiting review.', {exact: false}).waitFor();
+}
+async function reviewPayment(page, orderPath, ref, approve, total) {
+  await visit(page, '/dashboard/commerce-operations');
+  const link = page.getByRole('row').filter({hasText: orderPath.split('/').at(-1)})
+    .getByRole('link', {name: 'Review receipt', exact: true});
+  await link.click();
+  await page.getByText('Review transfer', {exact: true}).click();
+  if (approve) {
+    await page.getByLabel('Verified reference').fill(ref);
+    await page.getByLabel('Verified USD amount').fill(total);
+  }
+  await page.getByLabel('Review note').fill('Verified against the isolated pilot statement.');
+  await page.getByRole('button', {name: approve ? 'Approve transfer' : 'Reject transfer', exact: true}).click();
+  await page.getByText(approve ? 'Verified' : 'Rejected', {exact: true}).first().waitFor();
+}
+
+try {
+  browser = await chromium.launch({headless: true});
+  const buyer = await login('buyer', {width: 390, height: 844});
+  const seller = await login('seller', {width: 1365, height: 900});
+  const admin = await login('admin', {width: 1365, height: 900});
+  const outsider = await login('outsider', {width: 1365, height: 900});
+
+  const productOrder = await order(buyer, fixture.product_url);
+  await uploadReceipt(buyer, 'PILOT-PRODUCT-REJECT');
+  assert.equal(await buyer.getByRole('link', {name: 'Download product'}).count(), 0);
+  await reviewPayment(admin, productOrder, 'PILOT-PRODUCT-REJECT', false);
+  await visit(buyer, productOrder);
+  await buyer.getByText('Your payment receipt was rejected.', {exact: false}).waitFor();
+  assert.equal(await buyer.getByRole('link', {name: 'Download product'}).count(), 0);
+  assert.equal(await buyer.getByRole('link', {name: 'View receipt'}).count(), 0);
+  record('Rejected manual receipt leaves the order locked');
+
+  await uploadReceipt(buyer, 'PILOT-PRODUCT-APPROVE');
+  await reviewPayment(admin, productOrder, 'PILOT-PRODUCT-APPROVE', true, '29.00');
+  await visit(buyer, productOrder);
+  const download = buyer.getByRole('link', {name: 'Download product', exact: true});
+  await download.waitFor();
+  const archiveURL = await download.getAttribute('href');
+  const file = await buyer.request.get(archiveURL);
+  assert.equal(file.status(), 200);
+  assert.equal(createHash('sha256').update(await file.body()).digest('hex'), fixture.sha256);
+  assert.equal((await outsider.request.get(archiveURL)).status(), 404);
+  await buyer.getByRole('link', {name: 'My licenses', exact: true}).click();
+  await buyer.getByText('River Market Restaurant Website Template', {exact: false}).first().waitFor();
+  record('Approved receipt delivers the exact template ZIP and an immediate buyer license');
+
+  const serviceOrder = await order(buyer, fixture.service_url);
+  await uploadReceipt(buyer, 'PILOT-SERVICE');
+  assert.equal(await buyer.getByRole('link', {name: 'Open service workspace'}).count(), 0);
+  await reviewPayment(admin, serviceOrder, 'PILOT-SERVICE', true, '75.00');
+  await visit(buyer, serviceOrder);
+  await buyer.getByRole('link', {name: 'Open service workspace', exact: true}).click();
+  const workspace = new URL(buyer.url()).pathname;
+  assert.equal((await outsider.request.get(origin+workspace)).status(), 404);
+  await buyer.getByLabel('Order requirements').fill('Install the restaurant website and explain how to update the menu.');
+  await buyer.getByRole('button', {name: 'Send requirements', exact: true}).click();
+  await buyer.getByText('The creator is preparing your delivery.', {exact: true}).waitFor();
+
+  await visit(seller, workspace);
+  await seller.getByLabel('Delivery notes').fill('The menu and hours are configured. The attached package includes the template and setup guide.');
+  await seller.getByLabel('Attachment (optional)').setInputFiles('storage/framework/commerce-pilot-template.zip');
+  await seller.getByRole('button', {name: 'Submit delivery', exact: true}).click();
+  await seller.getByText('Waiting for the buyer to review your delivery.', {exact: true}).waitFor();
+  await visit(buyer, workspace);
+  const deliveryURL = await buyer.getByRole('link', {name: /Download commerce-pilot-template.zip/}).getAttribute('href');
+  assert.equal((await buyer.request.get(deliveryURL)).status(), 200);
+  assert.equal((await outsider.request.get(deliveryURL)).status(), 404);
+  await buyer.getByLabel('Feedback (required for revisions)').fill('Please include instructions to update the opening hours.');
+  await buyer.getByRole('button', {name: 'Request revision', exact: true}).click();
+  await buyer.getByText('The creator can submit a revised delivery.', {exact: true}).waitFor();
+  await visit(seller, workspace);
+  await seller.getByLabel('Delivery notes').fill('Edit the Opening hours section of index.html and redeploy the file.');
+  await seller.getByRole('button', {name: 'Submit delivery', exact: true}).click();
+  await seller.getByText('Waiting for the buyer to review your delivery.', {exact: true}).waitFor();
+  await visit(buyer, workspace);
+  await buyer.getByRole('button', {name: 'Accept delivery', exact: true}).click();
+  await buyer.getByText('The buyer accepted the delivery.', {exact: true}).waitFor();
+  record('Buyer and seller complete private delivery, revision and acceptance');
+
+  await buyer.getByText('Open a private support ticket', {exact: true}).click();
+  await buyer.getByLabel('Subject', {exact: true}).fill('Pilot service delivery question');
+  await buyer.getByLabel('Describe the issue').fill('Please confirm the recommended publishing steps.');
+  await buyer.getByRole('button', {name: 'Create ticket', exact: true}).click();
+  await buyer.getByText('Related order', {exact: false}).waitFor();
+  assert.equal((await outsider.request.get(buyer.url())).status(), 404);
+
+  await visit(buyer, serviceOrder);
+  await buyer.getByLabel('Rating', {exact: true}).selectOption('5');
+  await buyer.getByLabel('Public review (optional)').fill('Pilot installation and handoff delivered as described.');
+  await buyer.getByRole('button', {name: 'Post review', exact: true}).click();
+  await buyer.getByText('Purchase review', {exact: true}).waitFor();
+  await visit(outsider, fixture.service_url);
+  await outsider.getByText('Verified buyer · 5 out of 5', {exact: true}).waitFor();
+  record('Service order links to a private ticket and one eligible buyer review');
+} catch (error) {
+  evidence.error = error.message;
+  throw error;
+} finally {
+  await fs.mkdir('uat-acceptance-results', {recursive: true});
+  await fs.writeFile('uat-acceptance-results/commerce-pilot.json', JSON.stringify(evidence, null, 2)+'\n');
+  await browser?.close();
+}
