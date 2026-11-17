@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContentEntry;
+use App\Models\CreatorBadge;
 use App\Models\FeatureFlag;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
 use App\Models\SavedJob;
 use App\Models\User;
+use App\Support\CreatorBadgeAwards;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -19,6 +21,7 @@ class HomeController extends Controller
         $searchEnabled=FeatureFlag::isEnabled('marketplace_search');
         $recentListings=collect();
         $freelancers=collect();
+        $freelancerBadges = collect();
         $listingTotals=collect();
         $savedIds=[];
 
@@ -51,14 +54,25 @@ class HomeController extends Controller
             // Ratings are not stored yet; do not invent a top-rated ranking.
             // Prioritize approved work and still show new opted-in freelancers.
             $freelancers=User::query()
-                ->select(['id','public_id','name'])
+                ->select(['id','public_id','name','role','created_at'])
                 ->where('role','freelancer')
                 ->whereHas('creatorProfile',fn($query)=>$query->where('is_public',true))
-                ->with(['creatorProfile:user_id,headline,is_public', 'userProfile:user_id,avatar_path'])
+                ->with([
+                    'creatorProfile:user_id,headline,is_public',
+                    'userProfile:user_id,avatar_path,public_location',
+                    'publicExpertise' => fn ($skills) => $skills->select('id', 'user_id', 'label')->limit(3),
+                ])
                 ->withCount(['publishedListings as public_listings_count'])
                 ->orderByDesc('public_listings_count')
                 ->orderByDesc('id')
                 ->limit(8)->get();
+
+            if ($freelancers->isNotEmpty()) {
+                $badgeCatalog = CreatorBadge::query()->where('enabled', true)->orderBy('sort_order')->get();
+                $freelancerBadges = $freelancers->mapWithKeys(fn (User $creator) => [
+                    $creator->id => CreatorBadgeAwards::earned($creator, $badgeCatalog)->take(2),
+                ]);
+            }
 
             if($request->user()){
                 $savedIds=SavedListing::query()->where('user_id',$request->user()->id)
@@ -84,7 +98,7 @@ class HomeController extends Controller
             : [];
 
         return view('home',compact(
-            'searchEnabled','recentListings','freelancers','listingTotals','savedIds','recentJobs','savedJobIds','recentPosts'
+            'searchEnabled','recentListings','freelancers','freelancerBadges','listingTotals','savedIds','recentJobs','savedJobIds','recentPosts'
         ));
     }
 }

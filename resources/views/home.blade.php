@@ -1,5 +1,8 @@
 @extends('layouts.main')
 @section('title','Home')
+@push('page-styles')
+  <link rel="stylesheet" href="{{ asset('css/freelancer-discovery.css') }}?v=1">
+@endpush
 @section('content')
 <div class="marketplace-hero-scene">
 <section class="hero container marketplace-home-hero">
@@ -76,44 +79,30 @@
     </div>
   @endif
 </section>
-<section id="bambodia-freelancers" class="container marketplace-section marketplace-freelancer-section" aria-labelledby="freelancer-section-title">
-  <div class="marketplace-section-heading">
+<section id="bambodia-freelancers" class="container marketplace-section freelancer-showcase" aria-labelledby="freelancer-section-title">
+  <div class="marketplace-section-heading freelancer-showcase-heading">
     <div>
       <span class="eyebrow">Discover independent talent</span>
       <h2 id="freelancer-section-title">Freelancers</h2>
       <p>Meet professionals with public portfolios and explore their approved work.</p>
     </div>
-    <a class="btn subtle" href="{{ route('creators.index') }}">Browse creator profiles</a>
   </div>
+
   @if($freelancers->isNotEmpty())
-    <div class="marketplace-freelancer-grid" aria-label="Public freelancer profiles">
+    <div @class(['freelancer-showcase-grid', 'freelancer-showcase-grid--single' => $freelancers->count() === 1])>
       @foreach($freelancers as $freelancer)
-        <article class="marketplace-freelancer-card">
-          <div class="marketplace-freelancer-card-heading">
-            <a class="marketplace-freelancer-avatar" href="{{ route('creators.show',$freelancer->public_id) }}" aria-label="View {{ $freelancer->name }} creator profile">
-              @if($freelancer->userProfile?->avatar_path)
-                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($freelancer->userProfile->avatar_path) }}" alt="{{ $freelancer->name }} profile photo" loading="lazy" decoding="async" width="112" height="112">
-              @else
-                <span aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($freelancer->name,0,1)) }}</span>
-              @endif
-            </a>
-          </div>
-          <h3><a href="{{ route('creators.show',$freelancer->public_id) }}">{{ $freelancer->name }}</a></h3>
-          <p class="marketplace-freelancer-headline">{{ $freelancer->creatorProfile->headline }}</p>
-          <div class="marketplace-freelancer-card-footer">
-            <span><x-icon name="briefcase" size="15"/> {{ number_format($freelancer->public_listings_count) }} approved {{ \Illuminate\Support\Str::plural('listing',$freelancer->public_listings_count) }}</span>
-          </div>
-        </article>
+        <x-home-freelancer-card :freelancer="$freelancer" :badges="$freelancerBadges->get($freelancer->id)"/>
       @endforeach
     </div>
   @else
-    <div class="marketplace-empty marketplace-freelancer-empty">
+    <div class="marketplace-empty freelancer-showcase-empty">
       <x-icon name="users" size="30"/>
       <strong>Freelancer profiles are coming soon.</strong>
       <p>Public portfolios will appear here when freelancers choose to publish them.</p>
-      <a class="btn subtle compact" href="{{ route('creators.index') }}">Browse creator profiles</a>
     </div>
   @endif
+
+  <a class="btn subtle freelancer-directory-link" href="{{ route('creators.index') }}">Browse freelancers</a>
 </section>
 @endif
 

@@ -1,5 +1,8 @@
 @extends('layouts.main')
 @section('title',$creator->name.' · Creator Portfolio')
+@push('page-styles')
+  <link rel="stylesheet" href="{{ asset('css/freelancer-discovery.css') }}?v=1">
+@endpush
 @section('content')
 @php
   $personal=$profile ? $creator->userProfile : null;
@@ -131,9 +134,9 @@
       <p class="profile-v3-disclosure">Creator-submitted information and external links are not independently verified. Badges represent platform activity or explicit administrator awards.</p>
     </main>
   </div>
-  <section class="marketplace-section">
+  <section id="published-work" class="marketplace-section" aria-labelledby="published-work-heading">
     <div class="marketplace-section-heading">
-      <div><span class="eyebrow">Approved marketplace activity</span><h2>Published work <span class="count">{{ $listings->total() }}</span></h2></div>
+      <div><span class="eyebrow">Approved marketplace activity</span><h2 id="published-work-heading">Published work <span class="count">{{ $listings->total() }}</span></h2></div>
     </div>
     @if($listings->isNotEmpty())
       <div class="marketplace-card-grid">
