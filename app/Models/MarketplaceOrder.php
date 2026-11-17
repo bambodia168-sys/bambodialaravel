@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MarketplaceOrder extends Model
 {
@@ -21,5 +22,10 @@ class MarketplaceOrder extends Model
     protected function casts(): array
     {
         return ['total' => 'decimal:2', 'completed_at' => 'datetime', 'cancelled_at' => 'datetime'];
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(CommercePayment::class);
     }
 }
