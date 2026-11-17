@@ -84,7 +84,7 @@ class HomepageFreelancerShowcaseTest extends TestCase
         UserProfile::query()->create([
             'user_id' => $creator->id,
             'avatar_path' => 'profile-avatars/example.webp',
-            'public_location' => 'Battambang',
+            'public_location' => 'Legacy district, Battambang, Cambodia',
         ]);
         foreach (['Laravel', 'PHP', 'WordPress', 'Fourth skill'] as $index => $label) {
             CreatorProfileItem::query()->create([
@@ -102,9 +102,11 @@ class HomepageFreelancerShowcaseTest extends TestCase
             ->assertSee('freelancer-showcase-grid--single')
             ->assertSee('freelancer-discovery.css')
             ->assertSee('profile-avatars/example.webp')
-            ->assertSee('View profile')
+            ->assertDontSee('freelancer-showcase-profile')
             ->assertSee($profileUrl.'#published-work')
-            ->assertSee('Battambang')
+            ->assertSee('title="0 approved listings" aria-label="0 approved listings">0</a>', false)
+            ->assertSeeInOrder(['class="freelancer-showcase-footer"', '>0</a>', 'Battambang, Cambodia'], false)
+            ->assertDontSee('Legacy district')
             ->assertSee('Full-stack developer')
             ->assertDontSee('Platform specialist')
             ->assertSeeInOrder(['<li>Laravel</li>', '<li>PHP</li>', '<li>WordPress</li>'], false)

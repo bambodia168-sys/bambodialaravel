@@ -1,7 +1,7 @@
 @extends('layouts.main')
 @section('title','Home')
 @push('page-styles')
-  <link rel="stylesheet" href="{{ asset('css/freelancer-discovery.css') }}?v=2">
+  <link rel="stylesheet" href="{{ asset('css/freelancer-discovery.css') }}?v=3">
 @endpush
 @section('content')
 <div class="marketplace-hero-scene">

@@ -253,7 +253,9 @@ try {
             href:card.querySelector('h3 a')?.getAttribute('href'),
             avatarHref:card.querySelector('a.freelancer-showcase-portrait')?.getAttribute('href'),
             avatarTag:card.querySelector('.freelancer-showcase-portrait')?.tagName,
-            profileCta:card.querySelector('.freelancer-showcase-profile')?.getAttribute('href'),
+            hasProfileCta:!!card.querySelector('.freelancer-showcase-profile'),
+            listingCount:card.querySelector('.freelancer-showcase-listings')?.textContent.trim(),
+            listingTooltip:card.querySelector('.freelancer-showcase-listings')?.title,
             workLink:card.querySelector('.freelancer-showcase-listings')?.getAttribute('href'),
             cardWidth:card.getBoundingClientRect().width,
             right:card.getBoundingClientRect().right,
@@ -264,9 +266,11 @@ try {
         const freelancerColumns=device.viewport.width>=1200?4:device.viewport.width>=900?3:device.viewport.width>=640?2:1;
         if(freelancerGeometry.columns!==freelancerColumns ||
            freelancerGeometry.items.some(c=>!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(c.href??'') ||
-             c.href!==c.avatarHref || c.href!==c.profileCta || c.avatarTag!=='A' ||
+             c.href!==c.avatarHref || c.hasProfileCta || c.avatarTag!=='A' ||
              c.workLink!==c.href+'#published-work' || c.right>device.viewport.width+3 ||
-             c.portraitWidth<c.cardWidth-3 || c.hasBiography))
+             c.portraitWidth<50 || c.portraitWidth>80 || c.hasBiography ||
+             !/^\d[\d,]*$/.test(c.listingCount??'') ||
+             !new RegExp('^'+c.listingCount+' approved listings?$').test(c.listingTooltip??'')))
           throw new Error(device.name+' freelancer grid regression '+JSON.stringify(freelancerGeometry));
         const avatarCard=freelancerCards.filter({hasText:'Browser QA Creator'}).first();
         if(await avatarCard.count()!==1)
@@ -298,9 +302,18 @@ try {
         const profileHtml=await profileResponse.text();
         if(!profileResponse.ok() || !profileHtml.includes('Browser QA Creator') || !profileHtml.includes('id="published-work"'))
           throw new Error(device.name+' freelancer photo or published work links to an inaccessible profile');
-        const firstFreelancer=freelancerCards.first();
-        if(!(await firstFreelancer.getByText(/approved listings?/).count()))
-          throw new Error(device.name+' approved listing count missing');
+        const cardPalette=await avatarCard.evaluate(card=>{
+          const root=document.documentElement;
+          const previous=root.getAttribute('data-theme');
+          const background=theme=>{
+            root.setAttribute('data-theme',theme);
+            return getComputedStyle(card).backgroundImage;
+          };
+          try{return [background('light'),background('dark')];}
+          finally{if(previous===null)root.removeAttribute('data-theme');else root.setAttribute('data-theme',previous);}
+        });
+        if(cardPalette[0]===cardPalette[1] || cardPalette.some(background=>!background.startsWith('linear-gradient')))
+          throw new Error(device.name+' freelancer card light/dark backgrounds did not adapt');
         if(await page.locator('.freelancer-showcase-card [data-rating],.freelancer-showcase-card .rating-stars').count())
           throw new Error(device.name+' unverified rating surfaced');
         checks+=4;
