@@ -348,10 +348,10 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/creator/apply', [CreatorApplicationController::class, 'show'])->name('creator.apply');
     Route::post('/creator/apply', [CreatorApplicationController::class, 'submit'])->name('creator.apply.store')->middleware('throttle:3,1');
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
-        Route::get('/sales-settlements', [CommerceOperationsController::class, 'index'])->name('studio.commerce-operations');
         Route::get('/orders', [CommerceOrderController::class, 'index'])->name('studio.orders.index');
         Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('studio.orders.show');
         Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('studio.orders.receipt');
+        Route::get('/sales-settlements', [CommerceOperationsController::class, 'index'])->name('studio.commerce-operations');
         Route::get('/profile', [CreatorProfileController::class,'edit'])->name('studio.profile.edit');
         Route::patch('/profile', [CreatorProfileController::class,'update'])
             ->name('studio.profile.update')->middleware('throttle:10,1');
