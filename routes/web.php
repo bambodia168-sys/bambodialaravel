@@ -352,6 +352,8 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('studio.orders.show');
         Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('studio.orders.receipt');
         Route::get('/sales-settlements', [CommerceOperationsController::class, 'index'])->name('studio.commerce-operations');
+        Route::get('/sales-settlements/statement.csv', [CommerceOperationsController::class, 'statement'])
+            ->middleware('throttle:10,1')->name('studio.commerce-operations.statement');
         Route::get('/profile', [CreatorProfileController::class,'edit'])->name('studio.profile.edit');
         Route::patch('/profile', [CreatorProfileController::class,'update'])
             ->name('studio.profile.update')->middleware('throttle:10,1');
@@ -392,6 +394,8 @@ Route::middleware('auth')->group(function (): void {
         });
         Route::middleware('role:super_admin')->group(function (): void {
             Route::get('/commerce-operations', [CommerceOperationsController::class, 'index'])->name('dashboard.commerce-operations');
+            Route::get('/commerce-operations/statement.csv', [CommerceOperationsController::class, 'statement'])
+                ->middleware('throttle:10,1')->name('dashboard.commerce-operations.statement');
             Route::get('/commerce-operations/{number}', [CommerceOperationsController::class, 'show'])
                 ->whereUuid('number')->name('dashboard.commerce-operations.show');
             Route::post('/commerce-operations/{number}', [CommerceOperationsController::class, 'store'])
