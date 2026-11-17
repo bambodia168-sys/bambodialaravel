@@ -3,13 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\CommercePaymentMethod;
+use App\Models\CommerceGatewaySetting;
+use App\Models\CommercePayment;
 use App\Models\AuditEvent;
-use App\Support\CommerceGateway;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CommercePaymentMethodController extends Controller
@@ -40,16 +42,33 @@ class CommercePaymentMethodController extends Controller
     public function update(Request $request, CommercePaymentMethod $method): RedirectResponse
     {
         abort_unless(config('commerce.enabled'), 404);
-        $values = $request->validate([
+        $live = (bool) config('commerce.live_gateways');
+        $fields = array_keys(CommerceGatewaySetting::FIELDS[$method->provider] ?? []);
+        $rules = [
             'available'=>['required', 'boolean'], 'instructions'=>['sometimes', 'nullable', 'string', 'max:2500'],
             'qr'=>['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'remove_qr'=>['nullable', 'boolean'],
-        ]);
-        abort_if($method->automatic() && ($request->hasFile('qr') || array_key_exists('instructions', $values)), 422);
+            'gateway' => [$fields ? 'array:'.implode(',', $fields) : 'prohibited'],
+        ];
+        foreach ($fields as $field) {
+            $rules['gateway.'.$field] = ['nullable', 'string', 'max:2048', 'regex:/^[!-~]+$/D'];
+        }
+        if ($method->provider === 'aba') {
+            $rules['gateway.merchant_id'] = ['nullable', 'string', 'regex:/^[A-Za-z0-9_.-]{1,30}$/D'];
+        }
+        if ($method->provider === 'bakong') {
+            $rules['gateway.account_id'] = ['nullable', 'string', 'regex:/^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+$/D', 'max:32'];
+            $rules['gateway.merchant_name'] = ['nullable', 'string', 'regex:/^[ -~]+$/D', 'max:25'];
+            $rules['gateway.merchant_city'] = ['nullable', 'string', 'regex:/^[ -~]+$/D', 'max:15'];
+        }
+        $values = $request->validate($rules, attributes: collect(CommerceGatewaySetting::FIELDS[$method->provider] ?? [])
+            ->mapWithKeys(fn (string $label, string $key) => ['gateway.'.$key => $label])->all());
+        abort_if($method->usesGateway() && ($request->hasFile('qr') || array_key_exists('instructions', $values)
+            || $request->boolean('remove_qr')), 422);
         $path = $request->file('qr')?->store('commerce/payment-qr', 'local');
         abort_if($path === false, 503);
         try {
-            $previous = DB::transaction(function () use ($method, $values, $path, $request): ?string {
+            $previous = DB::transaction(function () use ($method, $values, $path, $request, $live): ?string {
                 $locked = CommercePaymentMethod::query()->lockForUpdate()->findOrFail($method->id);
                 $old = $locked->qr_path;
                 $locked->fill(['available'=>$values['available']]);
@@ -59,14 +78,13 @@ class CommercePaymentMethodController extends Controller
                 if ($path || $request->boolean('remove_qr')) {
                     $locked->qr_path = $path;
                 }
-                if ($locked->available && config('commerce.payments_enabled')) {
-                    $live = (bool) config('commerce.live_gateways');
-                    abort_unless($locked->automatic()
-                        ? CommerceGateway::ready($locked->provider, $live) && ($live || ! app()->environment('production'))
-                        : filled($locked->instructions), 422, 'Configure the method before making it available.');
+                $credentialsChanged = $locked->usesGateway()
+                    && $this->saveCredentials($locked->provider, $live, $values['gateway'] ?? []);
+                if ($locked->available && config('commerce.payments_enabled') && ! $locked->availableForCheckout($live)) {
+                    throw ValidationException::withMessages(['available' => 'Configure the method before making it available.']);
                 }
                 $locked->save();
-                if ($locked->wasChanged()) {
+                if ($locked->wasChanged() || $credentialsChanged) {
                     AuditEvent::record('commerce.payment_method.configured', $request->user(), $request);
                 }
 
@@ -83,5 +101,35 @@ class CommercePaymentMethodController extends Controller
         }
 
         return back()->with('status', 'Payment method settings saved.');
+    }
+
+    private function saveCredentials(string $provider, bool $live, array $input): bool
+    {
+        $new = array_filter($input, fn (?string $value) => filled($value));
+        if ($new === []) {
+            return false;
+        }
+
+        $settings = CommerceGatewaySetting::forMode($provider, $live)->lockForUpdate()->firstOrFail();
+        $effective = CommerceGatewaySetting::effective($provider, $live);
+        $changed = array_filter($new, fn (string $value, string $field) => ($effective[$field] ?? null) !== $value, ARRAY_FILTER_USE_BOTH);
+        if ($changed === []) {
+            return false;
+        }
+        $credentials = array_replace($effective, $changed);
+        if (! CommerceGatewaySetting::configured($provider, $live, $credentials)) {
+            throw ValidationException::withMessages(['gateway' => 'Enter all required credentials for this environment.']);
+        }
+
+        $rotatingBakongToken = $provider === 'bakong' && array_keys($changed) === ['token'];
+        if (! $rotatingBakongToken && CommercePayment::query()->where('provider', $provider)
+            ->where('live_mode', $live)->whereIn('status', ['starting', 'checkout_open'])->exists()) {
+            throw ValidationException::withMessages(['gateway' => 'Resolve open checkouts before changing gateway credentials.']);
+        }
+
+        $settings->credentials = array_intersect_key($credentials, CommerceGatewaySetting::FIELDS[$provider]);
+        $settings->save();
+
+        return true;
     }
 }

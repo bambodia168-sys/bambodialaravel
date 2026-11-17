@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\CommercePayment;
+use App\Models\CommerceGatewaySetting;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
@@ -13,14 +14,7 @@ final class CommerceGateway
 {
     public static function ready(string $provider, bool $live): bool
     {
-        return match ($provider) {
-            'stripe' => str_starts_with((string) config('commerce.stripe.secret'), $live ? 'sk_live_' : 'sk_test_')
-                && filled(config('commerce.stripe.webhook_secret')),
-            'paypal' => (bool) config('commerce.live_gateways') === $live
-                && filled(config('commerce.paypal.client_id')) && filled(config('commerce.paypal.secret'))
-                && filled(config('commerce.paypal.merchant_id')) && filled(config('commerce.paypal.webhook_id')),
-            default => false,
-        };
+        return CommerceGatewaySetting::configured($provider, $live, CommerceGatewaySetting::effective($provider, $live));
     }
 
     public function start(CommercePayment $payment): array
@@ -29,7 +23,7 @@ final class CommerceGateway
         $returnUrl = $this->url('account.orders.payment.return', [$order->number, $payment->number]);
         $cancelUrl = $this->url('account.orders.show', [$order->number]);
         if ($payment->provider === 'stripe') {
-            $data = $this->send($this->stripe()->asForm()->withHeaders(['Idempotency-Key'=>$payment->number]), 'POST', '/checkout/sessions', [
+            $data = $this->send($this->stripe($payment->live_mode)->asForm()->withHeaders(['Idempotency-Key'=>$payment->number]), 'POST', '/checkout/sessions', [
                 'mode'=>'payment', 'success_url'=>$returnUrl, 'cancel_url'=>$cancelUrl,
                 'client_reference_id'=>$payment->number, 'metadata'=>['payment'=>$payment->number],
                 'payment_method_types'=>['card'],
@@ -64,7 +58,7 @@ final class CommerceGateway
         abort_unless(self::ready($payment->provider, $payment->live_mode), 503, 'Payment verification is temporarily unavailable.');
         $order = $payment->order;
         if ($payment->provider === 'stripe') {
-            $data = $this->send($this->stripe(), 'GET', '/checkout/sessions/'.$payment->remote_id);
+            $data = $this->send($this->stripe($payment->live_mode), 'GET', '/checkout/sessions/'.$payment->remote_id);
             abort_unless(($data['id'] ?? null) === $payment->remote_id
                 && ($data['livemode'] ?? null) === $payment->live_mode
                 && ($data['client_reference_id'] ?? null) === $payment->number
@@ -125,7 +119,7 @@ final class CommerceGateway
             preg_match_all('/(?:^|,)v1=([a-f0-9]{64})(?=,|$)/', $header, $signatures);
             $time = (int) ($timestamp[1] ?? 0);
             abort_unless(abs(time() - $time) <= 300, 400);
-            $expected = hash_hmac('sha256', $time.'.'.$request->getContent(), config('commerce.stripe.webhook_secret'));
+            $expected = hash_hmac('sha256', $time.'.'.$request->getContent(), CommerceGatewaySetting::effective('stripe', $live)['webhook_secret']);
             abort_unless(collect($signatures[1])->contains(fn (string $value) => hash_equals($expected, $value)), 400);
             abort_unless(($event['livemode'] ?? null) === $live, 400);
 
@@ -133,7 +127,7 @@ final class CommerceGateway
                 ? data_get($event, 'data.object.id') : null;
         }
 
-        $payload = ['webhook_id'=>config('commerce.paypal.webhook_id'), 'webhook_event'=>$event];
+        $payload = ['webhook_id'=>CommerceGatewaySetting::effective('paypal', $live)['webhook_id'], 'webhook_event'=>$event];
         foreach (['auth_algo', 'cert_url', 'transmission_id', 'transmission_sig', 'transmission_time'] as $field) {
             $payload[$field] = $request->header('PayPal-'.str_replace('_', '-', $field));
             abort_unless(filled($payload[$field]), 400);
@@ -166,7 +160,7 @@ final class CommerceGateway
             && ($data['intent'] ?? null) === 'CAPTURE'
             && count($data['purchase_units'] ?? []) === 1
             && data_get($data, 'purchase_units.0.custom_id') === $payment->number
-            && data_get($data, 'purchase_units.0.payee.merchant_id') === config('commerce.paypal.merchant_id')
+            && data_get($data, 'purchase_units.0.payee.merchant_id') === CommerceGatewaySetting::effective('paypal', $payment->live_mode)['merchant_id']
             && data_get($data, 'purchase_units.0.amount.currency_code') === 'USD'
             && data_get($data, 'purchase_units.0.amount.value') === $payment->order->total, 409, 'PayPal order does not match the order or merchant.');
     }
@@ -184,9 +178,9 @@ final class CommerceGateway
         return $base.route($name, $parameters, false);
     }
 
-    private function stripe(): PendingRequest
+    private function stripe(bool $live): PendingRequest
     {
-        return $this->http('https://api.stripe.com/v1')->withToken(config('commerce.stripe.secret'))
+        return $this->http('https://api.stripe.com/v1')->withToken(CommerceGatewaySetting::effective('stripe', $live)['secret'])
             ->withHeaders(['Stripe-Version'=>'2024-06-20']);
     }
 
@@ -194,7 +188,8 @@ final class CommerceGateway
     {
         $client = $this->http($live ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com');
         $authClient = clone $client;
-        $auth = $this->send($authClient->asForm()->withBasicAuth(config('commerce.paypal.client_id'), config('commerce.paypal.secret')),
+        $credentials = CommerceGatewaySetting::effective('paypal', $live);
+        $auth = $this->send($authClient->asForm()->withBasicAuth($credentials['client_id'], $credentials['secret']),
             'POST', '/v1/oauth2/token', ['grant_type'=>'client_credentials']);
         abort_unless(is_string($auth['access_token'] ?? null), 502);
 

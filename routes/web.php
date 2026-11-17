@@ -221,7 +221,9 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/{number}/payments/{payment}/return', [CommercePaymentController::class, 'returned'])
             ->whereUuid(['number', 'payment'])->name('payment.return');
         Route::post('/{number}/payments/{payment}/verify', [CommercePaymentController::class, 'verify'])
-            ->whereUuid(['number', 'payment'])->middleware('throttle:10,1')->name('payment.verify');
+            ->whereUuid(['number', 'payment'])->middleware('throttle:20,1')->name('payment.verify');
+        Route::get('/{number}/payments/{payment}/qr', [CommercePaymentController::class, 'orderQr'])
+            ->whereUuid(['number', 'payment'])->middleware('throttle:30,1')->name('payment.order-qr');
         Route::get('/{number}/payment-qr/{method}', [CommercePaymentController::class, 'qr'])
             ->whereUuid('number')->whereNumber('method')->name('payment.qr');
     });

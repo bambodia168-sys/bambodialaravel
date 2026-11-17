@@ -7,15 +7,13 @@
 @if($buyerView && $order->status === 'awaiting_payment' && $order->currency === 'USD')
   <div class="panel-head"><h2>Pay for this order</h2></div>
   @if(!$activePayment)
-    @forelse($methods->filter(fn ($method) => $method->automatic()
-      ? ($live || !app()->environment('production')) && \App\Support\CommerceGateway::ready($method->provider, $live)
-      : filled($method->instructions)) as $method)
+    @forelse($methods->filter(fn ($method) => $method->availableForCheckout($live)) as $method)
       <div class="panel-head">
-        @if($method->automatic())
+        @if($method->usesGateway())
           <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}">
             @csrf
             <input type="hidden" name="method" value="{{ $method->id }}">
-            <button class="btn primary">Pay with {{ $method->name }}</button>
+            <button class="btn primary">{{ $method->dynamicQr() ? 'Generate QR for' : 'Pay with' }} {{ $method->name }}</button>
           </form>
         @else
           <details>
@@ -40,6 +38,23 @@
     @endforelse
   @elseif($activePayment->status === 'manual_review')
     <div class="panel-head"><p>Your transfer is awaiting verification.</p></div>
+  @elseif($activePayment->dynamicQr() && $activePayment->remote_id)
+    <div class="panel-head">
+      <div>
+        <h3>{{ $activePayment->method_name }} payment · USD {{ $order->total }}</h3>
+        @if($activePayment->qrVisible())
+          <p data-payment-qr-hint>Scan this code in your banking app. It expires in six minutes from creation.</p>
+          <img data-order-payment-qr src="{{ route('account.orders.payment.order-qr', [$order->number, $activePayment->number]) }}"
+               alt="{{ $activePayment->method_name }} payment QR for this order" width="288" height="288">
+        @endif
+        <p role="status" data-order-payment-status>{{ $activePayment->qrVisible() ? 'Waiting for your bank to confirm payment.' : 'This QR has expired. Checking for a final payment result.' }}</p>
+        <form method="post" data-order-payment-poll action="{{ route('account.orders.payment.verify', [$order->number, $activePayment->number]) }}">
+          @csrf
+          <button class="btn subtle">Check payment status now</button>
+        </form>
+      </div>
+    </div>
+    <script defer src="{{ asset('js/commerce-payment-poll.js') }}"></script>
   @else
     <div class="panel-head">
       <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}">

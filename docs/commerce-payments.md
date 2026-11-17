@@ -16,3 +16,14 @@ Settlement accepts USD orders. Hosted checkout sends the buyer to the provider, 
 PayPal and Stripe need merchant credentials and working webhook registration before going live. Keep sandbox orders on an isolated database. Switch `COMMERCE_LIVE_GATEWAYS` only when deploying with the matching live provider configuration. Existing in-flight checkouts must be reconciled before rotating credentials or changing the gateway environment.
 
 The merchant account receives funds. Creator payouts, refunds, taxes, payment disputes, and automatic digital fulfillment are separate workflows. For an open checkout whose state is unclear, reconcile it with the provider before retrying with another method. Maintain private backup and retention for transfer proof files under `storage/app/private/commerce/payment-proofs`.
+
+## Gateway configuration and order QR
+
+A super-admin opens **Payment Methods → Configure** to enter the credentials for the environment selected by `COMMERCE_LIVE_GATEWAYS`. The app stores replacements encrypted per provider and environment and uses existing Stripe and PayPal environment variables as fallback. Empty fields preserve saved values. Finish open checkouts before replacing merchant credentials. Bakong access tokens can be rotated for the same recipient while bills are open.
+
+- **Stripe** requires the secret API key and webhook signing secret. **PayPal** requires the client ID, client secret, merchant ID, and webhook ID.
+- **ABA** requires the PayWay merchant ID and API key. Arrange gateway allowlisting with ABA. Each order calls PayWay Generate QR with its own transaction reference and fixed USD total.
+- **Bakong** requires the recipient's Bakong account ID, recipient name and city, and an NBC Open API access token. Its dynamic KHQR includes the exact USD total, a unique bill number and a six-minute expiry.
+- **Bank Transfer, KHQR, Wing, and custom manual methods** accept transfer instructions and an optional reusable QR image. A super-admin verifies bank records before accepting submitted proof.
+
+The buyer's open order checks QR payment status about every seven seconds. Run Laravel's scheduler each minute to reconcile recent bills when the buyer has closed the page. The order completes and a receipt is issued after a matching provider settlement. If the provider cannot establish the final result, an open attempt can continue to block a new payment. Check the provider dashboard before any manual resolution. Merchant sandbox testing must cover scanned QR compatibility and provider API verification before enabling production payments.
