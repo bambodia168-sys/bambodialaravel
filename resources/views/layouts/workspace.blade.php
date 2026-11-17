@@ -33,6 +33,13 @@
   $groups = [];
 
   if ($workspace === 'admin') {
+    if (config('commerce.enabled') && \App\Support\UserManagementAccess::allows($user, 'commerce_orders')) {
+      $commerceItems = [['route'=>'dashboard.orders.index','label'=>'Marketplace Orders','icon'=>'file-text']];
+      if ($user->role === 'super_admin') {
+        $commerceItems[] = ['route'=>'dashboard.payment-methods.index','label'=>'Payment Methods','icon'=>'credit-card'];
+      }
+      $groups[] = ['heading'=>'Commerce','items'=>$commerceItems];
+    }
     $groups[] = ['heading'=>'Overview','items'=>[
       ['route'=>'dashboard','label'=>'Dashboard overview','icon'=>'layout-dashboard'],
       ['route'=>'dashboard.badges.index','label'=>'Creator Badges','icon'=>'award'],
@@ -118,6 +125,7 @@
         ['route'=>'studio.media.index','label'=>'Media Library','icon'=>'image'],
       ]],
       ['heading'=>'Client Work','items'=>[
+        ...(config('commerce.enabled') ? [['route'=>'studio.orders.index','label'=>'Sales Orders','icon'=>'package']] : []),
         ['route'=>'studio.inquiries','label'=>'Client Inquiries','icon'=>'message'],
         ['route'=>'contracts.index','label'=>'Contracts','icon'=>'file-check'],
         ['route'=>'resume.edit','label'=>'Resume Builder','icon'=>'file-text'],
@@ -153,6 +161,7 @@
         ['route'=>'account.saved-jobs','label'=>'Saved Jobs','icon'=>'bookmark'],
       ]],
       ['heading'=>'Orders & Communication','items'=>[
+        ...(config('commerce.enabled') ? [['route'=>'account.orders.index','label'=>'Order History','icon'=>'clock']] : []),
         ['route'=>'contracts.index','label'=>'My Contracts','icon'=>'file-check'],
         ['route'=>'jobs.mine','label'=>'My Job Posts','icon'=>'briefcase','roles'=>['customer','subscriber','super_admin']],
         ['route'=>'account.inquiries','label'=>'Service Requests','icon'=>'message','roles'=>['customer','subscriber']],
