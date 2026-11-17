@@ -9,6 +9,7 @@ use App\Models\ServiceInquiry;
 use App\Models\ServiceInquiryMessage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -84,12 +85,17 @@ class ServiceInquiryController extends Controller
         return redirect()->route('inquiries.show',$id)->with('status','Your private inquiry was sent to the creator.');
     }
 
-    public function show(Request $request, ServiceInquiry $inquiry): View
+    public function show(Request $request, ServiceInquiry $inquiry): Response
     {
         $this->authorizeParticipant($request,$inquiry);
         $inquiry->load(['listing:id,public_id,title,type,slug,status','client:id,name,public_id','creator:id,name,public_id']);
         $messages=$inquiry->messages()->with('sender:id,name')->oldest('id')->paginate(10);
-        return view('inquiries.show',compact('inquiry','messages'));
+        $deliveries = $inquiry->marketplace_order_id === null
+            ? null : $inquiry->deliveries()->latest('id')->paginate(5, pageName: 'deliveries');
+        $currentDelivery = $deliveries ? $inquiry->deliveries()->latest('id')->first() : null;
+
+        return response()->view('inquiries.show', compact('inquiry', 'messages', 'deliveries', 'currentDelivery'))
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function reply(Request $request, ServiceInquiry $inquiry): RedirectResponse
@@ -122,6 +128,7 @@ class ServiceInquiryController extends Controller
         DB::transaction(function()use($request,$inquiry){
             $locked=ServiceInquiry::query()->lockForUpdate()->findOrFail($inquiry->id);
             $this->authorizeParticipant($request,$locked);
+            abort_if($locked->marketplace_order_id !== null, 409, 'Use the delivery workflow to complete this order.');
             abort_unless($locked->status==='open',409);
             $locked->update(['status'=>'closed','closed_by'=>$request->user()->id,'closed_at'=>now()]);
             $recipient=(int)$locked->client_id===(int)$request->user()->id
@@ -141,7 +148,7 @@ class ServiceInquiryController extends Controller
         abort_unless((int)$request->user()->id===(int)$inquiry->client_id
             || (int)$request->user()->id===(int)$inquiry->creator_id,404);
         if ($inquiry->marketplace_order_id !== null) {
-            abort_unless($inquiry->order()->where('status', 'completed')->whereHas('paidAttempt')->exists(), 404);
+            abort_unless($inquiry->hasVerifiedOrder(), 404);
         }
     }
 }

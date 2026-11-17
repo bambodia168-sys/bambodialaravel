@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -45,6 +46,23 @@ class MarketplaceOrder extends Model
     public function serviceInquiry(): HasOne
     {
         return $this->hasOne(ServiceInquiry::class);
+    }
+
+    public function review(): HasOne
+    {
+        return $this->hasOne(MarketplaceOrderReview::class);
+    }
+
+    public function scopeReviewEligible(Builder $orders): Builder
+    {
+        return $orders->where('status', 'completed')->whereHas('paidAttempt')
+            ->where(fn (Builder $order) => $order->whereHas('entitlement')
+                ->orWhereHas('serviceInquiry', fn (Builder $inquiry) => $inquiry->where('delivery_status', 'accepted')));
+    }
+
+    public function isReviewEligible(): bool
+    {
+        return self::query()->whereKey($this->id)->reviewEligible()->exists();
     }
 
     public function operations(): HasOne

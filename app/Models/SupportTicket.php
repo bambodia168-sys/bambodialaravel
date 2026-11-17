@@ -29,6 +29,11 @@ class SupportTicket extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrder::class, 'context_id');
+    }
+
     public function messages(): HasMany
     {
         return $this->hasMany(SupportMessage::class)->oldest();

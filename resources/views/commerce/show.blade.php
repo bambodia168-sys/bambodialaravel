@@ -13,7 +13,7 @@
       <div class="panel-head">
         <div>
           <h2>Service workspace</h2>
-          <p>Use the private conversation to coordinate delivery.</p>
+          <p>{{ \App\Models\ServiceInquiry::DELIVERY_STATUSES[$order->serviceInquiry->deliveryStatus()] }}</p>
         </div>
         <a class="btn primary" href="{{ route('inquiries.show', $order->serviceInquiry) }}">Open service workspace</a>
       </div>
@@ -80,5 +80,8 @@
       </div>
     @endif
   </section>
+  @if($order->relationLoaded('review') && ($canReview || $order->review))
+    @include('commerce.review')
+  @endif
 </div>
 @endsection

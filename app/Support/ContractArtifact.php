@@ -11,9 +11,13 @@ final class ContractArtifact
 {
     public static function persist(UploadedFile $file,int $contractId,int $milestoneId): array
     {
+        return self::persistIn($file, 'marketplace/contract-deliverables/'.$contractId.'/'.$milestoneId);
+    }
+
+    public static function persistIn(UploadedFile $file, string $directory): array
+    {
         $inspection=ProductVault::inspect($file);
-        $path='marketplace/contract-deliverables/'.$contractId.'/'.$milestoneId.'/'.
-            bin2hex(random_bytes(32)).'.'.$inspection['type'];
+        $path=$directory.'/'.bin2hex(random_bytes(32)).'.'.$inspection['type'];
 
         $stored=Storage::disk('local')->putFileAs(dirname($path),$file,basename($path));
         if($stored===false){
@@ -40,14 +44,19 @@ final class ContractArtifact
             $submission->storage_path)){
             return null;
         }
+        return self::verifyStoredFile($submission->storage_path, $submission->sha256, (int) $submission->byte_size);
+    }
+
+    public static function verifyStoredFile(string $storagePath, string $sha256, int $size): ?string
+    {
         $disk=Storage::disk('local');
-        if(! $disk->exists($submission->storage_path)){
+        if(! $disk->exists($storagePath)){
             return null;
         }
-        $path=$disk->path($submission->storage_path);
+        $path=$disk->path($storagePath);
         if(! is_file($path) || is_link($path)
-            || filesize($path)!==(int)$submission->byte_size
-            || ! hash_equals($submission->sha256,hash_file('sha256',$path))){
+            || filesize($path)!==$size
+            || ! hash_equals($sha256,hash_file('sha256',$path))){
             return null;
         }
         return $path;

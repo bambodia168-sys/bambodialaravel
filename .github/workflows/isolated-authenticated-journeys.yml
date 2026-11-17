@@ -63,6 +63,8 @@ jobs:
           php -l tests/browser/uat-seed.php
           php -l tests/browser/uat-verify.php
           node --check tests/browser/uat-journey.mjs
+          php -l tests/browser/commerce-pilot-seed.php
+          node --check tests/browser/commerce-pilot.mjs
       - name: Install Laravel and real Chromium
         run: |
           composer install --prefer-dist --no-interaction --no-progress
@@ -99,6 +101,26 @@ jobs:
           done
           node tests/browser/uat-journey.mjs
           php tests/browser/uat-verify.php
+      - name: Run the isolated commerce purchase pilot in Chromium and MySQL
+        env:
+          APP_URL: http://127.0.0.1:8097
+          BASE_URL: http://127.0.0.1:8097
+          COMMERCE_WORKSPACES_ENABLED: 'true'
+          COMMERCE_PAYMENTS_ENABLED: 'true'
+          COMMERCE_LIVE_GATEWAYS: 'false'
+        run: |
+          set -Eeuo pipefail
+          php artisan cache:clear
+          php tests/browser/commerce-pilot-seed.php
+          test -s storage/framework/commerce-pilot.json
+          php artisan serve --host=127.0.0.1 --port=8097 > "$RUNNER_TEMP/bambodia-commerce-pilot.log" 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 25); do
+            if curl -fsS -o /dev/null http://127.0.0.1:8097/; then break; fi
+            sleep 1
+          done
+          node tests/browser/commerce-pilot.mjs
       - name: Save redacted QA evidence
         if: always()
         uses: actions/upload-artifact@v4

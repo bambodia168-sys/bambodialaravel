@@ -8,9 +8,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServiceInquiry extends Model
 {
+    public const DELIVERY_STATUSES = [
+        'awaiting_requirements' => 'Awaiting requirements',
+        'in_progress' => 'In progress',
+        'delivered' => 'Ready for buyer review',
+        'revision_requested' => 'Revision requested',
+        'accepted' => 'Delivery accepted',
+    ];
+
     protected $fillable = [
         'marketplace_order_id','marketplace_listing_id','client_id','creator_id','subject','proposed_budget',
-        'currency','status','closed_by','closed_at',
+        'currency','status','closed_by','closed_at','delivery_status',
     ];
 
     protected function casts(): array
@@ -36,5 +44,21 @@ class ServiceInquiry extends Model
     public function order(): BelongsTo { return $this->belongsTo(MarketplaceOrder::class, 'marketplace_order_id'); }
     public function client(): BelongsTo { return $this->belongsTo(User::class,'client_id'); }
     public function creator(): BelongsTo { return $this->belongsTo(User::class,'creator_id'); }
+    public function hasVerifiedOrder(): bool
+    {
+        return $this->marketplace_order_id !== null
+            && $this->order()->where('status', 'completed')->whereHas('paidAttempt')->exists();
+    }
+
+    public function deliveryStatus(): string
+    {
+        return $this->delivery_status ?? 'awaiting_requirements';
+    }
+
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(ServiceDelivery::class);
+    }
+
     public function messages(): HasMany { return $this->hasMany(ServiceInquiryMessage::class); }
 }

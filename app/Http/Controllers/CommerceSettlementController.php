@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MarketplaceOrder;
 use App\Support\CommerceSettlementReport;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -17,7 +18,14 @@ final class CommerceSettlementController extends Controller
         $orders = CommerceSettlementReport::orders($filters, $creator ? $request->user()->id : null)
             ->latest('id')->paginate(15)->appends($filters);
 
-        return response()->view('commerce.operations.index', compact('creator', 'filters', 'orders'))
+        $pendingReceipts = $creator || ! config('commerce.payments_enabled') ? null : MarketplaceOrder::query()
+            ->where('status', 'awaiting_payment')
+            ->withWhereHas('payments', fn ($payments) => $payments->where('status', 'manual_review')
+                ->where('live_mode', true)->whereNotNull('proof_path')->latest('id'))
+            ->when(isset($filters['order']), fn ($query) => $query->where('number', $filters['order']))
+            ->latest('id')->paginate(10, pageName: 'receipts')->appends($filters)->fragment('pending-receipts');
+
+        return response()->view('commerce.operations.index', compact('creator', 'filters', 'orders', 'pendingReceipts'))
             ->header('Cache-Control', 'private, no-store');
     }
 

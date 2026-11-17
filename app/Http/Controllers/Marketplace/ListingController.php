@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Marketplace;
 use App\Http\Controllers\Controller;
 use App\Support\BuilderGallery;
 use App\Models\MarketplaceListing;
+use App\Models\MarketplaceOrderReview;
+use App\Support\PreviewContentReview;
 use App\Models\MarketplaceCategory;
 use App\Models\MediaAsset;
 use App\Models\FeatureFlag;
@@ -108,6 +110,13 @@ class ListingController extends Controller
             : [];
 
         $screenshots = BuilderGallery::approvedFor($listing->gallery_media_ids, (int)$listing->user_id);
-        return view('marketplace.detail',compact('listing','isSaved','relatedListings','savedRelatedIds','screenshots'));
+        $showReviews = config('commerce.enabled') && ! PreviewContentReview::isPreviewTitle($listing->title);
+        $reviews = $showReviews ? MarketplaceOrderReview::query()->whereNull('hidden_at')
+            ->whereHas('order', fn ($orders) => $orders->where('marketplace_listing_id', $listing->id)->reviewEligible()) : null;
+        $rating = $reviews ? (clone $reviews)->avg('rating') : null;
+        $purchaseReviews = $reviews?->latest('id')->simplePaginate(5, pageName: 'reviews')->withQueryString()->fragment('reviews');
+
+        return view('marketplace.detail', compact('listing', 'isSaved', 'relatedListings', 'savedRelatedIds',
+            'screenshots', 'purchaseReviews', 'rating'));
     }
 }
