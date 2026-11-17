@@ -5,11 +5,24 @@
 <div class="container inner-page">
   <section class="panel">
     <header class="panel-head">
-      <h1>{{ $creator ? 'Sales Settlements' : 'Commerce Operations' }}</h1>
-      <form class="table-search commerce-operation-toolbar" method="get">
-        <input aria-label="Order number" name="order" value="{{ $number }}" placeholder="Order number" maxlength="36">
-        <button class="btn primary compact">Find order</button>
-      </form>
+      <div>
+        <h1>{{ $creator ? 'Sales Settlements' : 'Commerce Operations' }}</h1>
+        @if($orders->total())
+          <p>Showing {{ $orders->firstItem() ?? 0 }}–{{ $orders->lastItem() ?? 0 }} of {{ $orders->total() }}</p>
+        @endif
+      </div>
+      <div class="commerce-operation-toolbar">
+        <form class="table-search commerce-operation-toolbar" method="get">
+          <input aria-label="Order number" name="order" value="{{ $number }}" placeholder="Order number" maxlength="36">
+          <button class="btn primary compact">Find order</button>
+        </form>
+        @if($orders->previousPageUrl())
+          <a class="btn subtle compact" href="{{ $orders->previousPageUrl() }}">Previous</a>
+        @endif
+        @if($orders->nextPageUrl())
+          <a class="btn subtle compact" href="{{ $orders->nextPageUrl() }}">Next</a>
+        @endif
+      </div>
     </header>
     @error('order')<p class="commerce-operation-message" role="alert">{{ $message }}</p>@enderror
     <div class="table-scroll">
@@ -46,7 +59,6 @@
         </tbody>
       </table>
     </div>
-    <x-pagination :paginator="$orders"/>
   </section>
 </div>
 @endsection
