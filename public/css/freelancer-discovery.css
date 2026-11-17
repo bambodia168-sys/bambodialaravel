@@ -216,6 +216,7 @@
   .freelancer-showcase > .freelancer-directory-link {
     grid-column: 2;
     grid-row: 1;
+    align-self: center;
   }
 
   .freelancer-showcase-grid:not(.freelancer-showcase-grid--single),
@@ -262,6 +263,7 @@
   }
 }
 
+#bambodia-freelancers,
 #published-work {
   scroll-margin-top: 110px;
 }
