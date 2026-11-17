@@ -135,7 +135,7 @@ def prepare(repo, stage, sha):
             originals[name] = copy.read_bytes()
         else:
             require(not current.exists(), f'File already exists: {name}')
-    patch = output('git', '-C', str(repo), 'diff', '--binary', BASE, sha, '--', *ADDED, *MODIFIED)
+    patch = output('git', '-C', str(repo), 'diff', '--binary', '--unified=1', BASE, sha, '--', *ADDED, *MODIFIED)
     subprocess.run(('git', 'apply', '--check', '--whitespace=error'), cwd=stage, input=patch, check=True)
     subprocess.run(('git', 'apply', '--whitespace=error'), cwd=stage, input=patch, check=True)
     for name in (*ADDED, *MODIFIED):
@@ -212,12 +212,12 @@ def main():
         work = Path(temporary)
         repo, stage = work / 'repo', work / 'overlay'
         subprocess.run(
-            ('git', 'clone', '--quiet', '--depth=2', '--single-branch', '--branch', BRANCH, SOURCE, str(repo)), check=True,
+            ('git', 'clone', '--quiet', '--depth=3', '--single-branch', '--branch', BRANCH, SOURCE, str(repo)), check=True,
         )
         require(output('git', '-C', str(repo), 'rev-parse', 'HEAD').decode().strip() == args.release,
                 'Release SHA differs')
-        require(output('git', '-C', str(repo), 'rev-parse', 'HEAD^').decode().strip() == BASE,
-                'Release parent differs from the verified production baseline')
+        require(output('git', '-C', str(repo), 'merge-base', BASE, args.release).decode().strip() == BASE,
+                'Release does not descend from the verified production baseline')
         originals = prepare(repo, stage, args.release)
         print('BAMBODIA_SMTP_PREFLIGHT=PASS', flush=True)
         if args.apply:
