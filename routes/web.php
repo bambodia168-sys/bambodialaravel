@@ -26,6 +26,7 @@ use App\Http\Controllers\ContractMilestoneController;
 use App\Http\Controllers\ContractCommunicationController;
 use App\Http\Controllers\Dashboard\ContractOversightController;
 use App\Http\Controllers\Dashboard\SiteSettingsController;
+use App\Http\Controllers\Dashboard\SmtpSettingsController;
 use App\Http\Controllers\Dashboard\SiteBrandingController;
 use App\Http\Controllers\Dashboard\SiteSeoController;
 use App\Http\Controllers\Dashboard\SiteSocialController;
@@ -478,6 +479,13 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/appearance', [SiteSettingsController::class, 'appearance'])->name('dashboard.appearance');
             Route::patch('/appearance', [SiteSettingsController::class, 'updateAppearance'])->name('dashboard.appearance.update');
             Route::get('/system-settings', [SiteSettingsController::class, 'system'])->name('dashboard.system-settings');
+            Route::middleware('role:super_admin')->prefix('system-settings/smtp')->name('dashboard.smtp.')->group(function (): void {
+                Route::get('/', [SmtpSettingsController::class, 'index'])->name('index');
+                Route::put('/', [SmtpSettingsController::class, 'save'])->name('save')->middleware('throttle:10,1');
+                Route::post('/test', [SmtpSettingsController::class, 'testDelivery'])->name('test')->middleware('throttle:5,1');
+                Route::post('/activate', [SmtpSettingsController::class, 'activate'])->name('activate')->middleware('throttle:10,1');
+                Route::delete('/active', [SmtpSettingsController::class, 'disable'])->name('disable')->middleware('throttle:10,1');
+            });
             Route::patch('/system-settings', [SiteSettingsController::class, 'updateSystem'])->name('dashboard.system-settings.update');
             Route::get('/site-identity', [SiteSettingsController::class, 'identity'])->name('dashboard.site-identity');
             Route::patch('/site-identity', [SiteSettingsController::class, 'updateIdentity'])->name('dashboard.site-identity.update')->middleware('throttle:30,1');
