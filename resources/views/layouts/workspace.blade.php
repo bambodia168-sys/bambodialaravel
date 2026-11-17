@@ -46,6 +46,7 @@
       $commerceItems = [['route'=>'dashboard.orders.index','label'=>'Marketplace Orders','icon'=>'file-text']];
       if ($user->role === 'super_admin') {
         $commerceItems[] = ['route'=>'dashboard.payment-methods.index','label'=>'Payment Methods','icon'=>'credit-card'];
+        $commerceItems[] = ['route'=>'dashboard.commerce-operations','label'=>'Commerce Operations','icon'=>'file-check'];
       }
       $groups[] = ['heading'=>'Commerce','items'=>$commerceItems];
     }
@@ -130,6 +131,7 @@
       ]],
       ['heading'=>'Client Work','items'=>[
         ...(config('commerce.enabled') ? [['route'=>'studio.orders.index','label'=>'Sales Orders','icon'=>'package']] : []),
+        ...(config('commerce.enabled') ? [['route'=>'studio.commerce-operations','label'=>'Sales Settlements','icon'=>'file-check']] : []),
         ['route'=>'studio.inquiries','label'=>'Client Inquiries','icon'=>'message'],
         ['route'=>'contracts.index','label'=>'Contracts','icon'=>'file-check'],
         ['route'=>'resume.edit','label'=>'Resume Builder','icon'=>'file-text'],

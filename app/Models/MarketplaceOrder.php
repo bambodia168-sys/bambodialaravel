@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MarketplaceOrder extends Model
 {
@@ -27,5 +28,10 @@ class MarketplaceOrder extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(CommercePayment::class);
+    }
+
+    public function operations(): HasOne
+    {
+        return $this->hasOne(CommerceOrderOperation::class);
     }
 }
