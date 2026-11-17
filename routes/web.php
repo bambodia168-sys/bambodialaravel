@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\BusinessToolsController;
 use App\Http\Controllers\CommerceOrderController;
 use App\Http\Controllers\CommercePaymentMethodController;
 use App\Http\Controllers\CommercePaymentController;
@@ -327,6 +328,12 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/creator/apply', [CreatorApplicationController::class, 'show'])->name('creator.apply');
     Route::post('/creator/apply', [CreatorApplicationController::class, 'submit'])->name('creator.apply.store')->middleware('throttle:3,1');
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
+        Route::prefix('business-tools')->name('studio.business-tools.')->group(function (): void {
+            Route::get('/', [BusinessToolsController::class, 'index'])->name('index');
+            Route::get('/open', [BusinessToolsController::class, 'open'])->name('open');
+            Route::get('/orders.csv', [BusinessToolsController::class, 'export'])->name('export');
+        });
+
         Route::get('/orders', [CommerceOrderController::class, 'index'])->name('studio.orders.index');
         Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('studio.orders.show');
         Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('studio.orders.receipt');
@@ -357,6 +364,12 @@ Route::middleware('auth')->group(function (): void {
     });
 
     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
+        Route::prefix('business-tools')->name('dashboard.business-tools.')->group(function (): void {
+            Route::get('/', [BusinessToolsController::class, 'index'])->name('index');
+            Route::get('/open', [BusinessToolsController::class, 'open'])->name('open');
+            Route::get('/orders.csv', [BusinessToolsController::class, 'export'])->name('export');
+        });
+
         Route::middleware('capability:commerce_orders')->group(function (): void {
             Route::get('/orders', [CommerceOrderController::class, 'index'])->name('dashboard.orders.index');
             Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('dashboard.orders.show');
