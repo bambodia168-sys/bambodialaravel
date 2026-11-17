@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'capability' => EnsureCapability::class,
         ]);
         $middleware->web(append: [SetLocale::class, EnsureActiveAccount::class]);
+        $middleware->redirectUsersTo(fn (Request $request) => $request->user()->defaultWorkspaceUrl());
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Credentials are never echoed into validation redirects or flash data.

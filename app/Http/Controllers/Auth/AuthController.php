@@ -46,6 +46,7 @@ class AuthController extends Controller
         if (UserTwoFactor::query()->whereKey($request->user()->id)->exists()) {
             $pendingId=$request->user()->id;
             $remember=$request->boolean('remember');
+            $intended = $request->session()->get('url.intended');
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -54,12 +55,15 @@ class AuthController extends Controller
                 'twofactor.pending_at'=>now()->timestamp,
                 'twofactor.pending_remember'=>$remember,
             ]);
+            if (is_string($intended)) {
+                $request->session()->put('url.intended', $intended);
+            }
             return redirect()->route('login.two-factor');
         }
         $request->session()->regenerate();
         AuditEvent::record('auth.login.success', $request->user(), $request);
 
-        return redirect()->intended($this->destination($request->user()));
+        return redirect()->intended($request->user()->defaultWorkspaceUrl());
     }
 
     public function register(): View
@@ -111,7 +115,7 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect($this->destination($user));
+        return redirect($user->defaultWorkspaceUrl());
     }
 
     public function logout(Request $request): RedirectResponse
@@ -174,12 +178,5 @@ class AuthController extends Controller
                 ->where('category','terms'))
             ->latest('id')
             ->first();
-    }
-
-    private function destination(User $user): string
-    {
-        return $user->isAdministrator()
-            ? route('dashboard')
-            : url('/account').'?='.$user->public_id;
     }
 }

@@ -135,8 +135,7 @@ final class TwoFactorController extends Controller
         AuditEvent::record('auth.two_factor.challenge.passed',$user,$request);
         AuditEvent::record('auth.login.success',$user,$request);
 
-        return redirect()->intended($user->isAdministrator()
-            ? route('dashboard') : url('/account').'?='.$user->public_id);
+        return redirect()->intended($user->defaultWorkspaceUrl());
     }
 
     public static function consume(UserTwoFactor $credential, string $code): bool

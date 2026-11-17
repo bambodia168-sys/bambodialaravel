@@ -74,6 +74,15 @@ class User extends Authenticatable
         return $this->hasOne(FreelancerResume::class);
     }
 
+    public function defaultWorkspaceUrl(): string
+    {
+        return match (true) {
+            $this->isAdministrator() => route('dashboard'),
+            $this->isCreator() => route('creator'),
+            default => route('account').'?='.$this->public_id,
+        };
+    }
+
     public function isAdministrator(): bool
     {
         return in_array($this->role, ['super_admin', 'admin', 'staff'], true);

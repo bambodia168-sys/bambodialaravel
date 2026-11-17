@@ -33,6 +33,12 @@
   $groups = [];
 
   if ($workspace === 'admin') {
+    $groups[] = ['heading'=>'Overview','items'=>[
+      ['route'=>'dashboard','label'=>'Dashboard overview','icon'=>'layout-dashboard'],
+      ['route'=>'dashboard.badges.index','label'=>'Creator Badges','icon'=>'award'],
+      ['route'=>'account.profile.edit','label'=>'My Profile','icon'=>'user-round'],
+      ['route'=>'account.security','label'=>'Account Security','icon'=>'shield-check'],
+    ]];
     if (config('commerce.enabled') && \App\Support\UserManagementAccess::allows($user, 'commerce_orders')) {
       $commerceItems = [['route'=>'dashboard.orders.index','label'=>'Marketplace Orders','icon'=>'file-text']];
       if ($user->role === 'super_admin') {
@@ -40,12 +46,6 @@
       }
       $groups[] = ['heading'=>'Commerce','items'=>$commerceItems];
     }
-    $groups[] = ['heading'=>'Overview','items'=>[
-      ['route'=>'dashboard','label'=>'Dashboard overview','icon'=>'layout-dashboard'],
-      ['route'=>'dashboard.badges.index','label'=>'Creator Badges','icon'=>'award'],
-      ['route'=>'account.profile.edit','label'=>'My Profile','icon'=>'user-round'],
-      ['route'=>'account.security','label'=>'Account Security','icon'=>'shield-check'],
-    ]];
     if ($user->role === 'super_admin') {
       $groups[] = ['heading'=>'Access & Security','items'=>[
         ['route'=>'dashboard.users','label'=>'User Manager','icon'=>'users'],
