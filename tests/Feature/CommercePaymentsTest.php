@@ -174,7 +174,6 @@ class CommercePaymentsTest extends TestCase
 
     public function test_paid_service_delivery_review_and_order_support_remain_participant_scoped(): void
     {
-        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         Storage::fake('local');
         [$buyer, $order] = $this->order();
         $seller = User::query()->findOrFail($order->seller_id);

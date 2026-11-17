@@ -196,7 +196,7 @@ Route::middleware('auth')->group(function (): void {
             ->name('security.alerts.acknowledge')->middleware('throttle:30,1');
     });
     Route::get('/support-center/tickets', [SupportController::class, 'index'])->name('support.tickets');
-    Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1');
+    Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1,support-ticket-create:');
     Route::get('/support-center/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('support.show');
     Route::post('/support-center/{ticket}/reply', [SupportController::class, 'reply'])->whereNumber('ticket')->name('support.reply')->middleware('throttle:10,1');
     Route::get('/privacy-requests', [PrivacyRequestController::class,'index'])->name('privacy.index');
@@ -211,10 +211,10 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/', [CommerceOrderController::class, 'index'])->name('index');
         Route::get('/new/{listing}', [CommerceOrderController::class, 'create'])->where('listing', '[0-9]{9}')->name('create');
         Route::post('/new/{listing}', [CommerceOrderController::class, 'store'])->where('listing', '[0-9]{9}')
-            ->middleware('throttle:10,1')->name('store');
+            ->middleware('throttle:10,1,commerce-order-create:')->name('store');
         Route::get('/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('show');
         Route::post('/{number}/review', [MarketplaceOrderReviewController::class, 'store'])->whereUuid('number')
-            ->middleware('throttle:10,1')->name('review.store');
+            ->middleware('throttle:10,1,commerce-review-create:')->name('review.store');
         Route::get('/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('receipt');
         Route::patch('/{number}/cancel', [CommerceOrderController::class, 'cancel'])->whereUuid('number')
             ->middleware('throttle:10,1')->name('cancel');
@@ -223,7 +223,7 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/{number}/payments/start', [CommercePaymentController::class, 'start'])->whereUuid('number')
             ->middleware('throttle:10,1')->name('payment.start');
         Route::post('/{number}/payments/manual', [CommercePaymentController::class, 'submit'])->whereUuid('number')
-            ->middleware('throttle:10,1')->name('payment.submit');
+            ->middleware('throttle:10,1,commerce-receipt-submit:')->name('payment.submit');
         Route::get('/{number}/payments/{payment}/return', [CommercePaymentController::class, 'returned'])
             ->whereUuid(['number', 'payment'])->name('payment.return');
         Route::post('/{number}/payments/{payment}/verify', [CommercePaymentController::class, 'verify'])
@@ -253,14 +253,14 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/inquiries/for/{listing}', [ServiceInquiryController::class, 'store'])
         ->name('inquiries.store')->middleware('throttle:5,1');
     Route::post('/inquiries/{inquiry}/reply', [ServiceInquiryController::class, 'reply'])
-        ->name('inquiries.reply')->middleware('throttle:20,1');
+        ->name('inquiries.reply')->middleware('throttle:20,1,inquiry-reply:');
     Route::patch('/inquiries/{inquiry}/close', [ServiceInquiryController::class, 'close'])->name('inquiries.close');
     Route::prefix('/inquiries/{inquiry}/delivery')->name('inquiries.delivery.')->group(function (): void {
-        Route::post('/requirements', [ServiceDeliveryController::class, 'requirements'])->middleware('throttle:10,1')->name('requirements');
-        Route::post('/', [ServiceDeliveryController::class, 'submit'])->middleware('throttle:10,1')->name('submit');
-        Route::patch('/', [ServiceDeliveryController::class, 'decide'])->middleware('throttle:10,1')->name('decide');
+        Route::post('/requirements', [ServiceDeliveryController::class, 'requirements'])->middleware('throttle:10,1,service-requirements:')->name('requirements');
+        Route::post('/', [ServiceDeliveryController::class, 'submit'])->middleware('throttle:10,1,service-delivery-submit:')->name('submit');
+        Route::patch('/', [ServiceDeliveryController::class, 'decide'])->middleware('throttle:10,1,service-delivery-decision:')->name('decide');
         Route::get('/{delivery}/download', [ServiceDeliveryController::class, 'download'])
-            ->whereNumber('delivery')->middleware('throttle:30,1')->name('download');
+            ->whereNumber('delivery')->middleware('throttle:30,1,service-delivery-download:')->name('download');
     });
     Route::get('/resume-builder', [ResumeController::class, 'edit'])->name('resume.edit');
     Route::patch('/resume-builder', [ResumeController::class, 'update'])->name('resume.update');
