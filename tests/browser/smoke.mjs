@@ -147,7 +147,7 @@ try {
         }
         // UI action convention: never add decorative arrows after button labels.
         const decoratedActions=[
-          '.marketplace-freelancer-section .marketplace-section-heading .btn svg',
+          '#bambodia-freelancers .freelancer-directory-link svg',
           '#bambodia-jobs .marketplace-section-heading .btn svg',
           '.home-blog-heading-actions > .btn svg',
           '.blog-card-read svg',
@@ -219,7 +219,7 @@ try {
           throw new Error(device.name+' expected 4 public freelancer cards');
         if(!(await page.getByRole('heading',{name:'Freelancers',exact:true}).isVisible()))
           throw new Error(device.name+' freelancer heading missing');
-        const creatorDirectory=page.locator('.marketplace-freelancer-section a[href*="/creators"]')
+        const creatorDirectory=page.locator('#bambodia-freelancers a.freelancer-directory-link[href*="/creators"]')
           .filter({hasText:'Browse freelancers'}).first();
         if(!(await creatorDirectory.isVisible()))
           throw new Error(device.name+' freelancer showcase directory label or target mismatch');
@@ -274,6 +274,8 @@ try {
         const uploadedAvatar=avatarCard.locator('a.freelancer-showcase-portrait img');
         if(await uploadedAvatar.count()!==1)
           throw new Error(device.name+' uploaded creator avatar was replaced by an initial');
+        await uploadedAvatar.scrollIntoViewIfNeeded();
+        await uploadedAvatar.evaluate(img=>img.decode());
         const avatarRender=await uploadedAvatar.evaluate(img=>({
           complete:img.complete,
           naturalWidth:img.naturalWidth,
