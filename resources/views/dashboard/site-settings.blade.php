@@ -5,6 +5,16 @@
 <div class="eyebrow">{{ $group==='appearance'?'Front Customizer':'System Center' }}</div>
 <h1>{{ $group==='appearance'?'Appearance':'System Settings' }}</h1>
 <p>Each configuration below is connected to actual page rendering, locale selection or the public support contact. Changes are stored in the database.</p></div>
+@if($group !== 'appearance' && auth()->user()->role === 'super_admin')
+<section class="panel">
+  <div class="panel-head">
+    <div><h2>SMTP Setup</h2><p>Configure email delivery for Bambodia notifications.</p></div>
+    <div class="smtp-settings-actions">
+      <a class="btn subtle compact" href="{{ route('dashboard.smtp.index') }}"><x-icon name="mail" size="16"/> Open SMTP Setup</a>
+    </div>
+  </div>
+</section>
+@endif
 <section class="panel"><div class="panel-head"><h2>Configuration <span class="count">{{ count($definitions) }}</span></h2></div>
 <div class="table-scroll"><table class="data-table">
 <thead><tr><th>Setting</th><th>Purpose</th><th>Current value</th><th>Action</th></tr></thead><tbody>

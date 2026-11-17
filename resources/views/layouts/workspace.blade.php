@@ -10,6 +10,9 @@
   @vite(['resources/css/app.css','resources/js/app.js'])
   @include('layouts.partials.site-typography')
   <link rel="stylesheet" href="{{ asset('css/header-flag-scroll-top.css') }}?v=1">
+  @if(request()->routeIs('dashboard.system-settings', 'dashboard.smtp.*', 'localized.*.dashboard.system-settings', 'localized.*.dashboard.smtp.*'))
+    <link rel="stylesheet" href="{{ asset('css/smtp-settings.css') }}?v=1">
+  @endif
   {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
   <link rel="stylesheet" href="{{ asset('css/creator-badge-tooltip-viewport.css') }}?v=1">
   <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>
@@ -72,6 +75,7 @@
         ['route'=>'dashboard.languages.index','label'=>'Language Manager','icon'=>'globe'],
         ['route'=>'dashboard.typography.index','label'=>'Typography','icon'=>'palette'],
         ['route'=>'dashboard.system-settings','label'=>'System Settings','icon'=>'settings'],
+        ['route'=>'dashboard.smtp.index','label'=>'SMTP Setup','icon'=>'mail','roles'=>['super_admin']],
         ['route'=>'dashboard.ai-draft.index','label'=>'AI Draft Studio','icon'=>'sparkles','roles'=>['super_admin']],
         ['route'=>'dashboard.pages','label'=>'Page Manager','icon'=>'file-text'],
         ['route'=>'dashboard.posts','label'=>'Post Manager','icon'=>'newspaper'],
