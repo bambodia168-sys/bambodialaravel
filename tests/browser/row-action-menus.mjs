@@ -108,8 +108,7 @@ try {
       viewport:{ width,height },deviceScaleFactor:1,isMobile,hasTouch:isMobile,
     });
     const creator = await creatorContext.newPage();
-    await login(creator, 'browser.creator@example.test', /\/account\?/);
-    await creator.goto(origin+'/creator', {waitUntil:'networkidle'});
+    await login(creator, 'browser.creator@example.test', /\/en\/creator$/);
     const recent = creator.locator('[aria-labelledby="creator-recent"] .workspace-overview-row').first();
     const recentTitle = await recent.locator('strong').innerText();
     if (!/\/builder\?=\d{9}$/.test(await recent.getAttribute('href') ?? ''))
