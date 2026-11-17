@@ -3,6 +3,7 @@
   use App\Support\SiteIdentity;
 
   $languages = SiteLanguage::CATALOG;
+  $sharingImageGuidance = 'PNG, JPEG, or WebP · 1,200 × 630 px recommended · up to 2 MB';
   $activeLanguages = SiteLanguage::activeCodes();
   $sharingSlots = SiteIdentity::sharingSlots();
   $sharedImage = SiteIdentity::sharedImage($assets->get(SiteIdentity::SHARED_IMAGE));
@@ -69,6 +70,7 @@
     <div>
       <h2 id="site-sharing-heading">Social Sharing</h2>
       <p>Public pages use their featured image first. The previews below show the fallback for each language.</p>
+      <p>{{ $sharingImageGuidance }}</p>
     </div>
   </div>
   <div class="table-scroll">
@@ -100,7 +102,7 @@
                 @csrf
                 <input type="hidden" name="slot" value="{{ $slot }}">
                 <h2 id="sharing-heading-{{ $slot }}">{{ $label }}</h2>
-                <p>Choose a 1200 × 630 px JPEG, PNG, or WebP image up to 3 MB.</p>
+                <p>{{ $sharingImageGuidance }}</p>
                 <label for="sharing-file-{{ $slot }}">Sharing image</label>
                 <input id="sharing-file-{{ $slot }}" type="file" accept="image/jpeg,image/png,image/webp" name="image" required>
                 @if(old('slot') === $slot)

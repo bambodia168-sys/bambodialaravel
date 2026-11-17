@@ -19,14 +19,14 @@ final class SiteBrandingController extends Controller
         $sharingSlots = SiteIdentity::sharingSlots();
         $data = $request->validate([
             'slot' => ['required', Rule::in([...array_keys(SiteBrandAsset::SLOTS), ...array_keys($sharingSlots)])],
-            'image' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:3072',
-                'dimensions:max_width=4096,max_height=4096'],
         ]);
 
         $slot = $data['slot'];
-        if (isset($sharingSlots[$slot])) {
-            $request->validate(['image' => ['dimensions:width=1200,height=630']]);
-        }
+        $imageRules = ['required', 'image', 'mimes:jpeg,jpg,png,webp'];
+        $imageRules = isset($sharingSlots[$slot])
+            ? [...$imageRules, 'max:2048']
+            : [...$imageRules, 'max:3072', 'dimensions:max_width=4096,max_height=4096'];
+        $request->validate(['image' => $imageRules]);
         $file = $request->file('image');
         $newPath = $file->store('site-branding', 'public');
         abort_unless($newPath, 500, 'Unable to store branding file.');

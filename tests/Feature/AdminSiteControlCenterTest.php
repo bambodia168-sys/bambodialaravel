@@ -117,6 +117,25 @@ class AdminSiteControlCenterTest extends TestCase
         $this->get('/km')->assertOk()->assertSee($tag($shared), false);
     }
 
+    public function test_social_image_uploads_use_a_two_megabyte_limit_with_flexible_dimensions(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->actor())->get(route('dashboard.site-identity'))->assertOk()
+            ->assertSee('PNG, JPEG, or WebP · 1,200 × 630 px recommended · up to 2 MB');
+        $upload = route('dashboard.site-identity.assets.store');
+        $smallImage = file_get_contents(public_path('favicon.png'));
+        foreach (['social_shared', 'social_km'] as $slot) {
+            $this->post($upload, ['slot' => $slot, 'image' => UploadedFile::fake()
+                ->createWithContent('sharing.png', $smallImage)->size(2048)])
+                ->assertRedirect()->assertSessionHasNoErrors();
+            $saved = SiteBrandAsset::query()->findOrFail($slot);
+            $this->post($upload, ['slot' => $slot, 'image' => UploadedFile::fake()
+                ->createWithContent('sharing.png', $smallImage)->size(2049)])
+                ->assertSessionHasErrors('image');
+            $this->assertSame($saved->storage_path, $saved->fresh()->storage_path);
+        }
+    }
+
     public function test_brand_asset_upload_replace_and_reset_work_in_public_layout(): void
     {
         Storage::fake('public');
