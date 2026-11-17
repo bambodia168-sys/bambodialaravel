@@ -34,6 +34,15 @@ class MediaLibraryController extends Controller
         return view('media.index', compact('assets', 'studio', 'accountMedia', 'routePrefix'));
     }
 
+    public function create(Request $request): View
+    {
+        $accountMedia = $request->routeIs('account.media.*');
+        $studio = $accountMedia || $request->routeIs('studio.media.*');
+        $routePrefix = $accountMedia ? 'account.media' : ($studio ? 'studio.media' : 'dashboard.media');
+
+        return view('media.upload', compact('accountMedia', 'studio', 'routePrefix'));
+    }
+
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $fromBuilder = $request->routeIs('builder.media.store');
@@ -114,7 +123,7 @@ class MediaLibraryController extends Controller
 
         AuditEvent::record('media.uploaded', $request->user(), $request);
 
-        if (($fromBuilder || $fromPost) && $request->expectsJson()) {
+        if ($request->expectsJson()) {
             return response()->json([
                 'id' => $asset->id,
                 'public_id' => $asset->public_id,
@@ -287,11 +296,29 @@ class MediaLibraryController extends Controller
             'rights_holder' => ['required', 'string', 'min:2', 'max:180'],
             'rights_note' => ['nullable', 'string', 'max:3000', 'required_if:rights_basis,licensed'],
         ];
+        $library = $request->routeIs('dashboard.media.*', 'studio.media.*', 'account.media.*');
+        if ($library) {
+            $rules = [
+                'alt_text' => ['nullable', 'string', 'max:180'],
+                'rights_basis' => ['nullable', Rule::in(['owned', 'licensed'])],
+                'rights_holder' => ['nullable', 'string', 'max:180'],
+                'rights_note' => ['nullable', 'string', 'max:3000'],
+            ];
+        }
         if ($withFile) {
             $rules['image'] = ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm',
                 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm', 'max:20480'];
         }
 
-        return $request->validate($rules);
+        $data = $request->validate($rules);
+        if ($library) {
+            // Empty metadata records no ownership assertion and needs no schema change.
+            $data['alt_text'] = $data['alt_text'] ?? ($withFile
+                ? mb_substr(pathinfo($request->file('image')->getClientOriginalName(), PATHINFO_FILENAME), 0, 180)
+                : '');
+            $data['rights_basis'] = $data['rights_basis'] ?? '';
+            $data['rights_holder'] = $data['rights_holder'] ?? '';
+        }
+        return $data;
     }
 }
