@@ -3,8 +3,12 @@
 @section('title', 'Payment Methods')
 @section('content')
 <div class="container inner-page">
-  <div class="page-intro">
+  <div class="page-intro payment-methods-intro">
     <h1>Payment methods</h1>
+    <button class="btn primary compact payment-methods-add" type="button" data-modal-open="add-payment-method"
+            aria-haspopup="dialog" aria-controls="add-payment-method">
+      <x-icon name="plus" size="16"/> Add method
+    </button>
     @if(!config('commerce.payments_enabled'))
       <p>Payment processing is disabled. You can prepare payment methods here.</p>
     @else
@@ -12,18 +16,6 @@
     @endif
   </div>
   <section class="panel">
-    <div class="panel-head">
-      <form method="post" action="{{ route('dashboard.payment-methods.store') }}" class="table-search">
-        @csrf
-        <input name="name" aria-label="Payment method name" placeholder="Payment method name" value="{{ old('name') }}" maxlength="80" required>
-        <select name="provider" aria-label="Payment provider">
-          @foreach(\App\Models\CommercePaymentMethod::PROVIDERS as $key => $label)
-            <option value="{{ $key }}" @selected(old('provider', 'other') === $key)>{{ $label }}</option>
-          @endforeach
-        </select>
-        <button class="btn primary compact">Add method</button>
-      </form>
-    </div>
     <div class="table-scroll">
       <table class="data-table">
         <thead><tr><th>Method</th><th>Mode</th><th>Availability</th><th>Settings</th></tr></thead>
@@ -49,6 +41,14 @@
   </section>
 </div>
 <style>
+  .payment-methods-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: .75rem;
+  }
+  .payment-methods-intro p { grid-column: 1 / -1; }
+  .payment-methods-add { justify-self: end; }
   dialog.payment-method-dialog {
     position: fixed;
     inset: 0;
@@ -73,7 +73,46 @@
   .payment-method-dialog__body input[type="checkbox"] { display: inline; width: auto; }
   .payment-method-dialog :is(input,textarea,select):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
   .payment-method-dialog__close { font-size: 1.35rem; }
+  dialog.payment-method-dialog--add { width: min(29rem, calc(100% - 2rem)); }
+  #add-payment-method-help { margin: .75rem 0 0; }
+  .payment-method-dialog__body .payment-method-dialog__error { color: var(--danger); margin: .4rem 0 0; }
 </style>
+@php($addErrors = $errors->getBag('addPaymentMethod'))
+<dialog class="config-dialog payment-method-dialog payment-method-dialog--add" id="add-payment-method"
+        aria-labelledby="add-payment-method-heading" aria-describedby="add-payment-method-help"
+        @if($addErrors->any()) data-payment-reopen @endif>
+  <form method="post" action="{{ route('dashboard.payment-methods.store') }}">
+    @csrf
+    <header class="payment-method-dialog__header">
+      <h2 id="add-payment-method-heading">Add manual payment method</h2>
+      <button type="button" class="btn subtle compact payment-method-dialog__close" data-modal-close aria-label="Close add payment method">×</button>
+    </header>
+    <div class="payment-method-dialog__body">
+      <label for="add-payment-method-name">Payment method name</label>
+      <input id="add-payment-method-name" name="name" maxlength="80" required autofocus
+             value="{{ $addErrors->any() ? old('name') : '' }}"
+             @error('name', 'addPaymentMethod') aria-invalid="true" aria-describedby="add-payment-method-name-error" @enderror>
+      @error('name', 'addPaymentMethod')
+        <p class="payment-method-dialog__error" id="add-payment-method-name-error" role="alert">{{ $message }}</p>
+      @enderror
+      <label for="add-payment-method-provider">Manual payment type</label>
+      <select id="add-payment-method-provider" name="provider"
+              @error('provider', 'addPaymentMethod') aria-invalid="true" aria-describedby="add-payment-method-provider-error" @enderror>
+        @foreach(\App\Models\CommercePaymentMethod::manualProviders() as $key => $label)
+          <option value="{{ $key }}" @selected(($addErrors->any() ? old('provider', 'other') : 'other') === $key)>{{ $label }}</option>
+        @endforeach
+      </select>
+      @error('provider', 'addPaymentMethod')
+        <p class="payment-method-dialog__error" id="add-payment-method-provider-error" role="alert">{{ $message }}</p>
+      @enderror
+      <p id="add-payment-method-help">New methods start hidden. Use Configure to add transfer instructions or a QR image.</p>
+    </div>
+    <footer class="payment-method-dialog__actions">
+      <button class="btn subtle" type="button" data-modal-close>Cancel</button>
+      <button class="btn primary" type="submit">Add method</button>
+    </footer>
+  </form>
+</dialog>
 @foreach($methods as $method)
   @php($retry = (string) old('configure_method') === (string) $method->id)
   <dialog class="config-dialog payment-method-dialog" id="payment-method-{{ $method->id }}"

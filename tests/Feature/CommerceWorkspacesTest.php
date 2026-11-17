@@ -94,12 +94,25 @@ class CommerceWorkspacesTest extends TestCase
     public function test_super_admin_can_register_and_toggle_payment_methods(): void
     {
         config(['commerce.enabled' => true]);
-        $this->actingAs($this->user('super_admin'))
-            ->post(route('dashboard.payment-methods.store'), ['name' => 'Local bank transfer', 'available' => true])
-            ->assertRedirect(route('dashboard.payment-methods.index'));
+        $page = route('dashboard.payment-methods.index');
+        $save = route('dashboard.payment-methods.store');
+        $popup = $this->actingAs($this->user('super_admin'))->get($page)->assertOk()
+            ->assertSee('data-modal-open="add-payment-method"', false)
+            ->assertSee('Add manual payment method');
+        $reopen = '/<dialog\b[^>]*id="add-payment-method"[^>]*\bdata-payment-reopen\b/';
+        $this->assertDoesNotMatchRegularExpression($reopen, $popup->getContent());
+        $this->from($page)->post($save, ['name' => 'Local bank transfer', 'provider' => 'stripe'])
+            ->assertRedirect($page)->assertSessionHasErrorsIn('addPaymentMethod', 'provider');
+        $this->assertDatabaseMissing('commerce_payment_methods', ['name' => 'Local bank transfer']);
+        $popup = $this->withCookie(config('session.cookie'), session()->getId())->get($page)->assertOk()
+            ->assertSee('id="add-payment-method-provider-error"', false)->assertSee('value="Local bank transfer"', false);
+        $this->assertMatchesRegularExpression($reopen, $popup->getContent());
+        $this->post($save, ['name' => 'Local bank transfer', 'provider' => 'bank_transfer', 'available' => true])
+            ->assertRedirect($page);
         $method = CommercePaymentMethod::query()->where('name', 'Local bank transfer')->sole();
         $this->assertFalse($method->available);
-        $this->get(route('dashboard.payment-methods.index'))->assertOk()->assertSee('Local bank transfer');
+        $this->assertSame('bank_transfer', $method->provider);
+        $this->get($page)->assertOk()->assertSee('Local bank transfer');
         $this->patch(route('dashboard.payment-methods.update', $method), ['available' => true])->assertRedirect();
         $this->assertTrue($method->refresh()->available);
     }

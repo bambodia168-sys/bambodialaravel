@@ -27,9 +27,9 @@ class CommercePaymentMethodController extends Controller
     public function store(Request $request): RedirectResponse
     {
         abort_unless(config('commerce.enabled'), 404);
-        $values = $request->validate([
+        $values = $request->validateWithBag('addPaymentMethod', [
             'name' => ['required', 'string', 'max:80', Rule::unique('commerce_payment_methods')],
-            'provider' => ['sometimes', Rule::in(array_keys(CommercePaymentMethod::PROVIDERS))],
+            'provider' => ['sometimes', Rule::in(array_keys(CommercePaymentMethod::manualProviders()))],
         ]);
         DB::transaction(function () use ($values, $request): void {
             CommercePaymentMethod::query()->create($values);
