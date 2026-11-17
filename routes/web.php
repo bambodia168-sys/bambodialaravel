@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\AccountController;
-use App\Http\Controllers\CommerceOrderController;
 use App\Http\Controllers\CommerceSettlementController;
+use App\Http\Controllers\CommerceOrderController;
 use App\Http\Controllers\CommercePaymentMethodController;
 use App\Http\Controllers\CommercePaymentController;
 use App\Http\Controllers\ProfileEditorController;

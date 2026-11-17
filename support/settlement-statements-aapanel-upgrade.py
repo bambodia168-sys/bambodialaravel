@@ -216,9 +216,10 @@ def main():
                 'Unexpected production checkout, settlement routes or payment activation state')
         work = Path(directory)
         repo, stage = work / 'repo', work / 'overlay'
-        subprocess.run(('git', 'clone', '--quiet', '--depth=2', '--single-branch', '--branch', BRANCH,
+        subprocess.run(('git', 'clone', '--quiet', '--depth=3', '--single-branch', '--branch', BRANCH,
                         SOURCE, str(repo)), check=True)
-        require(output('git', '-C', str(repo), 'rev-parse', 'HEAD', 'HEAD^').decode().split() == [args.release, BASE],
+        require(output('git', '-C', str(repo), 'rev-parse', 'HEAD').decode().strip() == args.release
+                and output('git', '-C', str(repo), 'merge-base', BASE, args.release).decode().strip() == BASE,
                 'Release SHA or production baseline differs')
         subprocess.run(('git', '-C', str(repo), 'fetch', '--quiet', '--depth=2', 'origin', CHECKOUT), check=True)
         require(output('git', '-C', str(repo), 'rev-parse', 'FETCH_HEAD').decode().strip() == CHECKOUT,
