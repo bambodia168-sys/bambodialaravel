@@ -1604,8 +1604,7 @@ try {
       await creator.locator('input[name="email"]').fill('browser.creator@example.test');
       await creator.locator('input[name="password"]').fill('BrowserOnlyPassword123!');
       await creator.locator('form.auth-form button[type="submit"]').click();
-      await creator.waitForURL(/\/account\?/,{timeout:15000});
-      await creator.goto(origin+'/en/creator',{waitUntil:'networkidle'});
+      await creator.waitForURL(/\/en\/creator$/,{timeout:15000});
       if(!(await creator.getByRole('heading',{name:'Your recent submissions'}).isVisible()))
         throw new Error('Creator private submissions overview missing');
       if(!(await creator.getByRole('heading',{name:'Open client conversations'}).isVisible()))
