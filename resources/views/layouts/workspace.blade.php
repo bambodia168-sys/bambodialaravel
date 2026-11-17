@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=3">
     <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=2"></script>
   @endif
+  @stack('workspace-styles')
 </head>
 @php
   $workspace = trim($__env->yieldContent('workspace', 'account'));
@@ -35,6 +36,7 @@
   if ($workspace === 'admin') {
     $groups[] = ['heading'=>'Overview','items'=>[
       ['route'=>'dashboard','label'=>'Dashboard overview','icon'=>'layout-dashboard'],
+      ['route'=>'dashboard.business-tools.index','label'=>'Business Tools','icon'=>'briefcase'],
       ['route'=>'dashboard.badges.index','label'=>'Creator Badges','icon'=>'award'],
       ['route'=>'account.profile.edit','label'=>'My Profile','icon'=>'user-round'],
       ['route'=>'account.security','label'=>'Account Security','icon'=>'shield-check'],
@@ -116,6 +118,7 @@
     $groups = [
       ['heading'=>'Creator Overview','items'=>[
         ['route'=>'creator','label'=>'Studio Overview','icon'=>'layout-dashboard'],
+        ['route'=>'studio.business-tools.index','label'=>'Business Tools','icon'=>'briefcase'],
         ['route'=>'studio.profile.edit','label'=>'Public Creator Profile','icon'=>'user-round-check'],
         ['route'=>'studio.listings','label'=>'Listings & Services','icon'=>'folders'],
       ]],

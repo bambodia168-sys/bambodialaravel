@@ -82,6 +82,21 @@ jobs:
           # login throttles before a final independent browser session.
           php artisan cache:clear
           node tests/browser/builder-terms-readable.mjs
+      - name: Verify Business Tools toolbar and report actions
+        env:
+          APP_URL: http://127.0.0.1:8095
+          BASE_URL: http://127.0.0.1:8095
+          COMMERCE_WORKSPACES_ENABLED: 'true'
+        run: |
+          php artisan cache:clear
+          php artisan serve --host=127.0.0.1 --port=8095 --no-reload > /tmp/bambodia-business-tools-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl -fsS -o /dev/null http://127.0.0.1:8095/; then break; fi
+            sleep 1
+          done
+          node tests/browser/business-tools.mjs
       - name: Keep screenshots for acceptance review
         if: always()
         uses: actions/upload-artifact@v4
