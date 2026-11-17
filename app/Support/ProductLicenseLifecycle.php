@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\LicenseDefinition;
 use App\Models\MarketplaceListing;
+use App\Models\MarketplaceOrder;
 use App\Models\ProductEntitlement;
 use App\Models\ProductFileVersion;
 use App\Models\ProductLicense;
@@ -16,9 +17,7 @@ use Illuminate\Validation\ValidationException;
 final class ProductLicenseLifecycle
 {
     /**
-     * This is the ONLY issuance path currently enabled. It is explicitly a
-     * complimentary manual grant, not proof of a purchase or processed payment.
-     * Do not wire order creation or browser-submitted "paid" flags here.
+     * A complimentary license issued by an administrator for an existing entitlement.
      */
     public static function issueManual(ProductEntitlement $entitlement, string $tier, User $administrator, string $reason, string $supportTerm = 'six_months'): ProductLicense
     {
@@ -49,28 +48,43 @@ final class ProductLicenseLifecycle
                 && $definition->allowsTier($tier), 409,
                 'The selected license definition must be active and reviewed.');
 
-            $secret = 'BAM-'.strtoupper(bin2hex(random_bytes(24)));
-            $license = ProductLicense::query()->create([
-                'product_entitlement_id' => $grant->id,
-                'marketplace_listing_id' => $product->id,
-                'product_file_version_id' => $version->id,
-                'user_id' => $grant->user_id,
-                'license_definition_id' => $definition->id,
-                'tier' => $tier,
-                'source' => 'admin_complimentary',
-                'issued_by' => $administrator->id,
-                'key_hash' => hash('sha256', $secret),
-                'key_prefix' => substr($secret,0,12),
-                'key_ciphertext' => $secret,
-                'status' => 'active',
-                'max_domains' => 1,
-                'expires_at' => null,
-                ...ProductLicenseSupport::issuePeriod($supportTerm),
-            ]);
+            $license = self::createLicense($grant, $product->id, $definition->id, $tier, 'admin_complimentary', $administrator->id, $supportTerm);
             self::event($license,'issued',$administrator->id,null,null,
                 mb_substr($reason.' · '.ProductLicenseSupport::TERMS[$supportTerm],0,500));
             return $license;
         });
+    }
+
+    public static function issuePurchase(ProductEntitlement $grant, MarketplaceOrder $order): ProductLicense
+    {
+        $license = self::createLicense($grant, $order->marketplace_listing_id, $order->fulfillment_definition_id,
+            $order->license_tier, 'verified_purchase', null, 'six_months');
+        self::event($license, 'issued', null, null, null, $grant->grant_reason);
+
+        return $license;
+    }
+
+    private static function createLicense(ProductEntitlement $grant, int $product, int $definition, string $tier,
+        string $source, ?int $issuer, string $supportTerm): ProductLicense
+    {
+        $secret = 'BAM-'.strtoupper(bin2hex(random_bytes(24)));
+
+        return ProductLicense::query()->create([
+            'product_entitlement_id' => $grant->id,
+            'marketplace_listing_id' => $product,
+            'product_file_version_id' => $grant->product_file_version_id,
+            'user_id' => $grant->user_id,
+            'license_definition_id' => $definition,
+            'tier' => $tier,
+            'source' => $source,
+            'issued_by' => $issuer,
+            'key_hash' => hash('sha256', $secret),
+            'key_prefix' => substr($secret, 0, 12),
+            'key_ciphertext' => $secret,
+            'status' => 'active',
+            'max_domains' => 1,
+            ...ProductLicenseSupport::issuePeriod($supportTerm),
+        ]);
     }
 
     /** The installer must send the key over HTTPS; no key ever appears in a URL. */

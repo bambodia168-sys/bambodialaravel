@@ -8,6 +8,7 @@ use App\Models\AuditEvent;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
 use App\Models\User;
+use App\Support\OrderFulfillment;
 use App\Support\PreviewContentReview;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -42,6 +43,9 @@ class CommerceOrderController extends Controller
     {
         [$orders, $section, $workspace] = $this->workspace($request);
         $order = $orders->where('number', $number)->firstOrFail();
+        if ($section !== 'dashboard.orders' && $order->status === 'completed') {
+            $order->load($section === 'account.orders' ? ['serviceInquiry', 'entitlement'] : ['serviceInquiry']);
+        }
 
         $methods = $section === 'account.orders' && $order->status === 'awaiting_payment'
             ? CommercePaymentMethod::query()->where('available', true)->orderBy('name')->get()
@@ -107,6 +111,7 @@ class CommerceOrderController extends Controller
             abort_unless($quote && hash_equals($quote['signature'], $data['quote']), 409, 'The listing price or terms changed. Reopen the order form.');
             $noPaymentDue = $quote['total'] === '0.00';
             $method = $noPaymentDue ? null : $this->availableMethod($data['payment_method'] ?? null);
+            $definition = $data['tier'] === 'extended' ? $record->extendedLicenseDefinition : $record->licenseDefinition;
 
             $order = MarketplaceOrder::query()->create([
                 'number' => (string) Str::uuid(),
@@ -125,6 +130,7 @@ class CommerceOrderController extends Controller
                 'status' => $noPaymentDue ? 'completed' : 'awaiting_payment',
                 'receipt_number' => $noPaymentDue ? (string) Str::uuid() : null,
                 'completed_at' => $noPaymentDue ? now() : null,
+                ...($noPaymentDue || $record->type !== 'product' ? [] : OrderFulfillment::snapshot($definition, $record, $buyer)),
             ]);
             AuditEvent::record('commerce.order.created', $buyer, $request);
 

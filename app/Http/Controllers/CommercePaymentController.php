@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditEvent;
+use App\Models\AccountNotification;
 use App\Models\CommercePayment;
 use App\Models\CommerceGatewaySetting;
 use App\Models\CommercePaymentMethod;
 use App\Models\MarketplaceOrder;
 use App\Support\CommerceGateway;
 use App\Support\CommerceQrGateway;
+use App\Support\OrderFulfillment;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -150,7 +152,7 @@ class CommercePaymentController extends Controller
         $data = $request->validate([
             'method'=>['required', 'integer', 'min:1'],
             'reference'=>['required', 'string', 'regex:/^[A-Za-z0-9.-]{3,100}$/D'],
-            'proof'=>['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'proof'=>['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
         ]);
         $path = $data['proof']->store('commerce/payment-proofs', 'local');
         abort_unless($path, 503, 'Unable to save the payment proof.');
@@ -160,7 +162,8 @@ class CommercePaymentController extends Controller
                 $this->awaiting($locked);
                 abort_if($locked->payments()->whereIn('status', CommercePayment::ACTIVE)->exists(), 409, 'An existing payment is still open.');
                 $method = CommercePaymentMethod::query()->where('available', true)->lockForUpdate()->findOrFail($data['method']);
-                abort_unless(! $method->usesGateway() && filled($method->instructions), 422);
+                abort_unless(! $method->usesGateway() && $method->availableForCheckout(false), 422);
+                OrderFulfillment::ensureReady($locked);
                 $locked->payments()->create([
                     'number'=>(string) Str::uuid(), 'commerce_payment_method_id'=>$method->id,
                     'method_name'=>$method->name, 'provider'=>$method->provider, 'status'=>'manual_review', 'live_mode'=>true,
@@ -173,7 +176,7 @@ class CommercePaymentController extends Controller
             throw $exception;
         }
 
-        return redirect()->route('account.orders.show', $number)->with('status', 'Payment proof submitted for verification.');
+        return redirect()->route('account.orders.show', $number)->with('status', 'Payment receipt submitted for review.');
     }
 
     public function proof(string $number, string $payment): StreamedResponse
@@ -182,7 +185,7 @@ class CommercePaymentController extends Controller
         $attempt = $this->findPayment($number, $payment);
         abort_unless($attempt->proof_path && Storage::disk('local')->exists($attempt->proof_path), 404);
 
-        return Storage::disk('local')->download($attempt->proof_path, 'payment-proof.'.pathinfo($attempt->proof_path, PATHINFO_EXTENSION),
+        return Storage::disk('local')->download($attempt->proof_path, 'payment-receipt.'.pathinfo($attempt->proof_path, PATHINFO_EXTENSION),
             ['Cache-Control'=>'private, no-store', 'X-Content-Type-Options'=>'nosniff']);
     }
 
@@ -201,13 +204,22 @@ class CommercePaymentController extends Controller
             abort_unless($current->status === 'manual_review', 409);
             abort_if(in_array((int) $request->user()->id, [(int) $order->buyer_id, (int) $order->seller_id], true), 403);
             $this->awaiting($order);
+            $orderPath = route('account.orders.show', $order->number, false);
             $current->update(['reviewed_by'=>$request->user()->id, 'review_note'=>$data['note'], 'reviewed_at'=>now()]);
             if ($data['decision'] === 'approve') {
                 abort_unless($data['verified_amount'] === $order->total, 409, 'The verified USD amount must match the order total.');
+                abort_unless($current->proof_path && Storage::disk('local')->exists($current->proof_path),
+                    409, 'The submitted receipt file is unavailable.');
+                OrderFulfillment::ensureReady($order);
                 $this->settle($order, $current, strtoupper($data['verified_reference']));
+                OrderFulfillment::deliverApprovedTransfer($order);
+                AccountNotification::deliver((int) $order->buyer_id, 'commerce.payment.approved', 'Payment approved',
+                    'Your purchase is ready. Open the order to access it.', $orderPath);
             } else {
                 $current->update(['status'=>'rejected']);
                 AuditEvent::record('commerce.payment.rejected', $request->user(), $request);
+                AccountNotification::deliver((int) $order->buyer_id, 'commerce.payment.rejected', 'Payment receipt rejected',
+                    'Open the order to review your payment status and submit a corrected receipt.', $orderPath);
             }
         }, 3);
 

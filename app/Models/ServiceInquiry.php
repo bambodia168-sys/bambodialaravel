@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ServiceInquiry extends Model
 {
     protected $fillable = [
-        'marketplace_listing_id','client_id','creator_id','subject','proposed_budget',
+        'marketplace_order_id','marketplace_listing_id','client_id','creator_id','subject','proposed_budget',
         'currency','status','closed_by','closed_at',
     ];
 
@@ -33,6 +33,7 @@ class ServiceInquiry extends Model
     }
 
     public function listing(): BelongsTo { return $this->belongsTo(MarketplaceListing::class,'marketplace_listing_id'); }
+    public function order(): BelongsTo { return $this->belongsTo(MarketplaceOrder::class, 'marketplace_order_id'); }
     public function client(): BelongsTo { return $this->belongsTo(User::class,'client_id'); }
     public function creator(): BelongsTo { return $this->belongsTo(User::class,'creator_id'); }
     public function messages(): HasMany { return $this->hasMany(ServiceInquiryMessage::class); }

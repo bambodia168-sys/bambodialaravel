@@ -140,5 +140,8 @@ class ServiceInquiryController extends Controller
     {
         abort_unless((int)$request->user()->id===(int)$inquiry->client_id
             || (int)$request->user()->id===(int)$inquiry->creator_id,404);
+        if ($inquiry->marketplace_order_id !== null) {
+            abort_unless($inquiry->order()->where('status', 'completed')->whereHas('paidAttempt')->exists(), 404);
+        }
     }
 }

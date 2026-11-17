@@ -136,9 +136,15 @@
           @php($live = (bool) config('commerce.live_gateways'))
           <p>{{ $live ? 'Live environment' : 'Sandbox environment' }} · {{ \App\Support\CommerceGateway::ready($method->provider, $live) ? 'Credentials saved' : 'Credentials required' }}</p>
           @if($method->automatic())
-            <p>Webhook endpoint<br><code>{{ route('commerce.webhook', $method->provider) }}</code></p>
+            <p>Enter credentials for this environment and register the webhook endpoint in your {{ $method->name }} dashboard.</p>
+            <p><code>{{ route('commerce.webhook', $method->provider) }}</code></p>
           @else
             <p>Creates a separate USD QR for each order and checks payment with {{ $method->provider === 'aba' ? 'ABA PayWay' : 'Bakong' }}.</p>
+            @if($method->provider === 'aba')
+              <p>Use your ABA PayWay merchant ID and API key. Arrange API access and server allowlisting with ABA.</p>
+            @else
+              <p>Enter the recipient's Bakong account details and NBC Open API access token.</p>
+            @endif
           @endif
           <p>Leave a field blank to keep its saved value.</p>
           @foreach(\App\Models\CommerceGatewaySetting::FIELDS[$method->provider] as $field => $label)
@@ -148,6 +154,7 @@
             </label>
           @endforeach
         @else
+          <p>Enter the recipient and account details buyers need to complete the transfer. Buyers upload their receipt from the order page for review.</p>
           <label>Transfer instructions<textarea name="instructions" rows="3" maxlength="2500">{{ $retry ? old('instructions') : $method->instructions }}</textarea></label>
           <label>Optional merchant QR image<input name="qr" type="file" accept="image/png,image/jpeg,image/webp"></label>
           @if($method->qr_path)

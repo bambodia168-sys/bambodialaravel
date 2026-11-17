@@ -3,10 +3,14 @@
   $canReview = $section === 'dashboard.orders' && auth()->user()->role === 'super_admin';
   $activePayment = $payments->first(fn ($payment) => in_array($payment->status, \App\Models\CommercePayment::ACTIVE, true));
   $live = (bool) config('commerce.live_gateways');
+  $rejectedReceipt = $payments->firstWhere('status', 'rejected');
 @endphp
 @if($buyerView && $order->status === 'awaiting_payment' && $order->currency === 'USD')
   <div class="panel-head"><h2>Pay for this order</h2></div>
   @if(!$activePayment)
+    @if($rejectedReceipt)
+      <div class="panel-head"><p>Your payment receipt was rejected. Check your transfer details and submit a corrected receipt.</p></div>
+    @endif
     @forelse($methods->filter(fn ($method) => $method->availableForCheckout($live)) as $method)
       <div class="panel-head">
         @if($method->usesGateway())
@@ -15,20 +19,23 @@
             <input type="hidden" name="method" value="{{ $method->id }}">
             <button class="btn primary">{{ $method->dynamicQr() ? 'Generate QR for' : 'Pay with' }} {{ $method->name }}</button>
           </form>
+        @elseif($order->license_tier !== null && !$order->fulfillment_version_id)
+          <p>{{ $method->name }} is unavailable for this order. Return to the product page to place a new order with an approved download.</p>
         @else
-          <details>
+          <details @if((string) old('method') === (string) $method->id) open @endif>
             <summary>{{ $method->name }} transfer</summary>
             <p>{!! nl2br(e($method->instructions)) !!}</p>
-            <p>Transfer exactly {{ $order->currency }} {{ $order->total }}. Then submit the transaction reference and proof.</p>
+            <p>Transfer exactly {{ $order->currency }} {{ $order->total }}. Then upload your receipt and enter the transfer reference for review.</p>
             @if($method->qr_path)
               <img src="{{ route('account.orders.payment.qr', [$order->number, $method]) }}" alt="{{ $method->name }} merchant QR" width="200" height="200">
             @endif
             <form method="post" action="{{ route('account.orders.payment.submit', $order->number) }}" enctype="multipart/form-data" class="form-stack">
               @csrf
               <input type="hidden" name="method" value="{{ $method->id }}">
-              <label>Transfer reference<input name="reference" required maxlength="100"></label>
-              <label>Payment proof<input name="proof" type="file" accept="image/png,image/jpeg,image/webp" required></label>
-              <button class="btn primary">Submit proof</button>
+              <label>Transfer reference<input name="reference" value="{{ (string) old('method') === (string) $method->id ? old('reference') : '' }}" required maxlength="100"></label>
+              <label>Payment receipt<input name="proof" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" required></label>
+              <p class="hint">PDF, PNG, JPEG or WebP, up to 5 MB.</p>
+              <button class="btn primary">Submit receipt</button>
             </form>
           </details>
         @endif
@@ -37,7 +44,7 @@
       <div class="panel-head"><p>There are currently no payment methods available for this order.</p></div>
     @endforelse
   @elseif($activePayment->status === 'manual_review')
-    <div class="panel-head"><p>Your transfer is awaiting verification.</p></div>
+    <div class="panel-head"><p>Your payment receipt is awaiting review. Purchase access opens after approval.</p></div>
   @elseif($activePayment->dynamicQr() && $activePayment->remote_id)
     <div class="panel-head">
       <div>
@@ -85,7 +92,8 @@
           @if($canReview)
             <td>
               @if($payment->submitted_reference)<p class="mono">{{ $payment->submitted_reference }}</p>@endif
-              @if($payment->proof_path)<a class="btn subtle compact" href="{{ route('dashboard.orders.payment.proof', [$order->number, $payment->number]) }}">Download proof</a>@endif
+              @if($payment->proof_path)<a class="btn subtle compact" href="{{ route('dashboard.orders.payment.proof', [$order->number, $payment->number]) }}">Download payment receipt</a>@endif
+              @if($payment->review_note)<p>{{ $payment->review_note }}</p>@endif
               @if($payment->status === 'manual_review' && !in_array((int) auth()->id(), [(int) $order->buyer_id, (int) $order->seller_id], true))
                 <details>
                   <summary>Review transfer</summary>
