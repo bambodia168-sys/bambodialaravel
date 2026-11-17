@@ -67,6 +67,7 @@ class ProductEntitlementController extends Controller
             $existing = ProductEntitlement::query()
                 ->where('user_id', $recipient->id)
                 ->where('product_file_version_id', $version->id)
+                ->whereNull('marketplace_order_id')
                 ->lockForUpdate()->first();
             abort_if($existing && $existing->isActive(), 409, 'This recipient already has active access to the selected version.');
 

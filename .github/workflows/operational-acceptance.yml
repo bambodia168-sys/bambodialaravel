@@ -68,6 +68,7 @@ jobs:
           for suite in \
             ContentAndSupportTest \
             ProductMediaLicenseTest \
+            PaidCommerceOperationsTest \
             ProductVaultFulfillmentTest \
             ServiceInquiriesTest \
             NotificationsTest \

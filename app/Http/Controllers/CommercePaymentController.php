@@ -8,6 +8,7 @@ use App\Models\CommerceGatewaySetting;
 use App\Models\CommercePaymentMethod;
 use App\Models\MarketplaceOrder;
 use App\Support\CommerceGateway;
+use App\Support\OrderFulfillment;
 use App\Support\CommerceQrGateway;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
@@ -30,6 +31,8 @@ class CommercePaymentController extends Controller
     public function start(Request $request, string $number): RedirectResponse
     {
         $order = $this->buyerOrder($request, $number);
+        abort_if(config('commerce.operations_enabled') && ! $request->user()->hasVerifiedEmail(),
+            403, 'Verify your email before starting payment.');
         $data = $request->validate(['method'=>['required', 'integer', 'min:1']]);
         $live = (bool) config('commerce.live_gateways');
         $payment = DB::transaction(function () use ($order, $data, $live): CommercePayment {
@@ -42,6 +45,7 @@ class CommercePaymentController extends Controller
 
                 return $active;
             }
+            $this->assertAvailableProduct($locked);
             $method = CommercePaymentMethod::query()->where('available', true)->lockForUpdate()->findOrFail($data['method']);
             abort_unless($method->usesGateway(), 422, 'This gateway is unavailable.');
             CommerceGatewaySetting::forMode($method->provider, $live)->lockForUpdate()->firstOrFail();
@@ -147,6 +151,8 @@ class CommercePaymentController extends Controller
     public function submit(Request $request, string $number): RedirectResponse
     {
         $order = $this->buyerOrder($request, $number);
+        abort_if(config('commerce.operations_enabled') && ! $request->user()->hasVerifiedEmail(),
+            403, 'Verify your email before starting payment.');
         $data = $request->validate([
             'method'=>['required', 'integer', 'min:1'],
             'reference'=>['required', 'string', 'regex:/^[A-Za-z0-9.-]{3,100}$/D'],
@@ -159,6 +165,7 @@ class CommercePaymentController extends Controller
                 $locked = MarketplaceOrder::query()->lockForUpdate()->findOrFail($order->id);
                 $this->awaiting($locked);
                 abort_if($locked->payments()->whereIn('status', CommercePayment::ACTIVE)->exists(), 409, 'An existing payment is still open.');
+                $this->assertAvailableProduct($locked);
                 $method = CommercePaymentMethod::query()->where('available', true)->lockForUpdate()->findOrFail($data['method']);
                 abort_unless(! $method->usesGateway() && filled($method->instructions), 422);
                 $locked->payments()->create([
@@ -265,6 +272,7 @@ class CommercePaymentController extends Controller
         $order->update(['status'=>'completed', 'completed_at'=>now(),
             'receipt_number'=>(string) Str::uuid(), 'payment_method'=>$payment->method_name]);
         AuditEvent::record('commerce.payment.verified', request()->user(), request());
+        OrderFulfillment::afterCommit($order);
     }
 
     private function findPayment(string $number, string $payment): CommercePayment
@@ -283,6 +291,14 @@ class CommercePaymentController extends Controller
     private function awaiting(MarketplaceOrder $order): void
     {
         abort_unless($order->status === 'awaiting_payment' && $order->total !== '0.00' && $order->currency === 'USD', 409);
+    }
+
+    private function assertAvailableProduct(MarketplaceOrder $order): void
+    {
+        if (config('commerce.operations_enabled') && $order->license_tier !== null) {
+            abort_unless($order->fulfillment_version_id && OrderFulfillment::canDeliver($order),
+                409, 'This product release is unavailable. Check the listing before placing a new order.');
+        }
     }
 
     private function enabled(): void

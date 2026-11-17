@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'operations_enabled' => env('COMMERCE_OPERATIONS_ENABLED', false),
     'enabled' => env('COMMERCE_WORKSPACES_ENABLED', false),
     'payments_enabled' => env('COMMERCE_PAYMENTS_ENABLED', false),
     'live_gateways' => env('COMMERCE_LIVE_GATEWAYS', false),

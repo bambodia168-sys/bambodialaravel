@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CommerceOrderController;
+use App\Http\Controllers\CommerceOperationsController;
 use App\Http\Controllers\CommerceCartController;
 use App\Http\Controllers\CommercePaymentMethodController;
 use App\Http\Controllers\CommercePaymentController;
@@ -221,6 +222,9 @@ Route::middleware('auth')->group(function (): void {
         ->name('privacy.close')->where('privacyRequest','[0-9]{9}');
     Route::get('/account/policy-receipts', [PolicyAcknowledgementController::class,'index'])->name('account.policy-receipts');
     Route::prefix('account/orders')->name('account.orders.')->group(function (): void {
+        Route::get('/{number}/refund', [CommerceOperationsController::class, 'show'])->whereUuid('number')->name('refund');
+        Route::post('/{number}/refund', [CommerceOperationsController::class, 'store'])->whereUuid('number')
+            ->middleware('throttle:6,1')->name('refund.store');
         Route::get('/', [CommerceOrderController::class, 'index'])->name('index');
         Route::get('/new/{listing}', [CommerceOrderController::class, 'create'])->where('listing', '[0-9]{9}')->name('create');
         Route::post('/new/{listing}', [CommerceOrderController::class, 'store'])->where('listing', '[0-9]{9}')
@@ -347,6 +351,7 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/orders', [CommerceOrderController::class, 'index'])->name('studio.orders.index');
         Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('studio.orders.show');
         Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('studio.orders.receipt');
+        Route::get('/sales-settlements', [CommerceOperationsController::class, 'index'])->name('studio.commerce-operations');
         Route::get('/profile', [CreatorProfileController::class,'edit'])->name('studio.profile.edit');
         Route::patch('/profile', [CreatorProfileController::class,'update'])
             ->name('studio.profile.update')->middleware('throttle:10,1');
@@ -386,6 +391,13 @@ Route::middleware('auth')->group(function (): void {
                 ->middleware('throttle:10,1')->name('update');
         });
         Route::middleware('role:super_admin')->group(function (): void {
+            Route::get('/commerce-operations', [CommerceOperationsController::class, 'index'])->name('dashboard.commerce-operations');
+            Route::get('/commerce-operations/{number}', [CommerceOperationsController::class, 'show'])
+                ->whereUuid('number')->name('dashboard.commerce-operations.show');
+            Route::post('/commerce-operations/{number}', [CommerceOperationsController::class, 'store'])
+                ->whereUuid('number')->middleware('throttle:15,1')->name('dashboard.commerce-operations.store');
+            Route::post('/orders/{number}/retry-delivery', [CommerceOperationsController::class, 'retryDelivery'])
+                ->whereUuid('number')->middleware('throttle:10,1')->name('dashboard.orders.retry-delivery');
             Route::get('/orders/{number}/payments/{payment}/proof', [CommercePaymentController::class, 'proof'])
                 ->whereUuid(['number', 'payment'])->name('dashboard.orders.payment.proof');
             Route::patch('/orders/{number}/payments/{payment}', [CommercePaymentController::class, 'review'])

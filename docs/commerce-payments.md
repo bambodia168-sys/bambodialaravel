@@ -27,3 +27,13 @@ A super-admin opens **Payment Methods → Configure** to enter the credentials f
 - **Bank Transfer, KHQR, Wing, and custom manual methods** accept transfer instructions and an optional reusable QR image. A super-admin verifies bank records before accepting submitted proof.
 
 The buyer's open order checks QR payment status about every seven seconds. Run Laravel's scheduler each minute to reconcile recent bills when the buyer has closed the page. The order completes and a receipt is issued after a matching provider settlement. If the provider cannot establish the final result, an open attempt can continue to block a new payment. Check the provider dashboard before any manual resolution. Merchant sandbox testing must cover scanned QR compatibility and provider API verification before enabling production payments.
+
+## Paid commerce operations
+
+Run the commerce migrations before enabling `COMMERCE_OPERATIONS_ENABLED=true` on an isolated environment. Keep the existing commerce and payment settings appropriate to that environment.
+
+- Publish a non-preview product with an approved cover, active license definition, and a rights-reviewed, malware-screened original in the File Vault. Checkout binds the order to that release and its license terms. Completed orders show download and license access after delivery.
+- For delivery pending after verified payment, review the original file, screening, license terms, and buyer account. A super administrator can retry from the order page. Previously completed product orders without a captured release cannot use automatic delivery.
+- In **Commerce Operations**, match the verified payment and amount to an external statement line. Record the seller amount due according to the applicable seller agreement. Use an external transfer reference when recording a completed refund, payout, or payout recovery.
+- A requested refund pauses payout recording. A completed full refund revokes the order's download and license. When you record a refund after a completed payout, the order shows the outstanding recovery amount. The workflow records full refunds and individual confirmed transfers.
+- Verify that a real mailbox receives the signed checkout verification email and that each payment method works in an isolated provider account before offering it to customers.
