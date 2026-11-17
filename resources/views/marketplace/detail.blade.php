@@ -6,6 +6,8 @@
   $kindTitle = ucfirst($kind);
   $isProduct = $kind === 'product';
   $layoutSample = str_starts_with($listing->title, '[LAYOUT TEST] ');
+  $cartQuotes = config('commerce.enabled') && \App\Support\CommerceOffers::eligible($listing, auth()->id())
+    ? \App\Support\CommerceOffers::quotes($listing) : [];
   $canInquire = ! $layoutSample && in_array($kind,['project','service','freelance'],true);
   $creatorBadges = $listing->creator
     ? \App\Support\CreatorBadgeAwards::earned($listing->creator) : collect();
@@ -124,7 +126,7 @@
               <p><a href="{{ $listing->extendedLicenseDefinition->publicUrl() }}">Read the Extended License terms</a></p>
             @endif
             @if($listing->license_terms)<p>{!! nl2br(e($listing->license_terms)) !!}</p>@endif
-            <p class="hint">Licensing rights are governed by the linked published license definition. File delivery requires a verified entitlement; direct checkout and payments are not available yet.</p>
+            <p class="hint">Licensing rights are governed by the linked published license definition. File delivery requires a verified entitlement.</p>
           </div>
         </section>
       @else
@@ -144,12 +146,6 @@
     <aside class="premium-detail-sidebar" aria-label="Listing information and actions">
       <section class="premium-side-card premium-price-card premium-offer-v3" aria-labelledby="detail-offer-heading">
         <div class="premium-side-card-body">
-          @if(config('commerce.enabled') && !\App\Support\PreviewContentReview::isPreviewTitle($listing->title)
-              && $listing->creator?->account_status === 'active' && (int) auth()->id() !== (int) $listing->user_id
-              && ($isProduct ? (($regularPrice !== null && $listing->licenseDefinition?->allowsTier('regular'))
-                  || $extendedLicense?->allowsTier('extended')) : $listing->price !== null))
-            <a class="btn primary premium-full-action" href="{{ route('account.orders.create', $listing->public_id) }}">Review order</a>
-          @endif
           @if($isProduct)
             <div class="premium-offer-heading">
               <div>
@@ -162,13 +158,14 @@
             <div class="premium-license-choice">
               <label class="premium-license-label" for="detail-license-tier">License type</label>
               <select id="detail-license-tier" class="premium-license-tier-select" data-detail-license-tier
+                @if($cartQuotes !== []) name="tier" form="listing-cart-add" @endif
                 aria-describedby="detail-license-scope">
-                <option value="regular"
+                <option value="regular" @disabled($cartQuotes !== [] && !isset($cartQuotes['regular']))
                   data-price="{{ $regularPrice !== null ? '$'.number_format((float)$regularPrice,2) : 'Price on request' }}"
                   data-description="{{ $listing->licenseDefinition?->permissions ?: \App\Models\LicenseDefinition::tierDescription('regular') }}"
                   data-terms-url="{{ $listing->licenseDefinition?->publicUrl() }}">Regular License</option>
                 @if($extendedLicense)
-                  <option value="extended"
+                  <option value="extended" @disabled($cartQuotes !== [] && !isset($cartQuotes['extended']))
                     data-price="{{ '$'.number_format((float)$listing->extended_price,2) }}"
                     data-description="{{ $extendedLicense->permissions ?: \App\Models\LicenseDefinition::tierDescription('extended') }}"
                     data-terms-url="{{ $extendedLicense->publicUrl() }}">Extended License</option>
@@ -199,6 +196,9 @@
             </details>
 
             <div class="premium-offer-actions">
+              @if($cartQuotes !== [])
+                <x-listing-cart-action :listing="$listing"/>
+              @endif
               @if($listing->licenseDefinition)
                 <a class="btn primary premium-full-action" data-detail-license-terms
                    href="{{ $listing->licenseDefinition->publicUrl() }}">
@@ -209,7 +209,10 @@
                 <a class="premium-offer-secondary-link" href="{{ route('account.downloads') }}">My entitled downloads</a>
               @endauth
             </div>
-            <p class="premium-offer-footnote"><x-icon name="lock" size="15"/> Direct checkout is not enabled. Download access requires an existing verified entitlement.</p>
+            <p class="premium-offer-footnote"><x-icon name="lock" size="15"/>
+              @if($cartQuotes === []) Direct checkout is not enabled. @endif
+              Download access requires a verified entitlement.
+            </p>
           @else
             <div class="premium-offer-heading">
               <div>
@@ -236,6 +239,9 @@
             </ul>
 
             <div class="premium-offer-actions">
+              @if($cartQuotes !== [])
+                <x-listing-cart-action :listing="$listing"/>
+              @endif
               @if($canInquire)
                 @auth
                   @if(in_array(auth()->user()->role,['customer','subscriber'],true) && (int)auth()->id() !== (int)$listing->user_id)

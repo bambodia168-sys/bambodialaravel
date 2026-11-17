@@ -1,0 +1,232 @@
+.storefront {
+    --storefront-radius: 16px;
+    padding-block: clamp(28px, 5vw, 72px);
+}
+
+.storefront-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    color: var(--muted);
+    font-size: .875rem;
+}
+
+.storefront-steps > * {
+    padding: 5px 12px;
+    border: 1px solid var(--line);
+    border-radius: 99px;
+}
+
+.storefront-steps [aria-current="step"] {
+    color: var(--text);
+    background: var(--surface-2);
+    font-weight: 750;
+}
+
+.storefront-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 330px);
+    align-items: start;
+    gap: 20px;
+}
+
+.storefront-panel {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--storefront-radius);
+    color: var(--text);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.storefront-panel h2,
+.storefront-panel h3 {
+    margin: 0;
+}
+
+.storefront-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px;
+}
+
+.storefront-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--line);
+}
+
+.storefront-icon {
+    display: inline-grid;
+    min-width: 40px;
+    height: 40px;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--accent);
+    background: var(--surface-2);
+}
+
+.storefront-item h3 {
+    overflow-wrap: anywhere;
+    font-size: 1rem;
+}
+
+.storefront-item p,
+.storefront-summary p,
+.storefront-dialog p,
+.storefront-verification p {
+    margin: 5px 0;
+    color: var(--muted);
+}
+
+.storefront-item-controls {
+    display: grid;
+    justify-items: end;
+    gap: 6px;
+    text-align: right;
+}
+
+.storefront-text-button {
+    padding: 2px 0;
+    border: 0;
+    color: var(--muted);
+    background: transparent;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.storefront-summary,
+.storefront-verification,
+.storefront-empty {
+    display: grid;
+    gap: 13px;
+    padding: clamp(16px, 3vw, 25px);
+}
+
+.storefront-summary dl {
+    margin: 0;
+}
+
+.storefront-summary dl > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.storefront-summary dd {
+    margin: 0;
+    font-weight: 750;
+}
+
+.storefront-methods {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.storefront-methods li {
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: var(--surface-2);
+}
+
+.storefront-empty,
+.storefront-verification {
+    justify-items: center;
+    max-width: 35rem;
+    margin-inline: auto;
+    padding: clamp(22px, 5vw, 42px);
+    text-align: center;
+}
+
+.storefront-verification h1 {
+    margin: 0;
+    font-size: clamp(1.45rem, 3vw, 2rem);
+}
+
+.storefront .storefront-notice,
+.storefront-errors {
+    color: var(--accent);
+}
+
+.storefront-dialog {
+    width: min(29rem, calc(100% - 24px));
+    max-height: calc(100dvh - 24px);
+    margin: auto;
+    padding: clamp(17px, 4vw, 26px);
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    color: var(--text);
+    background: var(--surface);
+    box-shadow: 0 22px 70px #07142655;
+}
+
+.storefront-dialog::backdrop {
+    background: #10192899;
+    backdrop-filter: blur(3px);
+}
+
+.storefront-dialog-head,
+.storefront-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.storefront-dialog h2 {
+    margin-block: 12px 4px;
+}
+
+.storefront-dialog-actions,
+.storefront-dialog .auth-form {
+    margin-top: 14px;
+}
+
+.storefront-auth-switch a,
+.storefront-verification > a,
+.storefront-panel-head > a {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.storefront-cart-link {
+    flex: 0 0 auto;
+}
+
+@media (max-width: 780px) {
+    .storefront-columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 520px) {
+    .storefront-item {
+        grid-template-columns: auto minmax(0, 1fr);
+        padding-inline: 14px;
+    }
+
+    .storefront-item-controls {
+        grid-column: 2;
+        justify-items: start;
+        text-align: left;
+    }
+
+    .storefront-dialog-actions > * {
+        flex: 1 1 9rem;
+    }
+}

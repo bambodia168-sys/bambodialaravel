@@ -3,12 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\CommercePaymentMethod;
+use App\Models\CommerceCart;
 use App\Models\CommercePayment;
 use App\Models\AuditEvent;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
 use App\Models\User;
-use App\Support\PreviewContentReview;
+use App\Support\CommerceOffers;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -68,9 +69,8 @@ class CommerceOrderController extends Controller
         abort_unless(config('commerce.enabled'), 404);
         $record = $this->availableListing($listing);
         abort_if((int) $record->user_id === (int) $request->user()->id, 403);
-        $quotes = collect($record->type === 'product' ? ['regular', 'extended'] : ['standard'])
-            ->mapWithKeys(fn (string $tier) => [$tier => $this->quote($record, $tier)])->filter();
-        abort_if($quotes->isEmpty(), 404);
+        $quotes = CommerceOffers::quotes($record);
+        abort_if($quotes === [], 404);
         $methods = CommercePaymentMethod::query()->where('available', true)->orderBy('name')->get();
         $requestKey = (string) Str::uuid();
 
@@ -80,6 +80,21 @@ class CommerceOrderController extends Controller
 
     public function store(Request $request, string $listing): RedirectResponse
     {
+        return $this->place($request, $listing, false);
+    }
+
+    public function placeFromCart(Request $request, string $listing): RedirectResponse
+    {
+        abort_unless(config('commerce.enabled'), 404);
+        if (! $request->user()->hasVerifiedEmail()) {
+            return redirect()->route('checkout.verification');
+        }
+
+        return $this->place($request, $listing, true);
+    }
+
+    private function place(Request $request, string $listing, bool $fromCart): RedirectResponse
+    {
         abort_unless(config('commerce.enabled'), 404);
         $data = $request->validate([
             'tier' => ['required', Rule::in(['regular', 'extended', 'standard'])],
@@ -88,9 +103,9 @@ class CommerceOrderController extends Controller
             'payment_method' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $order = DB::transaction(function () use ($request, $listing, $data): MarketplaceOrder {
+        $order = DB::transaction(function () use ($request, $listing, $data, $fromCart): MarketplaceOrder {
             $buyer = User::query()->lockForUpdate()->findOrFail($request->user()->id);
-            abort_unless($buyer->account_status === 'active', 403);
+            abort_unless($buyer->account_status === 'active' && (! $fromCart || $buyer->hasVerifiedEmail()), 403);
             $existing = MarketplaceOrder::query()->where('buyer_id', $buyer->id)
                 ->where('request_key', $data['request_key'])->first();
             if ($existing) {
@@ -101,12 +116,26 @@ class CommerceOrderController extends Controller
                 return $existing;
             }
 
+            $cart = $fromCart ? CommerceCart::query()->whereKey($buyer->id)->lockForUpdate()->first() : null;
+            $items = $cart?->items ?? [];
+            if ($fromCart) {
+                $line = $items[$listing] ?? null;
+                abort_unless($line && $line['request_key'] === $data['request_key']
+                    && $line['tier'] === $data['tier'], 409, 'The cart changed. Review checkout again.');
+            }
+
             $record = $this->availableListing($listing, lock: true);
             abort_if((int) $record->user_id === (int) $buyer->id, 403);
-            $quote = $this->quote($record, $data['tier']);
+            $quote = CommerceOffers::quote($record, $data['tier']);
             abort_unless($quote && hash_equals($quote['signature'], $data['quote']), 409, 'The listing price or terms changed. Reopen the order form.');
             $noPaymentDue = $quote['total'] === '0.00';
-            $method = $noPaymentDue ? null : $this->availableMethod($data['payment_method'] ?? null);
+            if ($fromCart && ! $noPaymentDue) {
+                abort_unless(config('commerce.payments_enabled') && $quote['currency'] === 'USD'
+                    && CommercePaymentMethod::query()->where('available', true)->get()
+                        ->contains(fn (CommercePaymentMethod $method) => $method->availableForCheckout((bool) config('commerce.live_gateways'))),
+                    422, 'Payment is not available for this item.');
+            }
+            $method = ($noPaymentDue || $fromCart) ? null : $this->availableMethod($data['payment_method'] ?? null);
 
             $order = MarketplaceOrder::query()->create([
                 'number' => (string) Str::uuid(),
@@ -126,6 +155,10 @@ class CommerceOrderController extends Controller
                 'receipt_number' => $noPaymentDue ? (string) Str::uuid() : null,
                 'completed_at' => $noPaymentDue ? now() : null,
             ]);
+            if ($cart) {
+                unset($items[$listing]);
+                $cart->update(['items' => $items]);
+            }
             AuditEvent::record('commerce.order.created', $buyer, $request);
 
             return $order;
@@ -191,7 +224,7 @@ class CommerceOrderController extends Controller
             ->where('public_id', $publicId)->when($lock, fn (Builder $query) => $query->lockForUpdate())
             ->firstOrFail();
         $listing->load(['creator', 'licenseDefinition', 'extendedLicenseDefinition']);
-        abort_if(PreviewContentReview::isPreviewTitle($listing->title) || $listing->creator?->account_status !== 'active', 404);
+        abort_unless(CommerceOffers::eligible($listing), 404);
 
         return $listing;
     }
@@ -200,34 +233,5 @@ class CommerceOrderController extends Controller
     {
         return $id === null ? null
             : CommercePaymentMethod::query()->where('available', true)->lockForUpdate()->findOrFail($id);
-    }
-
-    private function quote(MarketplaceListing $listing, string $tier): ?array
-    {
-        $license = null;
-        if ($listing->type === 'product') {
-            $license = match ($tier) {
-                'regular' => $listing->licenseDefinition,
-                'extended' => $listing->extendedLicenseDefinition,
-                default => null,
-            };
-            if ($license?->status !== 'active' || ! $license->allowsTier($tier)) {
-                return null;
-            }
-            $total = $tier === 'regular' ? ($listing->regular_price ?? $listing->price) : $listing->extended_price;
-        } else {
-            $total = $tier === 'standard' ? $listing->price : null;
-        }
-
-        if ($total === null || ! preg_match('/^\d{1,10}\.\d{2}$/D', $total)) {
-            return null;
-        }
-        $currency = $listing->currency;
-        $signature = hash('sha256', json_encode([
-            $listing->id, $listing->user_id, $listing->title, $tier, $license?->id, $license?->name,
-            $license?->version, $license?->permissions, $license?->restrictions, $total, $currency,
-        ], JSON_THROW_ON_ERROR));
-
-        return ['total' => $total, 'currency' => $currency, 'license' => $license?->name, 'signature' => $signature];
     }
 }

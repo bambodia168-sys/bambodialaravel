@@ -8,6 +8,7 @@ use App\Models\SiteSetting;
 use App\Models\User;
 use App\Models\UserTwoFactor;
 use App\Support\Security\Totp;
+use App\Support\CheckoutCart;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -135,7 +136,7 @@ final class TwoFactorController extends Controller
         AuditEvent::record('auth.two_factor.challenge.passed',$user,$request);
         AuditEvent::record('auth.login.success',$user,$request);
 
-        return redirect()->intended($user->defaultWorkspaceUrl());
+        return CheckoutCart::afterLogin($request, $user);
     }
 
     public static function consume(UserTwoFactor $credential, string $code): bool
