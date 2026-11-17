@@ -1,0 +1,28 @@
+<?php
+
+return [
+    'zh' => ['tagline' => '正版数字产品与自由职业服务', 'title' => 'Bambodia · 正版数字产品与自由职业服务',
+        'description' => '在 Bambodia 发现获授权的数字产品、独立创作者和自由职业服务，浏览项目与工作机会。'],
+    'km' => ['tagline' => 'ទីផ្សារផលិតផលឌីជីថលមានអាជ្ញាបណ្ណ', 'title' => 'Bambodia · ផលិតផលឌីជីថល និងសេវាកម្មឯករាជ្យ',
+        'description' => 'ស្វែងរកផលិតផលឌីជីថលមានអាជ្ញាបណ្ណ អ្នកបង្កើតឯករាជ្យ និងសេវាកម្ម។ រកមើលគម្រោង និងឱកាសការងារនៅលើ Bambodia។'],
+    'ko' => ['tagline' => '정식 라이선스 디지털 마켓', 'title' => 'Bambodia · 디지털 상품과 프리랜서 서비스',
+        'description' => 'Bambodia에서 정식 라이선스 디지털 상품과 독립 창작자, 프리랜서 서비스를 만나고 프로젝트와 채용 정보를 살펴보세요.'],
+    'ja' => ['tagline' => 'ライセンス付きデジタル製品のマーケット', 'title' => 'Bambodia · デジタル製品とフリーランスサービス',
+        'description' => 'Bambodiaでライセンス付きデジタル製品や独立系クリエイター、フリーランスサービスを探し、プロジェクトや求人をご覧ください。'],
+    'th' => ['tagline' => 'ตลาดสินค้าดิจิทัลที่มีลิขสิทธิ์', 'title' => 'Bambodia · สินค้าดิจิทัลและบริการฟรีแลนซ์',
+        'description' => 'ค้นหาสินค้าดิจิทัลที่มีลิขสิทธิ์ ครีเอเตอร์อิสระ และบริการฟรีแลนซ์ พร้อมสำรวจโครงการและโอกาสงานบน Bambodia'],
+    'vi' => ['tagline' => 'Chợ sản phẩm số có bản quyền', 'title' => 'Bambodia · Sản phẩm số và dịch vụ tự do',
+        'description' => 'Khám phá sản phẩm số có bản quyền, nhà sáng tạo độc lập và dịch vụ tự do. Tìm dự án và cơ hội việc làm trên Bambodia.'],
+    'de' => ['tagline' => 'Marktplatz für lizenzierte digitale Produkte', 'title' => 'Bambodia · Digitale Produkte und Freelancer',
+        'description' => 'Entdecken Sie lizenzierte digitale Produkte, unabhängige Kreative und Freelancer-Dienstleistungen. Finden Sie Projekte und Stellenangebote auf Bambodia.'],
+    'fr' => ['tagline' => 'Marché de produits numériques sous licence', 'title' => 'Bambodia · Produits numériques et services freelance',
+        'description' => 'Découvrez des produits numériques sous licence, des créateurs indépendants et des services freelance. Explorez les projets et offres d’emploi sur Bambodia.'],
+    'hi' => ['tagline' => 'लाइसेंस प्राप्त डिजिटल उत्पादों का बाज़ार', 'title' => 'Bambodia · डिजिटल उत्पाद और फ़्रीलांस सेवाएँ',
+        'description' => 'Bambodia पर लाइसेंस प्राप्त डिजिटल उत्पाद, स्वतंत्र रचनाकार और फ़्रीलांस सेवाएँ खोजें। प्रोजेक्ट और नौकरी के अवसर भी देखें।'],
+    'id' => ['tagline' => 'Pasar produk digital berlisensi', 'title' => 'Bambodia · Produk digital dan jasa pekerja lepas',
+        'description' => 'Temukan produk digital berlisensi, kreator independen, dan jasa pekerja lepas. Jelajahi proyek dan lowongan kerja di Bambodia.'],
+    'ms' => ['tagline' => 'Pasaran produk digital berlesen', 'title' => 'Bambodia · Produk digital dan khidmat bebas',
+        'description' => 'Temui produk digital berlesen, pencipta bebas dan khidmat pekerja bebas. Terokai projek dan peluang pekerjaan di Bambodia.'],
+    'es' => ['tagline' => 'Mercado de productos digitales con licencia', 'title' => 'Bambodia · Productos digitales y servicios freelance',
+        'description' => 'Descubre productos digitales con licencia, creadores independientes y servicios freelance. Explora proyectos y ofertas de trabajo en Bambodia.'],
+];

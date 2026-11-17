@@ -8,6 +8,8 @@ use App\Models\SiteSetting;
 use App\Models\SiteBrandAsset;
 use App\Models\SiteSeoPage;
 use App\Models\SiteLanguage;
+use App\Support\SiteIdentity;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -19,7 +21,30 @@ class SiteSettingsController extends Controller
     public function system(Request $request): View { return $this->index($request,'system'); }
     public function identity(Request $request): View { return $this->index($request,'identity'); }
     public function seo(Request $request): View { return $this->index($request,'seo'); }
-    public function updateIdentity(Request $request): RedirectResponse { return $this->update($request,'identity'); }
+    public function updateIdentity(Request $request): RedirectResponse
+    {
+        if (! $request->has('locale')) {
+            return $this->update($request, 'identity');
+        }
+
+        $rules = ['locale' => ['required', Rule::in(array_keys(SiteLanguage::CATALOG))]];
+        foreach (SiteIdentity::FIELDS as $field => $setting) {
+            $rules[$field] = ['present', 'nullable', 'string', 'max:'.SiteSetting::DEFINITIONS[$setting]['max']];
+        }
+        $data = $request->validate($rules);
+
+        DB::transaction(function () use ($request, $data): void {
+            foreach (SiteIdentity::FIELDS as $field => $setting) {
+                SiteSetting::query()->updateOrCreate(
+                    ['key' => SiteIdentity::settingKey($data['locale'], $field)],
+                    ['value' => $data[$field] ?? null, 'updated_by' => $request->user()->id],
+                );
+            }
+            AuditEvent::record('site.setting.changed', $request->user(), $request);
+        });
+
+        return back()->with('status', 'Localized site identity saved.');
+    }
     public function updateSeo(Request $request): RedirectResponse { return $this->update($request,'seo'); }
     public function updateAppearance(Request $request): RedirectResponse { return $this->update($request,'appearance'); }
     public function updateSystem(Request $request): RedirectResponse { return $this->update($request,'system'); }
