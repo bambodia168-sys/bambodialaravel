@@ -129,7 +129,9 @@ try {
     const passkey = await passkeyButton.boundingBox();
     assert(passkey && passkey.y + passkey.height <= boxes[0].y);
     assert(Math.abs(passkey.x + passkey.width - boxes[1].x - boxes[1].width) < 1);
-    await viewer.getByRole('button', {name: 'Toggle light or dark mode'}).click();
+    const nextTheme = viewport.width === 320 ? 'dark' : 'light';
+    await viewer.getByRole('button', {name: 'Switch to '+nextTheme+' mode', exact: true}).click();
+    await viewer.locator('html[data-theme="'+nextTheme+'"]').waitFor({state: 'attached'});
   }
   for (const [label] of providers) {
     await setSwitch(admin, label+' Login', false);
