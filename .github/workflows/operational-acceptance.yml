@@ -70,6 +70,7 @@ jobs:
             ProductMediaLicenseTest \
             SmtpSettingsTest \
             SettlementStatementsTest \
+            PaidCommerceOperationsTest \
             ProductVaultFulfillmentTest \
             ServiceInquiriesTest \
             NotificationsTest \

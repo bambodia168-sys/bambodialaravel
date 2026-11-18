@@ -98,7 +98,8 @@ final class CommerceSettlementReport
             fputcsv($stream, [
                 $order->number, $title, $order->completed_at?->toDateTimeString(), $order->currency, $order->total,
                 $record?->reconciled_at ? 'Matched' : 'Awaiting match', $record?->refund_status ?? '',
-                self::payoutStatus($order), $record?->seller_payable, $record?->paid_out_at?->toDateTimeString(),
+                self::payoutStatus($order), $order->status === 'refunded' ? '0.00' : $record?->seller_payable,
+                $record?->paid_out_at?->toDateTimeString(),
                 $record?->recovered_at?->toDateTimeString(),
             ], ',', '"', '', "\r\n");
         }

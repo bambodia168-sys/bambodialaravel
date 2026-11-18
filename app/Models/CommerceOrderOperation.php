@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CommerceOrderOperation extends Model
 {
@@ -23,5 +24,10 @@ class CommerceOrderOperation extends Model
     public function recoveryDue(): bool
     {
         return $this->refund_status === 'refunded' && $this->paid_out_at !== null && $this->recovered_at === null;
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(CommerceOperationEvent::class)->orderBy('id');
     }
 }

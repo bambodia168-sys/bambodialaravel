@@ -6,6 +6,7 @@
 @php
   $indexRoute = $creator ? 'studio.commerce-operations' : 'dashboard.commerce-operations';
   $statementRoute = $indexRoute.'.statement';
+  $manageSettlements = !$creator && \App\Support\CommerceOperations::enabled();
 @endphp
 <div class="container inner-page">
   @if($pendingReceipts !== null && $pendingReceipts->total() > 0)
@@ -88,6 +89,9 @@
             <td>
               <a class="listing-title-link" href="{{ route($creator ? 'studio.orders.show' : 'dashboard.orders.show', $order->number) }}">{{ $order->listing_title }}</a>
               <div class="text-muted mono">{{ $order->number }}</div>
+              @if($manageSettlements)
+                <a class="btn subtle compact" href="{{ route('dashboard.commerce-operations.show', $order->number) }}">Manage settlement</a>
+              @endif
             </td>
             <td>{{ $order->completed_at?->toDateString() ?? '—' }}</td>
             <td>{{ $order->currency }} {{ $order->total }}</td>

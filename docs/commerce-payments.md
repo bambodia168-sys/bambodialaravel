@@ -19,6 +19,15 @@ PayPal and Stripe need merchant credentials and working webhook registration bef
 
 The merchant account receives funds. Creator payouts, refunds, taxes, payment disputes, and digital fulfillment for gateway payments are separate workflows. For an open checkout whose state is unclear, reconcile it with the provider before retrying with another method. Maintain private backup and retention for transfer receipt files under `storage/app/private/commerce/payment-proofs`.
 
+## Refunds and statement matching
+
+Apply `2026_11_18_120000_create_commerce_operations_ledger` and enable `COMMERCE_OPERATIONS_ENABLED` in the isolated environment. Orders with a verified payment show **Refund details** to the buyer and **Manage settlement** to a super administrator. Refund handling stays available for settled orders when new payment collection is paused.
+
+- Buyers with verified email can request a refund. A super administrator who is neither the buyer nor the seller can decline the request or record a full refund after the bank or payment provider confirms it. Use the exact order amount and unique external refund reference. The order displays its original receipt and refund status. The purchase license and private download are revoked when the full refund is recorded.
+- To match a statement, enter the original verified payment reference, the exact collected amount, a unique statement line reference, and the seller amount payable. A late statement match can still record the original payment after the order has been refunded. Reports show zero payable for a refunded order and retain the private ledger history.
+
+Keep both ledger tables during an application rollback. Turning off `COMMERCE_OPERATIONS_ENABLED` disables finance actions while keeping existing statement reports and order history available.
+
 ## Gateway configuration and order QR
 
 A super-admin opens **Payment Methods → Configure** to enter the credentials for the environment selected by `COMMERCE_LIVE_GATEWAYS`. The app stores replacements encrypted per provider and environment and uses existing Stripe and PayPal environment variables as fallback. Empty fields preserve saved values. Finish open checkouts before replacing merchant credentials. Bakong access tokens can be rotated for the same recipient while bills are open.
