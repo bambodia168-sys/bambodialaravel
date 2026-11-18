@@ -22,18 +22,18 @@
       <p>@yield('intro')</p>
     </div>
     @yield('content')
+    <nav class="auth-tools" aria-label="Account page controls">
+      <a class="auth-home-tool auth-tool-icon" href="{{ route('home') }}" aria-label="{{ __('ui.home') }}" title="{{ __('ui.home') }}">
+        <x-icon name="home" size="20"/>
+      </a>
+      <button type="button" class="auth-theme-tool auth-tool-icon" data-theme-toggle aria-label="Toggle light or dark mode">
+        <span class="theme-icon-moon"><x-icon name="moon" size="20"/></span>
+        <span class="theme-icon-sun"><x-icon name="sun" size="20"/></span>
+        <span class="sr-only">Toggle theme</span>
+      </button>
+      <x-language-menu :compact="true" />
+    </nav>
   </section>
-  <nav class="auth-tools" aria-label="Account page controls">
-    <a class="auth-home-tool auth-tool-icon" href="{{ route('home') }}" aria-label="{{ __('ui.home') }}" title="{{ __('ui.home') }}">
-      <x-icon name="home" size="20"/>
-    </a>
-    <button type="button" class="auth-theme-tool auth-tool-icon" data-theme-toggle aria-label="Toggle light or dark mode">
-      <span class="theme-icon-moon"><x-icon name="moon" size="20"/></span>
-      <span class="theme-icon-sun"><x-icon name="sun" size="20"/></span>
-      <span class="sr-only">Toggle theme</span>
-    </button>
-    <x-language-menu :compact="true" />
-  </nav>
 </main>
 </body>
 </html>

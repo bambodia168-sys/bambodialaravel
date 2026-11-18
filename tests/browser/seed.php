@@ -148,7 +148,8 @@ $cover=\App\Models\MediaAsset::query()->create([
     'preview_url'=>'https://example.com/original-browser-product-preview',
 ]);
 $terms=\App\Models\Policy::query()->create([
-    'title'=>'Browser QA Terms of Service',
+    'title'=>'Terms of Service',
+    'public_code'=>'91204896',
     'category'=>'terms','status'=>'published','jurisdiction'=>'Test environment',
     'body'=>'<h1>Browser QA Submission Terms</h1>'
         .'<h2>Original work and licensing</h2>'
@@ -164,6 +165,10 @@ $terms=\App\Models\Policy::query()->create([
     'body_snapshot'=>$terms->body,'body_format'=>'html',
     'sha256'=>\App\Models\PolicyPublication::digestFor($terms),
     'published_by'=>$admin->id,'created_at'=>now(),
+]);
+\App\Models\Policy::query()->create([
+    'title'=>'Privacy Policy','category'=>'privacy','status'=>'published',
+    'public_code'=>'21879964','body'=>'Privacy notice for the browser acceptance test.',
 ]);
 // Published knowledge fixtures are strictly disposable browser test records.
 foreach ([

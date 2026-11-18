@@ -988,6 +988,8 @@ try {
       if(['/login','/register','/forgot-password'].includes(path)){
         if(await page.locator('.auth-brand').count())
           throw new Error(device.name+' '+path+' unexpectedly renders brand outside auth modal');
+        if(await page.locator('.auth-card > .auth-tools:last-child').count()!==1)
+          throw new Error(device.name+' '+path+' must place the toolbar at the bottom inside the auth card');
         if(!(await page.locator('.auth-tools .auth-home-tool svg').isVisible()))
           throw new Error(device.name+' '+path+' missing Home SVG');
         if(!(await page.locator('.auth-tools [data-theme-toggle]').isVisible()))
@@ -1010,8 +1012,16 @@ try {
       if(path==='/register'){
         if(!(await page.locator('input[name="terms_accepted"][required]').isVisible()))
           throw new Error(device.name+' registration Terms checkbox is missing');
-        if(!(await page.getByText('Terms of Service').first().isVisible()))
-          throw new Error(device.name+' registration has no published Terms');
+        const consent=page.locator('.auth-terms');
+        for(const [name,policyPath] of [
+          ['Terms of Service','/policies/91204896-terms-of-service'],
+          ['Privacy Policy','/policies/21879964-privacy-policy'],
+        ]){
+          const policyLink=consent.getByRole('link',{name,exact:true});
+          if(!(await policyLink.isVisible()) ||
+             new URL(await policyLink.getAttribute('href'),origin).pathname!==policyPath)
+            throw new Error(device.name+' registration must link to the published '+name);
+        }
       }
       if(path==='/jobs'){
         const jobRows=page.locator('.bambodia-job-list .bambodia-job-row');
