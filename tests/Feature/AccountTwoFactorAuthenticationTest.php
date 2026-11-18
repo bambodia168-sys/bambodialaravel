@@ -174,6 +174,75 @@ final class AccountTwoFactorAuthenticationTest extends TestCase
         $this->assertDatabaseHas('audit_events',['event'=>'auth.two_factor.disabled']);
     }
 
+    public function test_setup_qr_appears_only_for_pending_enrollment_and_is_not_cached(): void
+    {
+        $user = $this->member();
+        $page = route('account.security');
+        $this->actingAs($user)->get($page)->assertDontSee('data:image/svg+xml;base64,', false);
+        $this->post(route('account.security.begin'), [
+            'name' => 'Travel phone', 'current_password' => self::PASSWORD,
+        ])->assertRedirect();
+        $response = $this->get($page)->assertOk()->assertSee('Scan the QR code for Travel phone');
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->assertMatchesRegularExpression('/data:image\/svg\+xml;base64,[A-Za-z0-9+\/=]+/', $response->getContent());
+        $this->post(route('account.security.cancel'))->assertRedirect();
+        $this->get($page)->assertDontSee('data:image/svg+xml;base64,', false);
+
+        $this->post(route('account.security.begin'), ['current_password' => self::PASSWORD])->assertRedirect();
+        $this->travel(11)->minutes();
+        $this->get($page)->assertDontSee('data:image/svg+xml;base64,', false);
+        $this->post(route('account.security.enable'), ['code' => '123456'])->assertSessionHasErrors('code');
+        $this->assertDatabaseMissing('user_two_factors', ['user_id' => $user->id]);
+    }
+
+    public function test_additional_device_can_verify_sign_in_and_replace_the_legacy_authenticator(): void
+    {
+        $this->freezeTime();
+        $user = $this->member();
+        [$credential, $recovery, $secret] = $this->enrollment($user);
+        $credential->update(['authenticator_key' => null]);
+        $this->post(route('account.security.begin'), [
+            'current_password' => self::PASSWORD, 'name' => 'Travel phone',
+        ])->assertSessionHasErrors('current_code');
+        $this->post(route('account.security.begin'), [
+            'current_password' => self::PASSWORD, 'name' => 'Travel phone', 'current_code' => $recovery[0],
+        ])->assertRedirect();
+        $deviceSecret = session('twofactor.enroll_secret');
+        $this->assertNotSame($secret, $deviceSecret);
+        $deviceCode = Totp::code($deviceSecret, intdiv(now()->timestamp, 30));
+        $this->post(route('account.security.enable'), ['code' => $deviceCode])->assertRedirect(route('account.security'));
+        $device = $credential->devices()->sole();
+        $this->assertSame('Travel phone', $device->name);
+        $this->assertNotSame($deviceSecret, $device->getRawOriginal('secret'));
+        $this->assertCount(7, $credential->fresh()->recovery_hashes);
+
+        $this->post(route('logout'));
+        $login = ['email' => $user->email, 'password' => self::PASSWORD];
+        $this->post(route('login.store'), $login)->assertRedirect(route('login.two-factor'));
+        $this->post(route('login.two-factor.verify'), ['code' => $deviceCode])->assertRedirect();
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($device->fresh()->last_counter);
+
+        $this->post(route('logout'));
+        $this->post(route('login.store'), $login)->assertRedirect(route('login.two-factor'));
+        $this->post(route('login.two-factor.verify'), ['code' => $deviceCode])->assertSessionHasErrors('code');
+        $this->assertGuest();
+        $this->post(route('login.two-factor.verify'), ['code' => $recovery[1]])->assertRedirect();
+
+        $this->delete(route('account.security.authenticators.destroy', 'legacy'), [
+            'current_password' => self::PASSWORD, 'code' => $recovery[2],
+        ])->assertRedirect();
+        $promoted = $credential->fresh();
+        $this->assertSame($device->id, $promoted->authenticatorKey());
+        $this->assertSame($deviceSecret, $promoted->secret);
+        $this->assertSame(intdiv(now()->timestamp, 30), $promoted->last_counter);
+        $this->assertCount(5, $promoted->recovery_hashes);
+        $this->delete(route('account.security.authenticators.destroy', $device->id), [
+            'current_password' => self::PASSWORD, 'code' => $recovery[3],
+        ])->assertConflict();
+        $this->assertDatabaseHas('user_two_factors', ['user_id' => $user->id]);
+    }
+
     public function test_challenge_cannot_be_visited_without_password_step_or_after_expiration(): void
     {
         $this->get(route('login.two-factor'))->assertRedirect(route('login'));

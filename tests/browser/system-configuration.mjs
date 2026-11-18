@@ -90,8 +90,19 @@ try {
     console.error('Passkey enrollment status:', await customer.locator('[data-passkey-form] [role=status]').allTextContents());
     throw error;
   });
+  await customer.locator('#account-passkeys > [role=status]').getByText('Passkey saved successfully.').waitFor();
+  assert.equal(new URL(customer.url()).hash, '#account-passkeys');
   const {credentials} = await session.send('WebAuthn.getCredentials', {authenticatorId});
   assert.equal(credentials.length, 1);
+
+  await customer.getByLabel('Authenticator name').fill('Travel phone');
+  await customer.getByLabel('Current password', {exact: true}).first().fill(password);
+  await customer.getByRole('button', {name: 'Set up two-factor authentication'}).click();
+  const qr = customer.getByRole('img', {name: 'QR code for authenticator setup'});
+  await qr.waitFor();
+  assert(await qr.evaluate(image => image.complete && image.naturalWidth > 0));
+  await customer.getByRole('button', {name: 'Cancel setup'}).click();
+  await qr.waitFor({state: 'detached'});
 
   const token = await customer.locator('meta[name=csrf-token]').getAttribute('content');
   assert.equal((await customer.request.post(url+'/logout', {form: {_token: token}, maxRedirects: 0})).status(), 302);

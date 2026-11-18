@@ -76,7 +76,12 @@ for (const form of document.querySelectorAll('[data-passkey-form]')) {
         ...(enrollment ? {name: formData.get('name')} : {}),
         credential: JSON.stringify(credentialJson(credential)),
       });
-      window.location.assign(result.redirect);
+      if (enrollment) {
+        window.history.replaceState(null, '', result.redirect);
+        window.location.reload();
+      } else {
+        window.location.assign(result.redirect);
+      }
     } catch (error) {
       status.textContent = error.name === 'NotAllowedError' ? 'The passkey request was canceled or timed out.' : error.message;
     } finally {

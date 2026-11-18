@@ -64,9 +64,11 @@ final class Totp
         );
     }
 
-    public static function uri(string $issuer, string $email, string $secret): string
+    public static function uri(string $issuer, string $email, string $secret, ?string $device = null): string
     {
-        return 'otpauth://totp/'.rawurlencode($issuer.':'.$email)
+        $account = $device ? $email.' ('.$device.')' : $email;
+
+        return 'otpauth://totp/'.rawurlencode($issuer.':'.$account)
             .'?secret='.rawurlencode($secret).'&issuer='.rawurlencode($issuer)
             .'&algorithm=SHA1&digits=6&period=30';
     }
