@@ -13,7 +13,7 @@ class AuthExperienceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function terms(string $title='Bambodia Terms of Service'): PolicyPublication
+    private function terms(string $title='Terms of Service'): PolicyPublication
     {
         $admin=User::query()->create([
             'name'=>'Policy Administrator','email'=>uniqid('policy-admin',true).'@example.test',
@@ -88,18 +88,24 @@ class AuthExperienceTest extends TestCase
     public function test_registration_requires_acceptance_and_checks_specific_published_terms_revision(): void
     {
         $terms=$this->terms();
+        $otherTerms=$this->terms('Reviews and Ratings Integrity Policy');
+        $privacy=Policy::query()->create([
+            'title'=>'Privacy Policy','category'=>'privacy','status'=>'published',
+            'body'=>'Privacy notice for the registration acceptance test.',
+        ]);
         $this->get('/register')->assertOk()
-            ->assertSee('Terms of Service')
             ->assertSee('terms_accepted')
-            ->assertSee('terms_publication_id')
-            ->assertSee('published revision 1')
-            ->assertSee($terms->policy->publicUrl());
+            ->assertSee('name="terms_publication_id" value="'.$terms->id.'"', false)
+            ->assertSeeText('I have read and accept the Terms of Service and Privacy Policy.')
+            ->assertSee('href="'.$terms->policy->publicUrl().'"', false)
+            ->assertSee('href="'.$privacy->publicUrl().'"', false)
+            ->assertDontSee($otherTerms->policy->publicUrl());
 
         $withoutConsent=$this->validRegistration(['terms_publication_id'=>$terms->id]);
         $this->post('/register',$withoutConsent)->assertSessionHasErrors('terms_accepted');
 
         $this->post('/register',$this->validRegistration([
-            'terms_accepted'=>'1','terms_publication_id'=>$terms->id+99,
+            'terms_accepted'=>'1','terms_publication_id'=>$otherTerms->id,
         ]))->assertSessionHasErrors('terms_publication_id');
         $this->assertDatabaseCount('policy_acknowledgements',0);
 

@@ -13,7 +13,7 @@
     <input type="hidden" name="terms_publication_id" value="{{ $termsPublication->id }}">
     <label class="auth-terms" for="terms_accepted">
       <input id="terms_accepted" type="checkbox" name="terms_accepted" value="1" @checked(old('terms_accepted')) required>
-      <span>I have read and <strong>accept the <a href="{{ $termsPublication->policy->publicUrl() }}" target="_blank" rel="noopener noreferrer">Terms of Service</a></strong> (published revision {{ $termsPublication->revision }}).</span>
+      <span>I have read and accept the <a href="{{ $termsPublication->policy->publicUrl() }}" target="_blank" rel="noopener noreferrer">Terms of Service</a>@if($privacyPolicy) and <a href="{{ $privacyPolicy->publicUrl() }}" target="_blank" rel="noopener noreferrer">Privacy Policy</a>@endif.</span>
     </label>
     <x-turnstile-widget action="register"/>
     <button class="btn primary" type="submit">{{ __('ui.create_account') }}</button>

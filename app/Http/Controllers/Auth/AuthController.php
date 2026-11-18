@@ -8,6 +8,7 @@ use App\Models\UserTwoFactor;
 use App\Models\AuditEvent;
 use App\Models\FeatureFlag;
 use App\Support\Security\TurnstileVerifier;
+use App\Models\Policy;
 use App\Models\PolicyAcknowledgement;
 use App\Models\PolicyPublication;
 use Illuminate\Auth\Events\PasswordReset;
@@ -55,7 +56,16 @@ class AuthController extends Controller
     public function register(): View
     {
         abort_unless(FeatureFlag::isEnabled('registration'), 404);
-        return view('auth.register', ['termsPublication' => $this->currentTerms()]);
+        return view('auth.register', [
+            'termsPublication' => $this->currentTerms(),
+            'privacyPolicy' => Policy::query()
+                ->where('status', 'published')
+                ->where('category', 'privacy')
+                ->where('slug', 'privacy-policy')
+                ->orderByDesc('published_at')
+                ->latest('id')
+                ->first(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -160,8 +170,9 @@ class AuthController extends Controller
     {
         return PolicyPublication::query()
             ->with('policy')
-            ->whereHas('policy', fn ($query) => $query->where('status','published')
-                ->where('category','terms'))
+            ->whereHas('policy', fn ($query) => $query->where('status', 'published')
+                ->where('category', 'terms')
+                ->where('slug', 'terms-of-service'))
             ->latest('id')
             ->first();
     }
