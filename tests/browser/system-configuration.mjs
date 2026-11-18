@@ -24,9 +24,10 @@ try {
   const admin = await browser.newPage({viewport: {width: 1280, height: 800}});
   await login(admin, 'browser.admin@example.test');
   await admin.goto(url+system);
-  const nav = await admin.locator('#workspace-navigation').innerText();
-  assert(nav.indexOf('Assets & Communication') < nav.indexOf('System Configuration'));
-  assert(nav.indexOf('System Configuration') < nav.indexOf('Assistance'));
+  const headings = await admin.locator('#workspace-navigation .workspace-nav-heading').allTextContents();
+  const start = headings.indexOf('Assets & Communication');
+  assert.notEqual(start, -1, 'The admin sidebar renders its navigation groups');
+  assert.deepEqual(headings.slice(start, start + 3), ['Assets & Communication', 'System Configuration', 'Assistance']);
   await setSwitch(admin, 'Passkeys', true);
   await setSwitch(admin, 'Right-click protection', true);
 
@@ -60,7 +61,10 @@ try {
   await customer.getByLabel('Device name').fill('Virtual QA device');
   await customer.locator('#passkey-password').fill(password);
   await customer.getByRole('button', {name: 'Add passkey'}).click();
-  await customer.getByText('Virtual QA device', {exact: true}).waitFor({timeout: 20000});
+  await customer.getByText('Virtual QA device', {exact: true}).waitFor({timeout: 15000}).catch(async error => {
+    console.error('Passkey enrollment status:', await customer.locator('[data-passkey-form] [role=status]').allTextContents());
+    throw error;
+  });
   const {credentials} = await session.send('WebAuthn.getCredentials', {authenticatorId});
   assert.equal(credentials.length, 1);
 
@@ -68,9 +72,13 @@ try {
   assert.equal((await customer.request.post(url+'/logout', {form: {_token: token}, maxRedirects: 0})).status(), 302);
   await customer.goto(url+'/login');
   await customer.getByRole('button', {name: 'Sign in with a passkey'}).click();
-  await customer.waitForURL(current => current.pathname === '/account', {timeout: 20000});
+  await customer.waitForURL(current => current.pathname === '/account', {timeout: 15000}).catch(async error => {
+    console.error('Passkey sign-in status:', await customer.locator('[data-passkey-form] [role=status]').allTextContents());
+    throw error;
+  });
   await customer.goto(url+'/account/security');
   await customer.getByText(/Last used/).waitFor();
+  await setSwitch(admin, 'Passkeys', false);
   console.log('PASS System Configuration navigation, public protection toggle, and verified passkey enrollment and sign-in.');
 } finally {
   await browser.close();
