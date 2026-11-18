@@ -6,6 +6,8 @@ use App\Models\CommercePaymentMethod;
 use App\Models\LicenseDefinition;
 use App\Models\MarketplaceListing;
 use App\Models\MediaAsset;
+use App\Models\Policy;
+use App\Models\PolicyPublication;
 use App\Models\ProductFileVersion;
 use App\Models\User;
 use Illuminate\Contracts\Console\Kernel;
@@ -45,6 +47,20 @@ foreach (['buyer' => 'customer', 'seller' => 'freelancer', 'admin' => 'super_adm
 }
 $seller = $users['seller'];
 $admin = $users['admin'];
+$users['buyer']->markEmailAsVerified();
+$terms = Policy::query()->create([
+    'title' => 'Terms of Service', 'category' => 'terms', 'status' => 'published',
+    'public_code' => '91204896', 'body' => 'Synthetic publication for the isolated checkout pilot.',
+]);
+PolicyPublication::query()->create([
+    'policy_id' => $terms->id, 'revision' => 1, 'title' => $terms->title, 'category' => 'terms',
+    'body_snapshot' => $terms->body, 'sha256' => PolicyPublication::digestFor($terms),
+    'published_by' => $admin->id, 'created_at' => now(),
+]);
+Policy::query()->create([
+    'title' => 'Privacy Policy', 'category' => 'privacy', 'status' => 'published',
+    'public_code' => '21879964', 'body' => 'Synthetic privacy notice for the isolated checkout pilot.',
+]);
 $license = LicenseDefinition::query()->create([
     'name' => 'Pilot single-site license', 'code' => 'COMMERCE_PILOT', 'version' => '1.0.0', 'tier' => 'regular',
     'permissions' => 'Use the template for one site in this isolated pilot.',

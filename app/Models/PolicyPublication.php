@@ -25,4 +25,15 @@ class PolicyPublication extends Model
             'body'=>$policy->body,
         ],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
     }
+
+    public static function currentRegistrationTerms(): ?self
+    {
+        return self::query()
+            ->with('policy')
+            ->whereHas('policy', fn ($query) => $query->where('status', 'published')
+                ->where('category', 'terms')
+                ->where('slug', 'terms-of-service'))
+            ->latest('id')
+            ->first();
+    }
 }

@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\CommerceCartController;
+use App\Support\CheckoutCart;
 use App\Models\User;
 use App\Models\UserTwoFactor;
 use App\Models\AuditEvent;
 use App\Models\FeatureFlag;
 use App\Support\Security\TurnstileVerifier;
-use App\Models\Policy;
 use App\Models\PolicyAcknowledgement;
 use App\Models\PolicyPublication;
 use Illuminate\Auth\Events\PasswordReset;
@@ -50,28 +51,19 @@ class AuthController extends Controller
         $request->session()->regenerate();
         AuditEvent::record('auth.login.success', $request->user(), $request);
 
-        return redirect()->intended($request->user()->defaultWorkspaceUrl());
+        return CheckoutCart::afterLogin($request, $request->user());
     }
 
     public function register(): View
     {
         abort_unless(FeatureFlag::isEnabled('registration'), 404);
-        return view('auth.register', [
-            'termsPublication' => $this->currentTerms(),
-            'privacyPolicy' => Policy::query()
-                ->where('status', 'published')
-                ->where('category', 'privacy')
-                ->where('slug', 'privacy-policy')
-                ->orderByDesc('published_at')
-                ->latest('id')
-                ->first(),
-        ]);
+        return view('auth.register', ['termsPublication' => PolicyPublication::currentRegistrationTerms()]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         abort_unless(FeatureFlag::isEnabled('registration'), 404);
-        $terms = $this->currentTerms();
+        $terms = PolicyPublication::currentRegistrationTerms();
         if ($terms === null) {
             throw ValidationException::withMessages([
                 'terms_accepted' => 'Registration is unavailable until the administrator publishes Terms of Service.',
@@ -89,7 +81,8 @@ class AuthController extends Controller
 
         // The exact immutable publication accepted during registration is stored
         // in the existing policy receipt ledger, not just a mutable boolean.
-        $user = DB::transaction(function () use ($values, $terms, $request): User {
+        $guestItems = config('commerce.enabled') ? $request->session()->get(CheckoutCart::SESSION, []) : [];
+        $user = DB::transaction(function () use ($values, $terms, $request, $guestItems): User {
             $user = User::query()->create([
                 'name' => $values['name'],
                 'email' => Str::lower($values['email']),
@@ -104,12 +97,18 @@ class AuthController extends Controller
                 'created_at' => now(),
             ]);
             AuditEvent::record('auth.registration.terms_accepted', $user, $request);
+            CheckoutCart::attach($guestItems, $user);
 
             return $user;
         });
 
         Auth::login($user);
         $request->session()->regenerate();
+
+        if ($guestItems !== []) {
+            $request->session()->forget([CheckoutCart::SESSION, CheckoutCart::INTENT]);
+            return CommerceCartController::verificationEmail($user);
+        }
 
         return redirect($user->defaultWorkspaceUrl());
     }
@@ -164,16 +163,5 @@ class AuthController extends Controller
         return $status === Password::PASSWORD_RESET
             ? redirect()->route('login')->with('status', __($status))
             : back()->withErrors(['email' => __($status)]);
-    }
-
-    private function currentTerms(): ?PolicyPublication
-    {
-        return PolicyPublication::query()
-            ->with('policy')
-            ->whereHas('policy', fn ($query) => $query->where('status', 'published')
-                ->where('category', 'terms')
-                ->where('slug', 'terms-of-service'))
-            ->latest('id')
-            ->first();
     }
 }

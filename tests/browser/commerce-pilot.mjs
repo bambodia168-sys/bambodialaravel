@@ -25,18 +25,52 @@ async function visit(page, path) {
 async function login(role, viewport) {
   const page = await browser.newPage({viewport});
   await visit(page, '/login');
-  await page.locator('input[name="email"]').fill('commerce-pilot.'+role+'@example.test');
-  await page.locator('input[name="password"]').fill('CommercePilotBrowserOnly123!');
-  await page.locator('form.auth-form button[type="submit"]').click();
+  await submitCredentials(page.locator('form.auth-form'), role);
   await page.waitForURL(url => url.pathname !== '/login');
   return page;
 }
-async function order(page, listing) {
+async function submitCredentials(form, role) {
+  await form.locator('input[name="email"]').fill('commerce-pilot.'+role+'@example.test');
+  await form.locator('input[name="password"]').fill('CommercePilotBrowserOnly123!');
+  await form.locator('button[type="submit"]').click();
+}
+async function order(page, listing, {guest = false} = {}) {
   await visit(page, listing);
-  await page.getByRole('link', {name: 'Review order', exact: true}).click();
-  await page.getByRole('button', {name: 'Place order', exact: true}).click();
+  await page.getByRole('button', {name: 'Add to cart', exact: true}).click();
+  const added = page.getByRole('dialog', {name: 'Added to cart', exact: true});
+  await added.getByRole('button', {name: 'View cart', exact: true}).click();
+  await page.getByRole('link', {name: 'Review checkout', exact: true}).click();
+  if (guest) {
+    await page.getByRole('link', {name: 'Create account', exact: true}).click();
+    const registration = page.getByRole('dialog', {name: 'Create your account', exact: true});
+    for (const [name, path] of [
+      ['Terms of Service', '/policies/91204896-terms-of-service'],
+      ['Privacy Policy', '/policies/21879964-privacy-policy'],
+    ]) {
+      const link = registration.getByRole('link', {name, exact: true});
+      await link.waitFor();
+      assert.equal(new URL(await link.getAttribute('href')).pathname, path);
+    }
+    const consent = registration.locator('input[name="terms_accepted"]');
+    assert.notEqual(await consent.getAttribute('required'), null);
+    assert.equal(await consent.isChecked(), false);
+    await registration.getByRole('link', {name: 'Already have an account? Sign in', exact: true}).click();
+    const signIn = page.getByRole('dialog', {name: 'Sign in to checkout', exact: true});
+    await submitCredentials(signIn.locator('form.auth-form'), 'buyer');
+    await page.waitForURL(url => url.pathname === '/checkout' && url.search === '');
+    record('Guest cart survives checkout sign-in and registration shows both policy links');
+  }
+  const submit = page.getByRole('button', {name: 'Continue to payment', exact: true});
+  const payload = await submit.evaluate(button => ({
+    action: button.form.action, form: Object.fromEntries(new FormData(button.form)),
+  }));
+  await submit.click();
   await page.waitForURL(/\/account\/orders\/[a-f0-9-]{36}$/);
-  return new URL(page.url()).pathname;
+  const orderPath = new URL(page.url()).pathname;
+  const repeated = await page.request.post(payload.action, {form: payload.form, maxRedirects: 0});
+  assert.equal(repeated.status(), 302);
+  assert.equal(new URL(repeated.headers().location, origin).pathname, orderPath);
+  return orderPath;
 }
 async function uploadReceipt(page, ref) {
   await page.getByText('Bank Transfer transfer', {exact: true}).click();
@@ -62,12 +96,13 @@ async function reviewPayment(page, orderPath, ref, approve, total) {
 
 try {
   browser = await chromium.launch({headless: true});
-  const buyer = await login('buyer', {width: 390, height: 844});
+  const buyer = await browser.newPage({viewport: {width: 390, height: 844}});
   const seller = await login('seller', {width: 1365, height: 900});
   const admin = await login('admin', {width: 1365, height: 900});
   const outsider = await login('outsider', {width: 1365, height: 900});
 
-  const productOrder = await order(buyer, fixture.product_url);
+  const productOrder = await order(buyer, fixture.product_url, {guest: true});
+  record('Checkout retries return the same product order');
   await uploadReceipt(buyer, 'PILOT-PRODUCT-REJECT');
   assert.equal(await buyer.getByRole('link', {name: 'Download product'}).count(), 0);
   await reviewPayment(admin, productOrder, 'PILOT-PRODUCT-REJECT', false);
