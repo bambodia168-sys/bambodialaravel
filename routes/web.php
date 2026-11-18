@@ -431,6 +431,8 @@ Route::middleware('auth')->group(function (): void {
         });
         Route::middleware('role:super_admin')->prefix('payment-methods')->name('dashboard.payment-methods.')->group(function (): void {
             Route::get('/', [CommercePaymentMethodController::class, 'index'])->name('index');
+            Route::get('/{method}/qr-preview', [CommercePaymentMethodController::class, 'qrPreview'])
+                ->whereNumber('method')->name('qr-preview');
             Route::post('/', [CommercePaymentMethodController::class, 'store'])->middleware('throttle:10,1')->name('store');
             Route::patch('/{method}', [CommercePaymentMethodController::class, 'update'])->whereNumber('method')
                 ->middleware('throttle:10,1')->name('update');

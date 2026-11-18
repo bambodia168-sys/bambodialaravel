@@ -172,6 +172,41 @@ class CommercePaymentsTest extends TestCase
             ->assertSee('receipt was rejected')->assertDontSee('Open service workspace');
     }
 
+    public function test_saved_manual_qr_can_be_previewed_by_super_admin_with_checkout_disabled(): void
+    {
+        Storage::fake('local');
+        config(['commerce.payments_enabled' => false]);
+
+        $admin = $this->user('super_admin');
+        $bank = $this->method('bank_transfer');
+        $image = UploadedFile::fake()->image('merchant.png');
+        $preview = route('dashboard.payment-methods.qr-preview', $bank);
+        $page = route('dashboard.payment-methods.index');
+        $save = route('dashboard.payment-methods.update', $bank);
+
+        $this->get($preview)->assertRedirect(route('login'));
+        $this->actingAs($admin)->get($preview)->assertNotFound();
+        $this->patch($save, ['available' => false, 'qr' => $image])->assertRedirect();
+        $this->get($page)->assertOk()->assertSee($preview)->assertSee('Saved Bank Transfer merchant QR');
+        $response = $this->get($preview)->assertOk()
+            ->assertHeader('Content-Type', 'image/png')
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->assertSame(file_get_contents($image->getPathname()), $response->getContent());
+
+        $this->actingAs($this->user('admin'))->get($preview)->assertForbidden();
+        $this->actingAs($this->user('customer'))->get($preview)->assertForbidden();
+
+        $this->actingAs($admin);
+        $dynamic = $this->method('aba');
+        $dynamic->update(['qr_path' => $bank->refresh()->qr_path]);
+        $this->get(route('dashboard.payment-methods.qr-preview', $dynamic))->assertNotFound();
+
+        $this->patch($save, ['available' => false, 'remove_qr' => true])->assertRedirect();
+        $this->get($preview)->assertNotFound();
+        $this->get($page)->assertOk()->assertDontSee($preview);
+    }
+
     public function test_paid_service_delivery_review_and_order_support_remain_participant_scoped(): void
     {
         Storage::fake('local');
