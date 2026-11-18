@@ -51,7 +51,9 @@ final class PasskeyController extends Controller
 
         AuditEvent::record('auth.passkey.registered', $user, $request);
 
-        return response()->json(['redirect' => route('account.security')], 201);
+        $request->session()->flash('passkey_status', 'Passkey saved successfully.');
+
+        return response()->json(['redirect' => route('account.security').'#account-passkeys'], 201);
     }
 
     public function authenticationOptions(Request $request): Response

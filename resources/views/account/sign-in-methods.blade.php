@@ -5,12 +5,17 @@
   $linkedProviders = \App\Models\SocialLoginIdentity::query()->where('user_id', auth()->id())->pluck('provider')->all();
 @endphp
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/system-configuration.css') }}">
-@if($passkeysEnabled)<script defer src="{{ asset('js/passkeys.js') }}"></script>@endif
+<link rel="stylesheet" href="{{ asset('css/system-configuration.css') }}?v=3">
+@if($passkeysEnabled)<script defer src="{{ asset('js/passkeys.js') }}?v=2"></script>@endif
 @endpush
 @if($passkeysEnabled || $passkeys->isNotEmpty())
   <section class="panel" id="account-passkeys" aria-label="Passkeys">
-    <div class="panel-head"><div><h2>Passkeys</h2><p>Use your device’s fingerprint, face recognition, PIN, or security key to sign in.</p></div></div>
+    <div class="panel-head"><div><h2>Passkeys</h2><p>Use your device’s fingerprint, face recognition, PIN, or security key to sign in.</p></div>
+      <span class="role-pill">{{ $passkeys->count() }} registered</span>
+    </div>
+    @if(session('passkey_status'))
+      <p class="account-security-notice" role="status"><x-icon name="shield-check" size="18"/> {{ session('passkey_status') }}</p>
+    @endif
     @if($passkeysEnabled)
       <form class="settings-form" method="post" action="{{ route('account.passkeys.register') }}"
         data-passkey-form="register" data-options="{{ route('account.passkeys.options') }}">

@@ -341,11 +341,15 @@ Route::middleware('auth')->group(function (): void {
             ->middleware('throttle:6,1,social-disconnect:')->name('account.social.disconnect');
     });
     Route::post('/account/security/two-factor/begin', [TwoFactorController::class,'begin'])
-        ->name('account.security.begin')->middleware('throttle:5,1');
+        ->name('account.security.begin')->middleware('throttle:5,1,two-factor-begin:')->block();
     Route::post('/account/security/two-factor/enable', [TwoFactorController::class,'enable'])
-        ->name('account.security.enable')->middleware('throttle:5,1');
+        ->name('account.security.enable')->middleware('throttle:5,1,two-factor-verify:')->block();
+    Route::post('/account/security/two-factor/cancel', [TwoFactorController::class, 'cancel'])
+        ->name('account.security.cancel')->middleware('throttle:10,1,two-factor-cancel:')->block();
+    Route::delete('/account/security/two-factor/authenticators/{device}', [TwoFactorController::class, 'removeDevice'])
+        ->where('device', 'legacy|[0-9a-f-]{36}')->name('account.security.authenticators.destroy')->middleware('throttle:5,1,two-factor-remove:')->block();
     Route::post('/account/security/two-factor/disable', [TwoFactorController::class,'disable'])
-        ->name('account.security.disable')->middleware('throttle:5,1');
+        ->name('account.security.disable')->middleware('throttle:5,1,two-factor-disable:')->block();
     Route::get('/account/profile', [ProfileEditorController::class, 'editSelf'])->name('account.profile.edit');
     Route::patch('/account/profile', [ProfileEditorController::class, 'updateSelf'])->name('account.profile.update')->middleware('throttle:10,1');
     Route::post('/account/profile/items', [CreatorProfileItemController::class, 'storeSelf'])->name('account.profile.items.store')->middleware('throttle:20,1');

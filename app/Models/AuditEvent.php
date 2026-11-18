@@ -21,6 +21,8 @@ class AuditEvent extends Model
         'auth.logout',
         'auth.two_factor.enrollment.started',
         'auth.two_factor.enabled',
+        'auth.two_factor.authenticator.added',
+        'auth.two_factor.authenticator.removed',
         'auth.two_factor.disabled',
         'auth.two_factor.challenge.passed',
         'auth.two_factor.challenge.failed',
