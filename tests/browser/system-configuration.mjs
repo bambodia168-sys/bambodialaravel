@@ -97,6 +97,45 @@ try {
   await google.getByRole('button', {name: 'Save credentials', exact: true}).click();
   await google.getByText('Enter the secret for this client ID.', {exact: true}).waitFor();
   assert.equal(await google.getByLabel('Client ID', {exact: true}).inputValue(), 'updated-fixture-client');
+  await google.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await setSwitch(admin, 'Google Login', true);
+  const providers = [['Google', 'google'], ['Facebook', 'facebook'], ['LinkedIn', 'linkedin'], ['GitHub', 'github']];
+  for (const [label] of providers.slice(1)) {
+    await admin.getByRole('button', {name: 'Configure '+label, exact: true}).click();
+    const dialog = admin.getByRole('dialog', {name: 'Configure '+label, exact: true});
+    await dialog.getByLabel('Client ID', {exact: true}).fill('fixture-client');
+    await dialog.getByLabel('Client secret', {exact: true}).fill('synthetic-test-secret');
+    await dialog.getByRole('button', {name: 'Save credentials', exact: true}).click();
+    await dialog.waitFor({state: 'hidden'});
+    await setSwitch(admin, label+' Login', true);
+  }
+  await viewer.goto(url+'/login');
+  const group = viewer.getByRole('group', {name: 'Social sign-in'});
+  const passkeyButton = viewer.getByRole('button', {name: 'Sign in with a passkey', exact: true});
+  for (const viewport of [{width: 320, height: 700}, {width: 1280, height: 800}]) {
+    await viewer.setViewportSize(viewport);
+    const boxes = [];
+    for (const [label, key] of providers) {
+      const link = group.getByRole('link', {name: label, exact: true});
+      assert.equal(await link.getAttribute('href'), url+'/auth/'+key+'/start');
+      assert.equal(await link.locator('svg[aria-hidden=true] + span').textContent(), label);
+      const box = await link.boundingBox();
+      assert(box && box.x >= 0 && box.x + box.width <= viewport.width);
+      boxes.push(box);
+    }
+    assert.equal(boxes[0].y, boxes[1].y);
+    assert.equal(boxes[2].y, boxes[3].y);
+    assert(boxes[0].x < boxes[1].x && boxes[2].y > boxes[0].y);
+    const passkey = await passkeyButton.boundingBox();
+    assert(passkey && passkey.y + passkey.height <= boxes[0].y);
+    assert(Math.abs(passkey.x + passkey.width - boxes[1].x - boxes[1].width) < 1);
+    const nextTheme = viewport.width === 320 ? 'dark' : 'light';
+    await viewer.getByRole('button', {name: 'Switch to '+nextTheme+' mode', exact: true}).click();
+    await viewer.locator('html[data-theme="'+nextTheme+'"]').waitFor({state: 'attached'});
+  }
+  for (const [label] of providers) {
+    await setSwitch(admin, label+' Login', false);
+  }
   await admin.setViewportSize({width: 1280, height: 800});
   await admin.goto(url+system);
 

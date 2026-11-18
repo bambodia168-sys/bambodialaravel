@@ -60,7 +60,7 @@ class SystemConfigurationTest extends TestCase
 
     public function test_social_setup_encrypts_credentials_and_only_enabled_providers_appear(): void
     {
-        $this->get('/login')->assertOk()->assertDontSee('Continue with Google')->assertDontSee('Sign in with a passkey');
+        $this->get('/login')->assertOk()->assertDontSee('Other ways to sign in')->assertDontSee('Sign in with a passkey');
         $this->get(route('social.start', 'google'))->assertNotFound();
         $page = route('dashboard.social-auth.index');
         $this->actingAs($this->member('super_admin'))->get($page)->assertOk()
@@ -78,7 +78,10 @@ class SystemConfigurationTest extends TestCase
         $this->get($page)->assertOk()->assertDontSee('private-social-fixture');
         $this->patch(route('dashboard.social-auth.status', 'google'), ['enabled' => 1])->assertRedirect();
         $this->post(route('logout'));
-        $this->get('/login')->assertOk()->assertSee('Continue with Google')->assertDontSee('Continue with Facebook');
+        $this->get('/login')->assertOk()
+            ->assertSee('href="'.route('social.start', 'google').'"', false)
+            ->assertSee('<span>Google</span>', false)
+            ->assertDontSee('href="'.route('social.start', 'facebook').'"', false);
 
         $response = $this->get(route('social.start', 'google'))->assertRedirect();
         $this->assertStringStartsWith('https://accounts.google.com/', $response->headers->get('Location'));
