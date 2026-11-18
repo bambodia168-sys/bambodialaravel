@@ -47,11 +47,11 @@
         </tbody>
       </table>
     </div>
-    @if(config('commerce.payments_enabled'))
+    @if($collectingPayments || $payments->isNotEmpty())
       @include('commerce.payments')
     @endif
     @php($paymentOpen = $payments->contains(fn ($payment) => in_array($payment->status, \App\Models\CommercePayment::ACTIVE, true)))
-    @if(!config('commerce.payments_enabled') && !$paymentOpen && $section === 'account.orders' && $order->status === 'awaiting_payment' && ($methods->isNotEmpty() || $order->payment_method))
+    @if(!$collectingPayments && !$paymentOpen && $section === 'account.orders' && $order->status === 'awaiting_payment' && ($methods->isNotEmpty() || $order->payment_method))
       <div class="panel-head">
         <form method="post" action="{{ route('account.orders.payment-method', $order->number) }}" class="form-stack">
           @csrf @method('PATCH')

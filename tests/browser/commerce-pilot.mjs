@@ -140,10 +140,17 @@ try {
   record('Rejected manual receipt leaves the order locked');
 
   await uploadReceipt(buyer, 'PILOT-PRODUCT-APPROVE');
+  await visit(admin, '/dashboard/payment-methods');
+  await admin.getByRole('button', {name: 'Pause new payments', exact: true}).click();
+  await admin.getByRole('button', {name: 'Enable payments', exact: true}).waitFor();
   await reviewPayment(admin, productOrder, 'PILOT-PRODUCT-APPROVE', true, '29.00');
   await visit(buyer, productOrder);
   const download = buyer.getByRole('link', {name: 'Download product', exact: true});
   await download.waitFor();
+  await visit(admin, '/dashboard/payment-methods');
+  await admin.getByRole('button', {name: 'Enable payments', exact: true}).click();
+  await admin.getByRole('button', {name: 'Pause new payments', exact: true}).waitFor();
+  record('Site-wide pause allows a submitted receipt to finish fulfillment and collection can resume');
   const archiveURL = await download.getAttribute('href');
   const file = await buyer.request.get(archiveURL);
   assert.equal(file.status(), 200);

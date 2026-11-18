@@ -18,7 +18,7 @@ final class CommerceSettlementController extends Controller
         $orders = CommerceSettlementReport::orders($filters, $creator ? $request->user()->id : null)
             ->latest('id')->paginate(15)->appends($filters);
 
-        $pendingReceipts = $creator || ! config('commerce.payments_enabled') ? null : MarketplaceOrder::query()
+        $pendingReceipts = $creator ? null : MarketplaceOrder::query()
             ->where('status', 'awaiting_payment')
             ->withWhereHas('payments', fn ($payments) => $payments->where('status', 'manual_review')
                 ->where('live_mode', true)->whereNotNull('proof_path')->latest('id'))

@@ -111,7 +111,7 @@ Artisan::command('marketplace:preview-review {--json : Print a structured review
 })->purpose('Read-only review of public preview item ownership, media and customer activity');
 
 Artisan::command('commerce:reconcile-qr', function (): int {
-    if (! config('commerce.enabled') || ! config('commerce.payments_enabled')) {
+    if (! config('commerce.enabled')) {
         return 0;
     }
 

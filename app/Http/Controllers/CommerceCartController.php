@@ -9,6 +9,7 @@ use App\Models\PolicyPublication;
 use App\Models\User;
 use App\Notifications\CheckoutVerification;
 use App\Support\CheckoutCart;
+use App\Support\CommerceCollection;
 use App\Support\CommerceOffers;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
@@ -161,13 +162,14 @@ class CommerceCartController extends Controller
         $mode = $checkout && ! $request->user() ? $request->query('account') : null;
         $canRegister = FeatureFlag::isEnabled('registration');
         $termsPublication = $mode === 'register' && $canRegister ? PolicyPublication::currentRegistrationTerms() : null;
-        $methods = $checkout && $request->user()?->hasVerifiedEmail() && config('commerce.payments_enabled')
+        $collectingPayments = $checkout && CommerceCollection::enabled();
+        $methods = $collectingPayments && $request->user()?->hasVerifiedEmail()
             ? CommercePaymentMethod::query()->where('available', true)->orderBy('name')->get()
                 ->filter(fn (CommercePaymentMethod $method) => $method->availableForCheckout((bool) config('commerce.live_gateways')))
             : collect();
 
         return response()->view('commerce.cart', compact(
-            'lines', 'totals', 'checkout', 'mode', 'canRegister', 'termsPublication', 'methods',
+            'lines', 'totals', 'checkout', 'mode', 'canRegister', 'termsPublication', 'methods', 'collectingPayments',
         ))->header('Cache-Control', 'private, no-store');
     }
 }

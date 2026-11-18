@@ -29,6 +29,56 @@ class CommercePaymentsTest extends TestCase
         Http::preventStrayRequests();
     }
 
+    public function test_only_super_admin_can_enable_and_pause_collection_without_interrupting_receipt_review(): void
+    {
+        Storage::fake('local');
+        config(['commerce.payments_enabled' => false]);
+        [$buyer, $order] = $this->order();
+        $admin = $this->user('super_admin');
+        $settings = route('dashboard.payment-methods.index');
+        $toggle = route('dashboard.payment-methods.processing');
+        $orderPage = route('account.orders.show', $order->number);
+        $submit = route('account.orders.payment.submit', $order->number);
+
+        $this->actingAs($buyer)->patch($toggle, ['enabled' => true])->assertForbidden();
+        $this->actingAs($this->user('admin'))->patch($toggle, ['enabled' => true])->assertForbidden();
+        $this->actingAs($admin)->get($settings)->assertOk()->assertSee('Enable payments');
+        $this->from($settings)->patch($toggle, ['enabled' => true])->assertRedirect($settings)
+            ->assertSessionHasErrorsIn('paymentProcessing', 'enabled');
+
+        $method = $this->method('khqr');
+        $this->patch(route('dashboard.payment-methods.update', $method), [
+            'available' => true, 'qr' => UploadedFile::fake()->image('merchant.png'),
+        ])->assertRedirect();
+        $qr = route('account.orders.payment.qr', [$order->number, $method]);
+        $this->actingAs($buyer)->get($qr)->assertNotFound();
+        $this->actingAs($admin)->patch($toggle, ['enabled' => true])->assertRedirect();
+        $this->get($settings)->assertOk()->assertSee('Pause new payments');
+        $this->get(route('dashboard.features'))->assertOk();
+
+        $receipt = [
+            'method' => $method->id, 'reference' => 'PAUSE-E2E-REF', 'proof' => UploadedFile::fake()->image('proof.png'),
+        ];
+        $this->actingAs($buyer)->get($orderPage)->assertOk()->assertSee('KHQR transfer');
+        $this->get($qr)->assertOk();
+        $this->post($submit, $receipt)->assertRedirect();
+        $attempt = $order->payments()->sole();
+
+        $this->actingAs($admin)->patch($toggle, ['enabled' => false])->assertRedirect();
+        $this->get($settings)->assertOk()->assertSee('Enable payments');
+        $this->get(route('dashboard.orders.payment.proof', [$order->number, $attempt->number]))->assertDownload();
+        $this->actingAs($buyer)->get($orderPage)->assertOk()->assertSee('payment receipt is awaiting review');
+        $this->get($qr)->assertNotFound();
+        $this->post($submit, $receipt)->assertNotFound();
+        $this->patch(route('account.orders.cancel', $order->number))->assertConflict();
+        $this->actingAs($admin)->patch(route('dashboard.orders.payment.review', [$order->number, $attempt->number]), [
+            'decision' => 'approve', 'verified_reference' => 'PAUSE-E2E-REF', 'verified_amount' => '25.00',
+            'note' => 'Verified against the statement.',
+        ])->assertRedirect();
+        $this->actingAs($buyer)->get($orderPage)->assertOk()->assertSee('Open service workspace');
+        $this->get(route('account.orders.receipt', $order->number))->assertOk();
+    }
+
     public function test_stripe_checkout_verifies_amount_and_signed_webhook_is_idempotent(): void
     {
         config(['commerce.stripe.secret'=>'sk_test_fixture', 'commerce.stripe.webhook_secret'=>'whsec_fixture']);
@@ -53,6 +103,8 @@ class CommercePaymentsTest extends TestCase
         $this->patch(route('account.orders.cancel', $order->number))->assertConflict();
         $this->post($verify)->assertConflict();
         $this->assertNull($order->refresh()->receipt_number);
+        $this->actingAs($this->user('super_admin'))
+            ->patch(route('dashboard.payment-methods.processing'), ['enabled' => false])->assertRedirect();
         $amount = 2500;
         $body = json_encode(['livemode'=>false, 'type'=>'checkout.session.completed', 'data'=>['object'=>['id'=>'cs_test_one']]]);
         $timestamp = time();
@@ -65,7 +117,7 @@ class CommercePaymentsTest extends TestCase
         $this->assertNotNull($receipt);
         $this->call('POST', $hook, [], [], [], $headers, $body)->assertNoContent();
         $this->assertSame($receipt, $order->refresh()->receipt_number);
-        $this->get(route('account.orders.receipt', $order->number))->assertOk()->assertSee('Stripe · Verified');
+        $this->actingAs($buyer)->get(route('account.orders.receipt', $order->number))->assertOk()->assertSee('Stripe · Verified');
         Http::assertSent(fn ($request) => $request->hasHeader('Idempotency-Key', $payment->number)
             && $request['line_items'][0]['price_data']['unit_amount'] === 2500);
     }

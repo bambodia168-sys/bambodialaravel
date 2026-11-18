@@ -6,6 +6,8 @@ use App\Models\CommercePaymentMethod;
 use App\Models\CommerceGatewaySetting;
 use App\Models\CommercePayment;
 use App\Models\AuditEvent;
+use App\Models\FeatureFlag;
+use App\Support\CommerceCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -21,8 +23,31 @@ class CommercePaymentMethodController extends Controller
     {
         abort_unless(config('commerce.enabled'), 404);
         $methods = CommercePaymentMethod::query()->orderBy('name')->paginate(10);
+        $collectingPayments = CommerceCollection::enabled();
 
-        return view('commerce.methods', compact('methods'));
+        return view('commerce.methods', compact('methods', 'collectingPayments'));
+    }
+
+    public function processing(Request $request): RedirectResponse
+    {
+        abort_unless(config('commerce.enabled'), 404);
+        $values = $request->validateWithBag('paymentProcessing', ['enabled' => ['required', 'boolean']]);
+        $enabled = (bool) $values['enabled'];
+        $live = (bool) config('commerce.live_gateways');
+
+        DB::transaction(function () use ($enabled, $live, $request): void {
+            if ($enabled && ! CommercePaymentMethod::query()->where('available', true)->get()
+                ->contains(fn (CommercePaymentMethod $method) => $method->availableForCheckout($live))) {
+                throw ValidationException::withMessages(['enabled' => 'Configure and make a payment method available first.'])
+                    ->errorBag('paymentProcessing');
+            }
+            $flag = FeatureFlag::query()->updateOrCreate(['key' => CommerceCollection::FLAG], ['enabled' => $enabled]);
+            if ($flag->wasRecentlyCreated || $flag->wasChanged('enabled')) {
+                AuditEvent::record('feature.flag.changed', $request->user(), $request);
+            }
+        }, 3);
+
+        return back()->with('status', $enabled ? 'Payment processing enabled.' : 'New payments paused.');
     }
 
     public function qrPreview(CommercePaymentMethod $method): Response
@@ -99,7 +124,7 @@ class CommercePaymentMethodController extends Controller
                 }
                 $credentialsChanged = $locked->usesGateway()
                     && $this->saveCredentials($locked->provider, $live, $values['gateway'] ?? []);
-                if ($locked->available && config('commerce.payments_enabled') && ! $locked->availableForCheckout($live)) {
+                if ($locked->available && CommerceCollection::enabled() && ! $locked->availableForCheckout($live)) {
                     throw ValidationException::withMessages(['available' => 'Configure the method before making it available.']);
                 }
                 $locked->save();

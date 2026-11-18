@@ -9,6 +9,7 @@ use App\Models\CommerceGatewaySetting;
 use App\Models\CommercePaymentMethod;
 use App\Models\MarketplaceOrder;
 use App\Support\CommerceGateway;
+use App\Support\CommerceCollection;
 use App\Support\CommerceQrGateway;
 use App\Support\OrderFulfillment;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -31,6 +32,7 @@ class CommercePaymentController extends Controller
 
     public function start(Request $request, string $number): RedirectResponse
     {
+        abort_unless(CommerceCollection::enabled(), 404);
         $order = $this->buyerOrder($request, $number);
         $data = $request->validate(['method'=>['required', 'integer', 'min:1']]);
         $live = (bool) config('commerce.live_gateways');
@@ -108,8 +110,13 @@ class CommercePaymentController extends Controller
         $this->reconcile($attempt, true);
         if ($request->expectsJson()) {
             $attempt->refresh();
+            $collecting = CommerceCollection::enabled();
 
-            return response()->json(['status' => $attempt->status, 'qr_visible' => $attempt->qrVisible()])
+            return response()->json([
+                'status' => $attempt->status,
+                'qr_visible' => $collecting && $attempt->qrVisible(),
+                'collection_paused' => ! $collecting,
+            ])
                 ->header('Cache-Control', 'private, no-store');
         }
 
@@ -118,6 +125,7 @@ class CommercePaymentController extends Controller
 
     public function orderQr(Request $request, string $number, string $payment): Response
     {
+        abort_unless(CommerceCollection::enabled(), 404);
         $attempt = $this->buyerOrder($request, $number)->payments()->where('number', $payment)->firstOrFail();
         abort_unless($attempt->dynamicQr() && $attempt->qrVisible() && ($attempt->live_mode || ! app()->environment('production')), 404);
         $writer = new Writer(new ImageRenderer(new RendererStyle(288, 4), new SvgImageBackEnd));
@@ -148,6 +156,7 @@ class CommercePaymentController extends Controller
 
     public function submit(Request $request, string $number): RedirectResponse
     {
+        abort_unless(CommerceCollection::enabled(), 404);
         $order = $this->buyerOrder($request, $number);
         $data = $request->validate([
             'method'=>['required', 'integer', 'min:1'],
@@ -228,6 +237,7 @@ class CommercePaymentController extends Controller
 
     public function qr(Request $request, string $number, CommercePaymentMethod $method): StreamedResponse
     {
+        abort_unless(CommerceCollection::enabled(), 404);
         $this->awaiting($this->buyerOrder($request, $number));
         abort_unless($method->available && ! $method->usesGateway() && $method->qr_path
             && Storage::disk('local')->exists($method->qr_path), 404);
@@ -299,6 +309,6 @@ class CommercePaymentController extends Controller
 
     private function enabled(): void
     {
-        abort_unless(config('commerce.enabled') && config('commerce.payments_enabled'), 404);
+        abort_unless(config('commerce.enabled'), 404);
     }
 }
