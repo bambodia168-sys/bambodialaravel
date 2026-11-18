@@ -12,7 +12,7 @@
     <h1>Account Security</h1>
     <p>Protect your login with a six-digit authenticator code. Recovery codes give access if your device is unavailable.</p>
   </div>
-  <section class="panel">
+  <section class="panel" id="account-two-factor">
     <div class="panel-head">
       <div><h2>Two-factor authentication</h2>
         <p>Use your authenticator app, such as Microsoft Authenticator, Google Authenticator, or another TOTP app.</p></div>

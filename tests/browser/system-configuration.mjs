@@ -28,8 +28,33 @@ try {
   const start = headings.indexOf('Assets & Communication');
   assert.notEqual(start, -1, 'The admin sidebar renders its navigation groups');
   assert.deepEqual(headings.slice(start, start + 3), ['Assets & Communication', 'System Configuration', 'Assistance']);
+  assert.equal(await admin.getByRole('button', {name: /^Configure /}).count(), 5);
+  await admin.setViewportSize({width: 390, height: 844});
+  await admin.getByRole('button', {name: 'Configure Two-factor authentication (2FA) enrollment', exact: true}).click();
+  const enrollment = admin.getByRole('dialog', {name: 'Two-factor authentication (2FA) enrollment', exact: true});
+  const dialogBounds = await enrollment.boundingBox();
+  assert(dialogBounds && dialogBounds.x >= 0 && dialogBounds.x + dialogBounds.width <= 390);
+  assert.match(await enrollment.getByRole('link', {name: 'Open Account Security'}).getAttribute('href'), /\/account\/security#account-two-factor$/);
+  await enrollment.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await enrollment.waitFor({state: 'hidden'});
+  await admin.setViewportSize({width: 1280, height: 800});
+  for (const feature of ['Content protector', 'Selection protector']) {
+    await admin.getByRole('button', {name: 'Configure '+feature, exact: true}).click();
+    const dialog = admin.getByRole('dialog', {name: feature, exact: true});
+    assert.equal(await dialog.getByLabel('Status').inputValue(), '0');
+    await admin.keyboard.press('Escape');
+    await dialog.waitFor({state: 'hidden'});
+  }
   await setSwitch(admin, 'Passkeys', true);
-  await setSwitch(admin, 'Right-click protection', true);
+  await admin.getByRole('button', {name: 'Configure Passkeys', exact: true}).click();
+  const passkeySettings = admin.getByRole('dialog', {name: 'Passkeys', exact: true});
+  assert.match(await passkeySettings.getByRole('link', {name: 'Open Account Security'}).getAttribute('href'), /\/account\/security#account-passkeys$/);
+  await passkeySettings.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await admin.getByRole('button', {name: 'Configure Right-click protection', exact: true}).click();
+  const rightClickSettings = admin.getByRole('dialog', {name: 'Right-click protection', exact: true});
+  await rightClickSettings.getByLabel('Status').selectOption('1');
+  await rightClickSettings.getByRole('button', {name: 'Save', exact: true}).click();
+  assert.equal(await admin.getByRole('switch', {name: 'Right-click protection', exact: true}).getAttribute('aria-checked'), 'true');
 
   const viewer = await browser.newPage({viewport: {width: 390, height: 844}});
   await viewer.goto(url+'/');

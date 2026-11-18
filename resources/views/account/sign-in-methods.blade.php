@@ -9,7 +9,7 @@
 @if($passkeysEnabled)<script defer src="{{ asset('js/passkeys.js') }}"></script>@endif
 @endpush
 @if($passkeysEnabled || $passkeys->isNotEmpty())
-  <section class="panel" aria-label="Passkeys">
+  <section class="panel" id="account-passkeys" aria-label="Passkeys">
     <div class="panel-head"><div><h2>Passkeys</h2><p>Use your device’s fingerprint, face recognition, PIN, or security key to sign in.</p></div></div>
     @if($passkeysEnabled)
       <form class="settings-form" method="post" action="{{ route('account.passkeys.register') }}"
