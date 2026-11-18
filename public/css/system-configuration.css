@@ -54,7 +54,69 @@
 .system-switch[aria-checked=true] .system-switch-track { background: #13734b; justify-content: flex-end; }
 .system-switch:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .system-switch:disabled { opacity: .65; cursor: default; }
-.system-auth-actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-block-start: 1rem; }
+.sign-in-options {
+  display: grid;
+  gap: .65rem;
+  margin-block-start: 1.1rem;
+}
+.sign-in-options-divider {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 0 0 .15rem;
+  color: var(--muted);
+  font-size: var(--font-helper);
+  font-weight: 650;
+  text-align: center;
+}
+.sign-in-options-divider::before, .sign-in-options-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--line);
+}
+.sign-in-options .btn {
+  min-width: 0;
+  min-height: 46px;
+  padding-inline: .55rem;
+}
+.sign-in-passkey-button { width: 100%; }
+.sign-in-passkey-button svg { color: var(--secondary); flex: none; }
+.sign-in-passkey [role="status"] {
+  margin: .45rem 0 0;
+  color: var(--muted);
+}
+.sign-in-passkey [role="status"]:empty { margin: 0; }
+.sign-in-providers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+}
+.sign-in-provider:only-child { grid-column: 1 / -1; }
+.sign-in-providers .sign-in-provider {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+.sign-in-options .btn:hover:not(:disabled) {
+  border-color: var(--secondary);
+  background: var(--surface-2);
+}
+.sign-in-options .btn:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+}
+.sign-in-provider svg { flex: none; }
+:root[data-theme="dark"] .sign-in-provider .google-sign-in-icon {
+  box-sizing: content-box;
+  padding: 2px;
+  border-radius: 50%;
+  background: #fff;
+}
+.sign-in-provider .facebook-sign-in-icon { color: #0866ff; }
+.sign-in-provider .linkedin-sign-in-icon { color: #0a66c2; }
+:root[data-theme="dark"] .sign-in-provider .facebook-sign-in-icon { color: #6cabff; }
+:root[data-theme="dark"] .sign-in-provider .linkedin-sign-in-icon { color: #73bbff; }
 #account-passkeys, #account-two-factor { scroll-margin-top: 5rem; }
 @media (max-width: 550px) {
   .system-setting-row { padding: .9rem; gap: .5rem; align-items: flex-start; }
