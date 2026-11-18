@@ -9,6 +9,7 @@ use App\Models\AuditEvent;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
 use App\Models\User;
+use App\Support\CommerceCollection;
 use App\Support\CommerceOffers;
 use App\Support\OrderFulfillment;
 use Illuminate\Database\Eloquent\Builder;
@@ -52,13 +53,14 @@ class CommerceOrderController extends Controller
             ? CommercePaymentMethod::query()->where('available', true)->orderBy('name')->get()
             : collect();
 
-        $payments = config('commerce.payments_enabled') ? $order->payments()->latest('id')->get() : collect();
+        $collectingPayments = CommerceCollection::enabled();
+        $payments = $order->payments()->latest('id')->get();
         if ($section !== 'studio.orders') {
             $order->load('review');
         }
         $canReview = $section === 'account.orders' && $order->review === null && $order->isReviewEligible();
 
-        return response()->view('commerce.show', compact('order', 'section', 'workspace', 'methods', 'payments', 'canReview'))
+        return response()->view('commerce.show', compact('order', 'section', 'workspace', 'methods', 'payments', 'canReview', 'collectingPayments'))
             ->header('Cache-Control', 'private, no-store');
     }
 
@@ -79,7 +81,8 @@ class CommerceOrderController extends Controller
         abort_if((int) $record->user_id === (int) $request->user()->id, 403);
         $quotes = collect(CommerceOffers::quotes($record));
         abort_if($quotes->isEmpty(), 404);
-        if (config('commerce.payments_enabled') && $record->type === 'product'
+        $collectingPayments = CommerceCollection::enabled();
+        if ($collectingPayments && $record->type === 'product'
             && $quotes->contains(fn (array $quote) => $quote['total'] !== '0.00')) {
             $definition = isset($quotes['regular']) ? $record->licenseDefinition : $record->extendedLicenseDefinition;
             OrderFulfillment::ensureOfferReady($record, OrderFulfillment::snapshot($definition, $record, $request->user()));
@@ -87,7 +90,7 @@ class CommerceOrderController extends Controller
         $methods = CommercePaymentMethod::query()->where('available', true)->orderBy('name')->get();
         $requestKey = (string) Str::uuid();
 
-        return response()->view('commerce.create', compact('record', 'quotes', 'methods', 'requestKey'))
+        return response()->view('commerce.create', compact('record', 'quotes', 'methods', 'requestKey', 'collectingPayments'))
             ->header('Cache-Control', 'private, no-store');
     }
 
@@ -142,8 +145,9 @@ class CommerceOrderController extends Controller
             $quote = CommerceOffers::quote($record, $data['tier']);
             abort_unless($quote && hash_equals($quote['signature'], $data['quote']), 409, 'The listing price or terms changed. Reopen the order form.');
             $noPaymentDue = $quote['total'] === '0.00';
+            $collectingPayments = ! $noPaymentDue && CommerceCollection::enabled();
             if ($fromCart && ! $noPaymentDue) {
-                abort_unless(config('commerce.payments_enabled') && $quote['currency'] === 'USD'
+                abort_unless($collectingPayments && $quote['currency'] === 'USD'
                     && CommercePaymentMethod::query()->where('available', true)->get()
                         ->contains(fn (CommercePaymentMethod $method) => $method->availableForCheckout((bool) config('commerce.live_gateways'))),
                     422, 'Payment is not available for this item.');
@@ -154,7 +158,7 @@ class CommerceOrderController extends Controller
             $snapshot = [];
             if (! $noPaymentDue && $record->type === 'product') {
                 $snapshot = OrderFulfillment::snapshot($definition, $record, $buyer);
-                if (config('commerce.payments_enabled')) {
+                if ($collectingPayments) {
                     OrderFulfillment::ensureOfferReady($record, $snapshot);
                 }
             }

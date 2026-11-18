@@ -9,12 +9,27 @@
             aria-haspopup="dialog" aria-controls="add-payment-method">
       <x-icon name="plus" size="16"/> Add method
     </button>
-    @if(!config('commerce.payments_enabled'))
-      <p>Payment processing is disabled. You can prepare payment methods here.</p>
-    @else
-      <p>Configure hosted checkout and manual transfer instructions for USD orders.</p>
-    @endif
   </div>
+  <section class="panel" aria-labelledby="payment-processing-heading">
+    <div class="panel-head">
+      <div>
+        <h2 id="payment-processing-heading">Site-wide payment processing</h2>
+        <p>{{ $collectingPayments
+          ? 'Buyers can pay for USD orders using available payment methods.'
+          : 'New payments are paused. You can configure methods and review payments already submitted.' }}</p>
+        @error('enabled', 'paymentProcessing')
+          <p role="alert">{{ $message }}</p>
+        @enderror
+      </div>
+      <form method="post" action="{{ route('dashboard.payment-methods.processing') }}">
+        @csrf @method('PATCH')
+        <input type="hidden" name="enabled" value="{{ $collectingPayments ? '0' : '1' }}">
+        <button class="btn {{ $collectingPayments ? 'subtle' : 'primary' }}" type="submit">
+          {{ $collectingPayments ? 'Pause new payments' : 'Enable payments' }}
+        </button>
+      </form>
+    </div>
+  </section>
   <section class="panel">
     <div class="table-scroll">
       <table class="data-table">
@@ -47,7 +62,6 @@
     align-items: start;
     column-gap: .75rem;
   }
-  .payment-methods-intro p { grid-column: 1 / -1; }
   .payment-methods-add { justify-self: end; }
   dialog.payment-method-dialog {
     position: fixed;

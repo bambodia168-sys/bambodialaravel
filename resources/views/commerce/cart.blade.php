@@ -82,7 +82,7 @@
         @if(count($lines) > 1)
           <p>Each listing is placed and paid for separately.</p>
         @endif
-        @if($checkout && !config('commerce.payments_enabled') && max([0, ...array_values($totals)]) > 0)
+        @if($checkout && !$collectingPayments && max([0, ...array_values($totals)]) > 0)
           <p role="status">Paid checkout is currently unavailable. Your cart stays saved.</p>
         @endif
         @if(!$checkout && $totals !== [])

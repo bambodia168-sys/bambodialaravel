@@ -33,9 +33,13 @@ if (paymentForm) {
                 document.querySelector('[data-order-payment-qr]')?.remove();
                 document.querySelector('[data-payment-qr-hint]')?.remove();
             }
-            paymentStatus.textContent = payment.qr_visible
-                ? 'Waiting for your bank to confirm payment.'
-                : 'This QR has expired. Checking for a final payment result.';
+            if (payment.collection_paused) {
+                paymentStatus.textContent = 'New payments are paused. Checking for a final payment result.';
+            } else {
+                paymentStatus.textContent = payment.qr_visible
+                    ? 'Waiting for your bank to confirm payment.'
+                    : 'This QR has expired. Checking for a final payment result.';
+            }
             if (!payment.qr_visible) delay = 30000;
         } catch {
             paymentStatus.textContent = 'Payment status is temporarily unavailable. The page will check again.';

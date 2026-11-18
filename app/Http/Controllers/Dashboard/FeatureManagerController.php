@@ -18,7 +18,7 @@ class FeatureManagerController extends Controller
         }
 
         return view('dashboard.features', [
-            'features' => FeatureFlag::query()->orderBy('key')->paginate(10),
+            'features' => FeatureFlag::query()->whereIn('key', array_keys(FeatureFlag::AVAILABLE))->orderBy('key')->paginate(10),
             'available' => FeatureFlag::AVAILABLE,
         ]);
     }
