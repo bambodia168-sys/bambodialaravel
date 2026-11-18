@@ -18,7 +18,9 @@
         <p>Use your authenticator app, such as Microsoft Authenticator, Google Authenticator, or another TOTP app.</p></div>
       <span class="role-pill">{{ $credential ? 'Enabled' : 'Not enabled' }}</span>
     </div>
-    @if(!$credential && !$enrollmentSecret)
+    @if(!$credential && !$enrollmentAllowed)
+      <div class="settings-form"><p>New two-factor setup is currently disabled.</p></div>
+    @elseif(!$credential && !$enrollmentSecret)
       <form method="post" action="{{ route('account.security.begin') }}" class="settings-form">
         @csrf
         <label for="begin-password">Confirm current password</label>
@@ -56,6 +58,7 @@
       </form>
     @endif
   </section>
+  @include('account.sign-in-methods')
   @if(count($recoveryCodes))
     <section class="panel" style="margin-top:20px">
       <div class="panel-head"><div><h2>One-use recovery codes</h2>

@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=3">
     <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=2"></script>
   @endif
+  @stack('head')
 </head>
 @php
   $workspace = trim($__env->yieldContent('workspace', 'account'));
@@ -75,9 +76,6 @@
         ['route'=>'dashboard.social.index','label'=>'Footer Social Links','icon'=>'globe'],
         ['route'=>'dashboard.languages.index','label'=>'Language Manager','icon'=>'globe'],
         ['route'=>'dashboard.typography.index','label'=>'Typography','icon'=>'palette'],
-        ['route'=>'dashboard.system-settings','label'=>'System Settings','icon'=>'settings'],
-        ['route'=>'dashboard.smtp.index','label'=>'SMTP Setup','icon'=>'mail','roles'=>['super_admin']],
-        ['route'=>'dashboard.ai-draft.index','label'=>'AI Draft Studio','icon'=>'sparkles','roles'=>['super_admin']],
         ['route'=>'dashboard.pages','label'=>'Page Manager','icon'=>'file-text'],
         ['route'=>'dashboard.posts','label'=>'Post Manager','icon'=>'newspaper'],
         ['route'=>'dashboard.policies','label'=>'Policy Center','icon'=>'scale'],
@@ -96,13 +94,20 @@
       ]];
       $groups[] = ['heading'=>'Assets & Communication','items'=>[
         ['route'=>'dashboard.media.index','label'=>'Media Library','icon'=>'image'],
-        ['route'=>'dashboard.cloud-storage.index','label'=>'Cloud Storage','icon'=>'archive','roles'=>['super_admin']],
         ['route'=>'dashboard.vault.index','label'=>'Digital File Vault','icon'=>'archive'],
         ['route'=>'dashboard.licenses.index','label'=>'License Manager','icon'=>'scroll-text'],
         ['route'=>'dashboard.creator-applications','label'=>'Creator Applications','icon'=>'user-round-check'],
         ['route'=>'dashboard.reviews','label'=>'Review Queue','icon'=>'clipboard-check'],
         ['route'=>'dashboard.preview-visibility.index','label'=>'Preview Visibility','icon'=>'shield-check','roles'=>['super_admin']],
         ['route'=>'dashboard.notifications.index','label'=>'Notification Analytics','icon'=>'bell'],
+      ]];
+      $groups[] = ['heading'=>'System Configuration','items'=>[
+        ['route'=>'dashboard.system-settings','label'=>'Basic Settings','icon'=>'settings'],
+        ['route'=>'dashboard.cloud-storage.index','label'=>'Cloud Storage','icon'=>'archive','roles'=>['super_admin']],
+        ['route'=>'dashboard.smtp.index','label'=>'SMTP','icon'=>'mail','roles'=>['super_admin']],
+        ['route'=>'dashboard.ai-draft.index','label'=>'AI Draft Studio','icon'=>'sparkles','roles'=>['super_admin']],
+        ['route'=>'dashboard.system-security.index','label'=>'Security','icon'=>'shield-check','roles'=>['super_admin']],
+        ['route'=>'dashboard.social-auth.index','label'=>'Social Auth','icon'=>'key-round','roles'=>['super_admin']],
       ]];
     }
     if ($user->role === 'staff' && \App\Support\UserManagementAccess::allows($user, 'marketplace_transfer')) {

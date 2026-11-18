@@ -13,9 +13,11 @@
         "bacon/bacon-qr-code": "3.1.1",
         "ext-xmlwriter": "*",
         "laravel/framework": "^13.17",
+        "laravel/socialite": "5.33.0",
         "laravel/tinker": "^3.0",
         "league/flysystem-aws-s3-v3": "^3.0",
-        "php": "^8.3"
+        "php": "^8.3",
+        "spatie/laravel-passkeys": "1.8.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

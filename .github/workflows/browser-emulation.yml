@@ -57,6 +57,22 @@ jobs:
           php tests/browser/seed.php
           php artisan storage:link
           touch storage/app/installed.lock
+      - name: Verify system controls and passkey enrollment in Chromium
+        env:
+          APP_URL: http://localhost:8095
+          SYSTEM_CONFIGURATION_URL: http://localhost:8095
+        run: |
+          set -Eeuo pipefail
+          php artisan cache:clear
+          php artisan serve --host=127.0.0.1 --port=8095 > /tmp/bambodia-system-browser.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl -fsS -o /dev/null "$SYSTEM_CONFIGURATION_URL/"; then break; fi
+            sleep 1
+          done
+          node tests/browser/system-configuration.mjs
+          php artisan cache:clear
       - name: Verify desktop, tablet and mobile-emulated workflows
         env:
           BASE_URL: http://127.0.0.1:8094

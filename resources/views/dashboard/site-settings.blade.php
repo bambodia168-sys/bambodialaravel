@@ -1,9 +1,9 @@
 @extends('layouts.dashboard')
-@section('title',$group==='appearance'?'Appearance':'System Settings')
+@section('title',$group==='appearance'?'Appearance':'Basic Settings')
 @section('content')
 <div class="page-intro">
-<div class="eyebrow">{{ $group==='appearance'?'Front Customizer':'System Center' }}</div>
-<h1>{{ $group==='appearance'?'Appearance':'System Settings' }}</h1>
+<div class="eyebrow">{{ $group==='appearance'?'Front Customizer':'System Configuration' }}</div>
+<h1>{{ $group==='appearance'?'Appearance':'Basic Settings' }}</h1>
 <p>Each configuration below is connected to actual page rendering, locale selection or the public support contact. Changes are stored in the database.</p></div>
 @if($group !== 'appearance' && auth()->user()->role === 'super_admin')
 <section class="panel">

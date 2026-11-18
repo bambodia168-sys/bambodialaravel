@@ -2,7 +2,7 @@
 @section('title', 'SMTP Setup')
 @section('content')
 <div class="page-intro">
-  <div class="eyebrow">System Settings</div>
+  <div class="eyebrow">System Configuration</div>
   <h1>SMTP Setup</h1>
   <p>Configure email delivery for Bambodia notifications.</p>
 </div>

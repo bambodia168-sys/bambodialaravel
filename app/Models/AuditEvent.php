@@ -12,6 +12,10 @@ class AuditEvent extends Model
 
     public const EVENTS = [
         'auth.login.success',
+        'auth.passkey.registered',
+        'auth.passkey.removed',
+        'auth.social.connected',
+        'auth.social.disconnected',
         'auth.registration.terms_accepted',
         'auth.login.failed',
         'auth.logout',

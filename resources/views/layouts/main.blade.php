@@ -18,8 +18,15 @@
     <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=2">
     <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=2"></script>
   @endif
+@php
+  $contentControls = array_keys(array_filter(\App\Support\SystemSecurity::states(['right_click', 'content_protector', 'selection_protector'])));
+@endphp
+@if(in_array('selection_protector', $contentControls, true))
+  <link rel="stylesheet" href="{{ asset('css/system-configuration.css') }}">
+@endif
 </head>
-<body class="site-body">
+<body class="site-body" @if($contentControls) data-public-content-controls="{{ implode(' ', $contentControls) }}" @endif>
+@if($contentControls)<script defer src="{{ asset('js/public-content-controls.js') }}"></script>@endif
 <x-flash-feedback :validation-errors="$errors->all()" />
 <header class="site-header">
   <div class="site-nav container">
@@ -146,7 +153,7 @@
     </div>
   </div>
 </header>
-<main class="site-main">@yield('content')</main>
+<main class="site-main" @if($contentControls) data-protected-content @endif>@yield('content')</main>
 @php
   $footerPolicies = \App\Models\Policy::query()->where('status', 'published')
       ->whereIn('category', ['cookies', 'gdpr', 'privacy'])

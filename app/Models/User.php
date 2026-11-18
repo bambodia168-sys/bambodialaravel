@@ -8,9 +8,12 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class User extends Authenticatable
+use Spatie\LaravelPasskeys\Models\Concerns\HasPasskeys;
+use Spatie\LaravelPasskeys\Models\Concerns\InteractsWithPasskeys;
+
+class User extends Authenticatable implements HasPasskeys
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, InteractsWithPasskeys;
 
     public const ROLES = ['super_admin', 'admin', 'staff', 'customer', 'freelancer', 'subscriber'];
 
