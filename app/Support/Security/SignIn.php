@@ -5,6 +5,7 @@ namespace App\Support\Security;
 use App\Models\AuditEvent;
 use App\Models\User;
 use App\Models\UserTwoFactor;
+use App\Support\CheckoutCart;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,12 +23,13 @@ final class SignIn
         $request->session()->regenerate();
         AuditEvent::record('auth.login.success', $user, $request);
 
-        return redirect()->intended($user->defaultWorkspaceUrl());
+        return CheckoutCart::afterLogin($request, $user);
     }
 
     public static function challenge(Request $request, User $user, bool $remember = false): RedirectResponse
     {
         $intended = $request->session()->get('url.intended');
+        $checkout = $request->session()->only([CheckoutCart::SESSION, CheckoutCart::INTENT]);
         if (Auth::check()) {
             Auth::logout();
         }
@@ -37,7 +39,7 @@ final class SignIn
             'twofactor.pending_id' => $user->id,
             'twofactor.pending_at' => now()->timestamp,
             'twofactor.pending_remember' => $remember,
-        ]);
+        ] + $checkout);
         if (is_string($intended)) {
             $request->session()->put('url.intended', $intended);
         }

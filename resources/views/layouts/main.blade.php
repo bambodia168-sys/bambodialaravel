@@ -8,6 +8,10 @@
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
   @include('layouts.partials.site-typography')
+  @if(config('commerce.enabled'))
+    <link rel="stylesheet" href="{{ asset('css/commerce-storefront.css') }}?v=1">
+    <script defer src="{{ asset('js/commerce-storefront.js') }}?v=1"></script>
+  @endif
   <link rel="stylesheet" href="{{ asset('css/header-flag-scroll-top.css') }}?v=1">
   <link rel="stylesheet" href="{{ asset('css/footer-two-tone-themes.css') }}?v=2">
   <link rel="stylesheet" href="{{ asset('css/home-hero-aurora.css') }}?v=1">
@@ -103,6 +107,9 @@
     </details>
     @endif
     <div class="nav-actions">
+      @if(config('commerce.enabled'))
+        <a class="icon-button storefront-cart-link" href="{{ route('cart') }}" aria-label="Cart" title="Cart"><x-icon name="shopping-cart" size="19"/></a>
+      @endif
       <x-language-menu class="nav-language-menu header-flag-only"/>
       @auth
       <details class="dropdown profile-dropdown">
