@@ -76,6 +76,16 @@
   dialog.payment-method-dialog--add { width: min(29rem, calc(100% - 2rem)); }
   #add-payment-method-help { margin: .75rem 0 0; }
   .payment-method-dialog__body .payment-method-dialog__error { color: var(--danger); margin: .4rem 0 0; }
+  .payment-qr-preview { margin: .75rem 0; }
+  .payment-qr-preview img {
+    display: block;
+    max-inline-size: 100%;
+    max-block-size: 22rem;
+    inline-size: auto;
+    block-size: auto;
+    margin-block: .35rem;
+  }
+  .payment-qr-preview [hidden] { display: none; }
 </style>
 @php($addErrors = $errors->getBag('addPaymentMethod'))
 <dialog class="config-dialog payment-method-dialog payment-method-dialog--add" id="add-payment-method"
@@ -156,10 +166,24 @@
         @else
           <p>Enter the recipient and account details buyers need to complete the transfer. Buyers upload their receipt from the order page for review.</p>
           <label>Transfer instructions<textarea name="instructions" rows="3" maxlength="2500">{{ $retry ? old('instructions') : $method->instructions }}</textarea></label>
-          <label>Optional merchant QR image<input name="qr" type="file" accept="image/png,image/jpeg,image/webp"></label>
-          @if($method->qr_path)
-            <label><input name="remove_qr" type="checkbox" value="1"> Remove saved QR</label>
-          @endif
+          <div data-payment-qr>
+            <label>Optional merchant QR image<input name="qr" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            @if($method->qr_path)
+              @php($previewUrl = route('dashboard.payment-methods.qr-preview', $method))
+              <figure class="payment-qr-preview" data-saved-qr>
+                <figcaption>Saved QR image</figcaption>
+                <img src="{{ $previewUrl }}" alt="Saved {{ $method->name }} merchant QR" loading="lazy">
+                <a href="{{ $previewUrl }}" target="_blank" rel="noopener">View full-size QR</a>
+                <p data-qr-error hidden>The saved QR image could not be loaded. Upload a replacement.</p>
+              </figure>
+              <label><input name="remove_qr" type="checkbox" value="1"> Remove saved QR</label>
+            @endif
+            <figure class="payment-qr-preview" data-selected-qr hidden>
+              <figcaption>Selected QR image</figcaption>
+              <img alt="Selected {{ $method->name }} merchant QR" hidden>
+              <p data-qr-error hidden>The selected image could not be opened. Choose a PNG, JPEG, or WebP image.</p>
+            </figure>
+          </div>
         @endif
         <label>Availability
           <select name="available">
@@ -176,6 +200,42 @@
   </dialog>
 @endforeach
 <script>
+  for (const group of document.querySelectorAll('[data-payment-qr]')) {
+    const input = group.querySelector('input[type="file"]');
+    const saved = group.querySelector('[data-saved-qr]');
+    const selected = group.querySelector('[data-selected-qr]');
+    const image = selected.querySelector('img');
+    const selectionError = selected.querySelector('[data-qr-error]');
+    let previewUrl;
+
+    if (saved) {
+      const savedImage = saved.querySelector('img');
+      const showSavedError = () => {
+        savedImage.hidden = true;
+        saved.querySelector('a').hidden = true;
+        saved.querySelector('[data-qr-error]').hidden = false;
+      };
+      savedImage.addEventListener('error', showSavedError);
+      if (savedImage.complete && !savedImage.naturalWidth) showSavedError();
+    }
+
+    image.addEventListener('error', () => {
+      image.hidden = true;
+      selectionError.hidden = false;
+    });
+
+    input.addEventListener('change', () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      const file = input.files[0];
+      previewUrl = file ? URL.createObjectURL(file) : undefined;
+      image.hidden = !file;
+      selectionError.hidden = true;
+      selected.hidden = !file;
+      if (saved) saved.hidden = Boolean(file);
+      if (previewUrl) image.src = previewUrl;
+      else image.removeAttribute('src');
+    });
+  }
   document.querySelector('dialog[data-payment-reopen]')?.showModal();
 </script>
 @endsection

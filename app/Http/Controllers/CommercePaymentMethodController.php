@@ -8,6 +8,7 @@ use App\Models\CommercePayment;
 use App\Models\AuditEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -22,6 +23,24 @@ class CommercePaymentMethodController extends Controller
         $methods = CommercePaymentMethod::query()->orderBy('name')->paginate(10);
 
         return view('commerce.methods', compact('methods'));
+    }
+
+    public function qrPreview(CommercePaymentMethod $method): Response
+    {
+        abort_unless(config('commerce.enabled') && ! $method->usesGateway() && $method->qr_path, 404);
+
+        $image = Storage::disk('local')->get($method->qr_path);
+        abort_if($image === null, 404);
+
+        $type = (new \finfo(FILEINFO_MIME_TYPE))->buffer($image);
+        abort_unless(in_array($type, ['image/png', 'image/jpeg', 'image/webp'], true), 404);
+
+        return response($image, 200, [
+            'Content-Type' => $type,
+            'Cache-Control' => 'private, no-store',
+            'Content-Security-Policy' => "default-src 'none'; sandbox",
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

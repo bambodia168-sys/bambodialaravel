@@ -101,6 +101,33 @@ try {
   const admin = await login('admin', {width: 1365, height: 900});
   const outsider = await login('outsider', {width: 1365, height: 900});
 
+  await visit(admin, '/dashboard/payment-methods');
+  await admin.getByRole('button', {name: 'Configure Wing', exact: true}).click();
+  const wing = admin.getByRole('dialog', {name: 'Configure Wing', exact: true});
+  const previewImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAAAAADhZOFXAAAAEElEQVR4nGP8zwABTAwUMQBJQQEPeWDz+AAAAABJRU5ErkJggg==', 'base64');
+  await wing.locator('input[name="qr"]').setInputFiles({name: 'pilot-merchant.png', mimeType: 'image/png', buffer: previewImage});
+  const selectedQr = wing.getByRole('img', {name: 'Selected Wing merchant QR'});
+  await selectedQr.waitFor();
+  assert.ok(await selectedQr.evaluate(async image => {
+    await image.decode();
+    return image.naturalWidth > 0;
+  }));
+  await wing.getByRole('button', {name: 'Save settings', exact: true}).click();
+  await admin.getByText('Payment method settings saved.', {exact: true}).waitFor();
+  await visit(admin, '/dashboard/payment-methods');
+  await admin.getByRole('button', {name: 'Configure Wing', exact: true}).click();
+  const savedQr = wing.getByRole('img', {name: 'Saved Wing merchant QR'});
+  await savedQr.waitFor();
+  assert.ok(await savedQr.evaluate(async image => {
+    await image.decode();
+    return image.naturalWidth > 0;
+  }));
+  const qrUrl = await wing.getByRole('link', {name: 'View full-size QR', exact: true}).getAttribute('href');
+  assert.equal((await outsider.request.get(qrUrl)).status(), 403);
+  assert.equal(await wing.getByLabel('Availability').inputValue(), '0');
+  await wing.getByRole('button', {name: 'Close configuration'}).click();
+  record('Hidden manual payment method previews selected and saved QR images privately');
+
   const productOrder = await order(buyer, fixture.product_url, {guest: true});
   record('Checkout retries return the same product order');
   await uploadReceipt(buyer, 'PILOT-PRODUCT-REJECT');
