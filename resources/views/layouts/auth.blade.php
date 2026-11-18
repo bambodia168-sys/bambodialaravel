@@ -8,6 +8,7 @@
   <meta name="robots" content="noindex,nofollow">
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
+  <link rel="stylesheet" href="{{ asset('css/auth-tools.css') }}">
   @include('layouts.partials.site-typography')
   @stack('head')
 </head>
@@ -23,12 +24,12 @@
     @yield('content')
   </section>
   <nav class="auth-tools" aria-label="Account page controls">
-    <a class="auth-home-tool" href="{{ route('home') }}" aria-label="{{ __('ui.home') }}">
-      <x-icon name="home" size="18"/><span>{{ __('ui.home') }}</span>
+    <a class="auth-home-tool auth-tool-icon" href="{{ route('home') }}" aria-label="{{ __('ui.home') }}" title="{{ __('ui.home') }}">
+      <x-icon name="home" size="20"/>
     </a>
-    <button type="button" class="auth-theme-tool" data-theme-toggle aria-label="Toggle light or dark mode">
-      <span class="theme-icon-moon"><x-icon name="moon" size="18"/></span>
-      <span class="theme-icon-sun"><x-icon name="sun" size="18"/></span>
+    <button type="button" class="auth-theme-tool auth-tool-icon" data-theme-toggle aria-label="Toggle light or dark mode">
+      <span class="theme-icon-moon"><x-icon name="moon" size="20"/></span>
+      <span class="theme-icon-sun"><x-icon name="sun" size="20"/></span>
       <span class="sr-only">Toggle theme</span>
     </button>
     <x-language-menu :compact="true" />
