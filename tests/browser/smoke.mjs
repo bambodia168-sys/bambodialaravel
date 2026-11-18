@@ -992,8 +992,20 @@ try {
           throw new Error(device.name+' '+path+' missing Home SVG');
         if(!(await page.locator('.auth-tools [data-theme-toggle]').isVisible()))
           throw new Error(device.name+' '+path+' missing theme control');
-        if(!(await page.locator('.auth-tools .language-menu summary .locale-flag').isVisible()))
-          throw new Error(device.name+' '+path+' missing language SVG flag');
+        if(!(await page.locator('.auth-tools .language-menu summary > svg').isVisible()))
+          throw new Error(device.name+' '+path+' missing language globe SVG');
+        const authTools=await page.locator('.auth-tools .auth-tool-icon').evaluateAll(controls=>controls.map(control=>{
+          const style=getComputedStyle(control);
+          const bounds=control.getBoundingClientRect();
+          return {
+            background:style.backgroundColor, border:style.borderTopWidth, shadow:style.boxShadow,
+            width:bounds.width, height:bounds.height, visibleIcons: [...control.querySelectorAll('svg')]
+              .filter(svg=>svg.getBoundingClientRect().width>0).length,
+          };
+        }));
+        if(authTools.length!==3 || authTools.some(control=>control.background!=='rgba(0, 0, 0, 0)' ||
+           control.border!=='0px' || control.shadow!=='none' || control.width<44 || control.height<44 || control.visibleIcons!==1))
+          throw new Error(device.name+' '+path+' auth toolbar controls must be background-free icons with 44px targets');
       }
       if(path==='/register'){
         if(!(await page.locator('input[name="terms_accepted"][required]').isVisible()))
@@ -1236,10 +1248,12 @@ try {
         throw new Error('Expected 8 supported locale SVG flags');
       await language.locator('button[name="locale"][value="km"]').click();
       await page.waitForLoadState('networkidle');
-      if(!(await page.locator('.auth-tools .language-menu summary').getByText('ខ្មែរ').isVisible()))
+      if(await page.locator('html').getAttribute('lang')!=='km' ||
+         !(await language.locator('summary').getAttribute('aria-label')).endsWith('ខ្មែរ'))
         throw new Error('Locale POST did not persist selected Khmer locale');
+      const authTheme=await page.locator('html').getAttribute('data-theme');
       await page.locator('.auth-tools [data-theme-toggle]').click();
-      if(!['dark','light'].includes(await page.locator('html').getAttribute('data-theme')))
+      if(await page.locator('html').getAttribute('data-theme')!==(authTheme==='dark'?'light':'dark'))
         throw new Error('Theme did not toggle');
       checks+=4;
       await page.goto(origin+'/login',{waitUntil:'networkidle'});
