@@ -3,6 +3,7 @@
 return [
     'enabled' => env('COMMERCE_WORKSPACES_ENABLED', false),
     'payments_enabled' => env('COMMERCE_PAYMENTS_ENABLED', false),
+    'operations_enabled' => env('COMMERCE_OPERATIONS_ENABLED', false),
     'live_gateways' => env('COMMERCE_LIVE_GATEWAYS', false),
     'stripe' => [
         'secret' => env('COMMERCE_STRIPE_SECRET'),

@@ -7,6 +7,13 @@
     <a class="btn subtle compact" href="{{ route($section.'.index') }}">Back to orders</a>
     <h1>{{ $order->listing_title }}</h1>
     <p class="mono">{{ $order->number }}</p>
+    @if($canOpenSettlement)
+      @if($section === 'account.orders')
+        <a class="btn subtle compact" href="{{ route('account.orders.refund', $order->number) }}">Refund details</a>
+      @else
+        <a class="btn subtle compact" href="{{ route('dashboard.commerce-operations.show', $order->number) }}">Manage settlement</a>
+      @endif
+    @endif
   </div>
   @if($order->relationLoaded('serviceInquiry') && $order->serviceInquiry)
     <section class="panel">

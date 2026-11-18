@@ -16,6 +16,7 @@ class AccountNotification extends Model
         'inquiry.closed',
         'commerce.payment.approved',
         'commerce.payment.rejected',
+        'commerce.refund.updated',
         'commerce.service.purchased',
         'commerce.service.requirements',
         'commerce.service.delivered',

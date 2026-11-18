@@ -7,6 +7,7 @@ use App\Http\Controllers\Dashboard\SystemSecurityController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CommerceSettlementController;
 use App\Http\Controllers\CommerceOrderController;
+use App\Http\Controllers\CommerceOperationsController;
 use App\Http\Controllers\MarketplaceOrderReviewController;
 use App\Http\Controllers\CommerceCartController;
 use App\Http\Controllers\CommercePaymentMethodController;
@@ -244,6 +245,9 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/new/{listing}', [CommerceOrderController::class, 'store'])->where('listing', '[0-9]{9}')
             ->middleware('throttle:10,1,commerce-order-create:')->name('store');
         Route::get('/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('show');
+        Route::get('/{number}/refund', [CommerceOperationsController::class, 'show'])->whereUuid('number')->name('refund');
+        Route::post('/{number}/refund', [CommerceOperationsController::class, 'store'])->whereUuid('number')
+            ->middleware('throttle:10,1,commerce-refund:')->name('refund.store');
         Route::post('/{number}/review', [MarketplaceOrderReviewController::class, 'store'])->whereUuid('number')
             ->middleware('throttle:10,1,commerce-review-create:')->name('review.store');
         Route::get('/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('receipt');
@@ -439,6 +443,11 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/commerce-operations', [CommerceSettlementController::class, 'index'])->name('dashboard.commerce-operations');
             Route::get('/commerce-operations/statement.csv', [CommerceSettlementController::class, 'statement'])
                 ->middleware('throttle:10,1')->name('dashboard.commerce-operations.statement');
+            Route::get('/commerce-operations/{number}', [CommerceOperationsController::class, 'show'])
+                ->whereUuid('number')->name('dashboard.commerce-operations.show');
+            Route::post('/commerce-operations/{number}', [CommerceOperationsController::class, 'store'])
+                ->whereUuid('number')->middleware('throttle:20,1,commerce-operations:')
+                ->name('dashboard.commerce-operations.store');
             Route::get('/orders/{number}/payments/{payment}/proof', [CommercePaymentController::class, 'proof'])
                 ->whereUuid(['number', 'payment'])->name('dashboard.orders.payment.proof');
             Route::patch('/orders/{number}/payments/{payment}', [CommercePaymentController::class, 'review'])

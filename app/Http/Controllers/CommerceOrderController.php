@@ -10,6 +10,7 @@ use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
 use App\Models\User;
 use App\Support\CommerceOffers;
+use App\Support\CommerceOperations;
 use App\Support\OrderFulfillment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -57,15 +58,21 @@ class CommerceOrderController extends Controller
             $order->load('review');
         }
         $canReview = $section === 'account.orders' && $order->review === null && $order->isReviewEligible();
+        $canOpenSettlement = in_array($section, ['account.orders', 'dashboard.orders'], true)
+            && ($section === 'account.orders' || $request->user()->role === 'super_admin')
+            && in_array($order->status, ['completed', 'refunded'], true)
+            && CommerceOperations::enabled() && $order->paidAttempt()->exists();
 
-        return response()->view('commerce.show', compact('order', 'section', 'workspace', 'methods', 'payments', 'canReview'))
+        return response()->view('commerce.show', compact(
+            'order', 'section', 'workspace', 'methods', 'payments', 'canReview', 'canOpenSettlement',
+        ))
             ->header('Cache-Control', 'private, no-store');
     }
 
     public function receipt(Request $request, string $number): Response
     {
         [$orders, $section, $workspace] = $this->workspace($request);
-        $order = $orders->where('number', $number)->where('status', 'completed')
+        $order = $orders->where('number', $number)->whereIn('status', ['completed', 'refunded'])
             ->whereNotNull('receipt_number')->firstOrFail();
 
         return response()->view('commerce.receipt', compact('order', 'section', 'workspace'))
