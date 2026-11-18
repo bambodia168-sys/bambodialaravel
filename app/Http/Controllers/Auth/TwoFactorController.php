@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
-use App\Models\SiteSetting;
+use App\Support\SystemSecurity;
 use App\Models\User;
 use App\Models\UserTwoFactor;
 use App\Support\Security\Totp;
@@ -20,15 +20,19 @@ final class TwoFactorController extends Controller
 {
     public function settings(Request $request): View
     {
+        $enrollmentAllowed = SystemSecurity::enabled('two_factor_enrollment');
+
         return view('account.security',[
             'credential'=>UserTwoFactor::query()->find($request->user()->id),
-            'enrollmentSecret'=>$request->session()->get('twofactor.enroll_secret'),
+            'enrollmentSecret'=>$enrollmentAllowed ? $request->session()->get('twofactor.enroll_secret') : null,
+            'enrollmentAllowed'=>$enrollmentAllowed,
             'recoveryCodes'=>$request->session()->pull('twofactor.recovery_codes',[]),
         ]);
     }
 
     public function begin(Request $request): RedirectResponse
     {
+        abort_unless(SystemSecurity::enabled('two_factor_enrollment'), 403);
         $values=$request->validate(['current_password'=>['required','string']]);
         $user=$request->user();
         if (! Hash::check($values['current_password'],$user->password)) {
@@ -46,6 +50,7 @@ final class TwoFactorController extends Controller
 
     public function enable(Request $request): RedirectResponse
     {
+        abort_unless(SystemSecurity::enabled('two_factor_enrollment'), 403);
         $values=$request->validate(['code'=>['required','regex:/\A[0-9]{6}\z/D']]);
         $secret=$request->session()->get('twofactor.enroll_secret');
         $timestamp=(int)$request->session()->get('twofactor.enroll_at',0);

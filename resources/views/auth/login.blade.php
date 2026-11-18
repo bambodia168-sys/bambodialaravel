@@ -11,5 +11,6 @@
   <x-turnstile-widget action="login"/>
   <button class="btn primary" type="submit">{{ __('ui.sign_in') }}</button>
 </form>
+@include('auth.alternative-sign-in')
 @if(\App\Models\FeatureFlag::isEnabled('registration'))<p class="form-foot">New to Bambodia? <a href="{{ route('register') }}">Create your account</a></p>@endif
 @endsection

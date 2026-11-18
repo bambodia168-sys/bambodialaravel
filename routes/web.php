@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Controllers\Auth\PasskeyController;
+use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\Dashboard\SocialAuthSettingsController;
+use App\Http\Controllers\Dashboard\SystemSecurityController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CommerceSettlementController;
 use App\Http\Controllers\CommerceOrderController;
@@ -146,7 +150,18 @@ Route::middleware('auth')->prefix('detail')->group(function (): void {
         ->whereNumber('resource')->middleware('throttle:12,1')->name('detail.support.resources.destroy');
 });
 
+Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+    ->whereIn('provider', ['google', 'facebook', 'linkedin', 'github'])
+    ->middleware('throttle:15,1,social-callback:')->block()->name('social.callback');
+
 Route::middleware('guest')->group(function (): void {
+    Route::get('/auth/{provider}/start', [SocialAuthController::class, 'start'])
+        ->whereIn('provider', ['google', 'facebook', 'linkedin', 'github'])
+        ->middleware('throttle:10,1,social-start:')->name('social.start');
+    Route::post('/passkeys/sign-in/options', [PasskeyController::class, 'authenticationOptions'])
+        ->middleware('throttle:10,1,passkey-login-options:')->block()->name('login.passkeys.options');
+    Route::post('/passkeys/sign-in', [PasskeyController::class, 'authenticate'])
+        ->middleware('throttle:10,1,passkey-login:')->block()->name('login.passkeys.authenticate');
     Route::get('/login', [AuthController::class, 'login'])->name('login');
     Route::post('/login', [AuthController::class, 'authenticate'])->name('login.store')->middleware('throttle:8,1');
     Route::get('/two-factor-challenge', [TwoFactorController::class,'challenge'])->name('login.two-factor');
@@ -311,6 +326,20 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/account', [AccountController::class, 'index'])->name('account');
     Route::patch('/account', [AccountController::class, 'update'])->name('account.update');
     Route::get('/account/security', [TwoFactorController::class,'settings'])->name('account.security');
+    Route::prefix('account/security')->group(function (): void {
+        Route::post('/passkeys/options', [PasskeyController::class, 'registrationOptions'])
+            ->middleware('throttle:6,1,passkey-enroll-options:')->block()->name('account.passkeys.options');
+        Route::post('/passkeys', [PasskeyController::class, 'register'])
+            ->middleware('throttle:6,1,passkey-enroll:')->block()->name('account.passkeys.register');
+        Route::delete('/passkeys/{passkey}', [PasskeyController::class, 'destroy'])->whereNumber('passkey')
+            ->middleware('throttle:6,1,passkey-remove:')->name('account.passkeys.destroy');
+        Route::post('/social/{provider}', [SocialAuthController::class, 'connect'])
+            ->whereIn('provider', ['google', 'facebook', 'linkedin', 'github'])
+            ->middleware('throttle:6,1,social-connect:')->name('account.social.connect');
+        Route::delete('/social/{provider}', [SocialAuthController::class, 'disconnect'])
+            ->whereIn('provider', ['google', 'facebook', 'linkedin', 'github'])
+            ->middleware('throttle:6,1,social-disconnect:')->name('account.social.disconnect');
+    });
     Route::post('/account/security/two-factor/begin', [TwoFactorController::class,'begin'])
         ->name('account.security.begin')->middleware('throttle:5,1');
     Route::post('/account/security/two-factor/enable', [TwoFactorController::class,'enable'])
@@ -469,6 +498,16 @@ Route::middleware('auth')->group(function (): void {
             });
             Route::get('/appearance', [SiteSettingsController::class, 'appearance'])->name('dashboard.appearance');
             Route::patch('/appearance', [SiteSettingsController::class, 'updateAppearance'])->name('dashboard.appearance.update');
+            Route::prefix('system-configuration')->middleware('role:super_admin')->group(function (): void {
+                Route::get('/security', [SystemSecurityController::class, 'index'])->name('dashboard.system-security.index');
+                Route::patch('/security/{control}', [SystemSecurityController::class, 'update'])
+                    ->middleware('throttle:15,1,system-security:')->name('dashboard.system-security.update');
+                Route::get('/social-auth', [SocialAuthSettingsController::class, 'index'])->name('dashboard.social-auth.index');
+                Route::put('/social-auth/{provider}', [SocialAuthSettingsController::class, 'configure'])
+                    ->middleware('throttle:10,1,social-configure:')->name('dashboard.social-auth.configure');
+                Route::patch('/social-auth/{provider}', [SocialAuthSettingsController::class, 'status'])
+                    ->middleware('throttle:15,1,social-status:')->name('dashboard.social-auth.status');
+            });
             Route::get('/system-settings', [SiteSettingsController::class, 'system'])->name('dashboard.system-settings');
             Route::middleware('role:super_admin')->prefix('system-settings/smtp')->name('dashboard.smtp.')->group(function (): void {
                 Route::get('/', [SmtpSettingsController::class, 'index'])->name('index');
@@ -643,6 +682,9 @@ foreach (\App\Http\Middleware\SetLocale::SUPPORTED as $languageCode) {
             $action
         )->middleware($originalRoute->gatherMiddleware())
             ->name('localized.'.$languageCode.'.'.$name);
+        if ($originalRoute->locksFor() !== null) {
+            $localizedRoute->block($originalRoute->locksFor(), $originalRoute->waitsFor());
+        }
         foreach ($originalRoute->wheres as $parameter => $constraint) {
             $localizedRoute->where($parameter, $constraint);
         }

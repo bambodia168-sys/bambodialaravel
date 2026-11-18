@@ -9,6 +9,7 @@
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
   @include('layouts.partials.site-typography')
+  @stack('head')
 </head>
 <body class="auth-body">
 <x-flash-feedback :validation-errors="$errors->all()" />

@@ -44,21 +44,7 @@ class AuthController extends Controller
         }
 
         if (UserTwoFactor::query()->whereKey($request->user()->id)->exists()) {
-            $pendingId=$request->user()->id;
-            $remember=$request->boolean('remember');
-            $intended = $request->session()->get('url.intended');
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-            $request->session()->put([
-                'twofactor.pending_id'=>$pendingId,
-                'twofactor.pending_at'=>now()->timestamp,
-                'twofactor.pending_remember'=>$remember,
-            ]);
-            if (is_string($intended)) {
-                $request->session()->put('url.intended', $intended);
-            }
-            return redirect()->route('login.two-factor');
+            return \App\Support\Security\SignIn::challenge($request, $request->user(), $request->boolean('remember'));
         }
         $request->session()->regenerate();
         AuditEvent::record('auth.login.success', $request->user(), $request);
