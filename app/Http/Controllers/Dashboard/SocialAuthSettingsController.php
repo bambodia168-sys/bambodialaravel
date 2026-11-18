@@ -8,6 +8,7 @@ use App\Models\SocialLoginProvider;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 final class SocialAuthSettingsController extends Controller
@@ -22,16 +23,18 @@ final class SocialAuthSettingsController extends Controller
     public function configure(Request $request, string $provider): RedirectResponse
     {
         abort_unless(isset(SocialLoginProvider::PROVIDERS[$provider]), 404);
-        $input = $request->validate([
+        $bag = 'social-auth-'.$provider;
+        $input = $request->validateWithBag($bag, [
             'client_id' => ['required', 'string', 'max:255'],
             'client_secret' => ['nullable', 'string', 'max:1024'],
         ]);
 
-        DB::transaction(function () use ($request, $provider, $input): void {
+        DB::transaction(function () use ($request, $provider, $input, $bag): void {
             $setting = SocialLoginProvider::query()->lockForUpdate()->find($provider) ?? new SocialLoginProvider(['provider' => $provider]);
             $secret = $input['client_secret'] ?? null;
             if ($secret === null && (! $setting->exists || $setting->client_id !== $input['client_id'])) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['client_secret' => 'Enter the secret for this client ID.']);
+                throw ValidationException::withMessages(['client_secret' => 'Enter the secret for this client ID.'])
+                    ->errorBag($bag);
             }
             $setting->client_id = $input['client_id'];
             if ($secret !== null) {

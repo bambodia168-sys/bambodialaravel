@@ -68,6 +68,38 @@ try {
   assert.deepEqual(blocked, {content: true, header: false});
   await setSwitch(admin, 'Right-click protection', false);
 
+  await admin.goto(url+'/dashboard/system-configuration/social-auth');
+  await admin.setViewportSize({width: 390, height: 740});
+  for (const [label, key] of [['Google', 'google'], ['Facebook', 'facebook'], ['LinkedIn', 'linkedin'], ['GitHub', 'github']]) {
+    await admin.getByRole('button', {name: 'Configure '+label, exact: true}).click();
+    const dialog = admin.getByRole('dialog', {name: 'Configure '+label, exact: true});
+    await dialog.waitFor();
+    const bounds = await dialog.boundingBox();
+    assert(bounds && bounds.x >= 0 && bounds.x + bounds.width <= 390 && bounds.height <= 740);
+    assert.equal(await dialog.locator('code').innerText(), url+'/auth/'+key+'/callback');
+    assert.equal(await dialog.getByLabel('Client secret', {exact: true}).inputValue(), '');
+    await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+    await dialog.waitFor({state: 'hidden'});
+  }
+  await admin.getByRole('button', {name: 'Configure Google', exact: true}).click();
+  const google = admin.getByRole('dialog', {name: 'Configure Google', exact: true});
+  await admin.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: url});
+  await google.getByRole('button', {name: 'Copy URL', exact: true}).click();
+  await google.getByRole('button', {name: 'Copied', exact: true}).waitFor();
+  assert.equal(await admin.evaluate(() => navigator.clipboard.readText()), url+'/auth/google/callback');
+  await google.getByLabel('Client ID', {exact: true}).fill('fixture-client');
+  await google.getByLabel('Client secret', {exact: true}).fill('synthetic-test-secret');
+  await google.getByRole('button', {name: 'Save credentials', exact: true}).click();
+  await google.waitFor({state: 'hidden'});
+  await admin.getByRole('button', {name: 'Configure Google', exact: true}).click();
+  assert.equal(await google.getByLabel('Client secret', {exact: true}).inputValue(), '');
+  await google.getByLabel('Client ID', {exact: true}).fill('updated-fixture-client');
+  await google.getByRole('button', {name: 'Save credentials', exact: true}).click();
+  await google.getByText('Enter the secret for this client ID.', {exact: true}).waitFor();
+  assert.equal(await google.getByLabel('Client ID', {exact: true}).inputValue(), 'updated-fixture-client');
+  await admin.setViewportSize({width: 1280, height: 800});
+  await admin.goto(url+system);
+
   const customer = await browser.newPage();
   const session = await customer.context().newCDPSession(customer);
   await session.send('WebAuthn.enable');

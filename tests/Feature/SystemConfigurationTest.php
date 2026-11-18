@@ -64,9 +64,13 @@ class SystemConfigurationTest extends TestCase
         $this->get(route('social.start', 'google'))->assertNotFound();
         $page = route('dashboard.social-auth.index');
         $this->actingAs($this->member('super_admin'))->get($page)->assertOk()
-            ->assertSee('Google Login')->assertSee('Facebook Login')->assertSee('LinkedIn Login')->assertSee('GitHub Login');
+            ->assertSee('Google Login')->assertSee('Facebook Login')->assertSee('LinkedIn Login')->assertSee('GitHub Login')
+            ->assertSee('data-modal-open="configure-social-google"', false);
         $this->from($page)->put(route('dashboard.social-auth.configure', 'google'), ['client_id' => 'fixture'])
-            ->assertSessionHasErrors('client_secret');
+            ->assertSessionHasErrorsIn('social-auth-google', 'client_secret');
+        $this->put(route('dashboard.social-auth.configure', 'google'), ['client_secret' => 'never-flash-this'])
+            ->assertSessionHasErrorsIn('social-auth-google', 'client_id')
+            ->assertSessionMissing('_old_input.client_secret');
         $this->put(route('dashboard.social-auth.configure', 'google'), [
             'client_id' => 'fixture', 'client_secret' => 'private-social-fixture',
         ])->assertRedirect();
