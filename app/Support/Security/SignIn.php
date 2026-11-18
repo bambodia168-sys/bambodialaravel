@@ -29,7 +29,10 @@ final class SignIn
     public static function challenge(Request $request, User $user, bool $remember = false): RedirectResponse
     {
         $intended = $request->session()->get('url.intended');
-        $checkout = $request->session()->only([CheckoutCart::SESSION, CheckoutCart::INTENT]);
+        $checkout = array_filter([
+            CheckoutCart::SESSION => $request->session()->get(CheckoutCart::SESSION),
+            CheckoutCart::INTENT => $request->session()->get(CheckoutCart::INTENT),
+        ], fn ($value) => $value !== null);
         if (Auth::check()) {
             Auth::logout();
         }
