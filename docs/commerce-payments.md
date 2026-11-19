@@ -13,13 +13,15 @@ A super administrator can enable or pause new payments in **Payment Methods → 
 
 Manual approval records payment and grants access together. Buyers find their license and approved file on the order page. Buyers and sellers use the service workspace on their order pages to coordinate service delivery. Paid product orders created before release and license terms were recorded must be replaced before a buyer transfers funds. For already-submitted receipts on older orders, reconcile the transfer before rejecting and arranging a correction.
 
+Verified Stripe, PayPal, ABA and Bakong payments also grant the ordered download and issue a license for a licensed product, or open the service workspace for a service order. Stripe checks the provider's Checkout Session on signed webhook delivery and on the buyer's return, then checks the order, amount, currency and payment status before granting access. Duplicate events retain the original license. If the approved file or terms are unavailable when payment clears, the receipt remains on record and the buyer can choose **Check delivery** from the order once the same approved release becomes available.
+
 ## Operational scope
 
 Settlement accepts USD orders. Hosted checkout sends the buyer to the provider, and paid receipts are issued after provider-side verification or an independently reconciled manual transfer. An approved redirect is only a return to the order page. The order page also supports retrying verification when webhook delivery is delayed.
 
 PayPal and Stripe need merchant credentials and working webhook registration before going live. Keep sandbox orders on an isolated database. Switch `COMMERCE_LIVE_GATEWAYS` only when deploying with the matching live provider configuration. Stripe's dashboard selection takes precedence over this default for Stripe checkout. Existing in-flight checkouts must be reconciled before rotating credentials or changing the gateway environment.
 
-The merchant account receives funds. Creator payouts, refunds, taxes, payment disputes, and digital fulfillment for gateway payments are separate workflows. For an open checkout whose state is unclear, reconcile it with the provider before retrying with another method. Maintain private backup and retention for transfer receipt files under `storage/app/private/commerce/payment-proofs`.
+The merchant account receives funds. Creator payouts, refunds, taxes, payment disputes, and recurring subscriptions are separate workflows. For an open checkout whose state is unclear, reconcile it with the provider before retrying with another method. Maintain private backup and retention for transfer receipt files under `storage/app/private/commerce/payment-proofs`.
 
 ## Gateway configuration and order QR
 

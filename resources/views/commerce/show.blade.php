@@ -28,6 +28,22 @@
         </div>
       </div>
     </section>
+  @elseif($section === 'account.orders' && $order->status === 'completed'
+      && !$order->entitlement && !$order->serviceInquiry
+      && ($verifiedGateway = $payments->first(fn ($payment) => $payment->status === 'paid' && $payment->remote_id
+          && $payment->settlement_reference && ($payment->live_mode || !app()->isProduction()))))
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Purchase delivery pending</h2>
+          <p>Your payment is verified. Check delivery again or contact support with your order number.</p>
+        </div>
+        <form method="post" action="{{ route('account.orders.payment.verify', [$order->number, $verifiedGateway->number]) }}">
+          @csrf
+          <button class="btn subtle">Check delivery</button>
+        </form>
+      </div>
+    </section>
   @endif
   <section class="panel">
     <div class="panel-head">
