@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\FreelancerResume;
 use App\Models\JobProposal;
+use App\Models\MarketplaceCategory;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\ServiceInquiry;
@@ -47,6 +48,31 @@ class FrontendLayoutSamplesSafetyTest extends TestCase
             'description'=>str_repeat('This fictional job is only a preview for layout checking. ',2),
             'category'=>'design','budget'=>'300.00','status'=>'published',
         ]);
+        MarketplaceCategory::query()->create([
+            'type' => 'service', 'name' => 'Layout Preview Service', 'is_active' => true, 'created_by' => $creator->id,
+        ]);
+        $liveListing = MarketplaceListing::query()->create([
+            'user_id' => $creator->id, 'type' => 'service', 'title' => 'Professional UX Review',
+            'description' => 'A full review of the accessibility and usability of your website.',
+            'price' => '60.00', 'status' => 'published',
+        ]);
+        $liveJob = MarketplaceJob::query()->create([
+            'client_id' => $client->id, 'title' => 'Professional Website Design',
+            'description' => 'Design a responsive website for a local organization.',
+            'category' => 'design', 'budget' => '300.00', 'status' => 'published',
+        ]);
+
+        $this->get('/')->assertOk()
+            ->assertViewHas('listingTotals', fn ($totals) => $totals->get('service') === 1)
+            ->assertSee($liveListing->title)->assertSee($liveJob->title)
+            ->assertDontSee($listing->title)->assertDontSee($job->title)->assertDontSee('Layout Preview Service');
+        $this->get('/search?type=service&q=UX+Review')->assertOk()
+            ->assertSee($liveListing->title)->assertDontSee($listing->title)->assertDontSee('Layout Preview Service');
+        $this->get('/jobs?q=Website+Design')->assertOk()
+            ->assertSee($liveJob->title)->assertDontSee($job->title);
+        $this->get($liveListing->publicUrl())->assertOk()->assertDontSee($listing->title);
+        $this->get($liveJob->publicUrl())->assertOk()->assertDontSee($job->title);
+
         $this->actingAs($client)->get($listing->publicUrl())->assertOk()
             ->assertSee('Preview listing')->assertDontSee('id="request-service"',false)
             ->assertDontSee('LAYOUT TEST ONLY');

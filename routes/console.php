@@ -186,3 +186,5 @@ Artisan::command('commerce:alert-delayed-delivery', function (): int {
 })->purpose('Notify Super Admins once per verified order with delayed delivery');
 
 Schedule::command('commerce:alert-delayed-delivery')->everyFifteenMinutes()->withoutOverlapping();
+
+Schedule::command('vault:rescan-expiring')->hourly()->withoutOverlapping(30)->runInBackground();

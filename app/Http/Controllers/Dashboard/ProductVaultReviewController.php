@@ -8,7 +8,7 @@ use App\Models\AccountNotification;
 use App\Models\ProductFileVersion;
 use App\Support\ProductReadiness;
 use App\Support\ProductVault;
-use App\Support\VaultMalwareScanner;
+use App\Support\VaultScreening;
 use App\Support\VaultReleaseGate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,55 +28,16 @@ class ProductVaultReviewController extends Controller
             ->with(['product:id,public_id,user_id,title,type,status,license_definition_id,cover_media_id',
                 'uploader:id,name,public_id'])
             ->when($status!=='all',fn($query)=>$query->where('status',$status))
+            ->when($request->filled('release'), fn ($query) => $query->whereKey($request->integer('release')))
             ->latest()->paginate(10)->withQueryString();
         return view('dashboard.vault-versions',compact('versions','status'));
     }
 
-    public function scan(Request $request,ProductFileVersion $version,VaultMalwareScanner $scanner): RedirectResponse
+    public function scan(Request $request, ProductFileVersion $version, VaultScreening $screening): RedirectResponse
     {
-        abort_unless(in_array($version->status,['pending','approved'],true),409);
-        $path=ProductVault::verifiedPath($version->storage_path,$version->sha256,(int)$version->byte_size);
-        abort_unless($path!==null,409,'Private file is missing or fails integrity validation.');
+        $status = $screening->scan($version, $request);
 
-        // Scan the immutable private original, never a URL or user-supplied filesystem path.
-        $result=$scanner->scanFile($path);
-        abort_unless(in_array($result['status']??null,['clean','infected','error'],true),500);
-
-        DB::transaction(function()use($request,$version,$result): void {
-            $locked=ProductFileVersion::query()->lockForUpdate()->findOrFail($version->id);
-            abort_unless(in_array($locked->status,['pending','approved'],true),409);
-            abort_unless(ProductVault::verifiedPath($locked->storage_path,$locked->sha256,
-                (int)$locked->byte_size)!==null,409,'File integrity changed during screening.');
-
-            $status=$result['status'];
-            $attributes=[
-                'malware_scan_status'=>$status,
-                'malware_scanned_sha256'=>$status==='clean'?$locked->sha256:null,
-                'malware_scan_engine'=>($status==='error'?null:mb_substr((string)($result['engine']??''),0,180))?:null,
-                'malware_scanned_at'=>now(),
-                'malware_scanned_by'=>$request->user()->id,
-                'malware_scan_note'=>mb_substr((string)($result['note']??'Scanner returned no details.'),0,2000),
-            ];
-            if($status==='infected'){
-                $attributes['status']=$locked->status==='approved'?'disabled':'rejected';
-                $attributes['reviewed_at']=now();
-                $attributes['reviewed_by']=$request->user()->id;
-                $attributes['review_note']='Distribution blocked following antivirus threat detection.';
-            }
-            $locked->update($attributes);
-            if ($status === 'infected') {
-                AccountNotification::deliver(
-                    (int) $locked->product()->firstOrFail()->user_id,
-                    'vault.version.reviewed',
-                    'Product file release blocked',
-                    'Your uploaded release was blocked after malware screening.',
-                    '/studio/products/'.$locked->marketplace_listing_id.'/releases'
-                );
-            }
-            AuditEvent::record('vault.malware.'.$status,$request->user(),$request);
-        });
-
-        $message=match($result['status']){
+        $message=match($status){
             'clean'=>'ClamAV screening completed. Independent rights review and release approval remain required.',
             'infected'=>'A threat was detected; this release has been blocked.',
             default=>'ClamAV could not produce a reliable verdict. The release remains blocked.',

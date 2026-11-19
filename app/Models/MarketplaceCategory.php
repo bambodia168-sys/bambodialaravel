@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
@@ -35,6 +36,16 @@ class MarketplaceCategory extends Model
                 $category->slug=Str::slug($category->name) ?: 'category-'.$category->public_id;
             }
         });
+    }
+
+    public function scopePublicNavigation(Builder $query): Builder
+    {
+        return $query->where('is_active', true)->whereNotIn('slug', [
+            'layout-preview-product',
+            'layout-preview-project',
+            'layout-preview-service',
+            'layout-preview-freelance',
+        ]);
     }
 
     public function parent(): \Illuminate\Database\Eloquent\Relations\BelongsTo

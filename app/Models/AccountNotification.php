@@ -32,6 +32,8 @@ class AccountNotification extends Model
         'license.support.reviewed',
         'listing.reviewed',
         'vault.version.reviewed',
+        'vault.rescan.attention',
+        'vault.rescan.infected',
         'detail.comment.received',
         'support.replied',
         'support.status_changed',
