@@ -107,6 +107,23 @@ final class CommerceGateway
         return [$closed ? 'expired' : 'checkout_open', null, $closed ? null : ($link['href'] ?? null)];
     }
 
+    public function confirmFullStripeRefund(CommercePayment $payment, string $reference): void
+    {
+        $order = $payment->order;
+        abort_unless($payment->provider === 'stripe' && $order->currency === 'USD'
+            && preg_match('/\Astripe:pi_[A-Za-z0-9_]+\z/', (string) $payment->settlement_reference)
+            && preg_match('/\Are_[A-Za-z0-9_]{1,110}\z/', $reference), 409, 'The refund must match a verified Stripe payment.');
+        abort_unless(self::ready('stripe', $payment->live_mode), 503, 'Stripe verification is temporarily unavailable.');
+
+        $refund = $this->send($this->stripe($payment->live_mode), 'GET', '/refunds/'.$reference);
+        abort_unless(($refund['id'] ?? null) === $reference && ($refund['object'] ?? null) === 'refund'
+            && ($refund['status'] ?? null) === 'succeeded'
+            && ($refund['payment_intent'] ?? null) === substr($payment->settlement_reference, 7)
+            && ($refund['currency'] ?? null) === 'usd'
+            && ($refund['amount'] ?? null) === self::cents($order->total),
+            409, 'Stripe has not confirmed a single full refund for this payment.');
+    }
+
     public function webhook(Request $request, string $provider): ?array
     {
         $event = json_decode($request->getContent(), true);

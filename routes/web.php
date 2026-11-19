@@ -11,6 +11,7 @@ use App\Http\Controllers\MarketplaceOrderReviewController;
 use App\Http\Controllers\CommerceCartController;
 use App\Http\Controllers\CommercePaymentMethodController;
 use App\Http\Controllers\CommercePaymentController;
+use App\Http\Controllers\StripeRefundController;
 use App\Http\Controllers\ProfileEditorController;
 use App\Http\Controllers\CreatorProfileSectionController;
 use App\Http\Controllers\CreatorProfileItemController;
@@ -445,6 +446,8 @@ Route::middleware('auth')->group(function (): void {
                 ->middleware('throttle:10,1')->name('dashboard.commerce-operations.statement');
             Route::post('/commerce-operations/{number}/retry-delivery', [CommercePaymentController::class, 'retryDelivery'])
                 ->whereUuid('number')->middleware('throttle:15,1,commerce-delivery-retry:')->name('dashboard.commerce-operations.retry-delivery');
+            Route::post('/orders/{number}/stripe-refund', [StripeRefundController::class, 'store'])->whereUuid('number')
+                ->middleware('throttle:10,1,commerce-refund-verify:')->name('dashboard.orders.stripe-refund');
             Route::get('/orders/{number}/payments/{payment}/proof', [CommercePaymentController::class, 'proof'])
                 ->whereUuid(['number', 'payment'])->name('dashboard.orders.payment.proof');
             Route::patch('/orders/{number}/payments/{payment}', [CommercePaymentController::class, 'review'])

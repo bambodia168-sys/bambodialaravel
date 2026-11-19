@@ -263,8 +263,7 @@ class CommercePaymentController extends Controller
                 OrderFulfillment::ensureReady($order);
                 $this->settle($order, $current, strtoupper($data['verified_reference']));
                 OrderFulfillment::deliverVerifiedPurchase($order);
-                AccountNotification::deliver((int) $order->buyer_id, 'commerce.payment.approved', 'Payment approved',
-                    'Your purchase is ready. Open the order to access it.', $orderPath);
+                OrderFulfillment::notifyBuyer($order);
             } else {
                 $current->update(['status'=>'rejected']);
                 AuditEvent::record('commerce.payment.rejected', $request->user(), $request);
@@ -348,8 +347,7 @@ class CommercePaymentController extends Controller
             return $exception->getMessage();
         }
 
-        AccountNotification::deliver((int) $order->buyer_id, 'commerce.payment.approved', 'Payment verified',
-            'Your purchase is ready. Open the order to access it.', route('account.orders.show', $order->number, false));
+        OrderFulfillment::notifyBuyer($order);
 
         return null;
     }
