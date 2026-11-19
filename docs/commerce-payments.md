@@ -21,7 +21,13 @@ Settlement accepts USD orders. Hosted checkout sends the buyer to the provider, 
 
 PayPal and Stripe need merchant credentials and working webhook registration before going live. Keep sandbox orders on an isolated database. Switch `COMMERCE_LIVE_GATEWAYS` only when deploying with the matching live provider configuration. Stripe's dashboard selection takes precedence over this default for Stripe checkout. Existing in-flight checkouts must be reconciled before rotating credentials or changing the gateway environment.
 
-The merchant account receives funds. Creator payouts, refunds, taxes, payment disputes, and recurring subscriptions are separate workflows. For an open checkout whose state is unclear, reconcile it with the provider before retrying with another method. Maintain private backup and retention for transfer receipt files under `storage/app/private/commerce/payment-proofs`.
+The merchant account receives funds. Creator payouts, taxes, payment disputes, and recurring subscriptions are separate workflows. For an open checkout whose state is unclear, reconcile it with the provider before retrying with another method. Maintain private backup and retention for transfer receipt files under `storage/app/private/commerce/payment-proofs`.
+
+## Delivery and refunds
+
+- The buyer receives an account notification when delivery succeeds. Licensed archive orders group the download, **My licenses**, and installation instructions on the order page.
+- The scheduler checks for paid orders awaiting delivery every 15 minutes. It sends an in-app alert to each active Super Admin once per order after 30 minutes of delay. The alert opens **Commerce Operations** filtered to the affected order.
+- For a licensed product paid through Stripe, a Super Admin can record a single full refund that already succeeded with Stripe. Open the admin order, enter the refund ID, and record whether existing access is retained or revoked under the published refund policy. Verification uses the original payment's Stripe environment and matches the refund to the payment intent, amount, and currency. The refund record preserves the original verified payment and receipt. Partial refunds, split refunds, and refunds through other methods require separate handling.
 
 ## Gateway configuration and order QR
 

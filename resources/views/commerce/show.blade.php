@@ -8,6 +8,27 @@
     <h1>{{ $order->listing_title }}</h1>
     <p class="mono">{{ $order->number }}</p>
   </div>
+  @if($order->status === 'refunded')
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Full refund confirmed</h2>
+          @if($order->relationLoaded('operations') && $order->operations?->refund_access === 'revoke')
+            <p>Download and license access have ended for this order.</p>
+          @elseif($order->relationLoaded('operations') && $order->operations?->refund_access === 'retain')
+            <p>The recorded refund decision retained existing product access.</p>
+          @endif
+          @if($section === 'dashboard.orders' && auth()->user()->role === 'super_admin' && $order->relationLoaded('operations') && $order->operations?->refund_reference)
+            <p>Stripe reference <span class="mono">{{ $order->operations->refund_reference }}</span></p>
+            <p>{{ $order->operations->refund_note }}</p>
+          @endif
+        </div>
+        @if($section === 'account.orders')
+          <a class="btn subtle" href="{{ route('support') }}">Get support</a>
+        @endif
+      </div>
+    </section>
+  @endif
   @if($order->relationLoaded('serviceInquiry') && $order->serviceInquiry)
     <section class="panel">
       <div class="panel-head">
@@ -20,14 +41,31 @@
     </section>
   @elseif($section === 'account.orders' && $order->relationLoaded('entitlement') && $order->entitlement?->isActive()
       && ($order->license_tier === null || $order->entitlement->license_exists))
+    @php($installationGuide = $order->license_tier && $order->entitlement->version?->file_type === 'zip')
     <section class="panel">
       <div class="panel-head">
-        <h2>Product access</h2>
+        <h2>{{ $installationGuide ? 'Ready to install' : 'Product access' }}</h2>
         <div class="panel-actions">
           <a class="btn primary" href="{{ route('account.downloads.file', $order->entitlement) }}">Download product</a>
           <a class="btn subtle" href="{{ route('account.licenses.index') }}">My licenses</a>
+          @if($installationGuide)
+            <a class="btn subtle" href="#installation-guide">Installation guide</a>
+          @endif
         </div>
       </div>
+      @if($installationGuide)
+        <div class="panel-head" id="installation-guide">
+          <div>
+            <h3>Installation guide</h3>
+            <ol>
+              <li>Download the package and open its INSTALL.txt or README for hosting requirements and setup instructions.</li>
+              <li>Open My licenses and reveal the key for this product after confirming your password.</li>
+              <li>Follow the package instructions and enter the key in the installer on your HTTPS domain if prompted.</li>
+            </ol>
+            <a href="{{ route('support') }}">Get installation support</a>
+          </div>
+        </div>
+      @endif
     </section>
   @elseif($section === 'account.orders' && $order->status === 'completed'
       && (!$order->entitlement || ($order->entitlement->isActive() && !$order->entitlement->license_exists))
@@ -46,6 +84,9 @@
         </form>
       </div>
     </section>
+  @endif
+  @if($canRecordStripeRefund)
+    @include('commerce.operations.stripe-refund')
   @endif
   <section class="panel">
     <div class="panel-head">

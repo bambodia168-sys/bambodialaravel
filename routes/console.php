@@ -1,7 +1,11 @@
 <?php
 
+use App\Models\AccountNotification;
 use App\Models\AuditEvent;
+use App\Models\MarketplaceOrder;
+use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('audit:prune {--days=90}', function (): int {
@@ -140,3 +144,45 @@ Artisan::command('commerce:reconcile-qr', function (): int {
 })->purpose('Verify open ABA and Bakong bills through the provider');
 
 Schedule::command('commerce:reconcile-qr')->everyMinute()->withoutOverlapping()->runInBackground();
+
+Artisan::command('commerce:alert-delayed-delivery', function (): int {
+    if (! config('commerce.enabled')) {
+        return 0;
+    }
+
+    $admins = User::query()->where('role', 'super_admin')->where('account_status', 'active')->pluck('id');
+    if ($admins->isEmpty()) {
+        return 0;
+    }
+
+    $sent = 0;
+    $event = 'commerce.delivery.delayed';
+    $cutoff = now()->subMinutes(30);
+    MarketplaceOrder::query()->deliveryPending()->where('completed_at', '<=', $cutoff)
+        ->chunkById(100, function ($orders) use ($admins, $event, $cutoff, &$sent): void {
+            foreach ($orders as $pending) {
+                $sent += DB::transaction(function () use ($pending, $admins, $event, $cutoff): int {
+                    $order = MarketplaceOrder::query()->whereKey($pending->id)->lockForUpdate()->firstOrFail();
+                    if (! MarketplaceOrder::query()->whereKey($order->id)->deliveryPending()->where('completed_at', '<=', $cutoff)->exists()) {
+                        return 0;
+                    }
+
+                    $path = route('dashboard.commerce-operations', ['order' => $order->number], false).'#pending-deliveries';
+                    $notified = AccountNotification::query()->where('event', $event)->where('target_path', $path)
+                        ->whereIn('user_id', $admins)->pluck('user_id');
+                    $recipients = $admins->diff($notified);
+                    foreach ($recipients as $admin) {
+                        AccountNotification::deliver((int) $admin, $event, 'Paid order awaiting delivery',
+                            'This verified order has been waiting for delivery for at least 30 minutes.', $path);
+                    }
+
+                    return $recipients->count();
+                }, 3);
+            }
+        });
+    $this->info($sent.' delayed delivery notification(s) sent.');
+
+    return 0;
+})->purpose('Notify Super Admins once per verified order with delayed delivery');
+
+Schedule::command('commerce:alert-delayed-delivery')->everyFifteenMinutes()->withoutOverlapping();

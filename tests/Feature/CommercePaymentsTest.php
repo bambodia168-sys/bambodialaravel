@@ -12,6 +12,7 @@ use App\Models\ProductFileVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -509,7 +510,11 @@ Private installation report.
         Storage::disk('local')->put($release->storage_path, $archive);
 
         $paid = false;
-        Http::fake(function ($request) use ($order, &$paid) {
+        $refundResponses = [];
+        Http::fake(function ($request) use ($order, &$paid, &$refundResponses) {
+            if ($request->url() === 'https://api.stripe.com/v1/refunds/re_product_fixture') {
+                return Http::response(array_shift($refundResponses));
+            }
             if ($request->method() === 'POST') {
                 return Http::response(['id' => 'cs_test_product_fixture', 'url' => 'https://checkout.stripe.com/c/pay/product-fixture']);
             }
@@ -564,6 +569,14 @@ Private installation report.
                 ->assertSee('Paid orders awaiting delivery')->assertSee($order->number)
                 ->assertSee('The original file is missing or failed its integrity check.')
                 ->assertSee('Retry delivery');
+            $this->artisan('commerce:alert-delayed-delivery')->expectsOutput('0 delayed delivery notification(s) sent.')->assertSuccessful();
+            $order->update(['completed_at' => now()->subMinutes(31)]);
+            $this->artisan('commerce:alert-delayed-delivery')->expectsOutput('1 delayed delivery notification(s) sent.')->assertSuccessful();
+            $this->artisan('commerce:alert-delayed-delivery')->expectsOutput('0 delayed delivery notification(s) sent.')->assertSuccessful();
+            $this->assertDatabaseHas('account_notifications', [
+                'user_id' => $admin->id, 'event' => 'commerce.delivery.delayed',
+                'target_path' => route('dashboard.commerce-operations', ['order' => $order->number], false).'#pending-deliveries',
+            ]);
             $this->post($retry)->assertRedirect($dashboard.'#pending-deliveries')
                 ->assertSessionHas('error', 'The original file is missing or failed its integrity check.');
             $this->assertDatabaseCount('product_licenses', 0);
@@ -602,7 +615,8 @@ Private installation report.
         }
         $license = $grant->license()->sole();
         $this->assertSame('verified_purchase', $license->source);
-        $this->get($orderUrl)->assertOk()->assertSee('Download product')->assertSee('My licenses');
+        $this->get($orderUrl)->assertOk()->assertSee('Ready to install')->assertSee('Download product')
+            ->assertSee('My licenses')->assertSee('Installation guide')->assertDontSee($license->key_ciphertext);
         $this->get(route('account.licenses.index'))->assertOk()->assertSee($product->title)->assertDontSee($license->key_ciphertext);
         $this->get(route('account.downloads.file', $grant))->assertDownload();
         $this->actingAs($this->user('super_admin'))->get(route('dashboard.licenses.index'))
@@ -617,6 +631,51 @@ Private installation report.
         $sendEvent()->assertNoContent();
         $this->assertDatabaseCount('product_entitlements', 1);
         $this->assertDatabaseCount('product_licenses', 1);
+        $this->assertDatabaseHas('account_notifications', [
+            'user_id' => $buyer->id, 'event' => 'commerce.payment.approved', 'title' => 'Purchase ready',
+            'target_path' => route('account.orders.show', $order->number, false),
+        ]);
+
+        $refund = route('dashboard.orders.stripe-refund', $order->number);
+        $data = ['reference' => 're_product_fixture', 'access' => $archiveUnavailable ? 'revoke' : 'retain',
+            'note' => 'Reviewed this order and the applicable access terms.'];
+        $this->post($refund, $data)->assertForbidden();
+        $this->actingAs($admin)->get(route('dashboard.orders.show', $order->number))
+            ->assertOk()->assertSee('Record a Stripe refund');
+        $provider = [
+            'id' => $data['reference'], 'object' => 'refund', 'status' => 'succeeded',
+            'payment_intent' => 'pi_test_product_fixture', 'currency' => 'usd', 'amount' => 3900,
+        ];
+        $refundResponses = [
+            array_replace($provider, ['amount' => 1900]),
+            array_replace($provider, ['status' => 'pending']),
+            array_replace($provider, ['payment_intent' => 'pi_other_order']),
+            $provider,
+            $provider,
+        ];
+        foreach (range(1, 3) as $attemptNumber) {
+            $this->post($refund, $data)->assertConflict();
+        }
+        $this->assertSame('completed', $order->fresh()->status);
+        $this->assertSame('active', $license->fresh()->status);
+        $this->post($refund, $data)->assertRedirect(route('dashboard.orders.show', $order->number));
+        $this->post($refund, $data)->assertRedirect(route('dashboard.orders.show', $order->number));
+        $this->assertSame('refunded', $order->fresh()->status);
+        $this->assertSame($data['access'], $order->operations()->sole()->refund_access);
+        $this->assertSame(1, DB::table('account_notifications')->where('event', 'commerce.refund.confirmed')->count());
+        Http::assertSent(fn ($request) => $request->method() === 'GET'
+            && $request->url() === 'https://api.stripe.com/v1/refunds/re_product_fixture');
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $this->actingAs($buyer)->get($orderUrl)->assertOk()->assertSee('Full refund confirmed');
+        $this->get(route('account.orders.receipt', $order->number))->assertOk()->assertSee('Full refund confirmed');
+        if ($archiveUnavailable) {
+            $this->assertSame('revoked', $license->fresh()->status);
+            $this->postJson(route('api.v1.licenses.validate'), $installation)->assertForbidden();
+            $this->get(route('account.downloads.file', $grant))->assertForbidden();
+        } else {
+            $this->postJson(route('api.v1.licenses.validate'), $installation)->assertOk();
+            $this->get(route('account.downloads.file', $grant))->assertDownload();
+        }
     }
 
     public function test_stripe_credentials_can_be_prepared_without_switching_the_active_environment(): void

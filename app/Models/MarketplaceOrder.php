@@ -12,6 +12,7 @@ class MarketplaceOrder extends Model
     public const STATUSES = [
         'awaiting_payment' => 'Awaiting payment',
         'completed' => 'Completed',
+        'refunded' => 'Refunded',
         'cancelled' => 'Cancelled',
     ];
 

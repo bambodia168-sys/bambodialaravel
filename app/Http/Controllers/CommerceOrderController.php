@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -45,10 +46,10 @@ class CommerceOrderController extends Controller
     {
         [$orders, $section, $workspace] = $this->workspace($request);
         $order = $orders->where('number', $number)->firstOrFail();
-        if ($section !== 'dashboard.orders' && $order->status === 'completed') {
+        if ($section !== 'dashboard.orders' && in_array($order->status, ['completed', 'refunded'], true)) {
             $order->load('serviceInquiry');
             if ($section === 'account.orders') {
-                $order->load(['entitlement' => fn ($grant) => $grant->withExists('license')]);
+                $order->load(['entitlement' => fn ($grant) => $grant->withExists('license')->with('version:id,file_type')]);
             }
         }
 
@@ -58,19 +59,27 @@ class CommerceOrderController extends Controller
 
         $collectingPayments = CommerceCollection::enabled();
         $payments = $order->payments()->latest('id')->get();
+        $refundTracking = $order->license_tier !== null && in_array($order->status, ['completed', 'refunded'], true)
+            && Schema::hasTable('commerce_order_operations');
+        if ($refundTracking) {
+            $order->load('operations');
+        }
+        $canRecordStripeRefund = $refundTracking && $section === 'dashboard.orders' && $order->status === 'completed'
+            && $request->user()->role === 'super_admin'
+            && $order->paidAttempt()->where('provider', 'stripe')->exists();
         if ($section !== 'studio.orders') {
             $order->load('review');
         }
         $canReview = $section === 'account.orders' && $order->review === null && $order->isReviewEligible();
 
-        return response()->view('commerce.show', compact('order', 'section', 'workspace', 'methods', 'payments', 'canReview', 'collectingPayments'))
+        return response()->view('commerce.show', compact('order', 'section', 'workspace', 'methods', 'payments', 'canReview', 'collectingPayments', 'canRecordStripeRefund'))
             ->header('Cache-Control', 'private, no-store');
     }
 
     public function receipt(Request $request, string $number): Response
     {
         [$orders, $section, $workspace] = $this->workspace($request);
-        $order = $orders->where('number', $number)->where('status', 'completed')
+        $order = $orders->where('number', $number)->whereIn('status', ['completed', 'refunded'])
             ->whereNotNull('receipt_number')->firstOrFail();
 
         return response()->view('commerce.receipt', compact('order', 'section', 'workspace'))

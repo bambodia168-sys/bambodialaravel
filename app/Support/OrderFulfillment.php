@@ -156,6 +156,16 @@ final class OrderFulfillment
             'Open the private conversation to coordinate delivery with the buyer.', route('inquiries.show', $inquiry, false));
     }
 
+    public static function notifyBuyer(MarketplaceOrder $order): void
+    {
+        $message = $order->license_tier === null
+            ? 'Your service workspace is ready. Open your order to get started.'
+            : 'Your purchase is ready. Open your order for the download and license details.';
+
+        AccountNotification::deliver((int) $order->buyer_id, 'commerce.payment.approved', 'Purchase ready',
+            $message, route('account.orders.show', $order->number, false));
+    }
+
     private static function usableVersion(ProductFileVersion $version): bool
     {
         return $version->isApproved()
