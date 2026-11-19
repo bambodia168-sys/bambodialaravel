@@ -498,7 +498,7 @@ Private installation report.
             'available' => true, 'stripe_environment' => 'live', 'gateway' => $live,
         ])->assertRedirect($page)->assertSessionHasNoErrors();
         $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('stripe'));
-        $this->assertNull(CommerceGatewaySetting::effective('stripe', false)['secret'] ?? null);
+        $this->assertNull(CommerceGatewaySetting::forMode('stripe', false)->firstOrFail()->credentials);
 
         $this->patch($save, [
             'available' => true, 'stripe_environment' => 'sandbox', 'gateway' => $sandbox,
