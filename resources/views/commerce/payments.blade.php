@@ -2,7 +2,6 @@
   $buyerView = $section === 'account.orders';
   $canReview = $section === 'dashboard.orders' && auth()->user()->role === 'super_admin';
   $activePayment = $payments->first(fn ($payment) => in_array($payment->status, \App\Models\CommercePayment::ACTIVE, true));
-  $live = (bool) config('commerce.live_gateways');
   $rejectedReceipt = $payments->firstWhere('status', 'rejected');
 @endphp
 @if($buyerView && $order->status === 'awaiting_payment' && $order->currency === 'USD' && ($collectingPayments || $activePayment))
@@ -11,7 +10,7 @@
     @if($rejectedReceipt)
       <div class="panel-head"><p>Your payment receipt was rejected. Check your transfer details and submit a corrected receipt.</p></div>
     @endif
-    @forelse($methods->filter(fn ($method) => $method->availableForCheckout($live)) as $method)
+    @forelse($methods->filter(fn ($method) => $method->availableForCheckout()) as $method)
       <div class="panel-head">
         @if($method->usesGateway())
           <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}">

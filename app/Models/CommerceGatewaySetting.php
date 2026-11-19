@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CommerceGatewaySetting extends Model
 {
+    public const STRIPE_LIVE_FLAG = 'commerce_stripe_live';
+
     public const FIELDS = [
         'stripe' => ['secret' => 'API secret key', 'webhook_secret' => 'Webhook signing secret'],
         'paypal' => ['client_id' => 'Client ID', 'secret' => 'Client secret', 'merchant_id' => 'Merchant ID', 'webhook_id' => 'Webhook ID'],
@@ -26,6 +28,16 @@ class CommerceGatewaySetting extends Model
         return static::query()->where('provider', $provider)->where('live_mode', $live);
     }
 
+    public static function checkoutIsLive(string $provider): bool
+    {
+        $default = (bool) config('commerce.live_gateways');
+        if ($provider !== 'stripe') {
+            return $default;
+        }
+
+        return (bool) (FeatureFlag::query()->where('key', self::STRIPE_LIVE_FLAG)->value('enabled') ?? $default);
+    }
+
     public static function effective(string $provider, bool $live): array
     {
         $stored = static::forMode($provider, $live)->first()?->credentials;
@@ -43,7 +55,8 @@ class CommerceGatewaySetting extends Model
         }
 
         return match ($provider) {
-            'stripe' => str_starts_with($credentials['secret'], $live ? 'sk_live_' : 'sk_test_'),
+            'stripe' => str_starts_with($credentials['secret'], $live ? 'sk_live_' : 'sk_test_')
+                && str_starts_with($credentials['webhook_secret'], 'whsec_'),
             'paypal', 'aba', 'bakong' => true,
             default => false,
         };

@@ -149,7 +149,7 @@ class CommerceOrderController extends Controller
             if ($fromCart && ! $noPaymentDue) {
                 abort_unless($collectingPayments && $quote['currency'] === 'USD'
                     && CommercePaymentMethod::query()->where('available', true)->get()
-                        ->contains(fn (CommercePaymentMethod $method) => $method->availableForCheckout((bool) config('commerce.live_gateways'))),
+                        ->contains(fn (CommercePaymentMethod $method) => $method->availableForCheckout()),
                     422, 'Payment is not available for this item.');
             }
             $method = ($noPaymentDue || $fromCart) ? null : $this->availableMethod($data['payment_method'] ?? null);

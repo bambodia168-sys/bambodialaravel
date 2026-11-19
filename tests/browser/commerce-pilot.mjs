@@ -128,6 +128,23 @@ try {
   await wing.getByRole('button', {name: 'Close configuration'}).click();
   record('Hidden manual payment method previews selected and saved QR images privately');
 
+  const stripe = admin.getByRole('dialog', {name: 'Configure Stripe', exact: true});
+  const openStripe = admin.getByRole('button', {name: 'Configure Stripe', exact: true});
+  await openStripe.click();
+  await stripe.getByLabel('Credentials environment').selectOption({label: 'Live Production'});
+  await stripe.getByLabel('API secret key').fill('sk_live_isolated_pilot_fixture');
+  await stripe.getByLabel('Webhook signing secret').fill('whsec_isolated_pilot_fixture');
+  await stripe.getByRole('button', {name: 'Save settings', exact: true}).click();
+  await admin.getByText('Payment method settings saved.', {exact: true}).waitFor();
+  await openStripe.click();
+  await stripe.getByText(/Live Production credentials saved/).waitFor();
+  await stripe.getByText('Stripe checkout environment Sandbox', {exact: true}).waitFor();
+  assert.equal(await stripe.getByLabel('Credentials environment').inputValue(), 'sandbox');
+  assert.equal(await stripe.getByLabel('API secret key').inputValue(), '');
+  assert.equal(await stripe.getByLabel('Use this environment for new Stripe checkouts').isChecked(), false);
+  await stripe.getByRole('button', {name: 'Close configuration'}).click();
+  record('Stripe live credentials can be saved while Sandbox remains active');
+
   const productOrder = await order(buyer, fixture.product_url, {guest: true});
   record('Checkout retries return the same product order');
   await uploadReceipt(buyer, 'PILOT-PRODUCT-REJECT');

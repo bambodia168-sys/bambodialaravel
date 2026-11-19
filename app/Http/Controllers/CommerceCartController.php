@@ -165,7 +165,7 @@ class CommerceCartController extends Controller
         $collectingPayments = $checkout && CommerceCollection::enabled();
         $methods = $collectingPayments && $request->user()?->hasVerifiedEmail()
             ? CommercePaymentMethod::query()->where('available', true)->orderBy('name')->get()
-                ->filter(fn (CommercePaymentMethod $method) => $method->availableForCheckout((bool) config('commerce.live_gateways')))
+                ->filter(fn (CommercePaymentMethod $method) => $method->availableForCheckout())
             : collect();
 
         return response()->view('commerce.cart', compact(

@@ -33,11 +33,15 @@ class CommercePaymentMethod extends Model
         return $this->automatic() || $this->dynamicQr();
     }
 
-    public function availableForCheckout(bool $live): bool
+    public function availableForCheckout(): bool
     {
-        return $this->usesGateway()
-            ? ($live || ! app()->environment('production')) && \App\Support\CommerceGateway::ready($this->provider, $live)
-            : filled($this->instructions);
+        if (! $this->usesGateway()) {
+            return filled($this->instructions);
+        }
+
+        $live = CommerceGatewaySetting::checkoutIsLive($this->provider);
+
+        return ($live || ! app()->environment('production')) && \App\Support\CommerceGateway::ready($this->provider, $live);
     }
 
     protected function casts(): array
