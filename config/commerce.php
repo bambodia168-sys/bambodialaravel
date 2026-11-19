@@ -8,6 +8,7 @@ return [
         'secret' => env('COMMERCE_STRIPE_SECRET'),
         'webhook_secret' => env('COMMERCE_STRIPE_WEBHOOK_SECRET'),
     ],
+    'stripe_publishable_key' => env('VITE_STRIPE_PUBLISHABLE_KEY'),
     'paypal' => [
         'client_id' => env('COMMERCE_PAYPAL_CLIENT_ID'),
         'secret' => env('COMMERCE_PAYPAL_SECRET'),

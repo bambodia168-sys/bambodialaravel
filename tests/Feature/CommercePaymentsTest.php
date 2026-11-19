@@ -122,6 +122,66 @@ class CommercePaymentsTest extends TestCase
             && $request['line_items'][0]['price_data']['unit_amount'] === 2500);
     }
 
+    public function test_checkout_studio_form_reuses_the_order_amount_and_returns_a_private_client_secret(): void
+    {
+        config([
+            'commerce.stripe.secret' => 'sk_test_fixture',
+            'commerce.stripe.webhook_secret' => 'whsec_fixture',
+            'commerce.stripe_publishable_key' => 'pk_test_fixture',
+        ]);
+        [$buyer, $order] = $this->order();
+        $method = $this->method('stripe');
+        $start = route('account.orders.payment.start', $order->number);
+        $page = route('account.orders.show', $order->number);
+        $clientSecret = 'cs_test_form_secret_fixture';
+        $paid = false;
+        Http::fake(function ($request) use ($order, $clientSecret, &$paid) {
+            return Http::response([
+                'id' => 'cs_test_form', 'ui_mode' => 'form', 'client_secret' => $clientSecret,
+                'livemode' => false, 'mode' => 'payment', 'currency' => 'usd', 'amount_total' => 2500,
+                'client_reference_id' => $order->payments()->sole()->number,
+                'status' => $paid ? 'complete' : 'open',
+                'payment_status' => $paid ? 'paid' : 'unpaid',
+                'payment_intent' => $paid ? 'pi_form_test' : null,
+            ]);
+        });
+        $this->actingAs($this->user('customer'))->postJson($start, ['method' => $method->id])->assertNotFound();
+        $this->actingAs($buyer)->get($page)->assertOk()->assertSee('https://js.stripe.com/dahlia/stripe.js', false)
+            ->assertSee('data-stripe-checkout-start', false)->assertDontSee($clientSecret);
+        $this->post($start, ['method' => $method->id])->assertUnprocessable();
+        $this->assertFalse($order->payments()->exists());
+        $result = $this->postJson($start, ['method' => $method->id])->assertOk()
+            ->assertExactJson(['client_secret' => $clientSecret, 'order_url' => $page]);
+        $this->assertStringContainsString('no-store', $result->headers->get('Cache-Control'));
+        $attempt = $order->payments()->sole();
+        $this->assertSame('cs_test_form', $attempt->remote_id);
+        $this->assertNull($order->refresh()->receipt_number);
+        $this->postJson($start, ['method' => $method->id])->assertOk()->assertJsonPath('client_secret', $clientSecret);
+
+        Http::assertSent(fn ($request) => $request->method() === 'POST'
+            && $request->hasHeader('Stripe-Version', '2026-03-25.dahlia')
+            && $request->hasHeader('Idempotency-Key', $attempt->number)
+            && $request['client_reference_id'] === $attempt->number
+            && $request['mode'] === 'payment'
+            && $request['line_items'][0]['price_data']['unit_amount'] === 2500
+            && $request['return_url'] === route('account.orders.payment.return', [$order->number, $attempt->number])
+            && $request['ui_mode'] === 'form'
+            && $request['billing_address_collection'] === 'required'
+            && $request['phone_number_collection']['enabled'] === 'false'
+            && $request['automatic_tax']['enabled'] === 'false'
+            && $request['submit_type'] === 'auto'
+            && $request['name_collection']['individual'] === ['enabled' => 'true', 'optional' => 'true']
+            && $request['integration_identifier'] === 'custom_embedded_web_0001'
+            && ! isset($request['payment_method_collection'], $request['success_url'], $request['cancel_url']));
+        $this->assertCount(1, Http::recorded(fn ($request) => $request->method() === 'POST'));
+
+        $paid = true;
+        $this->postJson($start, ['method' => $method->id])->assertOk()
+            ->assertExactJson(['redirect_url' => $page]);
+        $this->assertSame('paid', $attempt->refresh()->status);
+        $this->get(route('account.orders.receipt', $order->number))->assertOk();
+    }
+
     public function test_paypal_capture_checks_the_merchant_and_reuses_a_completed_capture(): void
     {
         config(['commerce.paypal'=>['client_id'=>'client', 'secret'=>'secret', 'merchant_id'=>'MERCHANT', 'webhook_id'=>'WEBHOOK']]);
