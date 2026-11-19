@@ -1,10 +1,10 @@
 # Bambodia product licenses
 
-## Scope and purchase limitation
+## License issuance
 
 License definitions contain reviewed rights and restrictions; they are NOT customer keys. Issued licenses are secret installer credentials tied to (1) a published downloadable product, (2) an approved private original file, (3) an active customer download entitlement for that exact file, and (4) an active Regular or Extended license definition. A product upload or unpublished draft never creates a key.
 
-Verified checkout and automatic paid-purchase issuance are NOT enabled. The current issuance workflow is a deliberate complimentary grant by the super administrator, based on an existing manually approved entitlement, with a written reason. No payment is recorded. A future paid flow must verify a genuine processor-signed captured payment, unique order, buyer identity, paid tier, refunds, fraud checks and product eligibility before invoking a trusted, idempotent issuance service. Do not let browsers declare an order paid.
+Bambodia issues an eligible one-time product license after server-side verification of a supported gateway payment or a super administrator's independent reconciliation of a manual payment. Repeated verification retains the original key. A super administrator can also issue a complimentary license against an approved entitlement with a written reason. See [payment processing and delivery](commerce-payments.md).
 
 ## Administrator workflow
 
@@ -22,21 +22,11 @@ Never put keys in URLs, source control, screenshots, Javascript bundles or a pub
 
 ## Installer handshake (v1)
 
-Over verified HTTPS, installed scripts POST JSON to:
-- https://bambodia.com/api/v1/licenses/activate
-- https://bambodia.com/api/v1/licenses/validate
-
-Request JSON (both endpoints):
-    {"license_key":"BAM-<48 uppercase hexadecimal characters>","product_id":"123456789","domain":"store.example.com"}
-
-Activate once before attempting validate. A valid 200 response includes valid=true, status, license_id, product_id, tier, release_version, license_version, domain, expires_at, checked_at and check_again_after_seconds=21600. The server requires product_id to match the key. Compare product_id and domain to the expected installed product and configured application host. Wrong domain or invalid/revoked/expired/blocked licenses fail. A second concurrent domain is rejected until the customer releases the old activation. These are POST-only, throttled and HTTPS-only in production. Do not log secret request bodies.
-
-An installed PHP/Laravel product must integrate the license client itself. Bambodia's own marketplace installer is separate. An optional portable PHP reference implementation is in examples/license-validation.php. This is a reference, not an installed product plugin. Live external TLS and domain acceptance, cPanel and aaPanel testing remain release gates.
+See the [License Manager integration guide](integrations/license-manager.md) for the request contract, PHP reference client, runtime validation and release checks. Package the client with your script and verify it on each supported hosting environment, including aaPanel or cPanel where applicable.
 
 ## Fail-closed behavior
 
-Online validation depends on an active entitlement and accessible, reviewed product original. A scan may expire under the vault policy and require renewal. No offline signature, unverifiable grace period, paid checkout, chargeback automation or refund-triggered license revocation is implemented. Do not claim these features are live.
-
+Online validation depends on an active entitlement and accessible, reviewed product original. A scan may expire under the vault policy and require renewal. The installer API requires server-side validation over HTTPS. Refunds and payment disputes are separate from licensing. See [payment processing](commerce-payments.md).
 
 ## Lifetime license and separately renewable support
 
@@ -48,38 +38,32 @@ invalidating the previously issued installed-script license. Explicit
 entitlement revocation still invalidates authentication.
 
 Product support is an independent term:
-- \`six_months\` — 6-month support
-- \`twelve_months\` — 12-month support
-- \`five_years\` — 5-year support
-- \`lifetime\` — lifetime support
 
-New complimentary licenses receive the term explicitly chosen by the super
-administrator. Previously issued licenses retain their existing support
-state as **Not set**, avoiding an unrequested change to historical benefits.
+- `six_months` — 6-month support
+- `twelve_months` — 12-month support
+- `five_years` — 5-year support
+- `lifetime` — lifetime support
+
+Verified purchases include six months of support. New complimentary licenses
+receive the term chosen by the super administrator. Older licenses with no
+support term display **Not set**.
 A support term that reaches its end date displays **Expired** while the license
 remains Lifetime. Support expiration does not, by itself, revoke a domain,
 disable a working script or change its licensed tier.
 
 Customers choose a new term in **My Licenses**. The request stays **Pending**
-until reviewed. The current deployment has no verified payment gateway, so
-neither clicking Renew nor submitting a request extends support or charges
-the customer. A super administrator can grant a documented **complimentary**
-extension or reject the request. Approval starts a new term at the later of
+until reviewed. A super administrator can grant a documented
+**complimentary** extension or reject the request. Approval starts a new term at the later of
 today and the prior support expiry, preventing overlapping periods from
 removing already-granted time. Once Lifetime support is granted, further
 renewal requests are rejected. Audit events and customer notifications
 record requests and decisions.
 
-When paid renewal support is introduced, only a verified server-side
-payment event should authorize an appropriate renewal grant; a browser
-button or unpaid order must never activate support. Prices, refunds and
-payment processing are not part of this release.
-
 ## Tables and pagination
 
 Admin License Definitions, Issued Licenses and Support Renewals are each
-paginated to 10 records with independent \`page\`, \`issued_page\`, and
-\`support_page\` keys. Creator Product Licenses, Customer My Licenses and
+paginated to 10 records with independent `page`, `issued_page`, and
+`support_page` keys. Creator Product Licenses, Customer My Licenses and
 My Downloads each show up to 10 rows. The shared Previous/Next/Go To
 component preserves other filters and page values without overwriting the
 wrong table's page parameter.
