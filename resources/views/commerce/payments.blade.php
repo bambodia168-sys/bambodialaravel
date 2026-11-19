@@ -6,7 +6,9 @@
 @endphp
 @if($buyerView && $order->status === 'awaiting_payment' && $order->currency === 'USD' && ($collectingPayments || $activePayment))
   <div class="panel-head"><h2>Pay for this order</h2></div>
-  @if(!$activePayment)
+  @if(!$activePayment && $order->license_tier !== null && !$order->fulfillment_version_id)
+    <div class="panel-head"><p>Return to the product page to place a new order with an approved download.</p></div>
+  @elseif(!$activePayment)
     @if($rejectedReceipt)
       <div class="panel-head"><p>Your payment receipt was rejected. Check your transfer details and submit a corrected receipt.</p></div>
     @endif
@@ -18,8 +20,6 @@
             <input type="hidden" name="method" value="{{ $method->id }}">
             <button class="btn primary">{{ $method->dynamicQr() ? 'Generate QR for' : 'Pay with' }} {{ $method->name }}</button>
           </form>
-        @elseif($order->license_tier !== null && !$order->fulfillment_version_id)
-          <p>{{ $method->name }} is unavailable for this order. Return to the product page to place a new order with an approved download.</p>
         @else
           <details @if((string) old('method') === (string) $method->id) open @endif>
             <summary>{{ $method->name }} transfer</summary>

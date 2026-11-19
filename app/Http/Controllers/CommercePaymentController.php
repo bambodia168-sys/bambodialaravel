@@ -16,6 +16,7 @@ use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 class CommercePaymentController extends Controller
@@ -50,6 +52,7 @@ class CommercePaymentController extends Controller
             $live = CommerceGatewaySetting::checkoutIsLive($method->provider);
             CommerceGatewaySetting::forMode($method->provider, $live)->lockForUpdate()->firstOrFail();
             abort_unless($method->availableForCheckout(), 422, 'This gateway is unavailable.');
+            OrderFulfillment::ensureReady($locked);
 
             return $locked->payments()->create([
                 'number'=>(string) Str::uuid(), 'commerce_payment_method_id'=>$method->id,
@@ -99,7 +102,20 @@ class CommercePaymentController extends Controller
 
     public function returned(Request $request, string $number, string $payment): RedirectResponse
     {
-        $this->buyerOrder($request, $number)->payments()->where('number', $payment)->whereNotNull('remote_id')->firstOrFail();
+        $attempt = $this->buyerOrder($request, $number)->payments()
+            ->where('number', $payment)->whereNotNull('remote_id')->firstOrFail();
+        if ($attempt->provider === 'stripe' && $attempt->status === 'checkout_open') {
+            try {
+                $this->reconcile($attempt);
+            } catch (HttpExceptionInterface $exception) {
+                if (! in_array($exception->getStatusCode(), [409, 502, 503], true)) {
+                    throw $exception;
+                }
+
+                return redirect()->route('account.orders.show', $number)
+                    ->with('status', 'Payment confirmation is pending. You can check its status from your order.');
+            }
+        }
 
         return redirect()->route('account.orders.show', $number);
     }
@@ -223,7 +239,7 @@ class CommercePaymentController extends Controller
                     409, 'The submitted receipt file is unavailable.');
                 OrderFulfillment::ensureReady($order);
                 $this->settle($order, $current, strtoupper($data['verified_reference']));
-                OrderFulfillment::deliverApprovedTransfer($order);
+                OrderFulfillment::deliverVerifiedPurchase($order);
                 AccountNotification::deliver((int) $order->buyer_id, 'commerce.payment.approved', 'Payment approved',
                     'Your purchase is ready. Open the order to access it.', $orderPath);
             } else {
@@ -251,29 +267,63 @@ class CommercePaymentController extends Controller
 
     public function reconcile(CommercePayment $payment, bool $capture = false): ?string
     {
-        if ($payment->status !== 'checkout_open') {
+        if (! in_array($payment->status, ['checkout_open', 'paid'], true)) {
             return null;
         }
         abort_if(! $payment->live_mode && app()->environment('production'), 409);
-        $result = $payment->dynamicQr()
-            ? $this->qrGateway->refresh($payment)
-            : $this->gateway->refresh($payment, $capture);
-        [$status, $reference, $url] = array_pad($result, 3, null);
+
+        $status = $reference = $url = null;
+        if ($payment->status === 'checkout_open') {
+            $result = $payment->dynamicQr()
+                ? $this->qrGateway->refresh($payment)
+                : $this->gateway->refresh($payment, $capture);
+            [$status, $reference, $url] = array_pad($result, 3, null);
+        }
         DB::transaction(function () use ($payment, $status, $reference): void {
             $order = MarketplaceOrder::query()->lockForUpdate()->findOrFail($payment->marketplace_order_id);
             $current = $order->payments()->lockForUpdate()->findOrFail($payment->id);
+            if ($current->status === 'paid' && $current->settlement_reference !== null) {
+                $this->fulfillGatewayPurchase($order);
+
+                return;
+            }
             if ($current->status !== 'checkout_open') {
                 return;
             }
             if ($status === 'paid') {
                 $this->awaiting($order);
                 $this->settle($order, $current, $reference);
+                $this->fulfillGatewayPurchase($order);
             } elseif ($status === 'expired') {
                 $current->update(['status'=>'expired']);
             }
         }, 3);
 
         return $url;
+    }
+
+    private function fulfillGatewayPurchase(MarketplaceOrder $order): void
+    {
+        if ($order->status !== 'completed' || $order->entitlement()->exists() || $order->serviceInquiry()->exists()) {
+            return;
+        }
+
+        try {
+            OrderFulfillment::ensureReady($order);
+        } catch (ModelNotFoundException) {
+            return;
+        } catch (HttpExceptionInterface $exception) {
+            if ($exception->getStatusCode() !== 409) {
+                throw $exception;
+            }
+
+            // Keep a verified payment on record if its approved delivery becomes unavailable.
+            return;
+        }
+
+        OrderFulfillment::deliverVerifiedPurchase($order);
+        AccountNotification::deliver((int) $order->buyer_id, 'commerce.payment.approved', 'Payment verified',
+            'Your purchase is ready. Open the order to access it.', route('account.orders.show', $order->number, false));
     }
 
     private function settle(MarketplaceOrder $order, CommercePayment $payment, ?string $reference): void

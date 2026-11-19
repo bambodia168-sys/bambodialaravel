@@ -73,7 +73,7 @@ final class OrderFulfillment
         }
     }
 
-    public static function deliverApprovedTransfer(MarketplaceOrder $order): void
+    public static function deliverVerifiedPurchase(MarketplaceOrder $order): void
     {
         abort_unless($order->status === 'completed' && $order->paidAttempt()->exists(), 409);
 

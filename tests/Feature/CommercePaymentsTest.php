@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class CommercePaymentsTest extends TestCase
@@ -471,6 +472,94 @@ Private installation report.
         $this->get($page)->assertSee('Sandbox credentials saved')->assertDontSee($credentials['secret']);
         $this->patch($save, ['available'=>'0', 'gateway'=>['secret'=>'', 'webhook_secret'=>'']])->assertRedirect();
         $this->assertSame($credentials, $settings->refresh()->credentials);
+    }
+
+    public static function deliveryConditions(): array
+    {
+        return ['ready at confirmation' => [false], 'archive temporarily unavailable' => [true]];
+    }
+
+    #[DataProvider('deliveryConditions')]
+    public function test_verified_gateway_purchase_issues_one_installer_license(bool $archiveUnavailable): void
+    {
+        Storage::fake('local');
+        config(['commerce.stripe.secret' => 'sk_test_product_fixture', 'commerce.stripe.webhook_secret' => 'whsec_product_fixture']);
+        $buyer = $this->user('customer');
+        [$product, $release] = $this->product($this->user('freelancer'), $this->user('super_admin'));
+        $stripe = $this->method('stripe');
+        $this->actingAs($buyer);
+        $offer = $this->get(route('account.orders.create', $product->public_id))->assertOk();
+        $this->post(route('account.orders.store', $product->public_id), [
+            'tier' => 'regular', 'request_key' => $offer->viewData('requestKey'),
+            'quote' => $offer->viewData('quotes')['regular']['signature'],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $order = MarketplaceOrder::query()->sole();
+        $orderUrl = route('account.orders.show', $order->number);
+        $start = route('account.orders.payment.start', $order->number);
+        $archive = Storage::disk('local')->get($release->storage_path);
+        Storage::disk('local')->put($release->storage_path, 'wrong file');
+        $this->post($start, ['method' => $stripe->id])->assertConflict();
+        $this->assertDatabaseCount('commerce_payments', 0);
+        Storage::disk('local')->put($release->storage_path, $archive);
+
+        $paid = false;
+        Http::fake(function ($request) use ($order, &$paid) {
+            if ($request->method() === 'POST') {
+                return Http::response(['id' => 'cs_test_product_fixture', 'url' => 'https://checkout.stripe.com/c/pay/product-fixture']);
+            }
+
+            return Http::response([
+                'id' => 'cs_test_product_fixture', 'livemode' => false, 'mode' => 'payment', 'currency' => 'usd',
+                'amount_total' => 3900, 'client_reference_id' => $order->payments()->sole()->number,
+                'status' => $paid ? 'complete' : 'open', 'payment_status' => $paid ? 'paid' : 'unpaid',
+                'payment_intent' => 'pi_test_product_fixture',
+            ]);
+        });
+        $this->post($start, ['method' => $stripe->id])->assertRedirect('https://checkout.stripe.com/c/pay/product-fixture');
+        $attempt = $order->payments()->sole();
+        $return = route('account.orders.payment.return', [$order->number, $attempt->number]);
+        $verify = route('account.orders.payment.verify', [$order->number, $attempt->number]);
+        $event = json_encode(['livemode' => false, 'type' => 'checkout.session.completed',
+            'data' => ['object' => ['id' => $attempt->remote_id]]], JSON_THROW_ON_ERROR);
+        $time = time();
+        $signature = hash_hmac('sha256', $time.'.'.$event, 'whsec_product_fixture');
+        $sendEvent = fn () => $this->call('POST', route('commerce.webhook', 'stripe'), [], [], [],
+            ['HTTP_STRIPE_SIGNATURE' => "t=$time,v1=$signature"], $event);
+        $this->get($return)->assertRedirect($orderUrl);
+        $this->assertDatabaseCount('product_licenses', 0);
+        $this->assertSame('awaiting_payment', $order->refresh()->status);
+
+        $paid = true;
+        if ($archiveUnavailable) {
+            Storage::disk('local')->put($release->storage_path, 'wrong file');
+            $this->get($return)->assertRedirect($orderUrl);
+            $this->get($orderUrl)->assertOk()->assertSee('Purchase delivery pending')->assertDontSee('Download product');
+            $this->assertDatabaseCount('product_licenses', 0);
+            Storage::disk('local')->put($release->storage_path, $archive);
+            $this->post($verify)->assertRedirect($orderUrl);
+        } else {
+            $sendEvent()->assertNoContent();
+        }
+        $this->assertSame('completed', $order->refresh()->status);
+        $this->assertSame('paid', $attempt->refresh()->status);
+        $grant = $order->entitlement()->sole();
+        $license = $grant->license()->sole();
+        $this->assertSame('verified_purchase', $license->source);
+        $this->get($orderUrl)->assertOk()->assertSee('Download product')->assertSee('My licenses');
+        $this->get(route('account.licenses.index'))->assertOk()->assertSee($product->title)->assertDontSee($license->key_ciphertext);
+        $this->get(route('account.downloads.file', $grant))->assertDownload();
+        $this->actingAs($this->user('super_admin'))->get(route('dashboard.licenses.index'))
+            ->assertOk()->assertSee($product->title)->assertDontSee($license->key_ciphertext);
+        $this->actingAs($buyer);
+        $installation = ['license_key' => $license->key_ciphertext, 'domain' => 'installer.example.test', 'product_id' => $product->public_id];
+        $this->postJson(route('api.v1.licenses.activate'), $installation)->assertOk()->assertJsonPath('status', 'activated');
+        $this->postJson(route('api.v1.licenses.validate'), $installation)->assertOk()->assertJsonPath('valid', true);
+        $this->postJson(route('api.v1.licenses.activate'), array_replace($installation, ['product_id' => '999999999']))
+            ->assertForbidden()->assertJsonPath('valid', false);
+
+        $sendEvent()->assertNoContent();
+        $this->assertDatabaseCount('product_entitlements', 1);
+        $this->assertDatabaseCount('product_licenses', 1);
     }
 
     public function test_stripe_credentials_can_be_prepared_without_switching_the_active_environment(): void
