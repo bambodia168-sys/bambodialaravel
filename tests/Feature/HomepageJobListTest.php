@@ -51,7 +51,7 @@ class HomepageJobListTest extends TestCase
         $this->assertSame(5,substr_count($response->getContent(),'class="bambodia-job-row"'));
     }
 
-    public function test_directory_uses_same_component_and_handles_preview_and_unspecified_budgets(): void
+    public function test_directory_keeps_unspecified_budgets_and_excludes_preview_jobs(): void
     {
         $client=User::query()->create([
             'name'=>'Independent Hiring Partner','email'=>'client-job-directory@example.test',
@@ -63,12 +63,12 @@ class HomepageJobListTest extends TestCase
             ->assertSee('Approved job search results')
             ->assertSee('On request')
             ->assertSee('Budget not specified')
-            ->assertSee('Preview only')
-            ->assertSee('View preview')
+            ->assertDontSee('Preview only')
+            ->assertDontSee('View preview')
             ->assertSee('View job')
             ->assertSee(e($normal->publicUrl()),false)
-            ->assertSee(e($preview->publicUrl()),false);
-        $this->assertSame(2,substr_count($response->getContent(),'class="bambodia-job-row"'));
+            ->assertDontSee(e($preview->publicUrl()),false);
+        $this->assertSame(1,substr_count($response->getContent(),'class="bambodia-job-row"'));
     }
 
     public function test_signed_in_save_state_preserved_in_both_job_lists(): void

@@ -223,13 +223,13 @@ final class PreviewVisibilityControlTest extends TestCase
         $item = $this->job($client);
         $this->actingAs($super);
 
-        $this->get('/jobs')->assertOk()->assertSee($item->title);
+        $this->get($item->publicUrl())->assertOk()->assertSee($item->title);
         $this->patch(route('dashboard.preview-visibility.withdraw', [
             'kind'=>'job','publicId'=>$item->public_id,
         ]), $this->form('job', $item))->assertRedirect();
 
         $this->assertSame('withdrawn', $item->fresh()->status);
-        $this->get('/jobs')->assertOk()->assertDontSee($item->title);
+        $this->get($item->publicUrl())->assertNotFound();
         $this->assertDatabaseCount('marketplace_jobs', 1);
 
         $this->patch(route('dashboard.preview-visibility.restore', [
@@ -237,7 +237,7 @@ final class PreviewVisibilityControlTest extends TestCase
         ]), $this->form('job', $item->fresh()))->assertRedirect();
 
         $this->assertSame('pending', $item->fresh()->status);
-        $this->get('/jobs')->assertOk()->assertDontSee($item->title);
+        $this->get($item->publicUrl())->assertNotFound();
         $this->assertDatabaseCount('preview_visibility_actions', 2);
         $this->get(route('dashboard.jobs.index', ['status'=>'pending']))
             ->assertOk()->assertSee($item->title);
