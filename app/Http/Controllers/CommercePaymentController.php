@@ -30,13 +30,14 @@ class CommercePaymentController extends Controller
 {
     public function __construct(private readonly CommerceGateway $gateway, private readonly CommerceQrGateway $qrGateway) {}
 
-    public function start(Request $request, string $number): RedirectResponse
+    public function start(Request $request, string $number): RedirectResponse|JsonResponse
     {
         abort_unless(CommerceCollection::enabled(), 404);
         $order = $this->buyerOrder($request, $number);
         $data = $request->validate(['method'=>['required', 'integer', 'min:1']]);
         $live = (bool) config('commerce.live_gateways');
-        $payment = DB::transaction(function () use ($order, $data, $live): CommercePayment {
+        $formConfigured = CommerceGateway::stripeFormKey($live) !== null;
+        $payment = DB::transaction(function () use ($order, $data, $live, $formConfigured, $request): CommercePayment {
             $locked = MarketplaceOrder::query()->lockForUpdate()->findOrFail($order->id);
             $this->awaiting($locked);
             $active = $locked->payments()->whereIn('status', CommercePayment::ACTIVE)->first();
@@ -48,6 +49,8 @@ class CommercePaymentController extends Controller
             }
             $method = CommercePaymentMethod::query()->where('available', true)->lockForUpdate()->findOrFail($data['method']);
             abort_unless($method->usesGateway(), 422, 'This gateway is unavailable.');
+            abort_if($method->provider === 'stripe' && $formConfigured && ! $request->expectsJson(),
+                422, 'Enable JavaScript and reopen this order to pay with Stripe.');
             CommerceGatewaySetting::forMode($method->provider, $live)->lockForUpdate()->firstOrFail();
             abort_unless($method->availableForCheckout($live), 422, 'This gateway is unavailable.');
 
@@ -58,6 +61,8 @@ class CommercePaymentController extends Controller
         }, 3);
         abort_unless($payment->live_mode === $live && CommerceGateway::ready($payment->provider, $live)
             && ($live || ! app()->environment('production')), 503);
+        $embedded = $payment->provider === 'stripe' && $formConfigured;
+        abort_if($embedded && ! $request->expectsJson(), 422, 'Enable JavaScript and reopen this order to pay with Stripe.');
         if ($payment->dynamicQr()) {
             if ($payment->remote_id === null) {
                 // Serialize generation so concurrent clicks never open two bank bills.
@@ -74,17 +79,14 @@ class CommercePaymentController extends Controller
             return redirect()->route('account.orders.show', $number);
         }
         if ($payment->remote_id) {
-            $url = $this->reconcile($payment, false);
-            if ($this->gateway->trustedCheckout($payment->provider, $live, $url)) {
-                return redirect()->away($url);
-            }
+            $checkout = $this->reconcile($payment, false);
 
-            return redirect()->route('account.orders.show', $number)->with('status', 'Payment status updated.');
+            return $this->checkoutResponse($payment, $number, $embedded, $checkout);
         }
 
         // Never start another hosted checkout once the provider's idempotency window may have expired.
         abort_if($payment->created_at->lt(now()->subHour()), 409, 'This checkout needs settlement review.');
-        [$remote, $url] = $this->gateway->start($payment);
+        [$remote, $url, $clientSecret] = $this->gateway->start($payment);
         DB::transaction(function () use ($payment, $remote): void {
             $locked = CommercePayment::query()->lockForUpdate()->findOrFail($payment->id);
             abort_unless($locked->remote_id === null || $locked->remote_id === $remote, 409);
@@ -93,7 +95,24 @@ class CommercePaymentController extends Controller
             }
         }, 3);
 
-        return redirect()->away($url);
+        return $this->checkoutResponse($payment, $number, $embedded, ['url' => $url, 'client_secret' => $clientSecret]);
+    }
+
+    private function checkoutResponse(CommercePayment $payment, string $number, bool $embedded, array $checkout): RedirectResponse|JsonResponse
+    {
+        $url = $checkout['url'] ?? null;
+        $trusted = $this->gateway->trustedCheckout($payment->provider, $payment->live_mode, $url);
+        $orderUrl = route('account.orders.show', $number);
+        if ($embedded) {
+            $data = isset($checkout['client_secret'])
+                ? ['client_secret' => $checkout['client_secret'], 'order_url' => $orderUrl]
+                : ['redirect_url' => $trusted ? $url : $orderUrl];
+
+            return response()->json($data)->header('Cache-Control', 'private, no-store');
+        }
+
+        return $trusted ? redirect()->away($url)
+            : redirect()->route('account.orders.show', $number)->with('status', 'Payment status updated.');
     }
 
     public function returned(Request $request, string $number, string $payment): RedirectResponse
@@ -247,16 +266,16 @@ class CommercePaymentController extends Controller
         ]);
     }
 
-    public function reconcile(CommercePayment $payment, bool $capture = false): ?string
+    public function reconcile(CommercePayment $payment, bool $capture = false): array
     {
         if ($payment->status !== 'checkout_open') {
-            return null;
+            return [];
         }
         abort_if(! $payment->live_mode && app()->environment('production'), 409);
         $result = $payment->dynamicQr()
             ? $this->qrGateway->refresh($payment)
             : $this->gateway->refresh($payment, $capture);
-        [$status, $reference, $url] = array_pad($result, 3, null);
+        [$status, $reference, $url, $clientSecret] = array_pad($result, 4, null);
         DB::transaction(function () use ($payment, $status, $reference): void {
             $order = MarketplaceOrder::query()->lockForUpdate()->findOrFail($payment->marketplace_order_id);
             $current = $order->payments()->lockForUpdate()->findOrFail($payment->id);
@@ -271,7 +290,7 @@ class CommercePaymentController extends Controller
             }
         }, 3);
 
-        return $url;
+        return ['url' => $url, 'client_secret' => $clientSecret];
     }
 
     private function settle(MarketplaceOrder $order, CommercePayment $payment, ?string $reference): void

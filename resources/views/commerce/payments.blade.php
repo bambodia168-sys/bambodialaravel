@@ -4,6 +4,12 @@
   $activePayment = $payments->first(fn ($payment) => in_array($payment->status, \App\Models\CommercePayment::ACTIVE, true));
   $live = (bool) config('commerce.live_gateways');
   $rejectedReceipt = $payments->firstWhere('status', 'rejected');
+  $stripeFormKey = $buyerView && $collectingPayments && $order->status === 'awaiting_payment'
+    && $order->currency === 'USD'
+    && ($activePayment ? $activePayment->provider === 'stripe' : $methods->contains(
+      fn ($method) => $method->provider === 'stripe' && $method->availableForCheckout($live)
+    ))
+    ? \App\Support\CommerceGateway::stripeFormKey($live) : null;
 @endphp
 @if($buyerView && $order->status === 'awaiting_payment' && $order->currency === 'USD' && ($collectingPayments || $activePayment))
   <div class="panel-head"><h2>Pay for this order</h2></div>
@@ -14,7 +20,8 @@
     @forelse($methods->filter(fn ($method) => $method->availableForCheckout($live)) as $method)
       <div class="panel-head">
         @if($method->usesGateway())
-          <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}">
+          <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}"
+                @if($stripeFormKey && $method->provider === 'stripe') data-stripe-checkout-start @endif>
             @csrf
             <input type="hidden" name="method" value="{{ $method->id }}">
             <button class="btn primary">{{ $method->dynamicQr() ? 'Generate QR for' : 'Pay with' }} {{ $method->name }}</button>
@@ -73,7 +80,8 @@
   @else
     <div class="panel-head">
       @if($collectingPayments)
-        <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}">
+        <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}"
+              @if($stripeFormKey && $activePayment->provider === 'stripe') data-stripe-checkout-start @endif>
           @csrf
           <input type="hidden" name="method" value="{{ $activePayment->commerce_payment_method_id }}">
           <button class="btn primary">Continue {{ $activePayment->method_name }} checkout</button>
@@ -87,6 +95,19 @@
       @endif
     </div>
   @endif
+@endif
+@if($stripeFormKey)
+  @push('head')
+    <script defer src="https://js.stripe.com/dahlia/stripe.js"></script>
+    <script defer src="{{ asset('js/commerce-stripe-checkout.js') }}"></script>
+  @endpush
+  <div class="panel-head" data-stripe-checkout data-publishable-key="{{ $stripeFormKey }}" hidden>
+    <div>
+      <h3>Pay with Stripe</h3>
+      <p role="status" data-stripe-checkout-status></p>
+      <div id="checkout-form"></div>
+    </div>
+  </div>
 @endif
 @if($payments->isNotEmpty())
   <div class="panel-head"><h2>Payment activity</h2></div>

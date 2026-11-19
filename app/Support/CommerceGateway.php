@@ -17,22 +17,49 @@ final class CommerceGateway
         return CommerceGatewaySetting::configured($provider, $live, CommerceGatewaySetting::effective($provider, $live));
     }
 
+    public static function stripeFormKey(bool $live): ?string
+    {
+        $key = config('commerce.stripe_publishable_key');
+        $prefix = $live ? 'pk_live_' : 'pk_test_';
+
+        return is_string($key) && preg_match('/^'.$prefix.'[A-Za-z0-9_]+$/D', $key) ? $key : null;
+    }
+
     public function start(CommercePayment $payment): array
     {
         $order = $payment->order;
         $returnUrl = $this->url('account.orders.payment.return', [$order->number, $payment->number]);
         $cancelUrl = $this->url('account.orders.show', [$order->number]);
+        $clientSecret = null;
         if ($payment->provider === 'stripe') {
-            $data = $this->send($this->stripe($payment->live_mode)->asForm()->withHeaders(['Idempotency-Key'=>$payment->number]), 'POST', '/checkout/sessions', [
-                'mode'=>'payment', 'success_url'=>$returnUrl, 'cancel_url'=>$cancelUrl,
-                'client_reference_id'=>$payment->number, 'metadata'=>['payment'=>$payment->number],
-                'payment_method_types'=>['card'],
+            $embedded = self::stripeFormKey($payment->live_mode) !== null;
+            $parameters = [
+                'mode'=>'payment', 'client_reference_id'=>$payment->number,
                 'line_items'=>[['quantity'=>1, 'price_data'=>[
                     'currency'=>'usd', 'unit_amount'=>self::cents($order->total),
                     'product_data'=>['name'=>$order->listing_title],
                 ]]],
-            ]);
-            $redirect = $data['url'] ?? null;
+            ];
+            $parameters += $embedded ? [
+                'ui_mode' => 'form',
+                'billing_address_collection' => 'required',
+                'phone_number_collection' => ['enabled' => 'false'],
+                'automatic_tax' => ['enabled' => 'false'],
+                'submit_type' => 'auto',
+                'name_collection' => ['individual' => ['enabled' => 'true', 'optional' => 'true']],
+                'integration_identifier' => 'custom_embedded_web_0001',
+                'return_url' => $returnUrl,
+            ] : [
+                'success_url'=>$returnUrl, 'cancel_url'=>$cancelUrl,
+                'metadata'=>['payment'=>$payment->number], 'payment_method_types'=>['card'],
+            ];
+            $data = $this->send($this->stripe($payment->live_mode)->asForm()->withHeaders(['Idempotency-Key'=>$payment->number]),
+                'POST', '/checkout/sessions', $parameters);
+            $redirect = $embedded ? null : ($data['url'] ?? null);
+            if ($embedded) {
+                $clientSecret = $this->stripeFormSecret($data);
+                abort_unless($clientSecret !== null, 502, 'Stripe did not return an embedded checkout.');
+            }
         } else {
             $data = $this->send($this->paypal($payment->live_mode)->withHeaders(['PayPal-Request-Id'=>$payment->number.'-c']), 'POST', '/v2/checkout/orders', [
                 'intent'=>'CAPTURE',
@@ -47,10 +74,10 @@ final class CommerceGateway
             $redirect = $link['href'] ?? null;
         }
 
-        abort_unless($this->trustedCheckout($payment->provider, $payment->live_mode, $redirect)
+        abort_unless(($clientSecret !== null || $this->trustedCheckout($payment->provider, $payment->live_mode, $redirect))
             && is_string($data['id'] ?? null) && preg_match('/^[A-Za-z0-9_-]{1,200}$/D', $data['id']), 502, 'The payment provider did not return a valid checkout.');
 
-        return [$data['id'], $redirect];
+        return [$data['id'], $redirect, $clientSecret];
     }
 
     public function refresh(CommercePayment $payment, bool $capture = false): array
@@ -71,7 +98,10 @@ final class CommerceGateway
 
             $expired = ($data['status'] ?? null) === 'expired';
 
-            return [$expired ? 'expired' : 'checkout_open', null, $expired ? null : ($data['url'] ?? null)];
+            return [
+                $expired ? 'expired' : 'checkout_open', null, $expired ? null : ($data['url'] ?? null),
+                ($data['status'] ?? null) === 'open' ? $this->stripeFormSecret($data) : null,
+            ];
         }
 
         $client = $this->paypal($payment->live_mode);
@@ -180,8 +210,19 @@ final class CommerceGateway
 
     private function stripe(bool $live): PendingRequest
     {
+        $version = self::stripeFormKey($live) === null ? '2024-06-20' : '2026-03-25.dahlia';
+
         return $this->http('https://api.stripe.com/v1')->withToken(CommerceGatewaySetting::effective('stripe', $live)['secret'])
-            ->withHeaders(['Stripe-Version'=>'2024-06-20']);
+            ->withHeaders(['Stripe-Version' => $version]);
+    }
+
+    private function stripeFormSecret(array $session): ?string
+    {
+        $id = $session['id'] ?? null;
+        $secret = $session['client_secret'] ?? null;
+
+        return ($session['ui_mode'] ?? null) === 'form' && is_string($id) && is_string($secret)
+            && str_starts_with($secret, $id.'_secret_') ? $secret : null;
     }
 
     private function paypal(bool $live): PendingRequest
