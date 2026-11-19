@@ -476,16 +476,22 @@ Private installation report.
 
     public static function deliveryConditions(): array
     {
-        return ['ready at confirmation' => [false], 'archive temporarily unavailable' => [true]];
+        return [
+            'ready at confirmation' => [false, false],
+            'archive temporarily unavailable' => [true, false],
+            'existing download without a license' => [true, true],
+        ];
     }
 
     #[DataProvider('deliveryConditions')]
-    public function test_verified_gateway_purchase_issues_one_installer_license(bool $archiveUnavailable): void
+    public function test_verified_gateway_purchase_issues_one_installer_license(bool $archiveUnavailable, bool $existingGrant): void
     {
         Storage::fake('local');
         config(['commerce.stripe.secret' => 'sk_test_product_fixture', 'commerce.stripe.webhook_secret' => 'whsec_product_fixture']);
         $buyer = $this->user('customer');
-        [$product, $release] = $this->product($this->user('freelancer'), $this->user('super_admin'));
+        $seller = $this->user('freelancer');
+        $admin = $this->user('super_admin');
+        [$product, $release] = $this->product($seller, $admin);
         $stripe = $this->method('stripe');
         $this->actingAs($buyer);
         $offer = $this->get(route('account.orders.create', $product->public_id))->assertOk();
@@ -528,21 +534,72 @@ Private installation report.
         $this->get($return)->assertRedirect($orderUrl);
         $this->assertDatabaseCount('product_licenses', 0);
         $this->assertSame('awaiting_payment', $order->refresh()->status);
+        $retry = route('dashboard.commerce-operations.retry-delivery', $order->number);
+        $this->actingAs($admin)->post($retry)->assertConflict();
+        $this->actingAs($buyer);
 
         $paid = true;
+        $originalGrant = null;
         if ($archiveUnavailable) {
-            Storage::disk('local')->put($release->storage_path, 'wrong file');
+            Storage::disk('local')->delete($release->storage_path);
             $this->get($return)->assertRedirect($orderUrl);
-            $this->get($orderUrl)->assertOk()->assertSee('Purchase delivery pending')->assertDontSee('Download product');
             $this->assertDatabaseCount('product_licenses', 0);
-            Storage::disk('local')->put($release->storage_path, $archive);
+
+            if ($existingGrant) {
+                $originalGrant = $order->entitlement()->create([
+                    'user_id' => $buyer->id, 'product_file_version_id' => $release->id,
+                    'granted_by' => $seller->id, 'grant_reason' => 'Original order grant fixture', 'status' => 'active',
+                ]);
+            }
+
+            $dashboard = route('dashboard.commerce-operations');
+            $this->get($orderUrl)->assertOk()->assertSee('Purchase delivery pending')->assertDontSee('Download product');
             $this->post($verify)->assertRedirect($orderUrl);
+            $this->post($retry)->assertForbidden();
+            $this->actingAs($seller)->get(route('studio.commerce-operations'))
+                ->assertOk()->assertDontSee('Paid orders awaiting delivery')->assertDontSee('Retry delivery');
+            $this->actingAs($this->user('admin'))->post($retry)->assertForbidden();
+            $requestsBeforeRetry = Http::recorded()->count();
+            $this->actingAs($admin)->get($dashboard)->assertOk()
+                ->assertSee('Paid orders awaiting delivery')->assertSee($order->number)
+                ->assertSee('The original file is missing or failed its integrity check.')
+                ->assertSee('Retry delivery');
+            $this->post($retry)->assertRedirect($dashboard.'#pending-deliveries')
+                ->assertSessionHas('error', 'The original file is missing or failed its integrity check.');
+            $this->assertDatabaseCount('product_licenses', 0);
+
+            Storage::disk('local')->put($release->storage_path, $archive);
+            $release->update(['malware_scanned_at' => now()->subYear()]);
+            $this->get($dashboard)->assertOk()->assertSee('The original release needs a current clean malware scan.');
+            $this->post($retry)->assertSessionHas('error', 'The original release needs a current clean malware scan.');
+            $release->update(['malware_scanned_at' => now()]);
+
+            if ($originalGrant) {
+                $originalGrant->update(['status' => 'revoked', 'revoked_at' => now()]);
+                $this->post($retry)->assertSessionHas('error', 'The existing download entitlement is inactive. Review it before retrying.');
+                $this->assertSame('revoked', $originalGrant->fresh()->status);
+                $this->assertDatabaseCount('product_licenses', 0);
+                $originalGrant->update(['status' => 'active', 'revoked_at' => null]);
+            }
+
+            config(['commerce.payments_enabled' => false]);
+            $receipt = $order->fresh()->receipt_number;
+            $this->post($retry)->assertSessionHas('status', 'Purchase delivery completed.');
+            $this->post($retry)->assertSessionHas('status', 'This order has no pending delivery.');
+            $this->assertSame($requestsBeforeRetry, Http::recorded()->count());
+            $this->assertSame($receipt, $order->fresh()->receipt_number);
+            $this->assertDatabaseHas('audit_events', ['actor_id' => $admin->id, 'event' => 'commerce.order.delivery_retried']);
+            $this->get($dashboard)->assertOk()->assertSee('No paid orders are awaiting delivery.')->assertDontSee('Retry delivery');
+            $this->actingAs($buyer);
         } else {
             $sendEvent()->assertNoContent();
         }
         $this->assertSame('completed', $order->refresh()->status);
         $this->assertSame('paid', $attempt->refresh()->status);
         $grant = $order->entitlement()->sole();
+        if ($originalGrant) {
+            $this->assertTrue($grant->is($originalGrant));
+        }
         $license = $grant->license()->sole();
         $this->assertSame('verified_purchase', $license->source);
         $this->get($orderUrl)->assertOk()->assertSee('Download product')->assertSee('My licenses');

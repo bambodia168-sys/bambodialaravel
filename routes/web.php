@@ -443,6 +443,8 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/commerce-operations', [CommerceSettlementController::class, 'index'])->name('dashboard.commerce-operations');
             Route::get('/commerce-operations/statement.csv', [CommerceSettlementController::class, 'statement'])
                 ->middleware('throttle:10,1')->name('dashboard.commerce-operations.statement');
+            Route::post('/commerce-operations/{number}/retry-delivery', [CommercePaymentController::class, 'retryDelivery'])
+                ->whereUuid('number')->middleware('throttle:15,1,commerce-delivery-retry:')->name('dashboard.commerce-operations.retry-delivery');
             Route::get('/orders/{number}/payments/{payment}/proof', [CommercePaymentController::class, 'proof'])
                 ->whereUuid(['number', 'payment'])->name('dashboard.orders.payment.proof');
             Route::patch('/orders/{number}/payments/{payment}', [CommercePaymentController::class, 'review'])

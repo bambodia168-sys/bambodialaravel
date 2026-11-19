@@ -48,6 +48,16 @@ class MarketplaceOrder extends Model
         return $this->hasOne(ServiceInquiry::class);
     }
 
+    public function scopeDeliveryPending(Builder $orders): Builder
+    {
+        return $orders->where('status', 'completed')->whereHas('paidAttempt')
+            ->where(fn (Builder $pending) => $pending
+                ->where(fn (Builder $product) => $product->whereNotNull('license_tier')
+                    ->whereDoesntHave('entitlement.license')->whereDoesntHave('serviceInquiry'))
+                ->orWhere(fn (Builder $service) => $service->whereNull('license_tier')
+                    ->whereDoesntHave('serviceInquiry')->whereDoesntHave('entitlement')));
+    }
+
     public function review(): HasOne
     {
         return $this->hasOne(MarketplaceOrderReview::class);

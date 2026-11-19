@@ -102,6 +102,7 @@ class AuditEvent extends Model
         'product.updated',
         'commerce.order.created',
         'commerce.order.cancelled',
+        'commerce.order.delivery_retried',
         'commerce.order.payment_method_changed',
         'commerce.payment_method.created',
         'commerce.payment_method.availability_changed',
