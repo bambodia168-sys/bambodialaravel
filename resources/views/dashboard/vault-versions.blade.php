@@ -2,7 +2,8 @@
 @section('title','Digital File Vault')
 @section('content')
 <div class="page-intro"><div class="eyebrow">Marketplace · Secure Fulfillment</div><h1>Digital File Vault</h1>
-  <p>Fail-closed release governance: scan original bytes with ClamAV, inspect the screened file, review ownership evidence, then approve. A missing, failed, outdated or infected scan blocks customer access.</p></div>
+  <p>Scan the original with ClamAV, inspect the screened file, and review ownership evidence before approval. Downloads require a current clean scan.</p>
+  <p>Approved releases are checked hourly for upcoming scan expirations. <a href="{{ route('dashboard.vault.index', ['status' => 'approved']) }}">View approved releases</a></p></div>
 <section class="panel">
   <div class="panel-head"><h2>Product releases <span class="count">{{ $versions->total() }}</span></h2>
     <form method="get" class="table-search"><x-icon name="filter" size="17"/>
@@ -17,6 +18,15 @@
     <thead><tr><th>Product ID</th><th>Title</th><th>Version</th><th>Uploader</th><th>File</th><th>Status</th><th>Action</th></tr></thead>
     <tbody>
       @forelse($versions as $version)
+        @php
+          $scanExpiry = \App\Support\VaultReleaseGate::scanExpiresAt($version);
+          $scanHealth = match (true) {
+              $scanExpiry === null => 'No current clean scan',
+              $scanExpiry->isPast() => 'Scan expired',
+              $scanExpiry->lessThanOrEqualTo(now()->addHours(\App\Support\VaultReleaseGate::refreshWindowHours())) => 'Scan expiring soon',
+              default => 'Scan current',
+          };
+        @endphp
         <tr>
           <td class="mono">{{ $version->product?->public_id }}</td>
           <td><strong>{{ $version->product?->title }}</strong></td>
@@ -25,6 +35,9 @@
           <td>{{ strtoupper($version->file_type) }} · {{ number_format($version->byte_size / 1048576,2) }} MiB</td>
           <td><span class="role-pill">{{ ucfirst($version->status) }}</span>
             <div class="text-muted">AV: {{ ucfirst($version->malware_scan_status) }}</div>
+            @if($version->status === 'approved')
+              <div class="text-muted">{{ $scanHealth }}</div>
+            @endif
             <div class="text-muted">Rights: {{ ucfirst($version->rights_review_status) }}</div></td>
           <td><x-row-action-menu :id="'vault-'.$version->id" :label="'Release '.$version->version"><button type="button" data-modal-open="vault-{{ $version->id }}"><x-icon name="settings" size="16"/> Configure</button></x-row-action-menu>
             <dialog class="config-dialog wide-dialog" id="vault-{{ $version->id }}">
@@ -39,6 +52,9 @@
               <p><strong>Rights review:</strong> {{ ucfirst($version->rights_review_status) }} · {{ $version->rights_review_note ?? 'Not reviewed' }}</p>
               <p><strong>Malware screening:</strong> {{ ucfirst($version->malware_scan_status) }} · {{ $version->malware_scan_engine ?? 'Scanner unavailable' }}</p>
               <p><strong>Scan date:</strong> {{ $version->malware_scanned_at?->format('d M Y H:i') ?? 'Not screened' }}</p>
+              @if($scanExpiry)
+                <p><strong>Scan valid until:</strong> {{ $scanExpiry->format('d M Y H:i T') }}</p>
+              @endif
               <p><strong>Scan note:</strong> {{ $version->malware_scan_note ?? 'No reliable verdict yet' }}</p>
               @if(in_array($version->status,['pending','approved'],true))
                 <form method="post" action="{{ route('dashboard.vault.scan',$version) }}">

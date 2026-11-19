@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AccountNotification;
 use App\Models\LicenseDefinition;
 use App\Models\MarketplaceListing;
 use App\Models\MediaAsset;
@@ -575,6 +576,95 @@ class ProductVaultFulfillmentTest extends TestCase
         $this->assertDatabaseCount('product_download_events',1);
     }
 
+
+    public function test_scheduled_screening_refreshes_expired_approved_releases_only(): void
+    {
+        $version = $this->upload();
+        $this->approve($version);
+        $entitlement = $this->grant($version);
+        $pending = $this->upload('2.0.0');
+        $version->update(['malware_scanned_at' => now()->subDays(31)]);
+
+        $this->actingAs($this->reviewer)->get('/dashboard/file-vault?status=approved')
+            ->assertOk()->assertSee('Scan expired')->assertSee('Scan valid until');
+        $url = route('account.downloads.file', $entitlement);
+        $this->actingAs($this->customer)->get($url)->assertForbidden();
+
+        $this->artisan('vault:rescan-expiring')
+            ->expectsOutput('Vault screening attempted for 1 release(s). 0 require attention.')
+            ->assertSuccessful();
+        $this->assertTrue($version->fresh()->isApproved());
+        $this->assertNull($version->fresh()->malware_scanned_by);
+        $this->assertSame('pending', $pending->fresh()->status);
+        $this->assertNull($pending->fresh()->malware_scanned_at);
+        $this->get($url)->assertOk();
+
+        $this->artisan('vault:rescan-expiring')
+            ->expectsOutput('Vault screening attempted for 0 release(s). 0 require attention.')
+            ->assertSuccessful();
+    }
+
+    public function test_failed_refresh_warns_admins_and_keeps_the_original_expiry(): void
+    {
+        $version = $this->upload();
+        $this->approve($version);
+        $entitlement = $this->grant($version);
+        $version->update(['malware_scanned_at' => now()->subDays(29)]);
+        $originalScan = $version->fresh()->malware_scanned_at;
+        $this->app->instance(VaultMalwareScanner::class, new class extends VaultMalwareScanner {
+            public function scanFile(string $absoluteFile): array
+            {
+                return ['status' => 'error', 'note' => 'Scanner definitions are unavailable.'];
+            }
+        });
+
+        $this->actingAs($this->reviewer)->get('/dashboard/file-vault?status=approved')
+            ->assertOk()->assertSee('Scan expiring soon');
+        $this->artisan('vault:rescan-expiring')->assertFailed();
+        $this->assertEquals($originalScan, $version->fresh()->malware_scanned_at);
+        $this->assertEqualsCanonicalizing([$this->reviewer->id, $this->superAdmin->id],
+            AccountNotification::query()->where('event', 'vault.rescan.attention')->pluck('user_id')->all());
+        $path = AccountNotification::query()->where('event', 'vault.rescan.attention')->value('target_path');
+        $this->get($path)->assertOk()->assertSee($version->version);
+
+        $this->artisan('vault:rescan-expiring')->assertSuccessful();
+        $url = route('account.downloads.file', $entitlement);
+        $this->actingAs($this->customer)->get($url)->assertOk();
+        $this->travel(7)->hours();
+        $this->artisan('vault:rescan-expiring')->assertFailed();
+        $this->assertSame(2, AccountNotification::query()->where('event', 'vault.rescan.attention')->count());
+        $this->travel(1)->days();
+        $this->get($url)->assertForbidden();
+    }
+
+    public function test_scheduled_threat_detection_disables_downloads_immediately(): void
+    {
+        $version = $this->upload();
+        $this->approve($version);
+        $entitlement = $this->grant($version);
+        $version->update(['malware_scanned_at' => now()->subDays(29)]);
+        $this->app->instance(VaultMalwareScanner::class, new class extends VaultMalwareScanner {
+            public function scanFile(string $absoluteFile): array
+            {
+                return ['status' => 'infected', 'engine' => 'ClamAV 1.4.0 (test double)'];
+            }
+        });
+
+        $this->artisan('vault:rescan-expiring')->assertSuccessful();
+        $this->assertSame('disabled', $version->fresh()->status);
+        $this->assertDatabaseHas('audit_events', ['event' => 'vault.malware.infected', 'actor_id' => null]);
+        $this->assertDatabaseHas('account_notifications', [
+            'event' => 'vault.version.reviewed', 'user_id' => $this->creator->id,
+            'title' => 'Product file release blocked',
+        ]);
+        $this->assertDatabaseHas('account_notifications', [
+            'event' => 'vault.rescan.infected', 'user_id' => $this->superAdmin->id,
+        ]);
+        $this->actingAs($this->customer)->get(route('account.downloads.file', $entitlement))->assertForbidden();
+        $this->artisan('vault:rescan-expiring')
+            ->expectsOutput('Vault screening attempted for 0 release(s). 0 require attention.')
+            ->assertSuccessful();
+    }
 
     public function test_builder_accepts_a_private_zip_original_for_owned_product_draft_only(): void
     {

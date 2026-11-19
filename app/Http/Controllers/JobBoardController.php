@@ -7,6 +7,7 @@ use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
 use App\Support\BambodiaTaxonomy;
+use App\Support\PreviewContentReview;
 use App\Models\AuditEvent;
 use App\Models\AccountNotification;
 use App\Models\FreelancerResume;
@@ -31,6 +32,7 @@ class JobBoardController extends Controller
         abort_unless(in_array($sort,['recent','budget_low','budget_high'],true),404);
         $jobs = MarketplaceJob::query()->with(['client:id,name,public_id','featuredAsset'])->withCount('proposals')
             ->where('status','published')
+            ->tap(PreviewContentReview::excludeMarkedPreviews(...))
             ->when($category!=='',fn($q)=>$q->where('category',$category))
             ->when($search !== '', fn($q)=>$q->where(function($query)use($search){
                 $query->where('title','like','%'.$search.'%')->orWhere('description','like','%'.$search.'%');
@@ -63,6 +65,7 @@ class JobBoardController extends Controller
         $screenshots = BuilderGallery::approvedFor($listing->gallery_media_ids, (int)$listing->client_id);
         $relatedJobs=MarketplaceJob::query()
             ->where('status','published')
+            ->tap(PreviewContentReview::excludeMarkedPreviews(...))
             ->whereKeyNot($listing->id)
             ->where('category',$listing->category)
             ->with(['client:id,name,public_id','featuredAsset'])

@@ -42,8 +42,7 @@
     </a>
     @if(\App\Models\FeatureFlag::isEnabled('marketplace_search'))
     @php
-      $categoryGroups = \App\Models\MarketplaceCategory::query()
-        ->where('is_active', true)
+      $categoryGroups = \App\Models\MarketplaceCategory::query()->publicNavigation()
         ->orderBy('type')->orderBy('sort_order')->orderBy('name')
         ->get(['public_id','type','name'])->groupBy('type');
       $categoryTypes = ['product'=>'Product','project'=>'Project','service'=>'Service','freelance'=>'Freelance'];

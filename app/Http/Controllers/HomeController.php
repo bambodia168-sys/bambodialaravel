@@ -9,6 +9,7 @@ use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
 use App\Models\SavedJob;
 use App\Models\User;
+use App\Support\PreviewContentReview;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -28,6 +29,7 @@ class HomeController extends Controller
             $latestByType=[];
             foreach (MarketplaceListing::TYPES as $type) {
                 $latestByType[$type]=MarketplaceListing::query()->publiclyAvailable()
+                    ->tap(PreviewContentReview::excludeMarkedPreviews(...))
                     ->where('type',$type)
                     ->with([
                         'creator:id,name,public_id',
@@ -46,6 +48,7 @@ class HomeController extends Controller
             }
 
             $listingTotals=MarketplaceListing::query()->publiclyAvailable()
+                ->tap(PreviewContentReview::excludeMarkedPreviews(...))
                 ->selectRaw('type, COUNT(*) as total')->groupBy('type')->pluck('total','type');
 
             // Ratings are not stored yet; do not invent a top-rated ranking.
@@ -55,7 +58,7 @@ class HomeController extends Controller
                 ->where('role','freelancer')
                 ->whereHas('creatorProfile',fn($query)=>$query->where('is_public',true))
                 ->with(['creatorProfile:user_id,headline,is_public', 'userProfile:user_id,avatar_path'])
-                ->withCount(['publishedListings as public_listings_count'])
+                ->withCount(['publishedListings as public_listings_count' => PreviewContentReview::excludeMarkedPreviews(...)])
                 ->orderByDesc('public_listings_count')
                 ->orderByDesc('id')
                 ->limit(8)->get();
@@ -76,6 +79,7 @@ class HomeController extends Controller
             ->limit(10)->get();
 
         $recentJobs=MarketplaceJob::query()->where('status','published')
+            ->tap(PreviewContentReview::excludeMarkedPreviews(...))
             ->latest('id')->limit(5)->with('client:id,name,public_id')->get();
         $savedJobIds=$request->user()
             ? SavedJob::query()->where('user_id',$request->user()->id)

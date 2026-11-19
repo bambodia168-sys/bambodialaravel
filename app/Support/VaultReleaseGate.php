@@ -9,16 +9,33 @@ final class VaultReleaseGate
 {
     public static function screened(ProductFileVersion $version): bool
     {
-        $days=max(1,min(365,(int)config('vault.max_scan_age_days',30)));
-        return $version->malware_scan_status==='clean'
+        return self::scanExpiresAt($version)?->greaterThanOrEqualTo(now()) ?? false;
+    }
+
+    public static function scanValidityDays(): int
+    {
+        return max(1, min(365, (int) config('vault.max_scan_age_days', 30)));
+    }
+
+    public static function refreshWindowHours(): int
+    {
+        return min(72, self::scanValidityDays() * 12);
+    }
+
+    public static function scanExpiresAt(ProductFileVersion $version): ?Carbon
+    {
+        $hasCleanEvidence = $version->malware_scan_status==='clean'
             && $version->malware_scanned_sha256!==null
             && preg_match('/^[a-f0-9]{64}$/D',$version->malware_scanned_sha256)===1
             && $version->sha256!==null
             && hash_equals($version->sha256,$version->malware_scanned_sha256)
             && is_string($version->malware_scan_engine)
             && str_starts_with($version->malware_scan_engine,'ClamAV ')
-            && $version->malware_scanned_at!==null
-            && $version->malware_scanned_at->greaterThanOrEqualTo(now()->subDays($days));
+            && $version->malware_scanned_at!==null;
+
+        return $hasCleanEvidence
+            ? $version->malware_scanned_at->copy()->addDays(self::scanValidityDays())
+            : null;
     }
 
     public static function rightsReviewed(ProductFileVersion $version): bool

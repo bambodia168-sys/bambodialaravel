@@ -32,7 +32,7 @@ class ListingController extends Controller
         }
         abort_if($minPrice!=='' && $maxPrice!=='' && (float)$minPrice>(float)$maxPrice,404);
 
-        $categories=MarketplaceCategory::query()->where('is_active',true)
+        $categories=MarketplaceCategory::query()->publicNavigation()
             ->whereIn('type', MarketplaceListing::TYPES)
             ->with('parent:id,name')
             ->orderBy('type')->orderBy('sort_order')->orderBy('name')
@@ -43,6 +43,7 @@ class ListingController extends Controller
             ->with(['creator:id,name,public_id', 'creator.creatorProfile:user_id,is_public,headline',
                 'coverAsset:id,public_id,alt_text', 'featuredAsset:id,public_id,alt_text', 'category:id,name,type'])
             ->publiclyAvailable()
+            ->tap(PreviewContentReview::excludeMarkedPreviews(...))
             ->when($type !== '', fn ($builder) => $builder->where('type', $type))
             ->when($selectedCategory !== '', fn ($builder) => $builder->whereHas('category', fn ($q) =>
                 $q->where('is_active', true)->where(function ($categoryQuery) use ($selectedCategory): void {
@@ -97,6 +98,7 @@ class ListingController extends Controller
                 ->where('marketplace_listing_id',$listing->id)->exists()
             : false;
         $relatedListings=MarketplaceListing::query()->publiclyAvailable()
+            ->tap(PreviewContentReview::excludeMarkedPreviews(...))
             ->whereKeyNot($listing->id)->where('type',$listing->type)
             ->when($listing->category_id!==null,
                 fn($q)=>$q->where('category_id',$listing->category_id))

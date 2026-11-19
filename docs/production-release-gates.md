@@ -12,6 +12,7 @@ Passing a GitHub unit test or a MySQL test is NOT the same as approving a custom
 - The creator must identify rights-holder and distribution provenance before an original can be uploaded. The creator may update rights evidence on pending or previously approved versions; doing so invalidates previous rights clearance. Binary versions cannot be silently overwritten.
 - An authorized administrator runs actual ClamAV against the original file from the private storage path. No shell command is built from user input. The scanner must be an executable absolute path; missing executable/signatures, outdated definitions, scan errors and threats produce non-clean outcomes.
 - Scanner version and definition database revision/date are checked. Definitions older than VAULT_MAX_DEFINITION_AGE_DAYS (default 7) fail closed. Clean scan results are valid for VAULT_MAX_SCAN_AGE_DAYS (default 30), with a stored timestamp, engine information and SHA-256 of the exact inspected file.
+- Laravel schedules `vault:rescan-expiring` hourly. It refreshes approved, rights-reviewed releases on published products, processing up to five per run. The refresh window is 72 hours or half the scan validity period if shorter. Failures retry after six hours and notify active administrators in the dashboard. A failed refresh leaves the original validity deadline in force. A confirmed threat disables the release.
 - Inspecting the original for approval is blocked until there is a fresh clean scan. The inspector's account is logged.
 - An independent authorized reviewer records a documented rights-verification or rejection decision after inspecting the original. The source rights evidence and actual written reasoning are retained. "Verified" means an operator recorded an assessment; it is not an external legal opinion.
 - Release approval requires a current clean scan, a matching SHA-256, independent rights review, and affirmative approval by the administrator who inspected the artifact.
@@ -46,6 +47,8 @@ Run on each isolated staging host, with permission from the server operator:
 The script runs real ClamAV on a temporary harmless clean text fixture and an EICAR test-signature fixture assembled in memory, then deletes the temporary fixtures. It must report a clean verdict for the first and a detected test signature for the second. A mocked scanner used by unit tests does not satisfy this requirement.
 
 Store the engine version, definition revision/date, timestamp and test result with the host acceptance evidence. Confirm signature updates are scheduled and reliable. Run one additional controlled scan from the Admin Digital File Vault UI on a benign upload to verify that PHP-FPM can invoke the engine (CLI alone is not enough).
+
+Confirm the production scheduler account has access to the same private disk and ClamAV definitions as PHP-FPM. Check `php artisan schedule:list` under that account and verify the scheduled rescan on a controlled release approaching expiry.
 
 **Do not run unknown malicious samples or untrusted executable files as part of acceptance.** The harmless EICAR signature is sufficient for scanner integration smoke testing but not a guarantee that new threats are detected.
 

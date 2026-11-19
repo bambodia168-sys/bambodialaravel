@@ -88,6 +88,14 @@ final class PreviewContentReview
         return $report['customer_activity_blocked'];
     }
 
+    public static function excludeMarkedPreviews(Builder $query): void
+    {
+        $title = $query->getModel()->qualifyColumn('title');
+        foreach (['%[LAYOUT TEST]%', '%[DEMO]%', '%[SAMPLE]%', '%PREVIEW ONLY%'] as $marker) {
+            $query->whereRaw("UPPER({$title}) NOT LIKE ?", [$marker]);
+        }
+    }
+
     public static function isPreviewTitle(string $title): bool
     {
         return preg_match('/\[\s*(?:LAYOUT TEST|DEMO|SAMPLE)\s*\]|\bPREVIEW ONLY\b/iu', $title) === 1;
