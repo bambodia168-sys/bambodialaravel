@@ -16,7 +16,6 @@ use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -153,6 +152,30 @@ class CommercePaymentController extends Controller
             'Content-Security-Policy' => "default-src 'none'; sandbox",
             'X-Content-Type-Options' => 'nosniff',
         ]);
+    }
+
+    public function retryDelivery(Request $request, string $number): RedirectResponse
+    {
+        $this->enabled();
+
+        $outcome = DB::transaction(function () use ($request, $number): array {
+            $order = MarketplaceOrder::query()->where('number', $number)->lockForUpdate()->firstOrFail();
+            abort_unless($order->status === 'completed' && $order->paidAttempt()->exists(), 409);
+
+            if (! $this->deliveryPending($order)) {
+                return ['status' => 'This order has no pending delivery.'];
+            }
+
+            $blocker = $this->fulfillGatewayPurchase($order);
+            AuditEvent::record('commerce.order.delivery_retried', $request->user(), $request);
+
+            return $blocker === null
+                ? ['status' => 'Purchase delivery completed.']
+                : ['error' => $blocker];
+        }, 3);
+
+        return redirect()->route('dashboard.commerce-operations')->withFragment('pending-deliveries')
+            ->with($outcome);
     }
 
     public function webhook(Request $request, string $provider): Response
@@ -302,28 +325,33 @@ class CommercePaymentController extends Controller
         return $url;
     }
 
-    private function fulfillGatewayPurchase(MarketplaceOrder $order): void
+    private function deliveryPending(MarketplaceOrder $order): bool
     {
-        if ($order->status !== 'completed' || $order->entitlement()->exists() || $order->serviceInquiry()->exists()) {
-            return;
+        return MarketplaceOrder::query()->whereKey($order->id)->deliveryPending()->exists();
+    }
+
+    private function fulfillGatewayPurchase(MarketplaceOrder $order): ?string
+    {
+        if (! $this->deliveryPending($order)) {
+            return null;
         }
 
         try {
             OrderFulfillment::ensureReady($order);
-        } catch (ModelNotFoundException) {
-            return;
+            DB::transaction(fn () => OrderFulfillment::deliverVerifiedPurchase($order));
         } catch (HttpExceptionInterface $exception) {
             if ($exception->getStatusCode() !== 409) {
                 throw $exception;
             }
 
             // Keep a verified payment on record if its approved delivery becomes unavailable.
-            return;
+            return $exception->getMessage();
         }
 
-        OrderFulfillment::deliverVerifiedPurchase($order);
         AccountNotification::deliver((int) $order->buyer_id, 'commerce.payment.approved', 'Payment verified',
             'Your purchase is ready. Open the order to access it.', route('account.orders.show', $order->number, false));
+
+        return null;
     }
 
     private function settle(MarketplaceOrder $order, CommercePayment $payment, ?string $reference): void

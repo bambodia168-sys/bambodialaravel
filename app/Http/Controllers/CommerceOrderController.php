@@ -46,7 +46,10 @@ class CommerceOrderController extends Controller
         [$orders, $section, $workspace] = $this->workspace($request);
         $order = $orders->where('number', $number)->firstOrFail();
         if ($section !== 'dashboard.orders' && $order->status === 'completed') {
-            $order->load($section === 'account.orders' ? ['serviceInquiry', 'entitlement'] : ['serviceInquiry']);
+            $order->load('serviceInquiry');
+            if ($section === 'account.orders') {
+                $order->load(['entitlement' => fn ($grant) => $grant->withExists('license')]);
+            }
         }
 
         $methods = $section === 'account.orders' && $order->status === 'awaiting_payment'

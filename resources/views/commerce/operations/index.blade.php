@@ -2,7 +2,7 @@
 @section('workspace', $creator ? 'creator' : 'admin')
 @section('title', $creator ? 'Sales Settlements' : 'Commerce Operations')
 @section('content')
-<link rel="stylesheet" href="{{ asset('css/commerce-settlements.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/commerce-settlements.css') }}?v=2">
 @php
   $indexRoute = $creator ? 'studio.commerce-operations' : 'dashboard.commerce-operations';
   $statementRoute = $indexRoute.'.statement';
@@ -30,6 +30,9 @@
       </div>
       <x-pagination :paginator="$pendingReceipts"/>
     </section>
+  @endif
+  @if($pendingDeliveries !== null)
+    @include('commerce.operations.pending-deliveries')
   @endif
   <section class="panel">
     <header class="panel-head">

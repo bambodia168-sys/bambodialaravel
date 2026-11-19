@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MarketplaceOrder;
 use App\Support\CommerceSettlementReport;
+use App\Support\OrderFulfillment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
@@ -25,7 +26,19 @@ final class CommerceSettlementController extends Controller
             ->when(isset($filters['order']), fn ($query) => $query->where('number', $filters['order']))
             ->latest('id')->paginate(10, pageName: 'receipts')->appends($filters)->fragment('pending-receipts');
 
-        return response()->view('commerce.operations.index', compact('creator', 'filters', 'orders', 'pendingReceipts'))
+        $pendingDeliveries = $creator ? null : MarketplaceOrder::query()->deliveryPending()->with(['entitlement', 'paidAttempt'])
+            ->when(isset($filters['order']), fn ($query) => $query->where('number', $filters['order']))
+            ->when(isset($filters['from']), fn ($query) => $query->where('completed_at', '>=', $filters['from'].' 00:00:00'))
+            ->when(isset($filters['to']), fn ($query) => $query->where('completed_at', '<=', $filters['to'].' 23:59:59'))
+            ->oldest('completed_at')->oldest('id')
+            ->paginate(10, pageName: 'deliveries')->appends($filters)->fragment('pending-deliveries')
+            ->through(function (MarketplaceOrder $order): array {
+                $blocker = $order->entitlement ? OrderFulfillment::entitlementBlocker($order, $order->entitlement) : null;
+
+                return ['order' => $order, 'blocker' => $blocker ?? OrderFulfillment::readinessBlocker($order)];
+            });
+
+        return response()->view('commerce.operations.index', compact('creator', 'filters', 'orders', 'pendingReceipts', 'pendingDeliveries'))
             ->header('Cache-Control', 'private, no-store');
     }
 

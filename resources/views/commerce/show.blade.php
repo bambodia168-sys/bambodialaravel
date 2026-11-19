@@ -18,7 +18,8 @@
         <a class="btn primary" href="{{ route('inquiries.show', $order->serviceInquiry) }}">Open service workspace</a>
       </div>
     </section>
-  @elseif($section === 'account.orders' && $order->relationLoaded('entitlement') && $order->entitlement?->isActive())
+  @elseif($section === 'account.orders' && $order->relationLoaded('entitlement') && $order->entitlement?->isActive()
+      && ($order->license_tier === null || $order->entitlement->license_exists))
     <section class="panel">
       <div class="panel-head">
         <h2>Product access</h2>
@@ -29,7 +30,8 @@
       </div>
     </section>
   @elseif($section === 'account.orders' && $order->status === 'completed'
-      && !$order->entitlement && !$order->serviceInquiry
+      && (!$order->entitlement || ($order->entitlement->isActive() && !$order->entitlement->license_exists))
+      && !$order->serviceInquiry
       && ($verifiedGateway = $payments->first(fn ($payment) => $payment->status === 'paid' && $payment->remote_id
           && $payment->settlement_reference && ($payment->live_mode || !app()->isProduction()))))
     <section class="panel">
