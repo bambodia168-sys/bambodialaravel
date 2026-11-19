@@ -468,9 +468,113 @@ Private installation report.
         $this->assertSame($credentials, $settings->credentials);
         $this->assertNull(CommerceGatewaySetting::forMode('stripe', true)->sole()->credentials);
         $this->assertStringNotContainsString($credentials['secret'], DB::table('commerce_gateway_settings')->where('id', $settings->id)->value('credentials'));
-        $this->get($page)->assertSee('Credentials saved')->assertDontSee($credentials['secret']);
+        $this->get($page)->assertSee('Sandbox credentials saved')->assertDontSee($credentials['secret']);
         $this->patch($save, ['available'=>'0', 'gateway'=>['secret'=>'', 'webhook_secret'=>'']])->assertRedirect();
         $this->assertSame($credentials, $settings->refresh()->credentials);
+    }
+
+    public function test_stripe_credentials_can_be_prepared_without_switching_the_active_environment(): void
+    {
+        config(['commerce.live_gateways' => false]);
+        $stripe = $this->method('stripe');
+        $page = route('dashboard.payment-methods.index');
+        $save = route('dashboard.payment-methods.update', $stripe);
+        $sandbox = ['secret' => 'sk_test_stripe_mode_fixture', 'webhook_secret' => 'whsec_sandbox_mode_fixture'];
+        $live = ['secret' => 'sk_live_stripe_mode_fixture', 'webhook_secret' => 'whsec_live_mode_fixture'];
+        $this->actingAs($this->user('admin'))->patch($save, [
+            'available' => true, 'stripe_environment' => 'live', 'gateway' => $live,
+        ])->assertForbidden();
+        $this->actingAs($this->user('super_admin'))->get($page)
+            ->assertOk()->assertSee('Credentials environment')->assertSee('Live Production');
+
+        $this->from($page)->patch($save, [
+            'available' => true, 'stripe_environment' => 'live', 'activate_stripe_environment' => true,
+        ])->assertRedirect($page)->assertSessionHasErrors('stripe_environment');
+        $this->patch($save, [
+            'configure_method' => $stripe->id, 'available' => true, 'stripe_environment' => 'sandbox', 'gateway' => $live,
+        ])->assertRedirect($page)->assertSessionHasErrors('gateway.secret');
+        $this->assertNull(session()->getOldInput('gateway'));
+        $this->patch($save, [
+            'available' => true, 'stripe_environment' => 'live', 'gateway' => $live,
+        ])->assertRedirect($page)->assertSessionHasNoErrors();
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('stripe'));
+        $this->assertNull(CommerceGatewaySetting::forMode('stripe', false)->firstOrFail()->credentials);
+
+        $this->patch($save, [
+            'available' => true, 'stripe_environment' => 'sandbox', 'gateway' => $sandbox,
+        ])->assertRedirect($page)->assertSessionHasNoErrors();
+        $this->assertSame($live, CommerceGatewaySetting::effective('stripe', true));
+        $this->assertSame($sandbox, CommerceGatewaySetting::effective('stripe', false));
+        $this->get($page)->assertOk()->assertSee('Sandbox credentials saved')
+            ->assertSee('Live Production credentials saved')
+            ->assertDontSee($live['secret'])->assertDontSee($live['webhook_secret'])
+            ->assertDontSee($sandbox['secret'])->assertDontSee($sandbox['webhook_secret']);
+    }
+
+    public function test_live_stripe_checkout_and_signed_events_use_the_selected_mode(): void
+    {
+        config(['commerce.live_gateways' => false, 'app.url' => 'https://bambodia.example.test']);
+        $this->app->instance('env', 'production');
+        $this->withSession(['_token' => 'stripe-mode-csrf-fixture'])->withHeader('X-CSRF-TOKEN', 'stripe-mode-csrf-fixture');
+        $stripe = $this->method('stripe');
+        [$buyer, $order] = $this->order();
+        $start = route('account.orders.payment.start', $order->number);
+        $settings = route('dashboard.payment-methods.index');
+        $save = route('dashboard.payment-methods.update', $stripe);
+        $admin = $this->user('super_admin');
+        CommerceGatewaySetting::forMode('stripe', false)->firstOrFail()->forceFill([
+            'credentials' => ['secret' => 'sk_test_inactive_fixture', 'webhook_secret' => 'whsec_inactive_fixture'],
+        ])->save();
+        $this->actingAs($buyer)->post($start, ['method' => $stripe->id])->assertUnprocessable();
+        $this->actingAs($admin)->from($settings)->patch($save, [
+            'available' => true, 'stripe_environment' => 'live', 'activate_stripe_environment' => true,
+            'gateway' => ['secret' => 'sk_live_active_fixture', 'webhook_secret' => 'whsec_active_fixture'],
+        ])->assertRedirect($settings)->assertSessionHasNoErrors();
+        $this->assertTrue(CommerceGatewaySetting::checkoutIsLive('stripe'));
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('paypal'));
+        $this->assertTrue(\App\Support\CommerceCollection::enabled());
+
+        Http::fake(function ($request) use ($order) {
+            if ($request->method() === 'POST') {
+                return Http::response(['id' => 'cs_live_mode_fixture', 'url' => 'https://checkout.stripe.com/c/pay/fixture']);
+            }
+
+            return Http::response([
+                'id' => 'cs_live_mode_fixture', 'livemode' => true, 'mode' => 'payment', 'currency' => 'usd',
+                'amount_total' => 2500, 'client_reference_id' => $order->payments()->sole()->number,
+                'status' => 'complete', 'payment_status' => 'paid', 'payment_intent' => 'pi_live_mode_fixture',
+            ]);
+        });
+        $this->actingAs($buyer)->get(route('account.orders.show', $order->number))->assertOk()->assertSee('Pay with Stripe');
+        $this->post($start, ['method' => $stripe->id])->assertRedirect('https://checkout.stripe.com/c/pay/fixture');
+        $attempt = $order->payments()->sole();
+        $this->assertTrue($attempt->live_mode);
+        $this->actingAs($admin)->from($settings)->patch($save, [
+            'available' => true, 'stripe_environment' => 'sandbox', 'activate_stripe_environment' => true,
+        ])->assertRedirect($settings)->assertSessionHasErrors('stripe_environment');
+
+        $sendEvent = function (bool $live, string $signingSecret): \Illuminate\Testing\TestResponse {
+            $body = json_encode(['livemode' => $live, 'type' => 'checkout.session.completed',
+                'data' => ['object' => ['id' => 'cs_live_mode_fixture']]], JSON_THROW_ON_ERROR);
+            $time = time();
+            $signature = hash_hmac('sha256', $time.'.'.$body, $signingSecret);
+
+            return $this->call('POST', route('commerce.webhook', 'stripe'), [], [], [],
+                ['HTTP_STRIPE_SIGNATURE' => "t=$time,v1=$signature"], $body);
+        };
+        $sendEvent(true, 'whsec_inactive_fixture')->assertBadRequest();
+        $sendEvent(false, 'whsec_inactive_fixture')->assertNoContent();
+        $this->assertNull($order->refresh()->receipt_number);
+        $sendEvent(true, 'whsec_active_fixture')->assertNoContent();
+        $this->assertNotNull($order->refresh()->receipt_number);
+        Http::assertSent(fn ($request) => $request->method() === 'POST'
+            && $request->hasHeader('Authorization', 'Bearer sk_live_active_fixture'));
+
+        $this->patch($save, [
+            'available' => true, 'stripe_environment' => 'sandbox', 'activate_stripe_environment' => true,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('stripe'));
+        $sendEvent(true, 'whsec_active_fixture')->assertNoContent();
     }
 
     public function test_bakong_order_qr_has_bill_and_expiry_and_only_verified_payment_issues_receipt(): void

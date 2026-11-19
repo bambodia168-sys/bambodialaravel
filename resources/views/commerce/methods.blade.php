@@ -157,8 +157,19 @@
           </ul>
         @endif
         @if($method->usesGateway())
-          @php($live = (bool) config('commerce.live_gateways'))
-          <p>{{ $live ? 'Live environment' : 'Sandbox environment' }} · {{ \App\Support\CommerceGateway::ready($method->provider, $live) ? 'Credentials saved' : 'Credentials required' }}</p>
+          @php($live = \App\Models\CommerceGatewaySetting::checkoutIsLive($method->provider))
+          @if($method->provider === 'stripe')
+            @php($environment = $retry ? old('stripe_environment', $live ? 'live' : 'sandbox') : ($live ? 'live' : 'sandbox'))
+            <p>Stripe checkout environment <strong>{{ $live ? 'Live Production' : 'Sandbox' }}</strong></p>
+            <label for="stripe-environment-{{ $method->id }}">Credentials environment</label>
+            <select id="stripe-environment-{{ $method->id }}" name="stripe_environment">
+              <option value="sandbox" @selected($environment === 'sandbox')>Sandbox</option>
+              <option value="live" @selected($environment === 'live')>Live Production</option>
+            </select>
+            <p>Sandbox {{ \App\Support\CommerceGateway::ready('stripe', false) ? 'credentials saved' : 'credentials required' }} · Live Production {{ \App\Support\CommerceGateway::ready('stripe', true) ? 'credentials saved' : 'credentials required' }}</p>
+          @else
+            <p>{{ $live ? 'Live environment' : 'Sandbox environment' }} · {{ \App\Support\CommerceGateway::ready($method->provider, $live) ? 'Credentials saved' : 'Credentials required' }}</p>
+          @endif
           @if($method->automatic())
             <p>Enter credentials for this environment and register the webhook endpoint in your {{ $method->name }} dashboard.</p>
             <p><code>{{ route('commerce.webhook', $method->provider) }}</code></p>
@@ -170,13 +181,20 @@
               <p>Enter the recipient's Bakong account details and NBC Open API access token.</p>
             @endif
           @endif
-          <p>Leave a field blank to keep its saved value.</p>
+          <p>Leave a field blank to keep its saved value{{ $method->provider === 'stripe' ? ' for the selected environment' : '' }}.</p>
           @foreach(\App\Models\CommerceGatewaySetting::FIELDS[$method->provider] as $field => $label)
             <label>{{ $label }}
               <input name="gateway[{{ $field }}]" type="{{ in_array($field, ['secret', 'webhook_secret', 'token'], true) ? 'password' : 'text' }}"
                      autocomplete="new-password" autocapitalize="off" spellcheck="false">
             </label>
           @endforeach
+          @if($method->provider === 'stripe')
+            <label>
+              <input type="checkbox" name="activate_stripe_environment" value="1" @checked($retry && old('activate_stripe_environment'))>
+              Use this environment for new Stripe checkouts
+            </label>
+            <p>Live Production can accept real payments when Stripe is available and site-wide payment processing is enabled. Test checkouts run on the sandbox site.</p>
+          @endif
         @else
           <p>Enter the recipient and account details buyers need to complete the transfer. Buyers upload their receipt from the order page for review.</p>
           <label>Transfer instructions<textarea name="instructions" rows="3" maxlength="2500">{{ $retry ? old('instructions') : $method->instructions }}</textarea></label>

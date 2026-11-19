@@ -8,6 +8,7 @@ use App\Models\CommercePayment;
 use App\Models\AuditEvent;
 use App\Models\FeatureFlag;
 use App\Support\CommerceCollection;
+use App\Support\CommerceGateway;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -33,11 +34,9 @@ class CommercePaymentMethodController extends Controller
         abort_unless(config('commerce.enabled'), 404);
         $values = $request->validateWithBag('paymentProcessing', ['enabled' => ['required', 'boolean']]);
         $enabled = (bool) $values['enabled'];
-        $live = (bool) config('commerce.live_gateways');
-
-        DB::transaction(function () use ($enabled, $live, $request): void {
+        DB::transaction(function () use ($enabled, $request): void {
             if ($enabled && ! CommercePaymentMethod::query()->where('available', true)->get()
-                ->contains(fn (CommercePaymentMethod $method) => $method->availableForCheckout($live))) {
+                ->contains(fn (CommercePaymentMethod $method) => $method->availableForCheckout())) {
                 throw ValidationException::withMessages(['enabled' => 'Configure and make a payment method available first.'])
                     ->errorBag('paymentProcessing');
             }
@@ -86,13 +85,15 @@ class CommercePaymentMethodController extends Controller
     public function update(Request $request, CommercePaymentMethod $method): RedirectResponse
     {
         abort_unless(config('commerce.enabled'), 404);
-        $live = (bool) config('commerce.live_gateways');
+        $stripe = $method->provider === 'stripe';
         $fields = array_keys(CommerceGatewaySetting::FIELDS[$method->provider] ?? []);
         $rules = [
             'available'=>['required', 'boolean'], 'instructions'=>['sometimes', 'nullable', 'string', 'max:2500'],
             'qr'=>['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'remove_qr'=>['nullable', 'boolean'],
             'gateway' => [$fields ? 'array:'.implode(',', $fields) : 'prohibited'],
+            'stripe_environment' => $stripe ? ['sometimes', 'required', Rule::in(['sandbox', 'live'])] : ['prohibited'],
+            'activate_stripe_environment' => $stripe ? ['sometimes', 'boolean'] : ['prohibited'],
         ];
         foreach ($fields as $field) {
             $rules['gateway.'.$field] = ['nullable', 'string', 'max:2048', 'regex:/^[!-~]+$/D'];
@@ -112,7 +113,7 @@ class CommercePaymentMethodController extends Controller
         $path = $request->file('qr')?->store('commerce/payment-qr', 'local');
         abort_if($path === false, 503);
         try {
-            $previous = DB::transaction(function () use ($method, $values, $path, $request, $live): ?string {
+            $previous = DB::transaction(function () use ($method, $values, $path, $request, $stripe): ?string {
                 $locked = CommercePaymentMethod::query()->lockForUpdate()->findOrFail($method->id);
                 $old = $locked->qr_path;
                 $locked->fill(['available'=>$values['available']]);
@@ -122,13 +123,19 @@ class CommercePaymentMethodController extends Controller
                 if ($path || $request->boolean('remove_qr')) {
                     $locked->qr_path = $path;
                 }
+                $currentMode = CommerceGatewaySetting::checkoutIsLive($locked->provider);
+                $credentialsMode = $stripe && array_key_exists('stripe_environment', $values)
+                    ? $values['stripe_environment'] === 'live' : $currentMode;
                 $credentialsChanged = $locked->usesGateway()
-                    && $this->saveCredentials($locked->provider, $live, $values['gateway'] ?? []);
-                if ($locked->available && CommerceCollection::enabled() && ! $locked->availableForCheckout($live)) {
+                    && $this->saveCredentials($locked->provider, $credentialsMode, $values['gateway'] ?? []);
+                $activationChanged = $stripe && ($values['activate_stripe_environment'] ?? false)
+                    && $this->activateStripeEnvironment($currentMode, $credentialsMode);
+                if ($locked->available && (! $stripe || $locked->isDirty('available'))
+                    && CommerceCollection::enabled() && ! $locked->availableForCheckout()) {
                     throw ValidationException::withMessages(['available' => 'Configure the method before making it available.']);
                 }
                 $locked->save();
-                if ($locked->wasChanged() || $credentialsChanged) {
+                if ($locked->wasChanged() || $credentialsChanged || $activationChanged) {
                     AuditEvent::record('commerce.payment_method.configured', $request->user(), $request);
                 }
 
@@ -147,6 +154,27 @@ class CommercePaymentMethodController extends Controller
         return back()->with('status', 'Payment method settings saved.');
     }
 
+    private function activateStripeEnvironment(bool $currentMode, bool $selectedMode): bool
+    {
+        if (! CommerceGateway::ready('stripe', $selectedMode)) {
+            throw ValidationException::withMessages([
+                'stripe_environment' => 'Save the API secret key and webhook signing secret for this environment before activating it.',
+            ]);
+        }
+        if ($currentMode !== $selectedMode && CommercePayment::query()->where('provider', 'stripe')
+            ->whereIn('status', ['starting', 'checkout_open'])->exists()) {
+            throw ValidationException::withMessages([
+                'stripe_environment' => 'Resolve open Stripe checkouts before switching environments.',
+            ]);
+        }
+
+        $setting = FeatureFlag::query()->updateOrCreate(
+            ['key' => CommerceGatewaySetting::STRIPE_LIVE_FLAG], ['enabled' => $selectedMode],
+        );
+
+        return $setting->wasRecentlyCreated || $setting->wasChanged('enabled');
+    }
+
     private function saveCredentials(string $provider, bool $live, array $input): bool
     {
         $new = array_filter($input, fn (?string $value) => filled($value));
@@ -161,6 +189,12 @@ class CommercePaymentMethodController extends Controller
             return false;
         }
         $credentials = array_replace($effective, $changed);
+        if ($provider === 'stripe' && filled($credentials['secret'] ?? null)
+            && ! str_starts_with($credentials['secret'], $live ? 'sk_live_' : 'sk_test_')) {
+            throw ValidationException::withMessages(['gateway.secret' => $live
+                ? 'Use a Stripe live secret key beginning with sk_live_.'
+                : 'Use a Stripe sandbox secret key beginning with sk_test_.']);
+        }
         if (! CommerceGatewaySetting::configured($provider, $live, $credentials)) {
             throw ValidationException::withMessages(['gateway' => 'Enter all required credentials for this environment.']);
         }

@@ -35,8 +35,7 @@ class CommercePaymentController extends Controller
         abort_unless(CommerceCollection::enabled(), 404);
         $order = $this->buyerOrder($request, $number);
         $data = $request->validate(['method'=>['required', 'integer', 'min:1']]);
-        $live = (bool) config('commerce.live_gateways');
-        $payment = DB::transaction(function () use ($order, $data, $live): CommercePayment {
+        $payment = DB::transaction(function () use ($order, $data): CommercePayment {
             $locked = MarketplaceOrder::query()->lockForUpdate()->findOrFail($order->id);
             $this->awaiting($locked);
             $active = $locked->payments()->whereIn('status', CommercePayment::ACTIVE)->first();
@@ -48,14 +47,16 @@ class CommercePaymentController extends Controller
             }
             $method = CommercePaymentMethod::query()->where('available', true)->lockForUpdate()->findOrFail($data['method']);
             abort_unless($method->usesGateway(), 422, 'This gateway is unavailable.');
+            $live = CommerceGatewaySetting::checkoutIsLive($method->provider);
             CommerceGatewaySetting::forMode($method->provider, $live)->lockForUpdate()->firstOrFail();
-            abort_unless($method->availableForCheckout($live), 422, 'This gateway is unavailable.');
+            abort_unless($method->availableForCheckout(), 422, 'This gateway is unavailable.');
 
             return $locked->payments()->create([
                 'number'=>(string) Str::uuid(), 'commerce_payment_method_id'=>$method->id,
                 'method_name'=>$method->name, 'provider'=>$method->provider, 'live_mode'=>$live, 'status'=>'starting',
             ]);
         }, 3);
+        $live = CommerceGatewaySetting::checkoutIsLive($payment->provider);
         abort_unless($payment->live_mode === $live && CommerceGateway::ready($payment->provider, $live)
             && ($live || ! app()->environment('production')), 503);
         if ($payment->dynamicQr()) {
@@ -141,11 +142,12 @@ class CommercePaymentController extends Controller
     public function webhook(Request $request, string $provider): Response
     {
         $this->enabled();
-        $remote = $this->gateway->webhook($request, $provider);
-        if ($remote !== null) {
-            abort_unless(preg_match('/^[A-Za-z0-9_-]{1,200}$/D', $remote), 400);
+        $event = $this->gateway->webhook($request, $provider);
+        if ($event !== null) {
+            [$remote, $live] = $event;
+            abort_unless(is_string($remote) && preg_match('/^[A-Za-z0-9_-]{1,200}$/D', $remote), 400);
             $payment = CommercePayment::query()->where('provider', $provider)
-                ->where('live_mode', (bool) config('commerce.live_gateways'))->where('remote_id', $remote)->first();
+                ->where('live_mode', $live)->where('remote_id', $remote)->first();
             if ($payment) {
                 $this->reconcile($payment, $provider === 'paypal');
             }
@@ -171,7 +173,7 @@ class CommercePaymentController extends Controller
                 $this->awaiting($locked);
                 abort_if($locked->payments()->whereIn('status', CommercePayment::ACTIVE)->exists(), 409, 'An existing payment is still open.');
                 $method = CommercePaymentMethod::query()->where('available', true)->lockForUpdate()->findOrFail($data['method']);
-                abort_unless(! $method->usesGateway() && $method->availableForCheckout(false), 422);
+                abort_unless(! $method->usesGateway() && $method->availableForCheckout(), 422);
                 OrderFulfillment::ensureReady($locked);
                 $locked->payments()->create([
                     'number'=>(string) Str::uuid(), 'commerce_payment_method_id'=>$method->id,

@@ -107,13 +107,17 @@ final class CommerceGateway
         return [$closed ? 'expired' : 'checkout_open', null, $closed ? null : ($link['href'] ?? null)];
     }
 
-    public function webhook(Request $request, string $provider): ?string
+    public function webhook(Request $request, string $provider): ?array
     {
-        $live = (bool) config('commerce.live_gateways');
-        abort_unless(self::ready($provider, $live), 404);
         $event = json_decode($request->getContent(), true);
         abort_unless(is_array($event), 400);
         if ($provider === 'stripe') {
+            abort_unless(is_bool($event['livemode'] ?? null), 400);
+        }
+        $live = $provider === 'stripe' ? $event['livemode'] : CommerceGatewaySetting::checkoutIsLive($provider);
+        abort_unless(self::ready($provider, $live), 404);
+        if ($provider === 'stripe') {
+            // The event's mode selects the signing secret. The raw payload must still verify.
             $header = (string) $request->header('Stripe-Signature');
             preg_match('/(?:^|,)t=(\d+)(?:,|$)/', $header, $timestamp);
             preg_match_all('/(?:^|,)v1=([a-f0-9]{64})(?=,|$)/', $header, $signatures);
@@ -121,10 +125,10 @@ final class CommerceGateway
             abort_unless(abs(time() - $time) <= 300, 400);
             $expected = hash_hmac('sha256', $time.'.'.$request->getContent(), CommerceGatewaySetting::effective('stripe', $live)['webhook_secret']);
             abort_unless(collect($signatures[1])->contains(fn (string $value) => hash_equals($expected, $value)), 400);
-            abort_unless(($event['livemode'] ?? null) === $live, 400);
-
-            return in_array($event['type'] ?? null, ['checkout.session.completed', 'checkout.session.async_payment_succeeded', 'checkout.session.expired'], true)
+            $remote = in_array($event['type'] ?? null, ['checkout.session.completed', 'checkout.session.async_payment_succeeded', 'checkout.session.expired'], true)
                 ? data_get($event, 'data.object.id') : null;
+
+            return $remote === null ? null : [$remote, $live];
         }
 
         $payload = ['webhook_id'=>CommerceGatewaySetting::effective('paypal', $live)['webhook_id'], 'webhook_event'=>$event];
@@ -135,11 +139,13 @@ final class CommerceGateway
         $verified = $this->send($this->paypal($live), 'POST', '/v1/notifications/verify-webhook-signature', $payload);
         abort_unless(($verified['verification_status'] ?? null) === 'SUCCESS', 400);
 
-        return match ($event['event_type'] ?? '') {
+        $remote = match ($event['event_type'] ?? '') {
             'CHECKOUT.ORDER.APPROVED' => data_get($event, 'resource.id'),
             'PAYMENT.CAPTURE.COMPLETED', 'PAYMENT.CAPTURE.DENIED' => data_get($event, 'resource.supplementary_data.related_ids.order_id'),
             default => null,
         };
+
+        return $remote === null ? null : [$remote, $live];
     }
 
     public function trustedCheckout(string $provider, bool $live, ?string $url): bool
