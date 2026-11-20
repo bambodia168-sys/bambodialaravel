@@ -12,6 +12,7 @@ use App\Support\CheckoutCart;
 use App\Support\CommerceCollection;
 use App\Support\CommerceOffers;
 use Illuminate\Auth\Events\Verified;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -22,9 +23,18 @@ use Throwable;
 
 class CommerceCartController extends Controller
 {
-    public function cart(Request $request): Response
+    public function cart(Request $request): Response|JsonResponse
     {
-        return $this->page($request, false);
+        abort_unless(config('commerce.enabled'), 404);
+
+        if ($request->expectsJson()) {
+            return $this->preview($request);
+        }
+
+        $response = $this->page($request, false);
+        $response->setVary('Accept', false);
+
+        return $response;
     }
 
     public function checkout(Request $request): Response|RedirectResponse
@@ -43,7 +53,7 @@ class CommerceCartController extends Controller
         return $this->page($request, true);
     }
 
-    public function add(Request $request, string $listing): RedirectResponse
+    public function add(Request $request, string $listing): RedirectResponse|JsonResponse
     {
         abort_unless(config('commerce.enabled'), 404);
         $data = $request->validate(['tier' => ['required', Rule::in(['regular', 'extended', 'standard'])]]);
@@ -69,12 +79,24 @@ class CommerceCartController extends Controller
             return $items;
         });
 
-        return redirect()->route('cart')->with('cart_added', [
-            'title' => $record->title,
-            'license' => $quote['license'],
-            'price' => $quote['currency'].' '.$quote['total'],
-            'url' => $record->publicUrl(),
-        ]);
+        if ($request->expectsJson()) {
+            return $this->preview($request, $record->title);
+        }
+
+        return redirect()->route('cart')->with('cart_added', $record->title);
+    }
+
+    private function preview(Request $request, ?string $added = null): JsonResponse
+    {
+        $items = CheckoutCart::items($request);
+        $response = response()->json([
+            'count' => count($items),
+            'items' => array_values(array_map(fn (array $item) => $item['title'], $items)),
+            'added' => $added,
+        ], headers: ['Cache-Control' => 'private, no-store']);
+        $response->setVary('Accept', false);
+
+        return $response;
     }
 
     public function remove(Request $request, string $listing): RedirectResponse

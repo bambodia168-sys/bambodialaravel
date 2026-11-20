@@ -44,6 +44,35 @@ class StorefrontCheckoutTest extends TestCase
         $this->assertDatabaseCount('marketplace_orders', 0);
     }
 
+    public function test_mini_cart_returns_only_the_current_shopper_items_and_keeps_adds_idempotent(): void
+    {
+        config(['commerce.enabled' => true]);
+        $offer = $this->listing('WordPress design package', '250.00');
+        $cartUrl = route('cart');
+        $addUrl = route('cart.add', $offer->public_id);
+
+        $this->getJson($cartUrl)->assertOk()->assertExactJson(['count' => 0, 'items' => [], 'added' => null]);
+        $this->postJson($addUrl, ['tier' => 'extended'])->assertUnprocessable();
+
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $this->postJson($addUrl, ['tier' => 'standard'])->assertOk()
+                ->assertExactJson(['count' => 1, 'items' => [$offer->title], 'added' => $offer->title]);
+        }
+        $response = $this->getJson($cartUrl)->assertOk()
+            ->assertExactJson(['count' => 1, 'items' => [$offer->title], 'added' => null]);
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->assertContains('Accept', $response->headers->all('Vary'));
+
+        $this->delete(route('cart.remove', $offer->public_id))->assertRedirect($cartUrl);
+        $this->getJson($cartUrl)->assertOk()->assertJsonPath('count', 0);
+
+        $this->actingAs($this->user('customer'))->postJson($addUrl, ['tier' => 'standard'])->assertOk()
+            ->assertJsonPath('count', 1);
+        $this->getJson($cartUrl)->assertOk()->assertJsonPath('items.0', $offer->title);
+        $this->actingAs($this->user('customer'))->getJson($cartUrl)->assertOk()->assertJsonPath('count', 0);
+        $this->assertDatabaseCount('marketplace_orders', 0);
+    }
+
     public function test_registration_attaches_the_cart_and_verification_works_after_a_new_session(): void
     {
         config(['commerce.enabled' => true]);
@@ -101,6 +130,7 @@ class StorefrontCheckoutTest extends TestCase
         $this->post(route('login.store'), ['email' => $existing->email, 'password' => 'CheckoutLogin123!'])
             ->assertRedirect(route('checkout'))->assertSessionMissing(CheckoutCart::SESSION);
         $this->get(route('checkout'))->assertOk()->assertSee('Place free order');
+        $this->getJson(route('cart'))->assertOk()->assertJsonPath('items.0', $offer->title);
     }
 
     public function test_authenticator_challenge_preserves_the_cart_until_sign_in_completes(): void
@@ -178,6 +208,9 @@ class StorefrontCheckoutTest extends TestCase
             ->assertSee('data-payment-stamp="awaiting"', false)
             ->assertSee('name="order-payment-choice"  open', false)
             ->assertSee('Local transfer');
+        $this->getJson(route('cart'))->assertOk()->assertJsonPath('count', 0);
+        $this->patch(route('account.orders.cancel', $order->number))->assertRedirect(route('account.orders.show', $order->number));
+        $this->getJson(route('cart'))->assertOk()->assertJsonPath('count', 0);
         $this->assertDatabaseCount('marketplace_orders', 1);
         $this->assertDatabaseCount('commerce_payments', 0);
     }

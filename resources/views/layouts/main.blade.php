@@ -12,6 +12,7 @@
   @if(config('commerce.enabled'))
     <link rel="stylesheet" href="{{ asset('css/commerce-storefront.css') }}?v=1">
     <script defer src="{{ asset('js/commerce-storefront.js') }}?v=1"></script>
+    @include('layouts.partials.mini-cart-assets')
   @endif
   <link rel="stylesheet" href="{{ asset('css/header-flag-scroll-top.css') }}?v=1">
   <link rel="stylesheet" href="{{ asset('css/footer-two-tone-themes.css') }}?v=2">
@@ -109,7 +110,7 @@
     @endif
     <div class="nav-actions">
       @if(config('commerce.enabled'))
-        <a class="icon-button storefront-cart-link" href="{{ route('cart') }}" aria-label="Cart" title="Cart"><x-icon name="shopping-cart" size="19"/></a>
+        <x-storefront-mini-cart/>
       @endif
       <x-language-menu class="nav-language-menu header-flag-only"/>
       @auth
@@ -225,5 +226,8 @@
 <button type="button" class="back-to-top" data-back-to-top aria-label="Back to top" title="Back to top">
   <x-icon name="arrow-up" size="22"/>
 </button>
+@if(config('commerce.enabled'))
+  @include('layouts.partials.mini-cart-confirmation')
+@endif
 </body>
 </html>
