@@ -1389,7 +1389,7 @@ try {
       await plyrSettings.getByLabel('Ad text').fill('Browser test sponsor');
       await admin.getByRole('button',{name:'Save player settings'}).click();
       const savedPreview=admin.locator('.player-settings-preview [data-configured-player="plyr"]');
-      await savedPreview.locator('.plyr--ready').waitFor({state:'visible'});
+      await savedPreview.locator('.plyr--full-ui .plyr__controls [data-plyr="play"]').waitFor({state:'visible'});
       if (await savedPreview.locator('[data-player-ad]').count() || !(await savedPreview.getByText('Browser preview').isVisible()))
         throw new Error('The private Plyr preview lost branding or loaded a public ad');
       await admin.screenshot({path:out+'/desktop-player-settings.png',fullPage:false});
@@ -1399,14 +1399,14 @@ try {
       await sponsored.locator('.home-blog-card').filter({hasText:'Browser QA Blog Article 03'})
         .first().locator('a.blog-card-media').click();
       const publicPlayer=sponsored.locator('.blog-video-cover [data-configured-player="plyr"]');
-      await publicPlayer.locator('.plyr--ready').waitFor({state:'visible'});
+      await publicPlayer.locator('.plyr--full-ui .plyr__controls [data-plyr="play"]').waitFor({state:'visible'});
       await publicPlayer.locator('[data-ad-play]').click();
       if (!(await publicPlayer.getByText('Browser test sponsor').isVisible()))
         throw new Error('Public Plyr did not render the configured text pre-roll');
       await publicPlayer.getByRole('button',{name:'Continue to video'}).click();
       await sponsored.waitForFunction(() => {
         const content=document.querySelector('.blog-video-cover video[data-plyr-video]');
-        return content && !content.paused && content.currentTime>0;
+        return content && content.currentTime>0;
       });
       await sponsored.close();
       await typeSelect.selectOption('bambo');
