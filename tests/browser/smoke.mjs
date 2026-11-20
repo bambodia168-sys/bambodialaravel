@@ -1122,9 +1122,22 @@ try {
            await page.getByRole('heading',{name:'About the creator'}).count())
           throw new Error(device.name+' project must use a single sidebar creator panel');
         const creatorTab=page.locator('.premium-detail-tabs a[href="#publisher"]');
-        const profileLink=publisher.getByRole('link',{name:'View creator profile'});
+        const profileLink=publisher.locator('.premium-side-creator-name');
         if(!(await creatorTab.isVisible()) || !(await profileLink.isVisible()))
           throw new Error(device.name+' publisher sidebar or Creator tab has no valid profile link');
+        const publisherLayout=await publisher.evaluate(panel=>{
+          const bounds=selector=>panel.querySelector(selector).getBoundingClientRect();
+          const avatar=bounds('.listing-publisher-avatar');
+          const identity=bounds('.listing-publisher-identity');
+          const details=bounds('.listing-publisher-details');
+          const meta=bounds('.listing-publisher-meta');
+          return avatar.width>0 && Math.abs(avatar.width-avatar.height)<1 &&
+            avatar.right<=details.left && identity.bottom<=meta.top &&
+            Math.abs(meta.width-identity.width)<1 &&
+            !panel.querySelector('.freelancer-showcase-card');
+        });
+        if(!publisherLayout)
+          throw new Error(device.name+' listing publisher sidebar layout is incorrect');
         const profileHref=await profileLink.getAttribute('href');
         if(!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(profileHref??''))
           throw new Error(device.name+' invalid public creator profile URL: '+profileHref);

@@ -308,30 +308,7 @@
           <div><dt>Reference</dt><dd>{{ $listing->public_id }}</dd></div>
         </dl>
       </section>
-      <section class="premium-side-card premium-side-creator" id="publisher" aria-labelledby="publisher-heading">
-        <div class="premium-side-card-heading"><h2 id="publisher-heading">Published by</h2></div>
-        <div class="premium-side-card-body">
-          <div class="premium-side-creator-row">
-            <div class="premium-creator-avatar" aria-hidden="true"><x-profile-avatar :user="$listing->creator" public size="24"/></div>
-            <div>
-              @if($listing->creator?->isCreator())
-                <a class="premium-side-creator-name" href="{{ route('creators.show',$listing->creator->public_id) }}" aria-label="View {{ $ownerName }}'s public creator profile">{{ $ownerName }}</a>
-              @else
-                <strong>{{ $ownerName }}</strong>
-              @endif
-              <small>Bambodia creator</small>
-            </div>
-          </div>
-          @if($creatorBadges->isNotEmpty())
-            <x-creator-badges :badges="$creatorBadges" variant="compact" mode="badge"/>
-          @endif
-          @if($listing->creator?->isCreator())
-            <a class="btn subtle premium-full-action" href="{{ route('creators.show',$listing->creator->public_id) }}">
-              <x-icon name="user-round" size="16"/> View creator profile
-            </a>
-          @endif
-        </div>
-      </section>
+      @include('marketplace.partials.publisher-sidebar', ['creator' => $listing->creator])
     </aside>
   </div>
 
