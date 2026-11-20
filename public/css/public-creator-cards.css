@@ -5,6 +5,10 @@
   gap: clamp(.875rem, 1.65vw, 1.25rem);
 }
 
+#bambodia-freelancers > :is(.public-creator-grid, .pager) {
+  grid-column: 1 / -1;
+}
+
 .public-creator-grid--directory {
   padding: clamp(.75rem, 1.5vw, 1.125rem);
 }

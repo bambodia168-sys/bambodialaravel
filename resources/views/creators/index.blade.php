@@ -1,7 +1,7 @@
 @extends('layouts.main')
 @section('title','Browse Creators')
 @push('page-styles')
-  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=1">
+  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=2">
 @endpush
 @section('content')
 <div class="container inner-page">
