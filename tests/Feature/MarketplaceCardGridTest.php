@@ -53,7 +53,7 @@ class MarketplaceCardGridTest extends TestCase
         ]);
     }
 
-    public function test_homepage_balances_four_types_with_at_most_eight_cards_and_clickable_media_and_title(): void
+    public function test_homepage_balances_four_types_with_at_most_twelve_cards_and_clickable_media_and_title(): void
     {
         Storage::fake('local');
         $user=$this->creator();
@@ -66,7 +66,7 @@ class MarketplaceCardGridTest extends TestCase
         $asset=$this->asset($user);
         $saved=[];
         foreach (MarketplaceListing::TYPES as $type) {
-            foreach (range(1,3) as $i) {
+            foreach (range(1,4) as $i) {
                 $saved[$type][$i]=$this->listing($user,$type,$i,$license->id,$asset->id);
             }
         }
@@ -74,10 +74,11 @@ class MarketplaceCardGridTest extends TestCase
             ->assertSee('marketplace-home-feed')
             ->assertDontSee('View details');
         $html=$response->getContent();
-        $this->assertSame(8,substr_count($html,'<article class="marketplace-card">'));
+        $this->assertSame(12,substr_count($html,'<article class="marketplace-card">'));
         foreach (MarketplaceListing::TYPES as $type) {
             $this->assertStringContainsString($saved[$type][2]->title,$html);
             $this->assertStringContainsString($saved[$type][3]->title,$html);
+            $this->assertStringContainsString($saved[$type][4]->title,$html);
             $this->assertStringNotContainsString($saved[$type][1]->title,$html);
         }
         $product=$saved['product'][3];
@@ -88,8 +89,23 @@ class MarketplaceCardGridTest extends TestCase
             '<a href="'.$product->publicUrl().'" title="'.$product->title.'">', $html
         );
         $this->assertSame(0,substr_count($html,'class="marketplace-card-summary"'));
-        $this->assertSame(8,substr_count($html,'class="marketplace-card-price"'));
+        $this->assertSame(12,substr_count($html,'class="marketplace-card-price"'));
         $this->assertStringContainsString('$23.00',$html);
+    }
+
+    public function test_homepage_fills_the_feed_when_some_listing_types_are_unavailable(): void
+    {
+        $user=$this->creator();
+        $project=$this->listing($user,'project',1);
+        $services=collect(range(1,13))->map(fn ($index) => $this->listing($user,'service',$index));
+        $services->last()->update(['status'=>'draft']);
+        $expectedIds=$services->slice(1,11)->pluck('id')->push($project->id)->all();
+
+        $this->get('/')->assertOk()->assertViewHas('recentListings',function ($listings) use ($expectedIds) {
+            $this->assertEqualsCanonicalizing($expectedIds,$listings->modelKeys());
+
+            return true;
+        });
     }
 
     public function test_browse_page_paginates_eight_items_and_keeps_image_and_title_links(): void
