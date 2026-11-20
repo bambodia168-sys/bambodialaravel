@@ -87,6 +87,7 @@ async function order(page, listing, {guest = false} = {}) {
     await page.reload({waitUntil: 'domcontentloaded'});
     await added.click();
     await currentCheckoutStep(page, 'cart');
+    await cartButton.waitFor();
     assert.equal(await badge.textContent(), '1');
   }
   await page.getByRole('link', {name: 'Review checkout', exact: true}).click();
