@@ -88,7 +88,10 @@ class PostManagerController extends Controller
     public function preview(ContentEntry $entry): View
     {
         $this->ensurePost($entry);
-        $entry->load('author:id,name', 'featuredMedia:id,public_id,review_status,alt_text,mime_type');
+        $entry->load([
+            'author:id,name', 'author.creatorProfile:user_id,is_public', 'author.userProfile:user_id,avatar_path',
+            'featuredMedia:id,public_id,review_status,alt_text,mime_type',
+        ]);
         return view('content.show', ['entry' => $entry, 'preview' => true]);
     }
 

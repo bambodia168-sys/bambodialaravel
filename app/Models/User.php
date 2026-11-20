@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 use Spatie\LaravelPasskeys\Models\Concerns\HasPasskeys;
 use Spatie\LaravelPasskeys\Models\Concerns\InteractsWithPasskeys;
@@ -55,6 +56,22 @@ class User extends Authenticatable implements HasPasskeys
     public function creatorProfile(): HasOne
     {
         return $this->hasOne(CreatorProfile::class);
+    }
+
+    public function profileAvatarUrl(bool $public = false): ?string
+    {
+        if ($public && ! $this->creatorProfile?->is_public) {
+            return null;
+        }
+
+        $path = $this->userProfile?->avatar_path;
+        if (! filled($path)) {
+            return null;
+        }
+
+        $disk = Storage::disk('public');
+
+        return $disk->exists($path) ? $disk->url($path) : null;
     }
 
     public function publishedListings(): HasMany

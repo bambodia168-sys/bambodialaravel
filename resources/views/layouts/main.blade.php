@@ -20,7 +20,7 @@
   <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>
   @if(request()->routeIs('creators.show','account.profile.edit','studio.profile.edit','dashboard.users.profile.edit','localized.*.creators.show','localized.*.account.profile.edit','localized.*.studio.profile.edit','localized.*.dashboard.users.profile.edit'))
     <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=2">
-    <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=2"></script>
+    <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=3"></script>
   @endif
 @php
   $contentControls = array_keys(array_filter(\App\Support\SystemSecurity::states(['right_click', 'content_protector', 'selection_protector'])));
@@ -113,7 +113,7 @@
       <x-language-menu class="nav-language-menu header-flag-only"/>
       @auth
       <details class="dropdown profile-dropdown">
-        <summary class="profile-trigger" aria-label="Profile menu"><x-icon name="user" size="19"/></summary>
+        <summary class="profile-trigger" aria-label="Profile menu"><x-profile-avatar :user="auth()->user()"/></summary>
         <div class="dropdown-panel profile-panel">
           <strong>{{ auth()->user()->name }}</strong>
           <span class="text-muted">ID {{ auth()->user()->public_id }}</span>
@@ -143,7 +143,7 @@
       </details>
       @else
       <details class="dropdown profile-dropdown">
-        <summary class="profile-trigger" aria-label="Account menu"><x-icon name="user" size="19"/></summary>
+        <summary class="profile-trigger" aria-label="Account menu"><x-profile-avatar/></summary>
         <div class="dropdown-panel profile-panel">
           <a href="{{ route('login') }}"><x-icon name="log-in" size="16"/> {{ __('ui.sign_in') }}</a>
           @if(\App\Models\FeatureFlag::isEnabled('registration'))<a href="{{ route('register') }}"><x-icon name="user-plus" size="16"/> {{ __('ui.join') }}</a>@endif

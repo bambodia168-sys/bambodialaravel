@@ -53,7 +53,11 @@ class DetailDiscussionController extends Controller
         $comments = DetailComment::query()
             ->where('subject_type', $subject[0])->where('subject_id', $subject[1]->id)
             ->whereNull('parent_id')
-            ->with(['user:id,name', 'replies.user:id,name'])
+            ->with([
+                'user:id,name', 'user.creatorProfile:user_id,is_public', 'user.userProfile:user_id,avatar_path',
+                'replies.user:id,name', 'replies.user.creatorProfile:user_id,is_public',
+                'replies.user.userProfile:user_id,avatar_path',
+            ])
             ->oldest()->paginate(12);
         return view('details.comments', [
             'kind' => $kind, 'title' => $subject[2], 'publicUrl' => $subject[3],

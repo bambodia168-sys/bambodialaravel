@@ -312,7 +312,7 @@
         <div class="premium-side-card-heading"><h2 id="publisher-heading">Published by</h2></div>
         <div class="premium-side-card-body">
           <div class="premium-side-creator-row">
-            <div class="premium-creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($ownerName,0,1)) }}</div>
+            <div class="premium-creator-avatar" aria-hidden="true"><x-profile-avatar :user="$listing->creator" public size="24"/></div>
             <div>
               @if($listing->creator?->isCreator())
                 <a class="premium-side-creator-name" href="{{ route('creators.show',$listing->creator->public_id) }}" aria-label="View {{ $ownerName }}'s public creator profile">{{ $ownerName }}</a>

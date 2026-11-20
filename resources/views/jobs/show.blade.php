@@ -89,7 +89,7 @@
       <section class="panel premium-content-section" id="client">
         <div class="panel-head"><div><span class="eyebrow">Published by</span><h2>Client information</h2></div></div>
         <div class="premium-creator-body">
-          <div class="premium-creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($job->client?->name ?? 'B',0,1)) }}</div>
+          <div class="premium-creator-avatar" aria-hidden="true"><x-profile-avatar :user="$job->client" public size="24"/></div>
           <div><strong>{{ $job->client?->name ?? 'Bambodia client' }}</strong>
             <p>Client who published this approved job brief.</p></div>
         </div>

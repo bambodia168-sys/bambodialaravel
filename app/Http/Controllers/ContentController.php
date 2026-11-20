@@ -14,7 +14,10 @@ class ContentController extends Controller
         abort_unless(preg_match('/^(\d{9})_([a-z0-9-]+)$/', $content, $match) === 1, 404);
 
         $entry = ContentEntry::query()
-            ->with('author:id,name', 'featuredMedia:id,public_id,alt_text,mime_type')
+            ->with([
+                'author:id,name', 'author.creatorProfile:user_id,is_public', 'author.userProfile:user_id,avatar_path',
+                'featuredMedia:id,public_id,alt_text,mime_type',
+            ])
             ->where('public_id', $match[1])
             ->where('slug', $match[2])
             ->where('status', 'published')
@@ -24,7 +27,7 @@ class ContentController extends Controller
         $blogCategories = collect();
         $comments = null;
         if ($entry->type === 'post') {
-            $comments = $entry->comments()->with('user:id,name')
+            $comments = $entry->comments()->with('user:id,name', 'user.creatorProfile:user_id,is_public', 'user.userProfile:user_id,avatar_path')
                 ->latest('created_at')->orderByDesc('id')
                 ->paginate(8, ['*'], 'comments_page')->withQueryString();
             $relatedPosts = ContentEntry::query()

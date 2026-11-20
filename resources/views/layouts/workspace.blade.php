@@ -18,7 +18,7 @@
   <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>
   @if(request()->routeIs('creators.show','account.profile.edit','studio.profile.edit','dashboard.users.profile.edit','localized.*.creators.show','localized.*.account.profile.edit','localized.*.studio.profile.edit','localized.*.dashboard.users.profile.edit'))
     <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=3">
-    <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=2"></script>
+    <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=3"></script>
   @endif
   @stack('head')
 </head>
@@ -295,7 +295,7 @@
         <x-language-menu class="header-flag-only"/>
         <details class="workspace-account-menu">
           <summary class="workspace-profile" aria-label="Account menu" title="{{ $user->name }}">
-            <x-icon name="user" size="19"/>
+            <x-profile-avatar :user="$user"/>
           </summary>
           <div class="workspace-account-panel">
             <div class="workspace-account-identity">

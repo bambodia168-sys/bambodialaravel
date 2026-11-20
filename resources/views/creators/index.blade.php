@@ -16,7 +16,7 @@
     <div class="creator-directory-grid">
       @forelse($creators as $creator)
         <article class="creator-directory-card">
-          <div class="creator-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($creator->name,0,1)) }}</div>
+          <div class="creator-avatar" aria-hidden="true"><x-profile-avatar :user="$creator" public lazy size="23"/></div>
           <div class="eyebrow">Public ID {{ $creator->public_id }}</div>
           <h3><a href="{{ route('creators.show',$creator->public_id) }}">{{ $creator->name }}</a></h3>
           <strong>{{ $creator->creatorProfile?->is_public ? $creator->creatorProfile->headline : 'Creator achievements' }}</strong>

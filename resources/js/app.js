@@ -1735,3 +1735,23 @@ document.addEventListener('DOMContentLoaded', () => {
         videos.forEach(prime);
     }
 });
+
+function showProfileAvatarFallback(image) {
+    const fallback = image.closest('[data-profile-avatar]')?.querySelector('[data-profile-avatar-fallback]');
+    if (fallback) {
+        image.hidden = true;
+        fallback.hidden = false;
+    }
+}
+
+document.addEventListener('error', (event) => {
+    if (event.target instanceof HTMLImageElement && event.target.matches('[data-profile-avatar-image]')) {
+        showProfileAvatarFallback(event.target);
+    }
+}, true);
+
+document.querySelectorAll('[data-profile-avatar-image]').forEach((image) => {
+    if (image.complete && image.naturalWidth === 0) {
+        showProfileAvatarFallback(image);
+    }
+});

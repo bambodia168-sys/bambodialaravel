@@ -96,13 +96,13 @@ class PublicFrontendLayoutTest extends TestCase
             ->assertSee(Storage::disk('public')->url($path));
     }
 
-    public function test_homepage_freelancer_avatar_falls_back_to_initial_without_uploaded_image(): void
+    public function test_homepage_freelancer_avatar_falls_back_to_user_icon_without_uploaded_image(): void
     {
         $creator=$this->creator();
         $response=$this->get('/')->assertOk();
         $html=$response->getContent();
         $this->assertStringContainsString('class="marketplace-freelancer-avatar" href="'.route('creators.show',$creator->public_id).'"', $html);
-        $this->assertStringContainsString('aria-hidden="true">O</span>', $html);
+        $this->assertMatchesRegularExpression('/class="marketplace-freelancer-avatar"[^>]*>\s*<span[^>]*data-profile-avatar>\s*<span[^>]*data-profile-avatar-fallback[^>]*>\s*<svg/', $html);
         $this->assertStringNotContainsString('Public profile</span>', $html);
         $this->assertStringNotContainsString('View portfolio', $html);
         $this->assertStringNotContainsString($creator->name.' profile photo', $html);

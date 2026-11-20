@@ -37,6 +37,10 @@ $license=\App\Models\LicenseDefinition::query()->create([
 ]);
 $png=base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl+R1gAAAAASUVORK5CYII=',true);
 if($png===false)throw new RuntimeException('Missing QA image');
+
+$avatarPath = 'profile-avatars/uat-creator.png';
+\Illuminate\Support\Facades\Storage::disk('public')->put($avatarPath, $png);
+$creator->userProfile()->create(['avatar_path' => $avatarPath]);
 $path='marketplace/previews/'.$creator->id.'/uat-cover.png';
 \Illuminate\Support\Facades\Storage::disk('local')->put($path,$png);
 $cover=\App\Models\MediaAsset::query()->create([
