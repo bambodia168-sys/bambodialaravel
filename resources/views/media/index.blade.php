@@ -6,7 +6,7 @@
 @section('content')
 @php($videoSettings = $assets->contains(fn ($asset) => str_starts_with($asset->mime_type, 'video/')) ? \App\Support\VideoPlayerSettings::read() : null)
 <link rel="stylesheet" href="{{ asset('css/media-library-video.css') }}?v=2">
-<script defer src="{{ asset('js/media-library-video.js') }}?v=2"></script>
+<script defer src="{{ asset('js/media-library-video.js') }}?v=3"></script>
 <div class="{{ $studio ? 'container inner-page' : '' }}">
   <div class="page-intro"><div class="eyebrow">Rights-aware media management</div><h1>Media Library</h1>
     <p>Upload JPEG, PNG, WebP, GIF animation, MP4 or WebM. Media stays private until attached to published content. Admins manage all media; other users manage their own files.</p></div>

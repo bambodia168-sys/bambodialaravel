@@ -22,7 +22,7 @@ class VideoPlayerSettingsController extends Controller
             'settings' => VideoPlayerSettings::read(),
             'preview' => MediaAsset::query()
                 ->whereIn('mime_type', ['video/mp4', 'video/webm'])
-                ->where('review_status', 'approved')->latest('id')->first(),
+                ->latest('id')->first(),
         ]);
     }
 

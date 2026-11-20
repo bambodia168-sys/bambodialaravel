@@ -31,33 +31,102 @@ function initSettings(form) {
     sync();
 }
 
+let plyrModule;
+
 function initPlayer(shell) {
     const video = shell.querySelector('video');
-    if (!video) return;
+    if (!video || shell.dataset.playerInitialized) return;
+    shell.dataset.playerInitialized = 'true';
     const dialog = shell.closest('dialog');
     const plyr = shell.dataset.configuredPlayer === 'plyr';
-    const enhance = () => {
-        if (!plyr || shell.dataset.plyrRequested) return;
-        shell.dataset.plyrRequested = 'true';
-        import('./plyr-player.js').then(({ enhancePlyr }) => enhancePlyr(video, shell)).catch(() => {});
+    const recovery = shell.querySelector('[data-player-recovery]');
+    let enhancementRequested = false;
+    let automaticRetryUsed = false;
+    let wantsPlayback = false;
+    let primeRequested = false;
+    let resumeTime = null;
+
+    const showRecovery = () => {
+        recovery.hidden = false;
     };
-    if (dialog) {
-        if (dialog.open) enhance();
-        if (plyr) {
-            const observer = new MutationObserver(() => {
-                if (!dialog.open) return;
-                observer.disconnect();
-                enhance();
-            });
-            if (!dialog.open) observer.observe(dialog, { attributes: true, attributeFilter: ['open'] });
-            dialog.addEventListener('close', () => {
-                video.pause();
-                if (document.pictureInPictureElement === video) document.exitPictureInPicture().catch(() => {});
-            });
+    const restorePlayback = () => {
+        const position = resumeTime;
+        resumeTime = null;
+        if (position > 0 && Number.isFinite(video.duration)) {
+            video.currentTime = Math.min(position, video.duration);
         }
-    } else {
+        if (wantsPlayback && (!dialog || dialog.open)) video.play().catch(() => {});
+    };
+    const reload = (resume) => {
+        resumeTime = video.currentTime || resumeTime || 0;
+        wantsPlayback = resume;
+        recovery.hidden = true;
+        video.load();
+    };
+    video.addEventListener('play', () => { wantsPlayback = true; });
+    video.addEventListener('pause', () => {
+        if (!video.error && video.readyState >= HTMLMediaElement.HAVE_METADATA) wantsPlayback = false;
+    });
+    video.addEventListener('loadedmetadata', () => {
+        recovery.hidden = true;
+        if (resumeTime !== null) restorePlayback();
+    });
+    video.addEventListener('error', () => {
+        if (video.error?.code === MediaError.MEDIA_ERR_NETWORK && !automaticRetryUsed && (!dialog || dialog.open)) {
+            automaticRetryUsed = true;
+            reload(wantsPlayback);
+        } else {
+            showRecovery();
+        }
+    });
+    shell.querySelector('[data-player-retry]').addEventListener('click', () => {
+        if (dialog && !dialog.open) return;
+        reload(true);
+        // Call play in the click handler so mobile browsers retain user activation.
+        video.play().catch(() => {});
+    });
+
+    const enhance = () => {
+        if (!plyr || enhancementRequested) return;
+        enhancementRequested = true;
+        plyrModule ??= import('./plyr-player.js').catch(error => {
+            plyrModule = undefined;
+            throw error;
+        });
+        plyrModule.then(({ enhancePlyr }) => {
+            const mount = () => enhancePlyr(video, shell);
+            if (video.paused) mount();
+            else video.addEventListener('pause', mount, { once: true });
+        }).catch(() => { video.controls = true; });
+    };
+    const prepare = () => {
+        if (dialog && !primeRequested) {
+            primeRequested = true;
+            video.preload = 'metadata';
+            if (video.networkState === HTMLMediaElement.NETWORK_EMPTY
+                || (video.networkState === HTMLMediaElement.NETWORK_IDLE
+                    && video.readyState === HTMLMediaElement.HAVE_NOTHING)) {
+                video.load();
+            }
+        }
         enhance();
+    };
+
+    if (dialog) {
+        if (dialog.open) prepare();
+        const observer = new MutationObserver(() => {
+            if (dialog.open) prepare();
+        });
+        observer.observe(dialog, { attributes: true, attributeFilter: ['open'] });
+        dialog.addEventListener('close', () => {
+            wantsPlayback = false;
+            video.pause();
+            if (document.pictureInPictureElement === video) document.exitPictureInPicture().catch(() => {});
+        });
+    } else {
+        prepare();
     }
+    if (video.error) showRecovery();
     const ad = shell.querySelector('[data-player-ad]');
     if (ad) import('./video-player-ads.js').then(({ initPlayerAd }) => initPlayerAd(video, ad)).catch(() => {});
 }

@@ -88,6 +88,29 @@ final class VideoPlayerSettingsTest extends TestCase
         $this->savePlayer('plyr', $google)->assertSessionHasErrors('profiles.plyr.ad.media_url');
     }
 
+    public function test_an_unapproved_upload_is_available_in_the_admin_player_preview_only(): void
+    {
+        Storage::fake('local');
+        $owner = $this->member('freelancer');
+        $asset = MediaAsset::query()->create([
+            'user_id' => $owner->id, 'original_name' => 'new-library-upload.mp4',
+            'storage_path' => 'preview/new-library-upload.mp4',
+            'mime_type' => 'video/mp4', 'bytes' => 10, 'width' => 0, 'height' => 0,
+            'alt_text' => 'Private upload', 'rights_basis' => 'owned', 'rights_holder' => 'Bambodia',
+            'review_status' => 'pending',
+        ]);
+        Storage::disk('local')->put($asset->storage_path, 'test video');
+
+        $this->get($asset->previewUrl())->assertNotFound();
+        $this->actingAs($this->member('admin'))
+            ->get(route('dashboard.player-settings'))->assertOk()
+            ->assertSee('new-library-upload.mp4')
+            ->assertSee($asset->previewUrl(), false)
+            ->assertDontSee('data-player-ad=', false);
+        $this->get($asset->previewUrl())->assertOk();
+        $this->assertSame('pending', $asset->fresh()->review_status);
+    }
+
     public function test_published_video_uses_the_selected_player_and_private_previews_never_play_ads(): void
     {
         Storage::fake('local');

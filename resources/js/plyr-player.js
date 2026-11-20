@@ -9,6 +9,7 @@ export function enhancePlyr(video, shell) {
         ['time', 'current-time', 'duration'], ['volume', 'mute', 'volume'],
         ['speed', 'settings'], ['pip', 'pip'], ['fullscreen', 'fullscreen'],
     ].filter(([setting]) => selected.has(setting)).flatMap(([, ...items]) => items)];
+    const adjacent = video.nextSibling;
     try {
         new Plyr(video, {
             controls,
@@ -19,6 +20,11 @@ export function enhancePlyr(video, shell) {
             keyboard: { focused: false, global: false },
         });
     } catch {
+        const incompletePlayer = video.closest('.plyr');
+        if (incompletePlayer?.parentElement === shell) {
+            shell.insertBefore(video, adjacent?.parentNode === shell ? adjacent : incompletePlayer);
+            incompletePlayer.remove();
+        }
         video.controls = true;
     }
 }

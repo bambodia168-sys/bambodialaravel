@@ -233,6 +233,14 @@ export function initBlogPremiumPlayers() {
             setStatus('This video is unavailable. Check your connection or try again.');
         });
 
+        video.addEventListener('loadedmetadata', () => {
+            if (root.dataset.initialized !== 'true' || !hud.hidden) return;
+            hud.hidden = false;
+            video.controls = false;
+            setStatus('');
+            updatePlayback();
+        });
+
         // Only remove browser-native controls once the complete custom UI is wired.
         root.dataset.initialized = 'true';
         hud.hidden = false;

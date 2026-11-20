@@ -101,7 +101,7 @@ final class MediaLibraryPrivateVideoTest extends TestCase
             ->assertSee('data-player-seek',false)
             ->assertSee('data-player-fullscreen',false)
             ->assertSee('media-library-video.css?v=2',false)
-            ->assertSee('media-library-video.js?v=2',false)
+            ->assertSee('media-library-video.js?v=3',false)
             ->assertSee('Accessible video description')
             ->assertSee($asset->previewUrl(),false)
             ->assertDontSee('r2.cloudflarestorage.com');
