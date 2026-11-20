@@ -1,6 +1,9 @@
+import '../css/video-player.css';
 import { initBlogPremiumPlayers } from './blog-premium-player.js';
+import { initConfiguredPlayers } from './video-player.js';
 
 document.addEventListener('DOMContentLoaded', initBlogPremiumPlayers);
+document.addEventListener('DOMContentLoaded', initConfiguredPlayers);
 
 const root = document.documentElement;
 

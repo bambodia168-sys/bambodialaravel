@@ -12,7 +12,7 @@
         @if(in_array($entry->featured_type, ['image', 'video'], true) && $entry->featuredMedia)
           @if($entry->featured_type === 'video' && str_starts_with($entry->featuredMedia->mime_type, 'video/'))
             <figure class="post-featured-figure blog-article-cover blog-video-cover">
-              <x-blog-premium-native-video :media="$entry->featuredMedia" :title="$entry->title" />
+              <x-configured-video :media="$entry->featuredMedia" :title="$entry->title" :private="!empty($preview)" />
             </figure>
           @elseif($entry->featured_type === 'image' && str_starts_with($entry->featuredMedia->mime_type, 'image/'))
             <figure class="post-featured-figure blog-article-cover">

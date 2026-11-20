@@ -4,8 +4,9 @@
 @endif
 @section('title','Media Library')
 @section('content')
+@php($videoSettings = $assets->contains(fn ($asset) => str_starts_with($asset->mime_type, 'video/')) ? \App\Support\VideoPlayerSettings::read() : null)
 <link rel="stylesheet" href="{{ asset('css/media-library-video.css') }}?v=2">
-<script defer src="{{ asset('js/media-library-video.js') }}?v=1"></script>
+<script defer src="{{ asset('js/media-library-video.js') }}?v=2"></script>
 <div class="{{ $studio ? 'container inner-page' : '' }}">
   <div class="page-intro"><div class="eyebrow">Rights-aware media management</div><h1>Media Library</h1>
     <p>Upload JPEG, PNG, WebP, GIF animation, MP4 or WebM. Media stays private until attached to published content. Admins manage all media; other users manage their own files.</p></div>
@@ -44,40 +45,7 @@
               <dialog id="media-{{ $asset->id }}" class="config-dialog wide-dialog media-editor-dialog">
                 <div class="dialog-heading"><h2>{{ $asset->original_name }}</h2><p>ID {{ $asset->public_id }} · {{ $asset->mime_type }}</p></div>
                 @if(str_starts_with($asset->mime_type,'video/'))
-                  <div class="media-player-shell" data-media-player tabindex="0" aria-label="Private video preview">
-                    <div class="media-player-surface">
-                      <video data-player-video src="{{ $asset->previewUrl() }}"
-                        controls preload="none" playsinline aria-label="{{ $asset->alt_text }}"></video>
-                      <button class="media-player-center" type="button" data-player-overlay
-                        aria-label="Play video"><x-icon name="play" size="28"/></button>
-                    </div>
-                    <div class="media-player-controls" aria-label="Video playback controls">
-                      <button type="button" class="media-player-tool" data-player-toggle aria-label="Play video">
-                        <span data-player-play><x-icon name="play" size="18"/></span>
-                        <span data-player-pause><x-icon name="pause" size="18"/></span>
-                      </button>
-                      <input class="media-player-seek" data-player-seek type="range"
-                        min="0" max="1000" step="1" value="0" aria-label="Seek video">
-                      <span class="media-player-clock" data-player-clock>0:00 / 0:00</span>
-                      <button class="media-player-tool" type="button" data-player-mute aria-label="Mute video">
-                        <span data-player-sound><x-icon name="volume-2" size="18"/></span>
-                        <span data-player-muted><x-icon name="volume-x" size="18"/></span>
-                      </button>
-                      <select class="media-player-speed" data-player-speed aria-label="Playback speed">
-                        <option value="0.75">0.75×</option>
-                        <option value="1" selected>1×</option>
-                        <option value="1.25">1.25×</option>
-                        <option value="1.5">1.5×</option>
-                        <option value="2">2×</option>
-                      </select>
-                      <button class="media-player-tool" type="button" data-player-pip aria-label="Picture in picture">
-                        <x-icon name="picture-in-picture" size="18"/>
-                      </button>
-                      <button class="media-player-tool" type="button" data-player-fullscreen aria-label="Fullscreen video">
-                        <x-icon name="maximize" size="18"/>
-                      </button>
-                    </div>
-                  </div>
+                  <x-configured-video :media="$asset" :title="$asset->original_name" :settings="$videoSettings" private library/>
                   <p class="media-player-footnote" data-player-status>
                     Private preview. Only authorized users can watch unpublished media.
                   </p>

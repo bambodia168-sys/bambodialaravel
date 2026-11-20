@@ -94,6 +94,7 @@
       ]];
       $groups[] = ['heading'=>'Assets & Communication','items'=>[
         ['route'=>'dashboard.media.index','label'=>'Media Library','icon'=>'image'],
+        ['route'=>'dashboard.player-settings','label'=>'Player Settings','icon'=>'video','roles'=>['super_admin','admin']],
         ['route'=>'dashboard.vault.index','label'=>'Digital File Vault','icon'=>'archive'],
         ['route'=>'dashboard.licenses.index','label'=>'License Manager','icon'=>'scroll-text'],
         ['route'=>'dashboard.creator-applications','label'=>'Creator Applications','icon'=>'user-round-check'],

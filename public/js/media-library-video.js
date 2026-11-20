@@ -112,7 +112,7 @@
       if (event.target?.matches('input, select, textarea, button')) return;
       if (event.key===' ' || event.key.toLowerCase()==='k') {
         event.preventDefault(); togglePlayback();
-      } else if (event.key==='ArrowRight' || event.key==='ArrowLeft') {
+      } else if ((event.key==='ArrowRight' || event.key==='ArrowLeft') && !seek.hasAttribute('data-control-disabled')) {
         event.preventDefault();
         video.currentTime=Math.max(0,Math.min(video.duration||0,video.currentTime+(event.key==='ArrowRight'?5:-5)));
       }
