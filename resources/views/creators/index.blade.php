@@ -3,7 +3,7 @@
 @section('content')
 <div class="container inner-page">
   <div class="page-intro"><div class="eyebrow">Bambodia talent network</div><h1>Explore Creators</h1>
-    <p>Discover people who have chosen to publish their professional introductions and see their approved marketplace work.</p>
+    <p>Discover creators through their public portfolios and approved marketplace work.</p>
   </div>
   <section class="panel">
     <div class="panel-head"><h2>Public profiles <span class="count">{{ $creators->total() }}</span></h2>
@@ -19,14 +19,16 @@
           <div class="creator-avatar" aria-hidden="true"><x-profile-avatar :user="$creator" public lazy size="23"/></div>
           <div class="eyebrow">Public ID {{ $creator->public_id }}</div>
           <h3><a href="{{ route('creators.show',$creator->public_id) }}">{{ $creator->name }}</a></h3>
-          <strong>{{ $creator->creatorProfile?->is_public ? $creator->creatorProfile->headline : 'Creator achievements' }}</strong>
+          @if($creator->creatorProfile?->is_public && filled($creator->creatorProfile->headline))
+            <strong>{{ $creator->creatorProfile->headline }}</strong>
+          @endif
           <x-creator-badges :badges="\App\Support\CreatorBadgeAwards::earned($creator)" variant="compact"/>
           @if($creator->creatorProfile?->is_public)
             <p>{{ \Illuminate\Support\Str::limit($creator->creatorProfile->biography,160) }}</p>
           @endif
           <div class="creator-directory-foot">
             <span>{{ $creator->public_listings_count }} approved listings</span>
-            <a href="{{ route('creators.show',$creator->public_id) }}" class="btn subtle compact">View portfolio</a>
+            <a href="{{ route('creators.show',$creator->public_id) }}" class="btn subtle compact">View creator profile</a>
           </div>
         </article>
       @empty

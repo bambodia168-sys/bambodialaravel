@@ -12,6 +12,7 @@ use App\Models\CreatorProfileItem;
 use App\Models\CreatorProfileSection;
 use App\Http\Controllers\ProfileEditorController;
 use App\Support\CreatorBadgeAwards;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -31,14 +32,8 @@ class CreatorProfileController extends Controller
     public function directory(Request $request): View
     {
         $search=mb_substr(trim((string)$request->query('q','')),0,120);
-        $creators=User::query()
+        $creators=$this->publicCreators()
             ->select(['id','public_id','name','email','role','created_at'])
-            ->whereIn('role',['freelancer','super_admin'])
-            ->where(function($query): void {
-                $query->whereHas('creatorProfile',fn($p)=>$p->where('is_public',true))
-                    ->orWhere(fn($owner)=>$owner->where('role','super_admin')
-                        ->whereRaw('LOWER(email) = ?', [CreatorBadgeAwards::OWNER_EMAIL]));
-            })
             ->when($search!=='',fn($q)=>$q->where(function($builder)use($search){
                 $builder->where('name','like','%'.$search.'%')
                     ->orWhereHas('creatorProfile',fn($p)=>$p
@@ -50,7 +45,7 @@ class CreatorProfileController extends Controller
             }))
             ->with('creatorProfile:user_id,headline,biography,is_public', 'userProfile:user_id,avatar_path')
             ->withCount(['publishedListings as public_listings_count'])
-            ->orderBy('name')->paginate(10)->withQueryString();
+            ->orderBy('name')->orderBy('id')->paginate(10)->withQueryString();
         return view('creators.index',compact('creators','search'));
     }
 
@@ -60,14 +55,7 @@ class CreatorProfileController extends Controller
         // Published marketplace work already names its creator publicly.
         // Such creators can have a limited achievements page without publishing
         // their optional private biography, website or account profile.
-        $user=User::query()->where('public_id',$creator)
-            ->whereIn('role',['freelancer','super_admin'])
-            ->where(function($query): void {
-                $query->whereHas('creatorProfile',fn($p)=>$p->where('is_public',true))
-                    ->orWhereHas('publishedListings')
-                    ->orWhere(fn($owner)=>$owner->where('role','super_admin')
-                        ->whereRaw('LOWER(email) = ?', [CreatorBadgeAwards::OWNER_EMAIL]));
-            })
+        $user=$this->publicCreators()->where('public_id',$creator)
             ->with(['creatorProfile', 'userProfile'])->firstOrFail();
 
         $listings=MarketplaceListing::query()->publiclyAvailable()
@@ -95,5 +83,14 @@ class CreatorProfileController extends Controller
             'items'=>$items,'sections'=>$sections,'contactListing'=>$contactListing,
             'listings'=>$listings,'savedIds'=>$savedIds,
         ]);
+    }
+
+    private function publicCreators(): Builder
+    {
+        return User::query()->where(function (Builder $creators): void {
+            $creators->discoverableCreator(includeAdministratorProfiles: true)
+                ->orWhere(fn (Builder $owner) => $owner->where('role', 'super_admin')
+                    ->whereRaw('LOWER(email) = ?', [CreatorBadgeAwards::OWNER_EMAIL]));
+        });
     }
 }

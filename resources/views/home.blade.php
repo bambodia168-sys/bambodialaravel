@@ -81,7 +81,7 @@
     <div>
       <span class="eyebrow">Discover independent talent</span>
       <h2 id="freelancer-section-title">Freelancers</h2>
-      <p>Meet professionals with public portfolios and explore their approved work.</p>
+      <p>Explore public portfolios and approved marketplace work.</p>
     </div>
     <a class="btn subtle" href="{{ route('creators.index') }}">Browse creator profiles</a>
   </div>
@@ -95,7 +95,9 @@
             </a>
           </div>
           <h3><a href="{{ route('creators.show',$freelancer->public_id) }}">{{ $freelancer->name }}</a></h3>
-          <p class="marketplace-freelancer-headline">{{ $freelancer->creatorProfile->headline }}</p>
+          @if($freelancer->creatorProfile?->is_public && filled($freelancer->creatorProfile->headline))
+            <p class="marketplace-freelancer-headline">{{ $freelancer->creatorProfile->headline }}</p>
+          @endif
           <div class="marketplace-freelancer-card-footer">
             <span><x-icon name="briefcase" size="15"/> {{ number_format($freelancer->public_listings_count) }} approved {{ \Illuminate\Support\Str::plural('listing',$freelancer->public_listings_count) }}</span>
           </div>
@@ -106,10 +108,11 @@
     <div class="marketplace-empty marketplace-freelancer-empty">
       <x-icon name="users" size="30"/>
       <strong>Freelancer profiles are coming soon.</strong>
-      <p>Public portfolios will appear here when freelancers choose to publish them.</p>
+      <p>Freelancers appear here when they publish a portfolio or have work approved.</p>
       <a class="btn subtle compact" href="{{ route('creators.index') }}">Browse creator profiles</a>
     </div>
   @endif
+  <x-pagination :paginator="$freelancers"/>
 </section>
 @endif
 

@@ -158,9 +158,10 @@ class CreatorBadgePublicDisplayTest extends TestCase
             ->assertDontSee('private.example.test')
             ->assertDontSee($creator->email);
 
-        // Opt-in directory remains separate; listing-derived profiles are not indexed there.
-        $this->get(route('creators.index'))
-            ->assertOk()->assertDontSee('Independent freelancer');
+        $this->get(route('creators.index', ['q' => 'Independent freelancer']))
+            ->assertOk()->assertSee('Independent freelancer')
+            ->assertDontSee('PRIVATE UNPUBLISHED HEADLINE')
+            ->assertDontSee('PERSONAL PRIVATE BIOGRAPHY');
     }
 
     public function test_creator_without_public_biography_or_published_work_remains_private(): void
