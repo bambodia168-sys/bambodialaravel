@@ -1372,6 +1372,48 @@ try {
       if(!(await admin.getByText('Feature Manager').first().count()))
         throw new Error('Admin menu lacks real controls');
       await admin.screenshot({path:out+'/desktop-admin-workspace.png',fullPage:false});
+      await admin.goto(origin+'/en/dashboard/player-settings',{waitUntil:'domcontentloaded'});
+      const typeSelect=admin.getByLabel('Player Type');
+      const bamboSettings=admin.locator('[data-player-profile="bambo"]');
+      const plyrSettings=admin.locator('[data-player-profile="plyr"]');
+      if (await typeSelect.inputValue()!=='bambo' || !(await bamboSettings.isVisible()) || await plyrSettings.isVisible())
+        throw new Error('Default player settings did not open on Bambo Player');
+      await typeSelect.selectOption('plyr');
+      if (await bamboSettings.isVisible() || !(await plyrSettings.getByLabel('Fast-forward').isVisible()))
+        throw new Error('Selecting Plyr did not switch to its own controls');
+      await plyrSettings.getByLabel('Player Skin').selectOption('ocean');
+      await plyrSettings.getByLabel('Overlay text').fill('Browser preview');
+      await plyrSettings.getByLabel('Show an ad before public uploaded videos').check();
+      await plyrSettings.getByLabel('Ad provider').selectOption('facebook');
+      await plyrSettings.getByLabel('Creative format').selectOption('text');
+      await plyrSettings.getByLabel('Ad text').fill('Browser test sponsor');
+      await admin.getByRole('button',{name:'Save player settings'}).click();
+      const savedPreview=admin.locator('.player-settings-preview [data-configured-player="plyr"]');
+      await savedPreview.locator('.plyr--ready').waitFor({state:'visible'});
+      if (await savedPreview.locator('[data-player-ad]').count() || !(await savedPreview.getByText('Browser preview').isVisible()))
+        throw new Error('The private Plyr preview lost branding or loaded a public ad');
+      await admin.screenshot({path:out+'/desktop-player-settings.png',fullPage:false});
+
+      const sponsored=await adminContext.newPage();
+      await sponsored.goto(origin+'/',{waitUntil:'domcontentloaded'});
+      await sponsored.locator('.home-blog-card').filter({hasText:'Browser QA Blog Article 03'})
+        .first().locator('a.blog-card-media').click();
+      const publicPlayer=sponsored.locator('.blog-video-cover [data-configured-player="plyr"]');
+      await publicPlayer.locator('.plyr--ready').waitFor({state:'visible'});
+      await publicPlayer.locator('[data-ad-play]').click();
+      if (!(await publicPlayer.getByText('Browser test sponsor').isVisible()))
+        throw new Error('Public Plyr did not render the configured text pre-roll');
+      await publicPlayer.getByRole('button',{name:'Continue to video'}).click();
+      await sponsored.waitForFunction(() => {
+        const content=document.querySelector('.blog-video-cover video[data-plyr-video]');
+        return content && !content.paused && content.currentTime>0;
+      });
+      await sponsored.close();
+      await typeSelect.selectOption('bambo');
+      await admin.getByRole('button',{name:'Save player settings'}).click();
+      await admin.locator('.player-settings-preview [data-configured-player="bambo"]').waitFor({state:'visible'});
+      checks+=7;
+
       // License Manager: a top-level manual-issuance popup, not an expanded row
       // inside the horizontally scrollable ten-column issued-license table.
       await admin.goto(origin+'/en/dashboard/license-manager',{waitUntil:'networkidle'});

@@ -1,20 +1,22 @@
-@props(['media', 'title'])
+@props(['media', 'title', 'preload' => 'metadata', 'controls'])
 
 {{-- Progressive enhancement: native browser controls stay available until JS
      successfully binds accessible custom controls. Never autoplay on load. --}}
 <div class="blog-premium-player" data-blog-premium-player role="group"
      aria-label="Video player for {{ $title }}" tabindex="0">
   <video class="post-public-video blog-premium-player-video" data-blog-player-video
-         controls playsinline preload="metadata"
+         controls playsinline preload="{{ $preload }}"
          aria-label="{{ $media->alt_text ?: $title }}"
          src="{{ $media->previewUrl() }}"></video>
+
+  {{ $slot }}
 
   <div class="blog-player-top" aria-hidden="true">
     <span class="blog-player-brand"><x-icon name="video" size="16"/> Video</span>
   </div>
 
   {{-- Accessible icon-only exit within the immersive fullscreen surface. --}}
-  <button type="button" class="blog-player-fullscreen-exit" data-blog-player-exit-fullscreen
+  <button type="button" class="blog-player-fullscreen-exit" data-blog-player-exit-fullscreen @if (!in_array('fullscreen', $controls, true)) data-control-disabled @endif
           aria-label="Exit full screen" title="Exit full screen" hidden>
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
          stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -29,7 +31,7 @@
 
   <div class="blog-player-hud" data-blog-player-hud hidden>
     <div class="blog-player-progress">
-      <input type="range" data-blog-player-seek min="0" max="100" step="0.1" value="0"
+      <input type="range" data-blog-player-seek @if (!in_array('progress', $controls, true)) data-control-disabled @endif min="0" max="100" step="0.1" value="0"
              aria-label="Seek video" aria-valuetext="0:00 of 0:00">
     </div>
     <div class="blog-player-controls">
@@ -38,9 +40,9 @@
         <span data-blog-player-play-icon><x-icon name="play" size="20"/></span>
         <span data-blog-player-pause-icon hidden><x-icon name="pause" size="20"/></span>
       </button>
-      <output class="blog-player-time" data-blog-player-time aria-label="Video playback time">0:00 / 0:00</output>
+      <output class="blog-player-time" data-blog-player-time @if (!in_array('time', $controls, true)) data-control-disabled @endif aria-label="Video playback time">0:00 / 0:00</output>
       <span class="blog-player-control-spacer"></span>
-      <div class="blog-player-volume-wrap" data-blog-player-volume-wrap>
+      <div class="blog-player-volume-wrap" data-blog-player-volume-wrap @if (!in_array('volume', $controls, true)) data-control-disabled @endif>
         <button type="button" class="blog-player-icon-btn blog-player-volume-trigger"
                 data-blog-player-volume-trigger aria-label="Adjust volume"
                 aria-expanded="false" aria-controls="blog-volume-{{ $media->getKey() }}"
@@ -59,14 +61,14 @@
           </button>
         </div>
       </div>
-      <button type="button" class="blog-player-rate" data-blog-player-rate
+      <button type="button" class="blog-player-rate" data-blog-player-rate @if (!in_array('speed', $controls, true)) data-control-disabled @endif
               aria-label="Playback speed: 1×" title="Change playback speed">1×</button>
-      <button type="button" class="blog-player-icon-btn blog-player-pip" data-blog-player-pip
+      <button type="button" class="blog-player-icon-btn blog-player-pip" data-blog-player-pip @if (!in_array('pip', $controls, true)) data-control-disabled @endif
               aria-label="Picture in picture" title="Picture in picture" hidden>
         <x-icon name="picture-in-picture" size="20"/>
       </button>
       <button type="button" class="blog-player-icon-btn blog-player-fullscreen-btn"
-              data-blog-player-fullscreen aria-label="Enter full screen"
+              data-blog-player-fullscreen @if (!in_array('fullscreen', $controls, true)) data-control-disabled @endif aria-label="Enter full screen"
               title="Enter full screen" aria-keyshortcuts="F" aria-pressed="false">
         <span data-blog-player-expand-icon>
           <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor"

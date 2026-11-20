@@ -32,6 +32,7 @@ use App\Http\Controllers\ContractMilestoneController;
 use App\Http\Controllers\ContractCommunicationController;
 use App\Http\Controllers\Dashboard\ContractOversightController;
 use App\Http\Controllers\Dashboard\SiteSettingsController;
+use App\Http\Controllers\Dashboard\VideoPlayerSettingsController;
 use App\Http\Controllers\Dashboard\SmtpSettingsController;
 use App\Http\Controllers\Dashboard\SiteBrandingController;
 use App\Http\Controllers\Dashboard\SiteSeoController;
@@ -603,6 +604,9 @@ Route::middleware('auth')->group(function (): void {
                 Route::delete('/cloud-storage', [CloudStorageController::class, 'destroy'])->name('dashboard.cloud-storage.destroy')->middleware('throttle:3,1');
             });
             Route::get('/media-library', [MediaLibraryController::class, 'index'])->name('dashboard.media.index');
+            Route::get('/player-settings', [VideoPlayerSettingsController::class, 'show'])->name('dashboard.player-settings');
+            Route::patch('/player-settings', [VideoPlayerSettingsController::class, 'update'])
+                ->name('dashboard.player-settings.update')->middleware('throttle:20,1');
             Route::post('/media-library', [MediaLibraryController::class, 'store'])->name('dashboard.media.store')->middleware('throttle:10,1');
             Route::patch('/media-library/{asset}', [MediaLibraryController::class, 'update'])->name('dashboard.media.update');
             Route::delete('/media-library/{asset}', [MediaLibraryController::class, 'destroy'])->name('dashboard.media.destroy');

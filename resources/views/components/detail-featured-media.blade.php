@@ -13,9 +13,7 @@
     <img class="premium-showcase-cover premium-detail-media-content" src="{{ $asset->previewUrl() }}"
       alt="{{ $asset->alt_text ?: $item->title }}" decoding="async">
   @elseif($asset && $item->featured_kind === 'video')
-    <video class="premium-showcase-cover studio-showcase-video premium-detail-media-content"
-      src="{{ $asset->previewUrl() }}" controls playsinline preload="metadata"
-      aria-label="{{ $asset->alt_text ?: $item->title }}"></video>
+    <x-configured-video :media="$asset" :title="$item->title" class="premium-detail-media-content"/>
   @elseif($youtubeId)
     <div class="premium-detail-media-content premium-detail-youtube-preview" data-youtube-stage>
       <a class="premium-detail-youtube-play" href="https://www.youtube.com/watch?v={{ $youtubeId }}"

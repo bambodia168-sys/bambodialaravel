@@ -206,14 +206,14 @@ export function initBlogPremiumPlayers() {
             if (key === ' ' || key === 'k') {
                 event.preventDefault();
                 togglePlay();
-            } else if (key === 'arrowright' || key === 'arrowleft') {
+            } else if ((key === 'arrowright' || key === 'arrowleft') && !seek.hasAttribute('data-control-disabled')) {
                 if (!duration()) return;
                 event.preventDefault();
                 video.currentTime = Math.max(0, Math.min(duration(), video.currentTime + (key === 'arrowright' ? 5 : -5)));
-            } else if (key === 'm') {
+            } else if (key === 'm' && !volumeWrap.hasAttribute('data-control-disabled')) {
                 event.preventDefault();
                 video.muted = !video.muted;
-            } else if (key === 'f' && !fullscreen.hidden) {
+            } else if (key === 'f' && !fullscreen.hidden && !fullscreen.hasAttribute('data-control-disabled')) {
                 event.preventDefault();
                 fullscreen.click();
             }
