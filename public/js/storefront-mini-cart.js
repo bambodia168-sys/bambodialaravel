@@ -18,6 +18,21 @@
 
     const itemCount = (count) => `${count} ${count === 1 ? 'item' : 'items'}`;
 
+    function positionFloatingCart() {
+        if (!floatingCart || floatingCart.hidden) return;
+
+        const action = document.querySelector('[data-cart-action]')?.getBoundingClientRect();
+        const float = floatingCart.getBoundingClientRect();
+        const centeredTop = (window.innerHeight - floatingCart.offsetHeight) / 2;
+        const gap = 10;
+        const overlaps = action && float.right > action.left && float.left < action.right
+            && centeredTop < action.bottom + gap
+            && centeredTop + floatingCart.offsetHeight + gap > action.top;
+        const offset = overlaps ? action.top - gap - centeredTop - floatingCart.offsetHeight : 0;
+
+        floatingCart.style.setProperty('--cart-float-offset', `${offset}px`);
+    }
+
     function isInCart(form) {
         const tier = form.elements.namedItem('tier')?.value;
         return Boolean(tier && selections[form.dataset.cartAdd] === tier);
@@ -98,6 +113,8 @@
         }
     });
     window.addEventListener('focus', refresh);
+    window.addEventListener('scroll', positionFloatingCart, { passive: true });
+    window.addEventListener('resize', positionFloatingCart);
     window.addEventListener('storage', (event) => {
         if (event.key === syncKey) refresh();
     });
@@ -117,7 +134,10 @@
             syncListingAction(event.target.form);
         }
     });
-    document.addEventListener('bambodia:detail-tab-changed', () => syncListingAction());
+    document.addEventListener('bambodia:detail-tab-changed', () => {
+        syncListingAction();
+        positionFloatingCart();
+    });
 
     document.addEventListener('submit', async (event) => {
         const form = event.target;
@@ -159,6 +179,7 @@
             if (typeof cart.added !== 'string') throw new Error('Cart add not confirmed');
             render(cart);
             floatingCart.hidden = false;
+            positionFloatingCart();
             announcement.textContent = `${cart.added} added to cart. ${itemCount(cart.count)}.`;
             try {
                 localStorage.setItem(syncKey, String(Date.now()));

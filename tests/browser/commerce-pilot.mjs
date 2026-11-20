@@ -60,10 +60,18 @@ async function order(page, listing, {guest = false} = {}) {
   const floatsAtMiddleRight = await floating.evaluate(async float => {
     await Promise.allSettled(float.getAnimations().map(animation => animation.finished));
     const bounds = float.getBoundingClientRect();
-    return Math.abs(bounds.top + bounds.height / 2 - innerHeight / 2) < 2
-      && innerWidth - bounds.right >= 8 && innerWidth - bounds.right <= 50;
+    const button = document.querySelector('[data-cart-action]').getBoundingClientRect();
+    const centered = Math.abs(bounds.top + bounds.height / 2 - innerHeight / 2) < 2;
+    const aboveButton = Math.abs(button.top - bounds.bottom - 10) < 2;
+    return (centered || aboveButton) && innerWidth - bounds.right >= 8 && innerWidth - bounds.right <= 50;
   });
   assert.equal(floatsAtMiddleRight, true);
+  await added.evaluate(button => button.scrollIntoView({block: 'center', behavior: 'instant'}));
+  await page.waitForFunction(() => {
+    const button = document.querySelector('[data-cart-action]').getBoundingClientRect();
+    const float = document.querySelector('[data-cart-float]').getBoundingClientRect();
+    return Math.abs(button.top + button.height / 2 - innerHeight / 2) < 2 && button.top - float.bottom >= 9;
+  });
   await cartButton.waitFor();
   assert.equal(await badge.textContent(), '1');
 

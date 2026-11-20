@@ -108,7 +108,7 @@
     z-index: 65;
     inset-block-start: 50%;
     inset-inline-end: clamp(1rem, 3vw, 3rem);
-    translate: 0 -50%;
+    translate: 0 calc(-50% + var(--cart-float-offset, 0px));
     display: flex;
     align-items: center;
     gap: .15rem;
