@@ -46,14 +46,28 @@ async function order(page, listing, {guest = false} = {}) {
   const cartButton = page.getByLabel('Cart, 1 item', {exact: true});
   const floating = page.locator('[data-cart-float]');
   const add = page.getByRole('button', {name: 'Add to cart', exact: true});
+  const defaultColor = await add.evaluate(button => getComputedStyle(button).backgroundColor);
   await add.click();
   await floating.getByRole('link', {name: /Added to cart.*1 item.*View cart/}).waitFor();
   assert.equal(page.url(), listingUrl);
+  const added = page.getByRole('button', {name: 'In cart · View cart', exact: true});
+  await added.waitFor();
+  const addedColor = await added.evaluate(async button => {
+    await Promise.allSettled(button.getAnimations().map(animation => animation.finished));
+    return getComputedStyle(button).backgroundColor;
+  });
+  assert.notEqual(addedColor, defaultColor);
+  const floatsAtMiddleRight = await floating.evaluate(async float => {
+    await Promise.allSettled(float.getAnimations().map(animation => animation.finished));
+    const bounds = float.getBoundingClientRect();
+    return Math.abs(bounds.top + bounds.height / 2 - innerHeight / 2) < 2
+      && innerWidth - bounds.right >= 8 && innerWidth - bounds.right <= 50;
+  });
+  assert.equal(floatsAtMiddleRight, true);
   await cartButton.waitFor();
   assert.equal(await badge.textContent(), '1');
 
   if (guest) {
-    await page.reload({waitUntil: 'domcontentloaded'});
     await cartButton.click();
     await cart.getByRole('heading', {name: 'Your cart', exact: true}).waitFor();
     await cart.getByText('River Market Restaurant Website Template', {exact: true}).waitFor();
@@ -64,13 +78,18 @@ async function order(page, listing, {guest = false} = {}) {
     assert.equal(visible, true);
     await cartButton.press('Escape');
     assert.equal(await cart.getAttribute('open'), null);
-    await add.click();
-    await floating.getByRole('link', {name: /1 item/}).waitFor();
-    assert.equal(await badge.textContent(), '1');
   }
 
   await floating.getByRole('link', {name: /View cart/}).click();
   await currentCheckoutStep(page, 'cart');
+  if (guest) {
+    await visit(page, listing);
+    await page.reload({waitUntil: 'domcontentloaded'});
+    await added.click();
+    await currentCheckoutStep(page, 'cart');
+    await cartButton.waitFor();
+    assert.equal(await badge.textContent(), '1');
+  }
   await page.getByRole('link', {name: 'Review checkout', exact: true}).click();
   await currentCheckoutStep(page, 'checkout');
   if (guest) {
@@ -219,7 +238,7 @@ try {
   record('Stripe live credentials can be saved while Sandbox remains active');
 
   const productOrder = await order(buyer, fixture.product_url, {guest: true});
-  record('Guest cart stays on the listing, survives reload, opens the mobile dropdown and clears on checkout');
+  record('Floating cart opens at middle-right on mobile and the saved listing button survives reload and opens the cart');
   record('Checkout retries return the same product order');
   await uploadReceipt(buyer, 'PILOT-PRODUCT-REJECT');
   assert.equal(await buyer.getByRole('link', {name: 'Download product'}).count(), 0);

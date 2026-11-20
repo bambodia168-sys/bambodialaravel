@@ -51,20 +51,21 @@ class StorefrontCheckoutTest extends TestCase
         $cartUrl = route('cart');
         $addUrl = route('cart.add', $offer->public_id);
 
-        $this->getJson($cartUrl)->assertOk()->assertExactJson(['count' => 0, 'items' => [], 'added' => null]);
+        $this->getJson($cartUrl)->assertOk()->assertExactJson(['count' => 0, 'items' => [], 'selections' => [], 'added' => null]);
         $this->postJson($addUrl, ['tier' => 'extended'])->assertUnprocessable();
 
+        $selection = [(string) $offer->public_id => 'standard'];
         for ($attempt = 0; $attempt < 2; $attempt++) {
             $this->postJson($addUrl, ['tier' => 'standard'])->assertOk()
-                ->assertExactJson(['count' => 1, 'items' => [$offer->title], 'added' => $offer->title]);
+                ->assertExactJson(['count' => 1, 'items' => [$offer->title], 'selections' => $selection, 'added' => $offer->title]);
         }
         $response = $this->getJson($cartUrl)->assertOk()
-            ->assertExactJson(['count' => 1, 'items' => [$offer->title], 'added' => null]);
+            ->assertExactJson(['count' => 1, 'items' => [$offer->title], 'selections' => $selection, 'added' => null]);
         $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
         $this->assertContains('Accept', $response->headers->all('Vary'));
 
         $this->delete(route('cart.remove', $offer->public_id))->assertRedirect($cartUrl);
-        $this->getJson($cartUrl)->assertOk()->assertJsonPath('count', 0);
+        $this->getJson($cartUrl)->assertOk()->assertJsonPath('count', 0)->assertJsonPath('selections', []);
 
         $this->actingAs($this->user('customer'))->postJson($addUrl, ['tier' => 'standard'])->assertOk()
             ->assertJsonPath('count', 1);

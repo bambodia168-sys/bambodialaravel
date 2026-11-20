@@ -92,6 +92,7 @@ class CommerceCartController extends Controller
         $response = response()->json([
             'count' => count($items),
             'items' => array_values(array_map(fn (array $item) => $item['title'], $items)),
+            'selections' => (object) array_map(fn (array $item) => $item['tier'], $items),
             'added' => $added,
         ], headers: ['Cache-Control' => 'private, no-store']);
         $response->setVary('Accept', false);
