@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
+use App\Models\CreatorBadge;
 use App\Models\CreatorProfile;
 use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
@@ -43,10 +44,16 @@ class CreatorProfileController extends Controller
                                 ->orWhere('biography','like','%'.$search.'%');
                         }));
             }))
-            ->with('creatorProfile:user_id,headline,biography,is_public', 'userProfile:user_id,avatar_path')
+            ->with([
+                'creatorProfile:user_id,headline,is_public',
+                'userProfile:user_id,avatar_path,public_location',
+                'publicExpertise' => fn ($skills) => $skills->select('id', 'user_id', 'label')->limit(3),
+            ])
             ->withCount(['publishedListings as public_listings_count'])
             ->orderBy('name')->orderBy('id')->paginate(10)->withQueryString();
-        return view('creators.index',compact('creators','search'));
+        $badgeCatalog=CreatorBadge::query()->where('enabled', true)->orderBy('sort_order')->get();
+
+        return view('creators.index',compact('creators','search','badgeCatalog'));
     }
 
     public function show(Request $request,string $creator): View

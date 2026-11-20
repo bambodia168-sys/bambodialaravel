@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContentEntry;
+use App\Models\CreatorBadge;
 use App\Models\FeatureFlag;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
@@ -19,6 +20,7 @@ class HomeController extends Controller
         $searchEnabled=FeatureFlag::isEnabled('marketplace_search');
         $recentListings=collect();
         $freelancers=collect();
+        $badgeCatalog=collect();
         $listingTotals=collect();
         $savedIds=[];
 
@@ -52,11 +54,19 @@ class HomeController extends Controller
             $freelancers=User::query()
                 ->select(['id','public_id','name','email','role','created_at'])
                 ->discoverableCreator()
-                ->with(['creatorProfile:user_id,headline,is_public', 'userProfile:user_id,avatar_path'])
+                ->with([
+                    'creatorProfile:user_id,headline,is_public',
+                    'userProfile:user_id,avatar_path,public_location',
+                    'publicExpertise' => fn ($skills) => $skills->select('id', 'user_id', 'label')->limit(3),
+                ])
                 ->withCount(['publishedListings as public_listings_count'])
                 ->orderByDesc('public_listings_count')
                 ->orderByDesc('id')
                 ->paginate(10, pageName: 'freelancers_page')->withQueryString()->fragment('bambodia-freelancers');
+
+            if ($freelancers->isNotEmpty()) {
+                $badgeCatalog=CreatorBadge::query()->where('enabled', true)->orderBy('sort_order')->get();
+            }
 
             if($request->user()){
                 $savedIds=SavedListing::query()->where('user_id',$request->user()->id)
@@ -82,7 +92,7 @@ class HomeController extends Controller
             : [];
 
         return view('home',compact(
-            'searchEnabled','recentListings','freelancers','listingTotals','savedIds','recentJobs','savedJobIds','recentPosts'
+            'searchEnabled','recentListings','freelancers','badgeCatalog','listingTotals','savedIds','recentJobs','savedJobIds','recentPosts'
         ));
     }
 }

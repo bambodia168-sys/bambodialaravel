@@ -1,5 +1,8 @@
 @extends('layouts.main')
 @section('title','Home')
+@push('page-styles')
+  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=1">
+@endpush
 @section('content')
 <div class="marketplace-hero-scene">
 <section class="hero container marketplace-home-hero">
@@ -86,22 +89,9 @@
     <a class="btn subtle" href="{{ route('creators.index') }}">Browse creator profiles</a>
   </div>
   @if($freelancers->isNotEmpty())
-    <div class="marketplace-freelancer-grid" aria-label="Public freelancer profiles">
+    <div class="public-creator-grid" aria-label="Public freelancer profiles">
       @foreach($freelancers as $freelancer)
-        <article class="marketplace-freelancer-card">
-          <div class="marketplace-freelancer-card-heading">
-            <a class="marketplace-freelancer-avatar" href="{{ route('creators.show',$freelancer->public_id) }}" aria-label="View {{ $freelancer->name }} creator profile">
-              <x-profile-avatar :user="$freelancer" public lazy size="44" :alt="$freelancer->name.' profile photo'"/>
-            </a>
-          </div>
-          <h3><a href="{{ route('creators.show',$freelancer->public_id) }}">{{ $freelancer->name }}</a></h3>
-          @if($freelancer->creatorProfile?->is_public && filled($freelancer->creatorProfile->headline))
-            <p class="marketplace-freelancer-headline">{{ $freelancer->creatorProfile->headline }}</p>
-          @endif
-          <div class="marketplace-freelancer-card-footer">
-            <span><x-icon name="briefcase" size="15"/> {{ number_format($freelancer->public_listings_count) }} approved {{ \Illuminate\Support\Str::plural('listing',$freelancer->public_listings_count) }}</span>
-          </div>
-        </article>
+        <x-public-creator-card :creator="$freelancer" :badges="\App\Support\CreatorBadgeAwards::earned($freelancer, $badgeCatalog)"/>
       @endforeach
     </div>
   @else
