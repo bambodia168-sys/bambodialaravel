@@ -8,6 +8,7 @@
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
   @include('layouts.partials.site-typography')
+  <link rel="stylesheet" href="{{ asset('css/marketplace-pricing.css') }}?v=1">
   <link rel="stylesheet" href="{{ asset('css/save-star.css') }}?v=1">
   @if(config('commerce.enabled'))
     <link rel="stylesheet" href="{{ asset('css/commerce-storefront.css') }}?v=1">
