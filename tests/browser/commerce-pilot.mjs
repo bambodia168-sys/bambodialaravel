@@ -60,12 +60,26 @@ async function order(page, listing, {guest = false} = {}) {
     await page.waitForURL(url => url.pathname === '/checkout' && url.search === '');
     record('Guest cart survives checkout sign-in and registration shows both policy links');
   }
+  const method = page.getByRole('radio', {name: 'Bank Transfer', exact: true});
+  const normalBorder = await method.evaluate(radio => getComputedStyle(radio.closest('label')).borderColor);
+  await method.check();
+  const selected = await method.evaluate(radio => {
+    const row = radio.closest('label');
+    const icon = row.querySelector('svg');
+    return {border: getComputedStyle(row).borderColor, iconWidth: icon.getBoundingClientRect().width};
+  });
+  assert.ok(selected.iconWidth >= 28);
+  assert.notEqual(selected.border, normalBorder);
   const submit = page.getByRole('button', {name: 'Continue to payment', exact: true});
   const payload = await submit.evaluate(button => ({
     action: button.form.action, form: Object.fromEntries(new FormData(button.form)),
   }));
+  assert.equal(payload.form.payment_method, await method.getAttribute('value'));
   await submit.click();
   await page.waitForURL(/\/account\/orders\/[a-f0-9-]{36}$/);
+  const preferred = page.locator('.order-payment-option--selected');
+  await preferred.getByText('Selected', {exact: true}).waitFor();
+  assert.equal(await preferred.locator('details').getAttribute('open'), '');
   const orderPath = new URL(page.url()).pathname;
   const repeated = await page.request.post(payload.action, {form: payload.form, maxRedirects: 0});
   assert.equal(repeated.status(), 302);
@@ -73,7 +87,8 @@ async function order(page, listing, {guest = false} = {}) {
   return orderPath;
 }
 async function uploadReceipt(page, ref) {
-  await page.getByText('Bank Transfer transfer', {exact: true}).click();
+  const transfer = page.getByText('Bank Transfer transfer', {exact: true});
+  if (!(await transfer.evaluate(label => label.closest('details').open))) await transfer.click();
   await page.getByLabel('Transfer reference').fill(ref);
   await page.getByLabel('Payment receipt').setInputFiles({name: 'pilot-receipt.png', mimeType: 'image/png', buffer: receipt});
   await page.getByRole('button', {name: 'Submit receipt', exact: true}).click();

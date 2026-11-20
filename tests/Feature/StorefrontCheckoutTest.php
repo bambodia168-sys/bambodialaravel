@@ -145,27 +145,57 @@ class StorefrontCheckoutTest extends TestCase
         $this->assertDatabaseCount('marketplace_orders', 0);
     }
 
-    public function test_checking_out_one_item_opens_existing_payment_selection_idempotently(): void
+    public function test_checkout_carries_the_payment_choice_to_an_unpaid_order_idempotently(): void
     {
         config(['commerce.enabled' => true, 'commerce.payments_enabled' => true]);
         $buyer = $this->user('customer');
         $offer = $this->listing('Payment choice fixture', '15.00');
-        CommercePaymentMethod::query()->create([
+        $method = CommercePaymentMethod::query()->create([
             'name' => 'Local transfer', 'provider' => 'bank_transfer', 'available' => true,
             'instructions' => 'Follow the verified transfer instructions.',
         ]);
         $this->actingAs($buyer)->post(route('cart.add', $offer->public_id), ['tier' => 'standard'])->assertRedirect(route('cart'));
-        $this->get(route('checkout'))->assertOk()->assertSee('Local transfer')->assertSee('Continue to payment');
+        $this->get(route('checkout'))->assertOk()
+            ->assertSee('data-payment-icon="bank_transfer"', false)
+            ->assertSee('type="radio" name="payment_method"', false)
+            ->assertSee('Local transfer')->assertSee('Continue to payment');
 
-        $form = $this->orderForm($buyer, $offer);
+        $form = $this->orderForm($buyer, $offer) + ['payment_method' => $method->id];
         $this->post(route('checkout.place', $offer->public_id), $form)->assertRedirect();
         $order = MarketplaceOrder::query()->sole();
         $this->assertSame('awaiting_payment', $order->status);
+        $this->assertSame($method->name, $order->payment_method);
         $this->assertSame([], CommerceCart::query()->findOrFail($buyer->id)->items);
         $this->post(route('checkout.place', $offer->public_id), $form)
             ->assertRedirect(route('account.orders.show', $order->number));
-        $this->get(route('account.orders.show', $order->number))->assertOk()->assertSee('Pay for this order')->assertSee('Local transfer');
+        $this->get(route('account.orders.show', $order->number))->assertOk()
+            ->assertSee('Pay for this order')
+            ->assertSee('order-payment-option--selected')
+            ->assertSee('Local transfer');
         $this->assertDatabaseCount('marketplace_orders', 1);
+        $this->assertDatabaseCount('commerce_payments', 0);
+    }
+
+    public function test_changed_payment_availability_keeps_the_item_in_the_cart(): void
+    {
+        config(['commerce.enabled' => true, 'commerce.payments_enabled' => true]);
+        $buyer = $this->user();
+        $offer = $this->listing('Payment availability fixture', '15.00');
+        $disabled = CommercePaymentMethod::query()->create([
+            'name' => 'Disabled transfer', 'provider' => 'bank_transfer', 'available' => false,
+            'instructions' => 'Payment details.',
+        ]);
+        CommercePaymentMethod::query()->create([
+            'name' => 'Available transfer', 'provider' => 'bank_transfer', 'available' => true,
+            'instructions' => 'Payment details.',
+        ]);
+        $this->actingAs($buyer)->post(route('cart.add', $offer->public_id), ['tier' => 'standard'])->assertRedirect();
+        $this->get(route('checkout'))->assertOk()->assertDontSee('Disabled transfer');
+        $this->from(route('checkout'))->post(route('checkout.place', $offer->public_id),
+            $this->orderForm($buyer, $offer) + ['payment_method' => $disabled->id])
+            ->assertRedirect(route('checkout'))->assertSessionHasErrors('payment_method');
+        $this->assertArrayHasKey($offer->public_id, CommerceCart::query()->findOrFail($buyer->id)->items);
+        $this->assertDatabaseCount('marketplace_orders', 0);
     }
 
     private function user(string $role = 'customer', string $password = 'CheckoutFixturePassword123!'): User

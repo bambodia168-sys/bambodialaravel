@@ -12,17 +12,30 @@
     @if($rejectedReceipt)
       <div class="panel-head"><p>Your payment receipt was rejected. Check your transfer details and submit a corrected receipt.</p></div>
     @endif
+    @push('head')
+      <link rel="stylesheet" href="{{ asset('css/checkout-payment-methods.css') }}?v=1">
+    @endpush
     @forelse($methods->filter(fn ($method) => $method->availableForCheckout()) as $method)
-      <div class="panel-head">
+      @php($selected = old('method') !== null ? (string) old('method') === (string) $method->id : $method->name === $order->payment_method)
+      <div @class(['panel-head', 'order-payment-option', 'order-payment-option--selected' => $selected])>
         @if($method->usesGateway())
           <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}">
             @csrf
             <input type="hidden" name="method" value="{{ $method->id }}">
-            <button class="btn primary">{{ $method->dynamicQr() ? 'Generate QR for' : 'Pay with' }} {{ $method->name }}</button>
+            <button class="btn primary order-payment-label">
+              <x-payment-method-icon :provider="$method->provider"/>
+              <span>{{ $method->dynamicQr() ? 'Generate QR for' : 'Pay with' }} {{ $method->name }}</span>
+            </button>
+            @if($selected)<span class="order-payment-selection"><x-icon name="check" size="16"/> Selected</span>@endif
           </form>
         @else
-          <details @if((string) old('method') === (string) $method->id) open @endif>
-            <summary>{{ $method->name }} transfer</summary>
+          <details @if($selected) open @endif>
+            <summary class="order-payment-label">
+              <x-payment-method-icon :provider="$method->provider"/>
+              <span>{{ $method->name }} transfer</span>
+              @if($selected)<span class="order-payment-selection"><x-icon name="check" size="16"/> Selected</span>@endif
+              <x-icon name="chevron-down" size="16" class="order-payment-chevron"/>
+            </summary>
             <p>{!! nl2br(e($method->instructions)) !!}</p>
             <p>Transfer exactly {{ $order->currency }} {{ $order->total }}. Then upload your receipt and enter the transfer reference for review.</p>
             @if($method->qr_path)
