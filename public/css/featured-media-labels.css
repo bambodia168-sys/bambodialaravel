@@ -1,0 +1,20 @@
+/* Keep type names legible over both light and dark featured media. */
+.marketplace-card-media .marketplace-card-type,
+.listing-detail.premium-detail .premium-detail-floating-type {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #fff;
+  font-weight: 750;
+  line-height: 1.35;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-shadow: 0 0 2px #000, 0 1px 3px #000, 0 1px 6px #000;
+}
+
+.listing-detail.premium-detail .premium-detail-floating-type svg {
+  display: none;
+}
