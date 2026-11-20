@@ -72,7 +72,7 @@ class CreatorBadgePublicDisplayTest extends TestCase
             'headline' => 'WordPress developer',
             'biography' => 'WordPress design and Laravel development.',
         ]);
-        $owner->userProfile()->create(['public_location' => 'Private street, Battambang, Cambodia']);
+        $owner->userProfile()->create(['public_location' => 'Sangkat Svay Por, Battambang, Cambodia']);
         CreatorProfileItem::query()->create([
             'user_id' => $owner->id,
             'kind' => 'expertise',
@@ -96,12 +96,14 @@ class CreatorBadgePublicDisplayTest extends TestCase
                 'listing-publisher-skills',
                 'WordPress & Laravel',
                 'listing-publisher-badges',
-                'Approved listings',
+                'listing-publisher-listings',
                 '1 approved listing',
-                'Location',
+                'listing-publisher-location',
                 'Battambang, Cambodia',
+                'Sangkat Svay Por, Battambang, Cambodia',
             ])
-            ->assertDontSee('Private street')
+            ->assertDontSee('<dt>Approved listings</dt>', false)
+            ->assertDontSee('<dt>Location</dt>', false)
             ->assertDontSee('Hidden expertise')
             ->assertSee('View creator profile')
             ->assertSee('images/badges/top-rated.svg')
@@ -127,6 +129,7 @@ class CreatorBadgePublicDisplayTest extends TestCase
             'website_url'=>'https://private.example.test',
             'is_public'=>false,
         ]);
+        $creator->userProfile()->create(['public_location' => 'Private location, Cambodia']);
         $badge=CreatorBadge::query()->where('slug','skill-certified')->firstOrFail();
         CreatorBadgeGrant::query()->create([
             'user_id'=>$creator->id,
@@ -139,6 +142,8 @@ class CreatorBadgePublicDisplayTest extends TestCase
         $this->get($listing->publicUrl())
             ->assertOk()
             ->assertSee('Skill Certified')
+            ->assertDontSee('Private location, Cambodia')
+            ->assertDontSee('publisher-location-detail')
             ->assertDontSee('About the creator')
             ->assertSee(route('creators.show',$creator->public_id))
             ->assertSee('View creator profile');

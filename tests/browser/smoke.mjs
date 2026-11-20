@@ -1131,13 +1131,43 @@ try {
           const identity=bounds('.listing-publisher-identity');
           const details=bounds('.listing-publisher-details');
           const meta=bounds('.listing-publisher-meta');
-          return avatar.width>0 && Math.abs(avatar.width-avatar.height)<1 &&
+          return avatar.width>=56 && Math.abs(avatar.width-avatar.height)<1 &&
             avatar.right<=details.left && identity.bottom<=meta.top &&
             Math.abs(meta.width-identity.width)<1 &&
             !panel.querySelector('.freelancer-showcase-card');
         });
         if(!publisherLayout)
           throw new Error(device.name+' listing publisher sidebar layout is incorrect');
+        const location=publisher.locator('.listing-publisher-location');
+        const locationTrigger=location.getByRole('button');
+        const locationDetail=location.getByRole('tooltip',{includeHidden:true});
+        const skills=publisher.locator('.listing-publisher-skills');
+        await skills.scrollIntoViewIfNeeded();
+        await publisher.locator('.listing-publisher-skills[data-scrolling]').waitFor();
+        const marquee=await skills.evaluate(line=>({
+          distance:parseFloat(line.style.getPropertyValue('--publisher-overflow')),
+          animation:getComputedStyle(line.firstElementChild).animationName,
+        }));
+        if(marquee.distance<=0 || marquee.animation!=='listing-publisher-scroll')
+          throw new Error(device.name+' long publisher skill text did not scroll');
+        await page.emulateMedia({reducedMotion:'reduce'});
+        await publisher.locator('.listing-publisher-skills:not([data-scrolling])').waitFor();
+        if(await skills.locator('span').evaluate(text=>getComputedStyle(text).animationName)!=='none')
+          throw new Error(device.name+' publisher scroll ignored reduced motion');
+        await page.emulateMedia({reducedMotion:'no-preference'});
+        await location.locator('[data-publisher-country]').waitFor();
+        if(await location.locator('[data-publisher-province-country]').isVisible() ||
+           await location.locator('[data-publisher-country]').textContent()!=='Cambodia')
+          throw new Error(device.name+' publisher location did not fall back to the country');
+        if(device.mobile) await locationTrigger.tap();
+        else await locationTrigger.hover();
+        await locationDetail.waitFor();
+        if(!(await locationDetail.textContent()).includes('Sangkat Svay Por, A Test Province'))
+          throw new Error(device.name+' publisher location popup omitted the author’s public location');
+        if(device.mobile) await locationTrigger.tap();
+        else await page.keyboard.press('Escape');
+        await locationDetail.waitFor({state:'hidden'});
+        checks+=5;
         const profileHref=await profileLink.getAttribute('href');
         if(!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(profileHref??''))
           throw new Error(device.name+' invalid public creator profile URL: '+profileHref);

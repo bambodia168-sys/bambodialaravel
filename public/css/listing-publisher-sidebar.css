@@ -4,19 +4,20 @@
 }
 
 #publisher.premium-side-creator .listing-publisher-identity {
+  --publisher-avatar-size: clamp(3.625rem, 5vw, 4rem);
   display: grid;
-  grid-template-columns: 3.25rem minmax(0, 1fr);
+  grid-template-columns: var(--publisher-avatar-size) minmax(0, 1fr);
   align-items: center;
   gap: .75rem;
 }
 
 #publisher.premium-side-creator .listing-publisher-avatar {
   display: block;
-  width: 3.25rem;
-  height: 3.25rem;
+  width: var(--publisher-avatar-size);
+  height: var(--publisher-avatar-size);
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: .75rem;
+  border-radius: .85rem;
   background: var(--surface-2);
   color: var(--text);
 }
@@ -33,7 +34,38 @@
   margin: .2rem 0 0;
   color: var(--muted);
   font-size: .875rem;
-  overflow-wrap: anywhere;
+}
+
+#publisher.premium-side-creator .listing-publisher-line {
+  display: block;
+  overflow: hidden;
+}
+
+#publisher.premium-side-creator .listing-publisher-line > span,
+#publisher.premium-side-creator .listing-publisher-location-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#publisher.premium-side-creator .listing-publisher-line[data-scrolling] > span {
+  width: max-content;
+  animation: listing-publisher-scroll 4.8s ease-in-out both;
+}
+
+@keyframes listing-publisher-scroll {
+  0%, 12% { transform: translateX(0); }
+  85%, 100% { transform: translateX(calc(-1 * var(--publisher-overflow))); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #publisher.premium-side-creator .listing-publisher-line > span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    animation: none;
+  }
 }
 
 #publisher.premium-side-creator .listing-publisher-badges .creator-badge-row {
@@ -42,36 +74,73 @@
 
 #publisher.premium-side-creator .listing-publisher-meta {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: start;
-  gap: .5rem;
-  margin: 0;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: .75rem;
   padding-top: .75rem;
   border-top: 1px solid var(--line);
 }
 
-#publisher.premium-side-creator .listing-publisher-meta dt {
-  margin-bottom: .25rem;
-  color: var(--muted);
-  font-size: .75rem;
-  font-weight: 700;
-  overflow-wrap: anywhere;
+#publisher.premium-side-creator .listing-publisher-location {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
 }
 
-#publisher.premium-side-creator .listing-publisher-meta dd,
-#publisher.premium-side-creator .listing-publisher-meta dd a {
+#publisher.premium-side-creator .listing-publisher-listings,
+#publisher.premium-side-creator .listing-publisher-location-trigger {
   display: inline-flex;
   align-items: center;
-  gap: .3rem;
-  margin: 0;
+  gap: .375rem;
+  min-height: 1.75rem;
+  max-width: 100%;
+  color: var(--text);
+  font: inherit;
   font-size: .875rem;
-  overflow-wrap: anywhere;
+  text-align: start;
+  text-decoration: none;
+}
+
+#publisher.premium-side-creator .listing-publisher-location-trigger {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+#publisher.premium-side-creator .listing-publisher-listings:hover,
+#publisher.premium-side-creator .listing-publisher-location-trigger:hover {
+  color: var(--accent);
 }
 
 #publisher.premium-side-creator .listing-publisher-meta svg {
   flex: 0 0 auto;
+  color: var(--muted);
 }
 
-#publisher.premium-side-creator .listing-publisher-location {
-  text-align: end;
+#publisher.premium-side-creator .listing-publisher-location [data-publisher-country],
+#publisher.premium-side-creator .listing-publisher-location[data-country-only] [data-publisher-province-country] {
+  display: none;
+}
+
+#publisher.premium-side-creator .listing-publisher-location[data-country-only] [data-publisher-country] {
+  display: block;
+}
+
+#publisher.premium-side-creator .listing-publisher-location-detail {
+  position: absolute;
+  z-index: 5;
+  inset-block-start: 100%;
+  inset-inline-end: 0;
+  width: max-content;
+  max-width: min(17rem, calc(100vw - 4rem));
+  padding: .625rem .75rem;
+  border: 1px solid var(--line);
+  border-radius: .625rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: .875rem;
+  overflow-wrap: anywhere;
 }
