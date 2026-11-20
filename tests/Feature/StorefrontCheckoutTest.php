@@ -31,10 +31,13 @@ class StorefrontCheckoutTest extends TestCase
 
         $this->get($first->publicUrl())->assertOk()->assertSee('Add to cart');
         $this->post(route('cart.add', $first->public_id), ['tier' => 'standard'])->assertRedirect(route('cart'));
-        $this->get(route('cart'))->assertOk()->assertSee('Added to cart')->assertSee('USD 30.25');
+        $this->get(route('cart'))->assertOk()->assertSee('Added to cart')->assertSee('USD 30.25')
+            ->assertSee('data-step="cart" data-state="current"', false)
+            ->assertSee('data-step="review" data-state="upcoming"', false);
         $this->post(route('cart.add', $second->public_id), ['tier' => 'standard'])->assertRedirect(route('cart'));
         $this->get(route('checkout', ['account' => 'login']))->assertOk()
-            ->assertSee('Sign in to checkout')->assertSee('USD 45.30')->assertDontSee('Continue to payment');
+            ->assertSee('Sign in to checkout')->assertSee('USD 45.30')->assertDontSee('Continue to payment')
+            ->assertSee('data-step="checkout" data-state="current"', false);
         $this->delete(route('cart.remove', $first->public_id))->assertRedirect(route('cart'));
         $this->get(route('cart'))->assertOk()->assertSee('USD 15.05')->assertDontSee('Logo setup');
         $this->assertGuest();
@@ -170,6 +173,8 @@ class StorefrontCheckoutTest extends TestCase
             ->assertRedirect(route('account.orders.show', $order->number));
         $this->get(route('account.orders.show', $order->number))->assertOk()
             ->assertSee('Pay for this order')
+            ->assertSee('data-step="payment" data-state="current"', false)
+            ->assertDontSee('Payment pending')
             ->assertSee('order-payment-option--selected')
             ->assertSee('Local transfer');
         $this->assertDatabaseCount('marketplace_orders', 1);
@@ -196,6 +201,21 @@ class StorefrontCheckoutTest extends TestCase
             ->assertRedirect(route('checkout'))->assertSessionHasErrors('payment_method');
         $this->assertArrayHasKey($offer->public_id, CommerceCart::query()->findOrFail($buyer->id)->items);
         $this->assertDatabaseCount('marketplace_orders', 0);
+    }
+
+    public function test_review_marks_payment_not_required_for_a_free_order(): void
+    {
+        config(['commerce.enabled' => true]);
+        $buyer = $this->user();
+        $offer = $this->listing('Free order progress fixture', '0.00');
+        $this->actingAs($buyer)->post(route('cart.add', $offer->public_id), ['tier' => 'standard'])->assertRedirect();
+        $this->post(route('checkout.place', $offer->public_id), $this->orderForm($buyer, $offer))->assertRedirect();
+        $order = MarketplaceOrder::query()->sole();
+        foreach (['account.orders.show', 'account.orders.receipt'] as $route) {
+            $this->get(route($route, $order->number))->assertOk()
+                ->assertSee('data-step="payment" data-state="skipped"', false)
+                ->assertSee('data-step="review" data-state="current"', false);
+        }
     }
 
     private function user(string $role = 'customer', string $password = 'CheckoutFixturePassword123!'): User

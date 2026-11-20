@@ -3,6 +3,9 @@
 @section('title', 'Order Receipt')
 @section('content')
 <article class="container inner-page commerce-receipt">
+  @if($section === 'account.orders')
+    <x-checkout-progress :order="$order"/>
+  @endif
   <div class="page-intro">
     <h1>Order receipt</h1>
     <p class="mono">{{ $order->receipt_number }}</p>

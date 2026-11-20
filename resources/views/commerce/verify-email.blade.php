@@ -2,6 +2,7 @@
 @section('title', 'Verify your email')
 @section('content')
 <div class="container inner-page storefront">
+  <x-checkout-progress step="checkout"/>
   <section class="storefront-panel storefront-verification" aria-labelledby="verification-title">
     <span class="storefront-icon"><x-icon name="mail" size="24"/></span>
     <h1 id="verification-title">Verify your email</h1>
