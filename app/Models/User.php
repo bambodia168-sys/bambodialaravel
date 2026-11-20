@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -77,6 +78,17 @@ class User extends Authenticatable implements HasPasskeys
     public function publishedListings(): HasMany
     {
         return $this->hasMany(MarketplaceListing::class,'user_id')->publiclyAvailable();
+    }
+
+    public function scopeDiscoverableCreator(Builder $query, bool $includeAdministratorProfiles = false): Builder
+    {
+        $portfolioRoles = $includeAdministratorProfiles ? ['freelancer', 'super_admin'] : ['freelancer'];
+
+        return $query->where(function (Builder $creators) use ($portfolioRoles): void {
+            $creators->where(fn (Builder $portfolios) => $portfolios->whereIn('role', $portfolioRoles)
+                ->whereHas('creatorProfile', fn (Builder $profile) => $profile->where('is_public', true)))
+                ->orWhereHas('publishedListings');
+        });
     }
 
     public function savedJobs(): HasMany

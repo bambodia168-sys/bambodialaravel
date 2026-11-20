@@ -48,17 +48,15 @@ class HomeController extends Controller
             $listingTotals=MarketplaceListing::query()->publiclyAvailable()
                 ->selectRaw('type, COUNT(*) as total')->groupBy('type')->pluck('total','type');
 
-            // Ratings are not stored yet; do not invent a top-rated ranking.
-            // Prioritize approved work and still show new opted-in freelancers.
+            // Give published work priority while keeping new public portfolios discoverable.
             $freelancers=User::query()
-                ->select(['id','public_id','name'])
-                ->where('role','freelancer')
-                ->whereHas('creatorProfile',fn($query)=>$query->where('is_public',true))
+                ->select(['id','public_id','name','email','role','created_at'])
+                ->discoverableCreator()
                 ->with(['creatorProfile:user_id,headline,is_public', 'userProfile:user_id,avatar_path'])
                 ->withCount(['publishedListings as public_listings_count'])
                 ->orderByDesc('public_listings_count')
                 ->orderByDesc('id')
-                ->limit(8)->get();
+                ->paginate(10, pageName: 'freelancers_page')->withQueryString()->fragment('bambodia-freelancers');
 
             if($request->user()){
                 $savedIds=SavedListing::query()->where('user_id',$request->user()->id)
