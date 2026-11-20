@@ -50,8 +50,8 @@ class SavedJobDiscoveryTest extends TestCase
         $this->assertDatabaseCount('saved_jobs',1);
 
         $this->get('/account/saved-jobs')->assertOk()->assertSee($job->title);
-        $this->get($job->publicUrl())->assertOk()->assertSee('Saved — remove from list');
-        $this->get('/jobs')->assertOk()->assertSee($job->title)->assertSee('Saved');
+        $this->get($job->publicUrl())->assertOk()->assertSee('aria-pressed="true"', false);
+        $this->get('/jobs')->assertOk()->assertSee($job->title)->assertSee('aria-pressed="true"', false);
         $this->assertDatabaseHas('audit_events',['actor_id'=>$freelancer->id,'event'=>'job.saved']);
     }
 
