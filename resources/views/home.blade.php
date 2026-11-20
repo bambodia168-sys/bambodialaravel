@@ -1,6 +1,7 @@
 @extends('layouts.main')
 @section('title','Home')
 @push('page-styles')
+  <link rel="stylesheet" href="{{ asset('css/home-type-directory.css') }}?v=1">
   <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=2">
 @endpush
 @section('content')
