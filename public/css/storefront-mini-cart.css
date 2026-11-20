@@ -106,8 +106,9 @@
 .mini-cart-float {
     position: fixed;
     z-index: 65;
+    inset-block-start: 50%;
     inset-inline-end: clamp(1rem, 3vw, 3rem);
-    inset-block-end: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+    translate: 0 -50%;
     display: flex;
     align-items: center;
     gap: .15rem;
@@ -117,7 +118,7 @@
     border-radius: .95rem;
     background: var(--surface);
     box-shadow: 0 12px 42px rgb(11 27 50 / .22);
-    animation: mini-cart-rise .32s cubic-bezier(.2, .75, .3, 1) both;
+    animation: mini-cart-slide .32s cubic-bezier(.2, .75, .3, 1) both;
 }
 
 .mini-cart-float-link {
@@ -184,6 +185,32 @@
     font-size: .85rem;
 }
 
+[data-cart-action][data-cart-state="added"] {
+    --cart-action-bg: #e4f6ec;
+    --cart-action-hover: #d1efdf;
+    --cart-action-border: #9bcdb3;
+    --cart-action-text: #14543a;
+    background: var(--cart-action-bg);
+    border-color: var(--cart-action-border);
+    color: var(--cart-action-text);
+}
+
+:root[data-theme="dark"] [data-cart-action][data-cart-state="added"] {
+    --cart-action-bg: #153b30;
+    --cart-action-hover: #1c4a3b;
+    --cart-action-border: #3f8269;
+    --cart-action-text: #bbf7d0;
+}
+
+[data-cart-action][data-cart-state="added"]:hover {
+    background: var(--cart-action-hover);
+    border-color: var(--cart-action-border);
+}
+
+[data-cart-action] [hidden] {
+    display: none;
+}
+
 [data-cart-add] [aria-disabled="true"] {
     cursor: progress;
     opacity: .72;
@@ -200,9 +227,9 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes mini-cart-rise {
-    from { opacity: 0; transform: translateY(.9rem) scale(.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes mini-cart-slide {
+    from { opacity: 0; transform: translateX(.9rem) scale(.95); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
 }
 
 @media (max-width: 720px) {
@@ -212,12 +239,6 @@
 
     .mini-cart-panel {
         inset-inline-end: .75rem;
-    }
-
-    .mini-cart-float {
-        inset-inline-start: 1rem;
-        inset-inline-end: auto;
-        inset-block-end: calc(1rem + env(safe-area-inset-bottom, 0px));
     }
 }
 

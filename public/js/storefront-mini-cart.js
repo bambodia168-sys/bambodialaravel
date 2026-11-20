@@ -14,14 +14,35 @@
     let adding = false;
     let revision = 0;
     let refreshRequest;
+    let selections = {};
 
     const itemCount = (count) => `${count} ${count === 1 ? 'item' : 'items'}`;
+
+    function isInCart(form) {
+        const tier = form.elements.namedItem('tier')?.value;
+        return Boolean(tier && selections[form.dataset.cartAdd] === tier);
+    }
+
+    function syncListingAction(form = document.querySelector('[data-cart-add]')) {
+        const button = form?.querySelector('[data-cart-action]');
+        if (!button) return;
+        const pending = form.getAttribute('aria-busy') === 'true';
+        const added = !pending && isInCart(form);
+        button.dataset.cartState = pending ? 'adding' : added ? 'added' : 'ready';
+        button.querySelector('[data-cart-action-label]').textContent =
+            pending ? 'Adding…' : added ? 'In cart · View cart' : 'Add to cart';
+        button.querySelector('[data-cart-add-icon]').hidden = added;
+        button.querySelector('[data-cart-added-icon]').hidden = !added;
+    }
 
     function render(cart) {
         if (!Number.isInteger(cart.count) || cart.count < 0 || !Array.isArray(cart.items)
             || cart.count !== cart.items.length || !cart.items.every((title) => typeof title === 'string')) {
             throw new Error('Invalid cart preview');
         }
+
+        selections = cart.selections ?? {};
+        syncListingAction();
 
         const filled = cart.count > 0;
         const label = itemCount(cart.count);
@@ -91,19 +112,32 @@
         if (restoreFocus) (document.querySelector('[data-cart-add] button[type="submit"]') ?? trigger).focus({ preventScroll: true });
     });
 
+    document.addEventListener('change', (event) => {
+        if (event.target.name === 'tier' && event.target.form?.matches('[data-cart-add]')) {
+            syncListingAction(event.target.form);
+        }
+    });
+    document.addEventListener('bambodia:detail-tab-changed', () => syncListingAction());
+
     document.addEventListener('submit', async (event) => {
         const form = event.target;
         if (event.defaultPrevented || !form.matches('[data-cart-add]') || !floatingCart) return;
+        const button = form.querySelector('[data-cart-action]');
+        if (!button) return;
         event.preventDefault();
         if (adding) return;
+        if (isInCart(form)) {
+            window.location.assign(menu.dataset.cartUrl);
+            return;
+        }
 
-        const button = event.submitter ?? form.querySelector('button[type="submit"]');
         const feedback = form.nextElementSibling;
         const body = new FormData(form);
         adding = true;
         ++revision;
         form.setAttribute('aria-busy', 'true');
-        button?.setAttribute('aria-disabled', 'true');
+        button.setAttribute('aria-disabled', 'true');
+        syncListingAction(form);
         feedback.hidden = true;
 
         try {
@@ -137,7 +171,8 @@
         } finally {
             adding = false;
             form.removeAttribute('aria-busy');
-            button?.removeAttribute('aria-disabled');
+            button.removeAttribute('aria-disabled');
+            syncListingAction();
             if (!feedback.hidden) refresh();
         }
     });
