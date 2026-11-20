@@ -39,7 +39,7 @@
             @if($entry->listing)<a href="{{ $entry->listing->publicUrl() }}"><x-icon name="eye" size="16"/> View</a>@endif
             <form method="post" action="{{ route('saved-listings.destroy',$entry->marketplace_listing_id) }}">
               @csrf @method('DELETE')
-              <button type="submit" class="is-danger"><x-icon name="x" size="16"/> Remove</button>
+              <button type="submit" class="is-danger"><x-icon name="star" size="16"/> Remove</button>
             </form>
           </x-row-action-menu></td>
         </tr>

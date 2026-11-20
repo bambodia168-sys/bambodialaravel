@@ -50,21 +50,9 @@
       <h1 class="premium-detail-below-title">{{ $listing->title }}</h1>
       <div class="premium-showcase-actions">
         <div class="marketplace-detail-actions">
+          <x-save-star :item="$listing" :is-saved="$isSaved" labeled/>
           @auth
-            @if($isSaved)
-              <form method="post" action="{{ route('saved-listings.destroy',$listing) }}">
-                @csrf @method('DELETE')
-                <button class="btn subtle" type="submit"><x-icon name="bookmark" size="16"/> Saved · Remove</button>
-              </form>
-            @else
-              <form method="post" action="{{ route('saved-listings.store',$listing) }}">
-                @csrf
-                <button class="btn subtle" type="submit"><x-icon name="bookmark" size="16"/> Save listing</button>
-              </form>
-            @endif
             <a class="btn subtle" href="{{ route('account.saved-listings') }}"><x-icon name="star" size="16"/> My saved listings</a>
-          @else
-            <a class="btn subtle" href="{{ route('login') }}"><x-icon name="bookmark" size="16"/> Sign in to save</a>
           @endauth
         </div>
         <a class="premium-action-link" href="{{ route('marketplace.search',['type'=>$kind]) }}">More {{ $kindTitle }} listings</a>

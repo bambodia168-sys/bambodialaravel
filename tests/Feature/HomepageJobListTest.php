@@ -87,7 +87,7 @@ class HomepageJobListTest extends TestCase
         foreach(['/','/jobs'] as $path){
             $this->get($path)->assertOk()
                 ->assertSee('Remove Approved Full Stack Development from saved jobs')
-                ->assertSee('Saved')
+                ->assertSee('aria-pressed="true"',false)
                 ->assertSee('method="post"',false);
         }
     }

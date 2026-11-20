@@ -28,7 +28,7 @@
           <td><x-row-action-menu :id="'saved-job-'.$entry->id" :label="$entry->job?->title ?? 'Saved job'">
             @if($entry->job)<a href="{{ $entry->job->publicUrl() }}"><x-icon name="eye" size="16"/> View job</a>@endif
             <form method="post" action="{{ route('saved-jobs.destroy',$entry->marketplace_job_id) }}">
-              @csrf @method('DELETE')<button type="submit" class="is-danger"><x-icon name="x" size="16"/> Remove</button>
+              @csrf @method('DELETE')<button type="submit" class="is-danger"><x-icon name="star" size="16"/> Remove</button>
             </form>
           </x-row-action-menu></td>
         </tr>

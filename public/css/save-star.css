@@ -1,0 +1,76 @@
+.save-star-form {
+  margin: 0;
+}
+
+.save-star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  cursor: pointer;
+}
+
+.save-star:not(.btn) {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgb(0 0 0 / .15);
+}
+
+.save-star:not(.btn):hover,
+.save-star[aria-pressed="true"] {
+  color: var(--accent);
+}
+
+.save-star[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+
+.save-star:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+}
+
+.marketplace-card-media {
+  position: relative;
+}
+
+.marketplace-card-save {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  z-index: 2;
+}
+
+.marketplace-card-media .marketplace-card-type {
+  box-sizing: border-box;
+  max-width: calc(100% - 65px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marketplace-card .marketplace-card-media .marketplace-card-featured {
+  inset: auto auto 8px 8px;
+}
+
+.bambodia-job-row .bambodia-job-actions {
+  flex-direction: row;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card-save-action {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  :is(.marketplace-card, .bambodia-job-row):hover .card-save-action,
+  .card-save-action:has(.save-star:focus-visible) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
