@@ -83,7 +83,7 @@ class PublicFrontendLayoutTest extends TestCase
         ]);
 
         $response=$this->get('/')->assertOk()
-            ->assertSee('class="marketplace-freelancer-avatar" href="'.route('creators.show',$creator->public_id).'"', false)
+            ->assertSee('class="public-creator-avatar" href="'.route('creators.show',$creator->public_id).'"', false)
             ->assertSee('src="'.Storage::disk('public')->url($path).'"', false)
             ->assertSee('alt="'.$creator->name.' profile photo"', false)
             ->assertSee('View '.$creator->name.' creator profile')
@@ -91,7 +91,7 @@ class PublicFrontendLayoutTest extends TestCase
             ->assertDontSee('View portfolio')
             ->assertDontSee('marketplace-freelancer-visibility', false);
 
-        $this->assertSame(1, substr_count($response->getContent(), 'class="marketplace-freelancer-avatar"'));
+        $this->assertSame(1, substr_count($response->getContent(), 'class="public-creator-avatar"'));
         $this->get(route('creators.show',$creator->public_id))->assertOk()
             ->assertSee(Storage::disk('public')->url($path));
     }
@@ -101,8 +101,8 @@ class PublicFrontendLayoutTest extends TestCase
         $creator=$this->creator();
         $response=$this->get('/')->assertOk();
         $html=$response->getContent();
-        $this->assertStringContainsString('class="marketplace-freelancer-avatar" href="'.route('creators.show',$creator->public_id).'"', $html);
-        $this->assertMatchesRegularExpression('/class="marketplace-freelancer-avatar"[^>]*>\s*<span[^>]*data-profile-avatar>\s*<span[^>]*data-profile-avatar-fallback[^>]*>\s*<svg/', $html);
+        $this->assertStringContainsString('class="public-creator-avatar" href="'.route('creators.show',$creator->public_id).'"', $html);
+        $this->assertMatchesRegularExpression('/class="public-creator-avatar"[^>]*>\s*<span[^>]*data-profile-avatar>\s*<span[^>]*data-profile-avatar-fallback[^>]*>\s*<svg/', $html);
         $this->assertStringNotContainsString('Public profile</span>', $html);
         $this->assertStringNotContainsString('View portfolio', $html);
         $this->assertStringNotContainsString($creator->name.' profile photo', $html);

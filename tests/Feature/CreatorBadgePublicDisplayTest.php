@@ -117,6 +117,22 @@ class CreatorBadgePublicDisplayTest extends TestCase
         $this->assertSame(16,substr_count($html,'class="creator-badge creator-badge--'));
         $this->assertSame(16,substr_count($html,'class="creator-badge-tooltip" role="tooltip"'));
         $this->assertSame(1,substr_count($html,'images/badges/top-rated.svg'));
+
+        foreach (['/', route('creators.index')] as $url) {
+            $this->get($url)->assertOk()
+                ->assertSeeInOrder([
+                    'class="public-creator-avatar"',
+                    'class="public-creator-details"',
+                    'Bamboo Cambodia',
+                    'WordPress &amp; Laravel',
+                    'creator-badge-row--badge',
+                    'class="public-creator-meta"',
+                    '1 approved listing',
+                    'Battambang, Cambodia',
+                ], false)
+                ->assertDontSee('Sangkat Svay Por')
+                ->assertDontSee('Hidden expertise');
+        }
     }
 
     public function test_publisher_profile_link_works_without_published_biography_but_private_data_stays_hidden(): void

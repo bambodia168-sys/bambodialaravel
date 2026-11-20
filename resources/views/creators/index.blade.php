@@ -1,5 +1,8 @@
 @extends('layouts.main')
 @section('title','Browse Creators')
+@push('page-styles')
+  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=2">
+@endpush
 @section('content')
 <div class="container inner-page">
   <div class="page-intro"><div class="eyebrow">Bambodia talent network</div><h1>Explore Creators</h1>
@@ -13,24 +16,9 @@
         <button type="submit" class="btn subtle">Search</button>
       </form>
     </div>
-    <div class="creator-directory-grid">
+    <div class="public-creator-grid public-creator-grid--directory">
       @forelse($creators as $creator)
-        <article class="creator-directory-card">
-          <div class="creator-avatar" aria-hidden="true"><x-profile-avatar :user="$creator" public lazy size="23"/></div>
-          <div class="eyebrow">Public ID {{ $creator->public_id }}</div>
-          <h3><a href="{{ route('creators.show',$creator->public_id) }}">{{ $creator->name }}</a></h3>
-          @if($creator->creatorProfile?->is_public && filled($creator->creatorProfile->headline))
-            <strong>{{ $creator->creatorProfile->headline }}</strong>
-          @endif
-          <x-creator-badges :badges="\App\Support\CreatorBadgeAwards::earned($creator)" variant="compact"/>
-          @if($creator->creatorProfile?->is_public)
-            <p>{{ \Illuminate\Support\Str::limit($creator->creatorProfile->biography,160) }}</p>
-          @endif
-          <div class="creator-directory-foot">
-            <span>{{ $creator->public_listings_count }} approved listings</span>
-            <a href="{{ route('creators.show',$creator->public_id) }}" class="btn subtle compact">View creator profile</a>
-          </div>
-        </article>
+        <x-public-creator-card :creator="$creator" :badges="\App\Support\CreatorBadgeAwards::earned($creator, $badgeCatalog)"/>
       @empty
         <div class="marketplace-empty">No public creator profiles match your search.</div>
       @endforelse

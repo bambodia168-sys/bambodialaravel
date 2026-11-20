@@ -83,7 +83,7 @@ class HomepageFreelancerShowcaseTest extends TestCase
             ->assertSee('Freelancer profiles are coming soon.')
             ->assertSee('Browse creator profiles')
             ->assertDontSee('Hidden Freelancer')
-            ->assertDontSee('marketplace-freelancer-card')
+            ->assertDontSee('class="public-creator-card"', false)
             ->assertDontSee('marketplace-category-track');
     }
 

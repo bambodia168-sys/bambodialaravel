@@ -219,8 +219,8 @@ try {
         const previewHref=await featuredProduct.locator('.marketplace-card-live-preview').getAttribute('href');
         if(previewHref!=='https://example.com/original-browser-product-preview')
           throw new Error(device.name+' product demo link must be creator-provided, not invented');
-        // Opted-in public freelancers only; clickable avatars and no redundant CTAs.
-        const freelancerCards=page.locator('.marketplace-freelancer-grid .marketplace-freelancer-card');
+        // Public creator cards follow the publisher panel, with square avatars and compact metadata.
+        const freelancerCards=page.locator('.public-creator-grid .public-creator-card');
         if(await freelancerCards.count()!==4)
           throw new Error(device.name+' expected 4 public freelancer cards');
         if(!(await page.getByRole('heading',{name:'Freelancers',exact:true}).isVisible()))
@@ -253,37 +253,38 @@ try {
           throw new Error(device.name+' retired category slider is still rendered');
         if(await page.getByText('Browser QA Private Freelancer').count())
           throw new Error(device.name+' private profile leaked');
-        const freelancerGeometry=await page.locator('.marketplace-freelancer-grid').evaluate(grid=>({
+        const freelancerGeometry=await page.locator('.public-creator-grid').evaluate(grid=>({
           columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
           items:[...grid.children].map(card=>({
             href:card.querySelector('h3 a')?.getAttribute('href'),
-            avatarHref:card.querySelector('a.marketplace-freelancer-avatar')?.getAttribute('href'),
-            avatarTag:card.querySelector('.marketplace-freelancer-avatar')?.tagName,
-            portfolioCta:!!card.querySelector('.marketplace-freelancer-card-footer a'),
+            avatarHref:card.querySelector('a.public-creator-avatar')?.getAttribute('href'),
+            avatarTag:card.querySelector('.public-creator-avatar')?.tagName,
+            countLink:card.querySelector('.public-creator-listings')?.getAttribute('href'),
+            avatarHeight:card.querySelector('.public-creator-avatar')?.getBoundingClientRect().height,
             publicProfileLabel:card.textContent.includes('Public profile'),
             right:card.getBoundingClientRect().right,
-            avatarWidth:card.querySelector('.marketplace-freelancer-avatar')?.getBoundingClientRect().width,
+            avatarWidth:card.querySelector('.public-creator-avatar')?.getBoundingClientRect().width,
             avatarOffset:(()=>{
-              const avatar=card.querySelector('.marketplace-freelancer-avatar')?.getBoundingClientRect();
-              const rect=card.getBoundingClientRect();
-              return avatar?Math.abs((avatar.left+avatar.right)/2-(rect.left+rect.right)/2):999;
+              const avatar=card.querySelector('.public-creator-avatar')?.getBoundingClientRect();
+              const title=card.querySelector('.public-creator-details')?.getBoundingClientRect();
+              return avatar&&title?title.left-avatar.right:-1;
             })(),
-            hasBiography:!!card.querySelector('.marketplace-freelancer-bio'),
           })),
         }));
-        const freelancerColumns=device.viewport.width>=1400?5:device.viewport.width>=1100?4:device.viewport.width>=700?3:2;
-        if(freelancerGeometry.columns!==freelancerColumns ||
+        const minimumColumns=device.viewport.width>=1200?3:device.viewport.width>=700?2:1;
+        if(freelancerGeometry.columns<minimumColumns ||
+           (device.viewport.width<700 && freelancerGeometry.columns!==1) ||
            freelancerGeometry.items.some(c=>!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(c.href??'') ||
              c.href!==c.avatarHref || c.avatarTag!=='A' ||
-             c.portfolioCta || c.publicProfileLabel ||
+             c.countLink!==c.href || c.publicProfileLabel ||
              c.right>device.viewport.width+3 ||
-             c.avatarWidth<(device.viewport.width<700?90:110) ||
-             c.avatarOffset>2 || c.hasBiography))
+             c.avatarWidth<55 || c.avatarWidth>68 ||
+             c.avatarWidth!==c.avatarHeight || c.avatarOffset<0))
           throw new Error(device.name+' freelancer grid regression '+JSON.stringify(freelancerGeometry));
         const avatarCard=freelancerCards.filter({hasText:'Browser QA Creator'}).first();
         if(await avatarCard.count()!==1)
           throw new Error(device.name+' missing uploaded-avatar test creator');
-        const uploadedAvatar=avatarCard.locator('a.marketplace-freelancer-avatar img');
+        const uploadedAvatar=avatarCard.locator('a.public-creator-avatar img');
         if(await uploadedAvatar.count()!==1)
           throw new Error(device.name+' uploaded creator avatar was replaced by an initial');
         const avatarRender=await uploadedAvatar.evaluate(img=>({
@@ -303,14 +304,14 @@ try {
            avatarRender.objectPosition!=='50% 15%' ||
            avatarRender.paddingTop!==0 || avatarRender.paddingBottom!==0)
           throw new Error(device.name+' uploaded creator avatar did not load '+JSON.stringify(avatarRender));
-        const target=await avatarCard.locator('a.marketplace-freelancer-avatar').getAttribute('href');
+        const target=await avatarCard.locator('a.public-creator-avatar').getAttribute('href');
         const profileResponse=await page.request.get(target);
         if(!profileResponse.ok() || !(await profileResponse.text()).includes('Browser QA Creator'))
           throw new Error(device.name+' uploaded avatar links to an inaccessible creator profile');
         const firstFreelancer=freelancerCards.first();
-        if(!(await firstFreelancer.getByText(/approved listings?/).count()))
+        if(!(await firstFreelancer.getByRole('link',{name:/approved listings?/}).count()))
           throw new Error(device.name+' approved listing count missing');
-        if(await page.locator('.marketplace-freelancer-card [data-rating],.marketplace-freelancer-card .rating-stars').count())
+        if(await page.locator('.public-creator-card [data-rating],.public-creator-card .rating-stars').count())
           throw new Error(device.name+' unverified rating surfaced');
         checks+=4;
         if(!(await page.getByText('Browser QA Published Freelance Job').first().isVisible()))
@@ -1051,8 +1052,14 @@ try {
         checks+=3;
       }
       if(path==='/creators'){
-        if(!(await page.getByText('Original full-stack Laravel consulting').first().isVisible()))
-          throw new Error(device.name+' missing opt-in creator');
+        const creatorCard=page.locator('.public-creator-grid--directory .public-creator-card')
+          .filter({hasText:'Browser QA Creator'}).first();
+        if(!(await creatorCard.getByText('Original full-stack Laravel consulting',{exact:false}).isVisible())
+          || !(await creatorCard.locator('.public-creator-avatar').isVisible())
+          || !(await creatorCard.getByRole('link',{name:/approved listings?/}).isVisible())
+          || !(await creatorCard.locator('.public-creator-location').isVisible()))
+          throw new Error(device.name+' missing reference-style directory card');
+        checks++;
       }
     }
     // Real approved Product, Project, Service and Freelance detail routes.
