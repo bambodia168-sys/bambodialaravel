@@ -162,7 +162,7 @@ try {
         // The arrow-only slider controls must remain functional.
         if(!(await page.locator('[data-home-blog-next] svg').count()))
           throw new Error(device.name+' blog navigation control lost its arrow');
-        // All eight approved homepage previews remain visible at every viewport.
+        // All selected homepage previews remain visible at every viewport.
         // Small-screen discovery uses two columns without hiding item types.
         const service=page.getByText('Browser QA Published Service').first();
         if(!(await service.count()) || !(await service.isVisible()))
@@ -170,8 +170,8 @@ try {
         // Shared listing cards: clickable artwork/title, two-line text and
         // four / three / two responsive columns without clipped or hidden links.
         const cards=await page.locator('.marketplace-home-feed .marketplace-card').count();
-        if(cards<1 || cards>8)
-          throw new Error(device.name+' homepage must show at most eight balanced cards; saw '+cards);
+        if(cards<1 || cards>12)
+          throw new Error(device.name+' homepage must show at most twelve cards; saw '+cards);
         const cardMetrics=await page.evaluate(()=>{
           const grid=document.querySelector('.marketplace-home-feed');
           const card=grid?.querySelector('.marketplace-card');

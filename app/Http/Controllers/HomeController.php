@@ -10,6 +10,7 @@ use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
 use App\Models\SavedJob;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -18,34 +19,41 @@ class HomeController extends Controller
     public function index(Request $request): View
     {
         $searchEnabled=FeatureFlag::isEnabled('marketplace_search');
-        $recentListings=collect();
+        $recentListings=new Collection();
         $freelancers=collect();
         $badgeCatalog=collect();
         $listingTotals=collect();
         $savedIds=[];
 
         if($searchEnabled){
-            // Two latest of each type, interleaved, keep all four categories
-            // represented within a compact 4-column, two-row homepage grid.
+            // Keep the newest listings from each type represented and fill
+            // spare slots from the types with more published listings.
+            $listingLimit=12;
             $latestByType=[];
             foreach (MarketplaceListing::TYPES as $type) {
                 $latestByType[$type]=MarketplaceListing::query()->publiclyAvailable()
                     ->where('type',$type)
-                    ->with([
-                        'creator:id,name,public_id',
-                        'creator.creatorProfile:user_id,is_public',
-                        'coverAsset:id,public_id,alt_text,review_status',
-                        'featuredAsset:id,public_id,alt_text',
-                        'category:id,name',
-                    ])->latest('id')->limit(2)->get();
+                    ->latest('id')->limit($listingLimit)->get();
             }
-            for ($index=0;$index<2;$index++) {
-                foreach (MarketplaceListing::TYPES as $type) {
-                    if (isset($latestByType[$type][$index])) {
-                        $recentListings->push($latestByType[$type][$index]);
+            for ($index=0;$index<$listingLimit;$index++) {
+                foreach ($latestByType as $listings) {
+                    if (!isset($listings[$index])) {
+                        continue;
+                    }
+
+                    $recentListings->push($listings[$index]);
+                    if ($recentListings->count()===$listingLimit) {
+                        break 2;
                     }
                 }
             }
+            $recentListings=$recentListings->shuffle()->load([
+                'creator:id,name,public_id',
+                'creator.creatorProfile:user_id,is_public',
+                'coverAsset:id,public_id,alt_text,review_status',
+                'featuredAsset:id,public_id,alt_text',
+                'category:id,name',
+            ]);
 
             $listingTotals=MarketplaceListing::query()->publiclyAvailable()
                 ->selectRaw('type, COUNT(*) as total')->groupBy('type')->pluck('total','type');
