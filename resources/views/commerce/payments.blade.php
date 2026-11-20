@@ -12,49 +12,74 @@
     @if($rejectedReceipt)
       <div class="panel-head"><p>Your payment receipt was rejected. Check your transfer details and submit a corrected receipt.</p></div>
     @endif
-    @push('head')
-      <link rel="stylesheet" href="{{ asset('css/checkout-payment-methods.css') }}?v=1">
-    @endpush
-    @forelse($methods->filter(fn ($method) => $method->availableForCheckout()) as $method)
-      @php($selected = old('method') !== null ? (string) old('method') === (string) $method->id : $method->name === $order->payment_method)
-      <div @class(['panel-head', 'order-payment-option', 'order-payment-option--selected' => $selected])>
-        @if($method->usesGateway())
-          <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}">
-            @csrf
-            <input type="hidden" name="method" value="{{ $method->id }}">
-            <button class="btn primary order-payment-label">
+    @php
+      $availableMethods = $methods->filter(fn ($method) => $method->availableForCheckout());
+      $preferredMethod = old('method') !== null
+          ? $availableMethods->first(fn ($method) => (string) old('method') === (string) $method->id)
+          : $availableMethods->firstWhere('name', $order->payment_method);
+    @endphp
+    @if($availableMethods->isNotEmpty())
+      <div class="order-review-methods">
+        @foreach($availableMethods as $method)
+          @php($selected = $preferredMethod?->id === $method->id || $availableMethods->count() === 1)
+          <details class="order-review-method" name="order-payment-choice" @if($selected) open @endif>
+            <summary>
               <x-payment-method-icon :provider="$method->provider"/>
-              <span>{{ $method->dynamicQr() ? 'Generate QR for' : 'Pay with' }} {{ $method->name }}</span>
-            </button>
-            @if($selected)<span class="order-payment-selection"><x-icon name="check" size="16"/> Selected</span>@endif
-          </form>
-        @else
-          <details @if($selected) open @endif>
-            <summary class="order-payment-label">
-              <x-payment-method-icon :provider="$method->provider"/>
-              <span>{{ $method->name }} transfer</span>
-              @if($selected)<span class="order-payment-selection"><x-icon name="check" size="16"/> Selected</span>@endif
-              <x-icon name="chevron-down" size="16" class="order-payment-chevron"/>
+              <span class="order-review-method-name">{{ $method->name }}</span>
+              <span class="order-review-method-selected"><x-icon name="check" size="16"/> Selected</span>
+              <x-icon name="chevron-down" size="16" class="order-review-method-chevron"/>
             </summary>
-            <p>{!! nl2br(e($method->instructions)) !!}</p>
-            <p>Transfer exactly {{ $order->currency }} {{ $order->total }}. Then upload your receipt and enter the transfer reference for review.</p>
-            @if($method->qr_path)
-              <img src="{{ route('account.orders.payment.qr', [$order->number, $method]) }}" alt="{{ $method->name }} merchant QR" width="200" height="200">
-            @endif
-            <form method="post" action="{{ route('account.orders.payment.submit', $order->number) }}" enctype="multipart/form-data" class="form-stack">
-              @csrf
-              <input type="hidden" name="method" value="{{ $method->id }}">
-              <label>Transfer reference<input name="reference" value="{{ (string) old('method') === (string) $method->id ? old('reference') : '' }}" required maxlength="100"></label>
-              <label>Payment receipt<input name="proof" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" required></label>
-              <p class="hint">PDF, PNG, JPEG or WebP, up to 5 MB.</p>
-              <button class="btn primary">Submit receipt</button>
-            </form>
+            <div class="order-review-method-body">
+              @if($method->usesGateway())
+                <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}">
+                  @csrf
+                  <input type="hidden" name="method" value="{{ $method->id }}">
+                  <button class="btn primary">{{ $method->dynamicQr() ? 'Generate QR for' : 'Pay with' }} {{ $method->name }}</button>
+                </form>
+              @else
+                <div class="order-review-transfer">
+                  <div>
+                    <p class="order-review-transfer-total">Transfer exactly <strong>{{ $order->currency }} {{ $order->total }}</strong>.</p>
+                    @if($method->instructions)
+                      <details class="order-review-instructions" @unless($method->qr_path) open @endunless>
+                        <summary>Transfer instructions</summary>
+                        <p>{{ $method->instructions }}</p>
+                      </details>
+                    @endif
+                  </div>
+                  @if($method->qr_path)
+                    <figure class="order-review-qr">
+                      <img src="{{ route('account.orders.payment.qr', [$order->number, $method]) }}"
+                           alt="{{ $method->name }} merchant QR" width="200" loading="lazy">
+                    </figure>
+                  @endif
+                </div>
+                <form method="post" action="{{ route('account.orders.payment.submit', $order->number) }}"
+                      enctype="multipart/form-data" class="order-receipt-upload">
+                  @csrf
+                  <input type="hidden" name="method" value="{{ $method->id }}">
+                  <h3>Upload your transfer receipt</h3>
+                  <label class="order-receipt-reference">
+                    <span>Transfer reference</span>
+                    <input name="reference" value="{{ (string) old('method') === (string) $method->id ? old('reference') : '' }}"
+                           placeholder="Reference from your payment receipt" required maxlength="100">
+                  </label>
+                  <label class="order-receipt-file">
+                    <span class="order-receipt-file-title"><x-icon name="upload" size="20"/> Payment receipt</span>
+                    <span class="order-receipt-hint" id="receipt-format-{{ $method->id }}">PDF, PNG, JPEG or WebP, up to 5 MB.</span>
+                    <input name="proof" type="file" accept="image/png,image/jpeg,image/webp,application/pdf"
+                           aria-label="Payment receipt" aria-describedby="receipt-format-{{ $method->id }}" required>
+                  </label>
+                  <button class="btn primary">Submit receipt</button>
+                </form>
+              @endif
+            </div>
           </details>
-        @endif
+        @endforeach
       </div>
-    @empty
+    @else
       <div class="panel-head"><p>There are currently no payment methods available for this order.</p></div>
-    @endforelse
+    @endif
   @elseif($activePayment->status === 'manual_review')
     <div class="panel-head"><p>Your payment receipt is awaiting review. Purchase access opens after approval.</p></div>
   @elseif($activePayment->dynamicQr() && $activePayment->remote_id)

@@ -90,9 +90,18 @@ async function order(page, listing, {guest = false} = {}) {
   await submit.click();
   await page.waitForURL(/\/account\/orders\/[a-f0-9-]{36}$/);
   await currentCheckoutStep(page, 'payment');
-  const preferred = page.locator('.order-payment-option--selected');
+  const preferred = page.locator('.order-review-method[open]');
   await preferred.getByText('Selected', {exact: true}).waitFor();
-  assert.equal(await preferred.locator('details').getAttribute('open'), '');
+  await preferred.getByText('Bank Transfer', {exact: true}).first().waitFor();
+  await page.locator('[data-payment-stamp="awaiting"]').getByText('Awaiting Payment', {exact: true}).waitFor();
+  const methods = page.locator('.order-review-method');
+  await methods.locator('summary').getByText('KHQR', {exact: true}).click();
+  assert.equal(await preferred.count(), 1);
+  await preferred.getByText('KHQR', {exact: true}).waitFor();
+  assert.equal(await page.getByRole('button', {name: 'Submit receipt', exact: true}).count(), 1);
+  assert.equal(await page.locator('.order-review').evaluate(review => review.scrollWidth <= review.clientWidth), true);
+  await methods.locator('summary').getByText('Bank Transfer', {exact: true}).click();
+  await preferred.getByText('Bank Transfer', {exact: true}).waitFor();
   const orderPath = new URL(page.url()).pathname;
   const repeated = await page.request.post(payload.action, {form: payload.form, maxRedirects: 0});
   assert.equal(repeated.status(), 302);
@@ -100,13 +109,15 @@ async function order(page, listing, {guest = false} = {}) {
   return orderPath;
 }
 async function uploadReceipt(page, ref) {
-  const transfer = page.getByText('Bank Transfer transfer', {exact: true});
+  const transfer = page.locator('.order-review-method > summary').getByText('Bank Transfer', {exact: true});
   if (!(await transfer.evaluate(label => label.closest('details').open))) await transfer.click();
-  await page.getByLabel('Transfer reference').fill(ref);
-  await page.getByLabel('Payment receipt').setInputFiles({name: 'pilot-receipt.png', mimeType: 'image/png', buffer: receipt});
-  await page.getByRole('button', {name: 'Submit receipt', exact: true}).click();
+  const form = page.locator('.order-review-method[open] .order-receipt-upload');
+  await form.getByLabel('Transfer reference').fill(ref);
+  await form.getByLabel('Payment receipt', {exact: true}).setInputFiles({name: 'pilot-receipt.png', mimeType: 'image/png', buffer: receipt});
+  await form.getByRole('button', {name: 'Submit receipt', exact: true}).click();
   await page.getByText('Your payment receipt is awaiting review.', {exact: false}).waitFor();
   await currentCheckoutStep(page, 'payment');
+  await page.locator('[data-payment-stamp="pending"]').waitFor();
   await page.locator('.checkout-progress').getByText('Payment pending', {exact: true}).waitFor();
   assert.equal(await page.locator('.checkout-progress [data-step="payment"] .checkout-progress-marker svg').count(), 0);
 }
@@ -183,6 +194,7 @@ try {
   await reviewPayment(admin, productOrder, 'PILOT-PRODUCT-REJECT', false);
   await visit(buyer, productOrder);
   await buyer.getByText('Your payment receipt was rejected.', {exact: false}).waitFor();
+  await buyer.locator('[data-payment-stamp="unpaid"]').getByText('Unpaid', {exact: true}).waitFor();
   assert.equal(await buyer.getByRole('link', {name: 'Download product'}).count(), 0);
   assert.equal(await buyer.getByRole('link', {name: 'View receipt'}).count(), 0);
   record('Rejected manual receipt leaves the order locked');
@@ -196,8 +208,10 @@ try {
   await currentCheckoutStep(buyer, 'review');
   assert.equal(await buyer.locator('.checkout-progress [data-step="payment"]').getAttribute('data-state'), 'completed');
   assert.equal(await buyer.locator('.checkout-progress-status').count(), 0);
+  await buyer.locator('[data-payment-stamp="paid"]').getByText('Paid', {exact: true}).waitFor();
   const receiptLink = buyer.getByRole('link', {name: 'View receipt', exact: true});
   await receiptLink.click();
+  await buyer.locator('.commerce-receipt [data-payment-stamp="paid"]').waitFor();
   await currentCheckoutStep(buyer, 'review');
   await visit(buyer, productOrder);
   record('Checkout progress keeps Payment pending until verification and opens Review afterward');
