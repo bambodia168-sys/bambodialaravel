@@ -1,0 +1,28 @@
+.marketplace-type-directory-tile > .marketplace-directory-icon {
+  display: grid;
+  place-items: center;
+  align-self: flex-end;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 82%, var(--surface));
+}
+
+.marketplace-type-directory-tile > .marketplace-directory-icon svg {
+  width: 42px;
+  height: 42px;
+}
+
+@media (max-width: 550px) {
+  .marketplace-type-directory-tile > .marketplace-directory-icon {
+    width: 37px;
+    height: 37px;
+  }
+
+  .marketplace-type-directory-tile > .marketplace-directory-icon svg {
+    width: 32px;
+    height: 32px;
+  }
+}
