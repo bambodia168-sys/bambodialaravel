@@ -156,12 +156,12 @@ Route::middleware('auth')->prefix('detail')->group(function (): void {
 Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
     ->whereIn('provider', ['google', 'facebook', 'linkedin', 'github'])
     ->middleware('throttle:15,1,social-callback:')->block()->name('social.callback');
-Route::get('/cart', [CommerceCartController::class, 'cart'])->name('cart');
+Route::get('/cart', [CommerceCartController::class, 'cart'])->block()->name('cart');
 Route::post('/cart/{listing}', [CommerceCartController::class, 'add'])->where('listing', '[0-9]{9}')
     ->middleware('throttle:40,1')->block()->name('cart.add');
 Route::delete('/cart/{listing}', [CommerceCartController::class, 'remove'])->where('listing', '[0-9]{9}')
     ->middleware('throttle:40,1')->block()->name('cart.remove');
-Route::get('/checkout', [CommerceCartController::class, 'checkout'])->name('checkout');
+Route::get('/checkout', [CommerceCartController::class, 'checkout'])->block()->name('checkout');
 Route::middleware('auth')->prefix('checkout')->name('checkout.')->group(function (): void {
     Route::get('/verify-email', [CommerceCartController::class, 'verification'])->name('verification');
     Route::post('/verify-email', [CommerceCartController::class, 'sendVerification'])

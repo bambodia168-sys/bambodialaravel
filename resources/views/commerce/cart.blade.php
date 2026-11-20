@@ -14,6 +14,10 @@
     @endif
   </div>
 
+  @if($added = session('cart_added'))
+    <p class="storefront-panel storefront-panel-head" role="status">Added to cart · {{ is_array($added) ? $added['title'] : $added }}</p>
+  @endif
+
   @if($lines === [])
     <div class="storefront-panel storefront-empty">
       <span class="storefront-icon"><x-icon name="shopping-cart" size="24"/></span>
@@ -108,22 +112,6 @@
     </div>
   @endif
 </div>
-
-@if($added = session('cart_added'))
-  <dialog class="storefront-dialog" aria-labelledby="cart-added-title" data-storefront-open>
-    <div class="storefront-dialog-head">
-      <span class="storefront-icon"><x-icon name="check" size="22"/></span>
-      <button type="button" data-modal-close class="icon-button" aria-label="Close"><x-icon name="x" size="20"/></button>
-    </div>
-    <h2 id="cart-added-title">Added to cart</h2>
-    <p>{{ $added['title'] }}</p>
-    <p>@if($added['license']) {{ $added['license'] }} · @endif <strong>{{ $added['price'] }}</strong></p>
-    <div class="storefront-dialog-actions">
-      <button type="button" class="btn primary" data-modal-close>View cart</button>
-      <a class="btn subtle" href="{{ $added['url'] }}">Continue shopping</a>
-    </div>
-  </dialog>
-@endif
 
 @if($mode === 'login' || ($mode === 'register' && $canRegister))
   @php $signingUp = $mode === 'register'; @endphp

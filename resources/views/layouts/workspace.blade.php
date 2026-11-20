@@ -20,6 +20,9 @@
     <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=3">
     <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=3"></script>
   @endif
+  @if(config('commerce.enabled') && trim($__env->yieldContent('workspace', 'account')) === 'account')
+    @include('layouts.partials.mini-cart-assets')
+  @endif
   @stack('head')
 </head>
 @php
@@ -291,6 +294,9 @@
         <span class="workspace-search-hint">Menu</span>
       </div>
       <div class="workspace-top-actions">
+        @if(config('commerce.enabled') && $workspace === 'account')
+          <x-storefront-mini-cart/>
+        @endif
         <a class="icon-button workspace-home-link" href="{{ route('home') }}" title="Home" aria-label="Home"><x-icon name="home" size="19"/></a>
         <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle light or dark mode"><x-icon name="moon" size="19"/></button>
         <x-language-menu class="header-flag-only"/>
