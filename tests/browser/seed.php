@@ -20,7 +20,7 @@ $creator=\App\Models\User::query()->create([
 ]);
 \App\Models\CreatorProfile::query()->create([
     'user_id'=>$creator->id,
-    'headline'=>'Original full-stack Laravel consulting',
+    'headline'=>'Original full-stack Laravel consulting, application modernization, performance engineering, cloud infrastructure, and ongoing technical support',
     'biography'=>str_repeat('Original test content for responsive UI verification. ',3),
     'is_public'=>true,
 ]);
@@ -36,6 +36,7 @@ if($avatarFixture===false){
 \App\Models\UserProfile::query()->create([
     'user_id'=>$creator->id,
     'avatar_path'=>'profile-avatars/browser-qa-creator.webp',
+    'public_location'=>'Sangkat Svay Por, A Test Province With a Very Long Name for Responsive Checks, Cambodia',
 ]);
 
 // Three additional public freelancers and one private profile for browser acceptance.
