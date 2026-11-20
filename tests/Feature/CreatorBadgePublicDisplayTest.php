@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CreatorBadge;
 use App\Models\CreatorBadgeGrant;
 use App\Models\CreatorProfile;
+use App\Models\CreatorProfileItem;
 use App\Models\MarketplaceListing;
 use App\Models\User;
 use App\Support\CreatorBadgeAwards;
@@ -66,11 +67,42 @@ class CreatorBadgePublicDisplayTest extends TestCase
     public function test_single_sidebar_replaces_duplicate_about_creator_section(): void
     {
         $owner=$this->creator('Bamboo Cambodia','super_admin',CreatorBadgeAwards::OWNER_EMAIL);
+        $owner->creatorProfile()->create([
+            'is_public' => true,
+            'headline' => 'WordPress developer',
+            'biography' => 'WordPress design and Laravel development.',
+        ]);
+        $owner->userProfile()->create(['public_location' => 'Private street, Battambang, Cambodia']);
+        CreatorProfileItem::query()->create([
+            'user_id' => $owner->id,
+            'kind' => 'expertise',
+            'label' => 'WordPress & Laravel',
+            'is_visible' => true,
+        ]);
+        CreatorProfileItem::query()->create([
+            'user_id' => $owner->id,
+            'kind' => 'expertise',
+            'label' => 'Hidden expertise',
+            'is_visible' => false,
+        ]);
         $listing=$this->publicProject($owner,'Bamboo owner published project');
         $html=$this->get($listing->publicUrl())->assertOk()
             ->assertSee('Published by')
             ->assertDontSee('About the creator')
             ->assertSee('Bamboo Cambodia')
+            ->assertSeeInOrder([
+                'listing-publisher-avatar',
+                'listing-publisher-details',
+                'listing-publisher-skills',
+                'WordPress & Laravel',
+                'listing-publisher-badges',
+                'Approved listings',
+                '1 approved listing',
+                'Location',
+                'Battambang, Cambodia',
+            ])
+            ->assertDontSee('Private street')
+            ->assertDontSee('Hidden expertise')
             ->assertSee('View creator profile')
             ->assertSee('images/badges/top-rated.svg')
             ->assertSee(route('creators.show',$owner->public_id))
