@@ -8,12 +8,12 @@ use Illuminate\Support\Str;
 final class BambodiaTaxonomy
 {
     private const LEGACY_JOB = [
-        'development' => 'Development',
-        'design' => 'Design',
-        'writing' => 'Writing',
-        'marketing' => 'Marketing',
-        'business' => 'Business',
-        'other' => 'Other',
+        'development' => 'Web Development',
+        'design' => 'Visual Design',
+        'writing' => 'Editorial Writing',
+        'marketing' => 'Digital Marketing',
+        'business' => 'Business Services',
+        'other' => 'General Work',
     ];
 
     /** Real active database categories, with legacy fallback until seeded. */
