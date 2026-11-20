@@ -15,12 +15,6 @@
     thumb.dataset.loaded = '1';
     thumb.preload = 'metadata';
     thumb.src = thumb.dataset.mediaSource || '';
-    thumb.addEventListener('loadedmetadata', () => {
-      if (Number.isFinite(thumb.duration) && thumb.duration > 0.1) {
-        try { thumb.currentTime = Math.min(0.35, thumb.duration / 8); } catch (_) {}
-      }
-    }, {once:true});
-    thumb.load();
   };
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver(entries => {

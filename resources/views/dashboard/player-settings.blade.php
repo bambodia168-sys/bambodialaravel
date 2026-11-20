@@ -111,9 +111,10 @@
     <div class="player-settings-preview-body">
       @if ($preview)
         <x-configured-video :media="$preview" :title="$preview->original_name" :settings="$settings" private/>
+        <p class="hint">{{ $preview->original_name }} · Private Media Library preview</p>
         <p class="hint">Save your changes to update the preview. Ads run on public videos.</p>
       @else
-        <p class="hint">An approved video from the Media Library will appear here for playback testing.</p>
+        <p class="hint">Upload an MP4 or WebM video to the Media Library to preview it here.</p>
       @endif
     </div>
   </section>

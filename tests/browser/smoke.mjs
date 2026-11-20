@@ -1394,6 +1394,25 @@ try {
         throw new Error('The private Plyr preview lost branding or loaded a public ad');
       await admin.screenshot({path:out+'/desktop-player-settings.png',fullPage:false});
 
+      const previewVideoUrl=await savedPreview.locator('video').getAttribute('src');
+      const failurePreview=await adminContext.newPage();
+      let firstLoadUnavailable=true;
+      await failurePreview.route(previewVideoUrl, route => firstLoadUnavailable
+        ? route.fulfill({status:503,body:'Temporary test response'})
+        : route.continue());
+      await failurePreview.goto(origin+'/en/dashboard/player-settings',{waitUntil:'domcontentloaded'});
+      const retryButton=failurePreview.getByRole('button',{name:'Retry video'});
+      await retryButton.waitFor({state:'visible'});
+      firstLoadUnavailable=false;
+      await retryButton.click();
+      await failurePreview.waitForFunction(() => {
+        const video=document.querySelector('.player-settings-preview video[data-plyr-video]');
+        return video && !video.error && video.currentTime>0;
+      });
+      await failurePreview.close();
+      checks+=2;
+
+
       const sponsored=await adminContext.newPage();
       await sponsored.goto(origin+'/',{waitUntil:'domcontentloaded'});
       await sponsored.locator('.home-blog-card').filter({hasText:'Browser QA Blog Article 03'})

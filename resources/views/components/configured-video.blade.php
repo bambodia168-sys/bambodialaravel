@@ -5,7 +5,7 @@
   $type = $settings['type'];
   $profile = $settings['profiles'][$type];
   $ad = $private ? null : $profile['ad'];
-  $preload = $private ? 'none' : 'metadata';
+  $preload = $library ? 'none' : 'metadata';
 @endphp
 <div {{ $attributes->class(['configured-player', 'configured-player--'.$profile['skin']]) }}
      data-configured-player="{{ $type }}" data-configured-controls="{{ implode(' ', $profile['controls']) }}">
@@ -22,4 +22,8 @@
       <x-video-player-overlays :profile="$profile" :ad="$ad"/>
     </x-blog-premium-native-video>
   @endif
+  <div class="configured-player-recovery" data-player-recovery hidden>
+    <p role="status">Video couldn’t load.</p>
+    <button class="btn subtle compact" type="button" data-player-retry>Retry video</button>
+  </div>
 </div>

@@ -89,3 +89,27 @@
 .player-settings-form button[type="submit"] { justify-self: start; }
 .player-settings-preview-body { padding: 1rem; }
 @media (max-width: 900px) { .player-settings-layout { grid-template-columns: minmax(0, 1fr); } }
+
+.configured-player[data-configured-player="plyr"] .plyr__video-wrapper {
+  aspect-ratio: 16 / 9;
+}
+.configured-player[data-configured-player="plyr"] .plyr__video-wrapper video {
+  object-fit: contain;
+}
+.configured-player-recovery {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .75rem;
+  padding: .65rem .85rem;
+  background: var(--surface-2);
+  color: var(--text);
+}
+.configured-player-recovery[hidden] { display: none; }
+.configured-player-recovery p { margin: 0; }
+.premium-detail-media-content .configured-player-recovery {
+  position: absolute;
+  z-index: 8;
+  inset-inline: .7rem;
+  inset-block-end: .7rem;
+}
