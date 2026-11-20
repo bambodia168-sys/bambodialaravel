@@ -67,6 +67,11 @@ class JobBoardController extends Controller
             ->where('category',$listing->category)
             ->with(['client:id,name,public_id','featuredAsset'])
             ->orderByDesc('created_at')->orderByDesc('id')->limit(8)->get();
+        $savedRelatedJobIds = $request->user() && $relatedJobs->isNotEmpty()
+            ? SavedJob::query()->where('user_id', $request->user()->id)
+                ->whereIn('marketplace_job_id', $relatedJobs->modelKeys())
+                ->pluck('marketplace_job_id')->map(fn ($id) => (int) $id)->all()
+            : [];
         $jobSections=[
             ['id'=>'overview','label'=>'Overview'],
             ['id'=>'requirements','label'=>'How proposals work'],
@@ -80,6 +85,7 @@ class JobBoardController extends Controller
             'job'=>$listing,'applied'=>$applied,'isSaved'=>$isSaved,
             'screenshots'=>$screenshots,'jobSections'=>$jobSections,
             'relatedJobs'=>$relatedJobs,
+            'savedRelatedJobIds'=>$savedRelatedJobIds,
         ]);
     }
 

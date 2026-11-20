@@ -25,7 +25,7 @@
     <a href="{{ route('jobs') }}"><x-icon name="briefcase" size="17"/> Find approved jobs</a>
     <a href="{{ route('creators.index') }}"><x-icon name="users" size="17"/> Explore creators</a>
     @auth<a href="{{ route('account.saved-listings') }}"><x-icon name="star" size="17"/> My saved listings</a>
-      <a href="{{ route('account.saved-jobs') }}"><x-icon name="briefcase" size="17"/> My saved jobs</a>
+      <a href="{{ route('account.saved-jobs') }}"><x-icon name="star" size="17"/> My saved jobs</a>
     @endauth
   </div>
 </section>

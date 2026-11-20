@@ -33,18 +33,6 @@
     <a class="bambodia-job-button" href="{{ $job->publicUrl() }}" aria-label="{{ $previewOnly ? 'View preview of' : 'View job details for' }} {{ $job->title }}">
       {{ $previewOnly ? 'View preview' : 'View job' }}
     </a>
-    @auth
-      @if($isSaved)
-        <form method="post" action="{{ route('saved-jobs.destroy',$job) }}">
-          @csrf @method('DELETE')
-          <button type="submit" class="bambodia-job-save" aria-label="Remove {{ $job->title }} from saved jobs"><x-icon name="bookmark" size="15"/> Saved</button>
-        </form>
-      @else
-        <form method="post" action="{{ route('saved-jobs.store',$job) }}">
-          @csrf
-          <button type="submit" class="bambodia-job-save" aria-label="Save {{ $job->title }}"><x-icon name="bookmark" size="15"/> Save</button>
-        </form>
-      @endif
-    @endauth
+    <div class="card-save-action"><x-save-star :item="$job" :is-saved="$isSaved"/></div>
   </div>
 </article>

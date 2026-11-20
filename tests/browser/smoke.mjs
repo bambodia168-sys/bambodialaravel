@@ -178,6 +178,7 @@ try {
           const art=card?.querySelector('.marketplace-card-art');
           const title=card?.querySelector('h3 a');
           const creator=card?.querySelector('.marketplace-card-creator');
+          const saveOverlay=card?.querySelector('.marketplace-card-save');
           const price=card?.querySelector('.marketplace-card-price');
           if(!grid || !card || !art || !title || !creator || !price)
             return {missing:true};
@@ -195,7 +196,11 @@ try {
             hasCreator:creator.textContent.trim().length>0,
             priceSymbol:price.textContent.trim().startsWith('$'),
             hasUnsupportedRatings:!!card.querySelector('[data-rating],.rating-stars'),
-            viewDetails:!!card.querySelector('.marketplace-card-actions a'),
+            saveInsideMedia:!!card.querySelector('.marketplace-card-media > .marketplace-card-save .save-star svg'),
+            saveInsideLink:!!art.querySelector('.save-star'),
+            saveReachesTouch:!matchMedia('(pointer:coarse)').matches ||
+              (!!saveOverlay && getComputedStyle(saveOverlay).opacity==='1'),
+            footerActions:!!card.querySelector('.marketplace-card-actions, .marketplace-card-body .save-star'),
           };
         });
         const expectedColumns=device.viewport.width>=1200?4:device.viewport.width>700?3:2;
@@ -203,7 +208,8 @@ try {
           || cardMetrics.visibleCards!==cards || cardMetrics.cardRight>device.viewport.width+3
           || cardMetrics.titleClamp!=='2' || !cardMetrics.fullTitleWidth
           || !cardMetrics.sameDestination || cardMetrics.hasSummary || !cardMetrics.hasCreator
-          || !cardMetrics.priceSymbol || cardMetrics.hasUnsupportedRatings || cardMetrics.viewDetails)
+          || !cardMetrics.priceSymbol || cardMetrics.hasUnsupportedRatings || !cardMetrics.saveInsideMedia
+          || cardMetrics.saveInsideLink || !cardMetrics.saveReachesTouch || cardMetrics.footerActions)
           throw new Error(device.name+' compact listing card regression '+JSON.stringify(cardMetrics));
         const featuredProduct=page.locator('.marketplace-home-feed .marketplace-card')
           .filter({hasText:'Browser QA Published Product'});
@@ -1325,17 +1331,37 @@ try {
         throw new Error('Profile-menu theme action did not toggle');
       checks+=2;
       await page.goto(origin+'/search',{waitUntil:'networkidle'});
-      const save=page.locator('article.marketplace-card')
-        .filter({hasText:'Browser QA Published Service'})
-        .locator('form[action*="/account/saved-listings/"] button[type="submit"]').first();
-      if(!(await save.isVisible()))throw new Error('Saved-listing action missing for signed-in customer');
-      await save.click();
+      const saveCard=page.locator('article.marketplace-card').filter({hasText:'Browser QA Published Service'}).first();
+      const save=saveCard.locator('.marketplace-card-save button.save-star');
+      const overlay=saveCard.locator('.marketplace-card-save');
+      await page.mouse.move(4,4);
+      if(await overlay.evaluate(element=>getComputedStyle(element).opacity)!=='0')
+        throw new Error('Card save star must be hidden at rest on a desktop');
+      await saveCard.hover();
+      if(await overlay.evaluate(element=>getComputedStyle(element).opacity)!=='1')
+        throw new Error('Card save star must show on hover');
+      await page.mouse.move(4,4);
+      await saveCard.locator('.marketplace-card-art').focus();
+      await page.keyboard.press('Tab');
+      if(!(await save.evaluate(button=>document.activeElement===button)) ||
+         await overlay.evaluate(element=>getComputedStyle(element).opacity)!=='1')
+        throw new Error('Card save star must show on keyboard focus');
+      await page.keyboard.press('Enter');
+      await save.locator('xpath=..').locator('input[name="_method"][value="DELETE"]').waitFor({state:'attached'});
+      if(await save.getAttribute('aria-pressed')!=='true')
+        throw new Error('Saving must render the pressed star state');
       await page.goto(origin+'/account/saved-listings',{waitUntil:'networkidle'});
       await page.getByRole('link',{name:'Browser QA Published Service',exact:true}).click();
       await page.waitForURL(/\/service\?=\d{9}-browser-qa-published-service$/);
       if(!(await page.getByRole('heading',{name:'Browser QA Published Service',exact:true}).isVisible()))
         throw new Error('Saved listing title did not open the matching public listing');
-      checks+=4;
+      await page.goto(origin+'/search',{waitUntil:'networkidle'});
+      await saveCard.hover();
+      await save.click();
+      await save.locator('xpath=..').locator('input[name="_method"]').waitFor({state:'detached'});
+      if(await save.getAttribute('aria-pressed')!=='false')
+        throw new Error('Removing a saved listing must reset the star');
+      checks+=8;
 
       // The Account shell must keep its sidebar and content scroll independent.
       await page.goto(origin+'/en/account/notifications?filter=read',{waitUntil:'networkidle'});

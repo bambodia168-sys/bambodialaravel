@@ -15,19 +15,9 @@
       <h1 class="premium-detail-below-title">{{ $job->title }}</h1>
       <div class="premium-showcase-actions">
         <div class="marketplace-detail-actions">
+          <x-save-star :item="$job" :is-saved="$isSaved" labeled/>
           @auth
-            @if($isSaved)
-              <form method="post" action="{{ route('saved-jobs.destroy',$job) }}">@csrf @method('DELETE')
-                <button type="submit" class="btn subtle"><x-icon name="bookmark" size="16"/> Saved — remove from list</button>
-              </form>
-            @else
-              <form method="post" action="{{ route('saved-jobs.store',$job) }}">@csrf
-                <button type="submit" class="btn subtle"><x-icon name="bookmark" size="16"/> Save job</button>
-              </form>
-            @endif
-            <a class="btn subtle" href="{{ route('account.saved-jobs') }}">My saved jobs</a>
-          @else
-            <a class="btn subtle" href="{{ route('login') }}">Sign in to save this job</a>
+            <a class="btn subtle" href="{{ route('account.saved-jobs') }}"><x-icon name="star" size="16"/> My saved jobs</a>
           @endauth
         </div>
         <a class="premium-action-link" href="{{ route('jobs') }}">Browse more opportunities</a>
@@ -165,7 +155,7 @@
       </div>
       <div class="marketplace-card-grid premium-related-grid" data-related-grid>
         @foreach($relatedJobs->take(8) as $relatedJob)
-          <x-related-job-card :job="$relatedJob"/>
+          <x-related-job-card :job="$relatedJob" :is-saved="in_array((int)$relatedJob->id, $savedRelatedJobIds, true)"/>
         @endforeach
       </div>
     </section>

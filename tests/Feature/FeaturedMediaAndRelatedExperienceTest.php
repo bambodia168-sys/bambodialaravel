@@ -201,7 +201,7 @@ class FeaturedMediaAndRelatedExperienceTest extends TestCase
         $client=$this->member('customer');
         $selected=$this->job($client,'Main approved job');
         foreach(range(1,10) as $index) {
-            $this->job($client,'Matching approved job '.sprintf('%02d',$index));
+            $related=$this->job($client,'Matching approved job '.sprintf('%02d',$index));
         }
         $draft=$this->job($client,'Hidden draft job');
         $draft->update(['status'=>'pending']);
@@ -214,5 +214,16 @@ class FeaturedMediaAndRelatedExperienceTest extends TestCase
             $this->assertStringContainsString('Matching approved job '.sprintf('%02d',$index),$html);
         $this->assertStringNotContainsString('Hidden draft job',$html);
         $this->assertStringNotContainsString('Other category job',$html);
+        $this->assertStringContainsString('Sign in to save Matching approved job 10',$html);
+        $this->assertStringNotContainsString('save-star-form',$html);
+
+        $viewer=$this->member('freelancer');
+        \App\Models\SavedJob::query()->create([
+            'user_id'=>$viewer->id,
+            'marketplace_job_id'=>$related->id,
+        ]);
+        $this->actingAs($viewer)->get($selected->publicUrl())->assertOk()
+            ->assertSeeInOrder(['aria-label="Save Matching approved job 10"', 'aria-pressed="true"',
+                'title="Remove Matching approved job 10 from saved jobs"'], false);
     }
 }

@@ -8,6 +8,7 @@
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
   @include('layouts.partials.site-typography')
+  <link rel="stylesheet" href="{{ asset('css/save-star.css') }}?v=1">
   @if(config('commerce.enabled'))
     <link rel="stylesheet" href="{{ asset('css/commerce-storefront.css') }}?v=1">
     <script defer src="{{ asset('js/commerce-storefront.js') }}?v=1"></script>
@@ -120,7 +121,7 @@
           <a href="{{ url('/account?='.auth()->user()->public_id) }}"><x-icon name="user" size="16"/> {{ __('ui.my_account') }}</a>
           <a href="{{ route('account.downloads') }}"><x-icon name="download" size="16"/> My Downloads</a>
           <a href="{{ route('account.saved-listings') }}"><x-icon name="star" size="16"/> Saved Listings</a>
-          <a href="{{ route('account.saved-jobs') }}"><x-icon name="briefcase" size="16"/> Saved Jobs</a>
+          <a href="{{ route('account.saved-jobs') }}"><x-icon name="star" size="16"/> Saved Jobs</a>
           <a href="{{ route('account.notifications') }}"><x-icon name="mail" size="16"/> Notifications</a>
           <a href="{{ route('account.policy-receipts') }}"><x-icon name="book" size="16"/> My Policy Receipts</a>
           <a href="{{ route('privacy.index') }}"><x-icon name="shield" size="16"/> Privacy Requests</a>

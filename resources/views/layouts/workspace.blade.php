@@ -145,7 +145,7 @@
       ['heading'=>'Saved & Shared','items'=>[
         ['route'=>'jobs.applied','label'=>'My Proposals','icon'=>'send','roles'=>['freelancer']],
         ['route'=>'account.saved-listings','label'=>'Saved Listings','icon'=>'star'],
-        ['route'=>'account.saved-jobs','label'=>'Saved Jobs','icon'=>'bookmark'],
+        ['route'=>'account.saved-jobs','label'=>'Saved Jobs','icon'=>'star'],
       ]],
     ];
   } elseif ($workspace === 'developer') {
@@ -170,7 +170,7 @@
         ['route'=>'account.media.index','label'=>'My Media Library','icon'=>'image'],
         ['route'=>'account.licenses.index','label'=>'My Licenses','icon'=>'key-round'],
         ['route'=>'account.saved-listings','label'=>'Saved Listings','icon'=>'star'],
-        ['route'=>'account.saved-jobs','label'=>'Saved Jobs','icon'=>'bookmark'],
+        ['route'=>'account.saved-jobs','label'=>'Saved Jobs','icon'=>'star'],
       ]],
       ['heading'=>'Orders & Communication','items'=>[
         ...(config('commerce.enabled') ? [['route'=>'account.orders.index','label'=>'Order History','icon'=>'clock']] : []),
