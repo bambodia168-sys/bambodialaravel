@@ -3,6 +3,9 @@
 @section('title', 'Order Details')
 @section('content')
 <div class="container inner-page">
+  @if($section === 'account.orders')
+    <x-checkout-progress :order="$order" :payment-pending="$payments->contains(fn ($payment) => in_array($payment->status, \App\Models\CommercePayment::ACTIVE, true))"/>
+  @endif
   <div class="page-intro">
     <a class="btn subtle compact" href="{{ route($section.'.index') }}">Back to orders</a>
     <h1>{{ $order->listing_title }}</h1>

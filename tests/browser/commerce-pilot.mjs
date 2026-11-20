@@ -34,12 +34,18 @@ async function submitCredentials(form, role) {
   await form.locator('input[name="password"]').fill('CommercePilotBrowserOnly123!');
   await form.locator('button[type="submit"]').click();
 }
+async function currentCheckoutStep(page, step) {
+  await page.locator(`.checkout-progress [data-step="${step}"][aria-current="step"]`).waitFor();
+  assert.equal(await page.locator('.checkout-progress [aria-current="step"]').count(), 1);
+}
 async function order(page, listing, {guest = false} = {}) {
   await visit(page, listing);
   await page.getByRole('button', {name: 'Add to cart', exact: true}).click();
   const added = page.getByRole('dialog', {name: 'Added to cart', exact: true});
   await added.getByRole('button', {name: 'View cart', exact: true}).click();
+  await currentCheckoutStep(page, 'cart');
   await page.getByRole('link', {name: 'Review checkout', exact: true}).click();
+  await currentCheckoutStep(page, 'checkout');
   if (guest) {
     await page.getByRole('link', {name: 'Create account', exact: true}).click();
     const registration = page.getByRole('dialog', {name: 'Create your account', exact: true});
@@ -60,6 +66,12 @@ async function order(page, listing, {guest = false} = {}) {
     await page.waitForURL(url => url.pathname === '/checkout' && url.search === '');
     record('Guest cart survives checkout sign-in and registration shows both policy links');
   }
+  const singleRow = await page.locator('.checkout-progress-track').evaluate(track => {
+    const markers = [...track.querySelectorAll('.checkout-progress-marker')];
+    const bounds = markers.map(marker => marker.getBoundingClientRect());
+    return bounds.length === 4 && bounds.every(box => box.top === bounds[0].top && box.left >= 0 && box.right <= innerWidth);
+  });
+  assert.equal(singleRow, true);
   const method = page.getByRole('radio', {name: 'Bank Transfer', exact: true});
   const normalBorder = await method.evaluate(radio => getComputedStyle(radio.closest('label')).borderColor);
   await method.check();
@@ -77,6 +89,7 @@ async function order(page, listing, {guest = false} = {}) {
   assert.equal(payload.form.payment_method, await method.getAttribute('value'));
   await submit.click();
   await page.waitForURL(/\/account\/orders\/[a-f0-9-]{36}$/);
+  await currentCheckoutStep(page, 'payment');
   const preferred = page.locator('.order-payment-option--selected');
   await preferred.getByText('Selected', {exact: true}).waitFor();
   assert.equal(await preferred.locator('details').getAttribute('open'), '');
@@ -93,6 +106,9 @@ async function uploadReceipt(page, ref) {
   await page.getByLabel('Payment receipt').setInputFiles({name: 'pilot-receipt.png', mimeType: 'image/png', buffer: receipt});
   await page.getByRole('button', {name: 'Submit receipt', exact: true}).click();
   await page.getByText('Your payment receipt is awaiting review.', {exact: false}).waitFor();
+  await currentCheckoutStep(page, 'payment');
+  await page.locator('.checkout-progress').getByText('Payment pending', {exact: true}).waitFor();
+  assert.equal(await page.locator('.checkout-progress [data-step="payment"] .checkout-progress-marker svg').count(), 0);
 }
 async function reviewPayment(page, orderPath, ref, approve, total) {
   await visit(page, '/dashboard/commerce-operations');
@@ -177,6 +193,14 @@ try {
   await admin.getByRole('button', {name: 'Enable payments', exact: true}).waitFor();
   await reviewPayment(admin, productOrder, 'PILOT-PRODUCT-APPROVE', true, '29.00');
   await visit(buyer, productOrder);
+  await currentCheckoutStep(buyer, 'review');
+  assert.equal(await buyer.locator('.checkout-progress [data-step="payment"]').getAttribute('data-state'), 'completed');
+  assert.equal(await buyer.locator('.checkout-progress-status').count(), 0);
+  const receiptLink = buyer.getByRole('link', {name: 'View receipt', exact: true});
+  await receiptLink.click();
+  await currentCheckoutStep(buyer, 'review');
+  await visit(buyer, productOrder);
+  record('Checkout progress keeps Payment pending until verification and opens Review afterward');
   const download = buyer.getByRole('link', {name: 'Download product', exact: true});
   await download.waitFor();
   await visit(admin, '/dashboard/payment-methods');

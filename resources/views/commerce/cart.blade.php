@@ -6,11 +6,7 @@
   <script defer src="{{ asset('js/checkout-payment-methods.js') }}?v=1"></script>
 @endif
 <div class="container inner-page storefront">
-  <nav class="storefront-steps" aria-label="Checkout steps">
-    <a href="{{ route('cart') }}" @if(!$checkout) aria-current="step" @endif>Cart</a>
-    <span @if($checkout) aria-current="step" @endif>Checkout</span>
-    <span>Payment</span>
-  </nav>
+  <x-checkout-progress :step="$checkout ? 'checkout' : 'cart'"/>
   <div class="page-intro">
     <h1>{{ $checkout ? 'Checkout' : 'Your cart' }}</h1>
     @if($lines !== [])
