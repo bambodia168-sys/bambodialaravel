@@ -175,7 +175,8 @@ class StorefrontCheckoutTest extends TestCase
             ->assertSee('Pay for this order')
             ->assertSee('data-step="payment" data-state="current"', false)
             ->assertDontSee('Payment pending')
-            ->assertSee('order-payment-option--selected')
+            ->assertSee('data-payment-stamp="awaiting"', false)
+            ->assertSee('name="order-payment-choice"  open', false)
             ->assertSee('Local transfer');
         $this->assertDatabaseCount('marketplace_orders', 1);
         $this->assertDatabaseCount('commerce_payments', 0);

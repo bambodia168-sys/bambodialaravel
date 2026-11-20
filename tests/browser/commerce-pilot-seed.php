@@ -140,6 +140,9 @@ if (! $release->isApproved()) {
 CommercePaymentMethod::query()->where('provider', 'bank_transfer')->sole()->update([
     'available' => true, 'instructions' => 'Isolated pilot. Upload a sample receipt. Do not send money.',
 ]);
+CommercePaymentMethod::query()->where('provider', 'khqr')->sole()->update([
+    'available' => true, 'instructions' => 'Isolated KHQR fixture. Do not send money.',
+]);
 file_put_contents($base.'/storage/framework/commerce-pilot.json', json_encode([
     'product_url' => $product->publicUrl(), 'service_url' => $service->publicUrl(),
     'sha256' => $hash, 'receipt' => base64_encode($receipt),

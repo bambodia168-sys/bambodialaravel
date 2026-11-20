@@ -1,16 +1,46 @@
 @extends('layouts.workspace')
 @section('workspace', $workspace)
 @section('title', 'Order Details')
+@php
+  $buyerView = $section === 'account.orders';
+  $paymentOpen = $payments->contains(fn ($payment) => in_array($payment->status, \App\Models\CommercePayment::ACTIVE, true));
+@endphp
+@if($buyerView)
+  @push('head')
+    <link rel="stylesheet" href="{{ asset('css/checkout-payment-methods.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('css/order-review.css') }}?v=1">
+  @endpush
+@endif
 @section('content')
-<div class="container inner-page">
-  @if($section === 'account.orders')
-    <x-checkout-progress :order="$order" :payment-pending="$payments->contains(fn ($payment) => in_array($payment->status, \App\Models\CommercePayment::ACTIVE, true))"/>
+<div @class(['container', 'inner-page', 'order-review' => $buyerView])>
+  @if($buyerView)
+    <x-checkout-progress :order="$order" :payment-pending="$paymentOpen"/>
   @endif
   <div class="page-intro">
     <a class="btn subtle compact" href="{{ route($section.'.index') }}">Back to orders</a>
     <h1>{{ $order->listing_title }}</h1>
     <p class="mono">{{ $order->number }}</p>
   </div>
+  @if($buyerView)
+    <section class="panel order-review-summary">
+      <div class="order-review-summary-head">
+        <div>
+          <h2>Order summary</h2>
+          <p class="order-review-total">{{ $order->currency }} {{ $order->total }}</p>
+        </div>
+        <x-order-payment-stamp :order="$order" :payment-open="$paymentOpen" :has-attempts="$payments->isNotEmpty()"/>
+      </div>
+      <dl class="order-review-facts">
+        <div><dt>Buyer</dt><dd>{{ $order->buyer_name }}</dd></div>
+        <div><dt>Seller</dt><dd>{{ $order->seller_name }}</dd></div>
+        <div><dt>Placed</dt><dd>{{ $order->created_at->format('d M Y H:i') }}</dd></div>
+        @if($order->license_name)<div><dt>License</dt><dd>{{ $order->license_name }}</dd></div>@endif
+        @if($order->payment_method)<div><dt>{{ $order->status === 'awaiting_payment' ? 'Payment preference' : 'Payment method' }}</dt><dd>{{ $order->payment_method }}</dd></div>@endif
+        @if($order->completed_at)<div><dt>Recorded</dt><dd>{{ $order->completed_at->format('d M Y H:i') }}</dd></div>@endif
+        @if($order->cancelled_at)<div><dt>Cancelled</dt><dd>{{ $order->cancelled_at->format('d M Y H:i') }}</dd></div>@endif
+      </dl>
+    </section>
+  @endif
   @if($order->status === 'refunded')
     <section class="panel">
       <div class="panel-head">
@@ -91,28 +121,30 @@
   @if($canRecordStripeRefund)
     @include('commerce.operations.stripe-refund')
   @endif
-  <section class="panel">
-    <div class="panel-head">
-      <h2>Order details</h2><span class="role-pill">{{ \App\Models\MarketplaceOrder::STATUSES[$order->status] }}</span>
-    </div>
-    <div class="table-scroll">
-      <table class="data-table">
-        <tbody>
-          <tr><th scope="row">Buyer</th><td>{{ $order->buyer_name }}</td></tr>
-          <tr><th scope="row">Seller</th><td>{{ $order->seller_name }}</td></tr>
-          @if($order->license_name)<tr><th scope="row">License</th><td>{{ $order->license_name }}</td></tr>@endif
-          <tr><th scope="row">Order total</th><td class="mono">{{ $order->currency }} {{ $order->total }}</td></tr>
-          @if($order->payment_method)<tr><th scope="row">Preferred payment method</th><td>{{ $order->payment_method }}</td></tr>@endif
-          <tr><th scope="row">Placed</th><td>{{ $order->created_at->format('d M Y H:i') }}</td></tr>
-          @if($order->completed_at)<tr><th scope="row">Recorded</th><td>{{ $order->completed_at->format('d M Y H:i') }}</td></tr>@endif
-          @if($order->cancelled_at)<tr><th scope="row">Cancelled</th><td>{{ $order->cancelled_at->format('d M Y H:i') }}</td></tr>@endif
-        </tbody>
-      </table>
-    </div>
+  @php($showOrderPanel = !$buyerView || $payments->isNotEmpty() || $order->receipt_number || $order->status === 'awaiting_payment')
+  <section class="panel" @if(!$showOrderPanel) hidden @endif>
+    @unless($buyerView)
+      <div class="panel-head">
+        <h2>Order details</h2><span class="role-pill">{{ \App\Models\MarketplaceOrder::STATUSES[$order->status] }}</span>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table">
+          <tbody>
+            <tr><th scope="row">Buyer</th><td>{{ $order->buyer_name }}</td></tr>
+            <tr><th scope="row">Seller</th><td>{{ $order->seller_name }}</td></tr>
+            @if($order->license_name)<tr><th scope="row">License</th><td>{{ $order->license_name }}</td></tr>@endif
+            <tr><th scope="row">Order total</th><td class="mono">{{ $order->currency }} {{ $order->total }}</td></tr>
+            @if($order->payment_method)<tr><th scope="row">Preferred payment method</th><td>{{ $order->payment_method }}</td></tr>@endif
+            <tr><th scope="row">Placed</th><td>{{ $order->created_at->format('d M Y H:i') }}</td></tr>
+            @if($order->completed_at)<tr><th scope="row">Recorded</th><td>{{ $order->completed_at->format('d M Y H:i') }}</td></tr>@endif
+            @if($order->cancelled_at)<tr><th scope="row">Cancelled</th><td>{{ $order->cancelled_at->format('d M Y H:i') }}</td></tr>@endif
+          </tbody>
+        </table>
+      </div>
+    @endunless
     @if($collectingPayments || $payments->isNotEmpty())
       @include('commerce.payments')
     @endif
-    @php($paymentOpen = $payments->contains(fn ($payment) => in_array($payment->status, \App\Models\CommercePayment::ACTIVE, true)))
     @if(!$collectingPayments && !$paymentOpen && $section === 'account.orders' && $order->status === 'awaiting_payment' && ($methods->isNotEmpty() || $order->payment_method))
       <div class="panel-head">
         <form method="post" action="{{ route('account.orders.payment-method', $order->number) }}" class="form-stack">

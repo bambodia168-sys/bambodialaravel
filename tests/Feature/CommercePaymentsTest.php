@@ -61,7 +61,7 @@ class CommercePaymentsTest extends TestCase
         $receipt = [
             'method' => $method->id, 'reference' => 'PAUSE-E2E-REF', 'proof' => UploadedFile::fake()->image('proof.png'),
         ];
-        $this->actingAs($buyer)->get($orderPage)->assertOk()->assertSee('KHQR transfer');
+        $this->actingAs($buyer)->get($orderPage)->assertOk()->assertSee('KHQR')->assertSee('data-payment-stamp="awaiting"', false);
         $this->get($qr)->assertOk();
         $this->post($submit, $receipt)->assertRedirect();
         $attempt = $order->payments()->sole();
