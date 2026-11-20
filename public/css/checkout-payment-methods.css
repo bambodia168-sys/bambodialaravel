@@ -1,0 +1,114 @@
+.checkout-payment-methods {
+    display: grid;
+    gap: .5rem;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.checkout-payment-methods legend {
+    margin-block-end: .65rem;
+    padding: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.checkout-payment-option {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .65rem;
+    min-width: 0;
+    padding: .5rem .65rem;
+    border: 1px solid var(--line);
+    border-radius: .75rem;
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 650;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+
+.checkout-payment-option:hover,
+.checkout-payment-option:has(input:checked) {
+    border-color: var(--accent);
+}
+
+.checkout-payment-option:has(input:checked),
+.order-payment-option--selected {
+    background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+    box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.checkout-payment-option:has(input:focus-visible) {
+    outline: 2px solid var(--secondary);
+    outline-offset: 2px;
+}
+
+.checkout-payment-option input {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    margin: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.payment-method-icon {
+    display: inline-grid;
+    width: 2.625rem;
+    height: 2.625rem;
+    flex: 0 0 2.625rem;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: .625rem;
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.payment-method-icon[data-payment-icon="stripe"] {
+    color: #5141c1;
+    background: #efebff;
+}
+
+.payment-method-icon[data-payment-icon="khqr"] {
+    color: #a31829;
+    background: #fff0f0;
+}
+
+.payment-method-icon[data-payment-icon="bank_transfer"] {
+    color: #185582;
+    background: #ebf5ff;
+}
+
+.order-payment-option > :is(details, form) {
+    width: 100%;
+}
+
+.order-payment-option--selected {
+    border-radius: .75rem;
+}
+
+.order-payment-label,
+.order-payment-selection {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+}
+
+summary.order-payment-label {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.order-payment-option details[open] .order-payment-chevron {
+    transform: rotate(180deg);
+}
+
+.order-payment-selection {
+    margin-inline: .5rem;
+    color: var(--accent);
+    font-size: .875rem;
+    font-weight: 700;
+}

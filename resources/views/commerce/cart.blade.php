@@ -1,6 +1,10 @@
 @extends('layouts.main')
 @section('title', $checkout ? 'Checkout' : 'Cart')
 @section('content')
+@if($checkout && $methods->isNotEmpty() && ($totals['USD'] ?? 0) > 0)
+  <link rel="stylesheet" href="{{ asset('css/checkout-payment-methods.css') }}?v=1">
+  <script defer src="{{ asset('js/checkout-payment-methods.js') }}?v=1"></script>
+@endif
 <div class="container inner-page storefront">
   <nav class="storefront-steps" aria-label="Checkout steps">
     <a href="{{ route('cart') }}" @if(!$checkout) aria-current="step" @endif>Cart</a>
@@ -55,7 +59,7 @@
                 </form>
               @elseif(auth()->user()?->hasVerifiedEmail() && $quote)
                 @if($quote['total'] === '0.00' || ($quote['currency'] === 'USD' && $methods->isNotEmpty()))
-                  <form method="post" action="{{ route('checkout.place', $id) }}">
+                  <form method="post" action="{{ route('checkout.place', $id) }}" @if($quote['total'] !== '0.00') data-checkout-payment @endif>
                     @csrf
                     <input type="hidden" name="tier" value="{{ $line['tier'] }}">
                     <input type="hidden" name="request_key" value="{{ $line['request_key'] }}">
@@ -90,11 +94,19 @@
         @elseif($checkout && !auth()->check() && $totals !== [])
           <a class="btn primary" href="{{ route('checkout', ['account' => 'login']) }}">Sign in to continue</a>
           @if($canRegister)<a class="btn subtle" href="{{ route('checkout', ['account' => 'register']) }}">Create account</a>@endif
-        @elseif($checkout && $methods->isNotEmpty())
-          <h3>Payment methods</h3>
-          <ul class="storefront-methods">
-            @foreach($methods as $method)<li>{{ $method->dynamicQr() ? 'Scan to pay · ' : '' }}{{ $method->name }}</li>@endforeach
-          </ul>
+        @elseif($checkout && $methods->isNotEmpty() && ($totals['USD'] ?? 0) > 0)
+          <fieldset class="checkout-payment-methods" data-checkout-payment-methods>
+            <legend>Payment methods</legend>
+            @foreach($methods as $method)
+              <label class="checkout-payment-option">
+                <x-payment-method-icon :provider="$method->provider"/>
+                <span>{{ $method->name }}</span>
+                <input type="radio" name="payment_method" value="{{ $method->id }}"
+                  @checked((string) old('payment_method') === (string) $method->id)>
+              </label>
+            @endforeach
+          </fieldset>
+          @error('payment_method')<p class="storefront-notice" role="alert">{{ $message }}</p>@enderror
         @endif
       </aside>
     </div>

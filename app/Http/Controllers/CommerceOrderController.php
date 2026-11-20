@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CommerceOrderController extends Controller
@@ -158,13 +159,22 @@ class CommerceOrderController extends Controller
             abort_unless($quote && hash_equals($quote['signature'], $data['quote']), 409, 'The listing price or terms changed. Reopen the order form.');
             $noPaymentDue = $quote['total'] === '0.00';
             $collectingPayments = ! $noPaymentDue && CommerceCollection::enabled();
+            $preferredMethodId = $data['payment_method'] ?? null;
+            $method = null;
             if ($fromCart && ! $noPaymentDue) {
-                abort_unless($collectingPayments && $quote['currency'] === 'USD'
-                    && CommercePaymentMethod::query()->where('available', true)->get()
-                        ->contains(fn (CommercePaymentMethod $method) => $method->availableForCheckout()),
-                    422, 'Payment is not available for this item.');
+                abort_unless($collectingPayments && $quote['currency'] === 'USD', 422, 'Payment is not available for this item.');
+                $checkoutMethods = CommercePaymentMethod::query()->where('available', true)->get()
+                    ->filter(fn (CommercePaymentMethod $option) => $option->availableForCheckout());
+                abort_if($checkoutMethods->isEmpty(), 422, 'Payment is not available for this item.');
+                if ($preferredMethodId !== null) {
+                    $method = $checkoutMethods->find($preferredMethodId);
+                    if (! $method) {
+                        throw ValidationException::withMessages(['payment_method' => 'That payment method is unavailable. Choose another method.']);
+                    }
+                }
+            } elseif (! $noPaymentDue) {
+                $method = $this->availableMethod($preferredMethodId);
             }
-            $method = ($noPaymentDue || $fromCart) ? null : $this->availableMethod($data['payment_method'] ?? null);
             $definition = $data['tier'] === 'extended' ? $record->extendedLicenseDefinition : $record->licenseDefinition;
 
             $snapshot = [];
