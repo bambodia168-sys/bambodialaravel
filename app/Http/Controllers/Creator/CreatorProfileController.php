@@ -48,7 +48,7 @@ class CreatorProfileController extends Controller
                                 ->orWhere('biography','like','%'.$search.'%');
                         }));
             }))
-            ->with('creatorProfile:user_id,headline,biography,is_public')
+            ->with('creatorProfile:user_id,headline,biography,is_public', 'userProfile:user_id,avatar_path')
             ->withCount(['publishedListings as public_listings_count'])
             ->orderBy('name')->paginate(10)->withQueryString();
         return view('creators.index',compact('creators','search'));

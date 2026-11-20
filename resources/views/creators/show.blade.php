@@ -15,11 +15,7 @@
   <div class="profile-v3-grid">
     <aside class="profile-v3-sidebar" aria-label="Creator profile and achievements">
       <div class="profile-v3-avatar">
-        @if($personal?->avatar_path)
-          <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($personal->avatar_path) }}" alt="{{ $creator->name }} profile photo" width="360" height="360" decoding="async">
-        @else
-          <span aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($creator->name,0,1)) }}</span>
-        @endif
+        <x-profile-avatar :user="$creator" public size="80" :alt="$creator->name.' profile photo'"/>
       </div>
       <div class="profile-v3-name-viewport" data-profile-name-viewport title="{{ $creator->name }}">
         <h1 data-profile-scroll-name>{{ $creator->name }}</h1>

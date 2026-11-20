@@ -2,15 +2,11 @@
 @php
   $previewOnly = str_starts_with($job->title,'[LAYOUT TEST] ');
   $clientName = $job->client?->name ?: 'Bambodia client';
-  $nameParts = preg_split('/\s+/u',trim($clientName),-1,PREG_SPLIT_NO_EMPTY) ?: [];
-  $clientInitials = collect($nameParts)->take(2)
-    ->map(fn($word) => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($word,0,1)))
-    ->implode('');
   $budget = $job->budget===null ? 'On request'
     : \App\Support\MarketplaceCardPresentation::price($job->budget,$job->currency);
 @endphp
 <article class="bambodia-job-row" aria-labelledby="bambodia-job-title-{{ $job->public_id }}">
-  <div class="bambodia-job-avatar bambodia-job-avatar--{{ $job->category }}" aria-hidden="true">{{ $clientInitials }}</div>
+  <div class="bambodia-job-avatar bambodia-job-avatar--{{ $job->category }}" aria-hidden="true"><x-profile-avatar :user="$job->client" public lazy size="23"/></div>
   <div class="bambodia-job-main">
     <div class="bambodia-job-title-line">
       <h3 id="bambodia-job-title-{{ $job->public_id }}"><a href="{{ $job->publicUrl() }}">{{ $job->title }}</a></h3>

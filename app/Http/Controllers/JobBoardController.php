@@ -29,7 +29,7 @@ class JobBoardController extends Controller
         abort_unless($category === '' || array_key_exists($category, $categoryChoices), 404);
         $sort=(string)$request->query('sort','recent');
         abort_unless(in_array($sort,['recent','budget_low','budget_high'],true),404);
-        $jobs = MarketplaceJob::query()->with(['client:id,name,public_id','featuredAsset'])->withCount('proposals')
+        $jobs = MarketplaceJob::query()->with(['client:id,name,public_id', 'client.creatorProfile:user_id,is_public', 'client.userProfile:user_id,avatar_path', 'featuredAsset'])->withCount('proposals')
             ->where('status','published')
             ->when($category!=='',fn($q)=>$q->where('category',$category))
             ->when($search !== '', fn($q)=>$q->where(function($query)use($search){
@@ -51,7 +51,7 @@ class JobBoardController extends Controller
     public function show(Request $request, string $job): View
     {
         abort_unless(preg_match('/^(\d{9})-([a-z0-9-]+)$/D', $job, $match)===1,404);
-        $listing = MarketplaceJob::query()->with(['client:id,name,public_id','featuredAsset'])
+        $listing = MarketplaceJob::query()->with(['client:id,name,public_id', 'client.creatorProfile:user_id,is_public', 'client.userProfile:user_id,avatar_path', 'featuredAsset'])
             ->where('public_id',$match[1])->where('slug',$match[2])->where('status','published')->firstOrFail();
         $applied = $request->user()
             ? JobProposal::query()->where('marketplace_job_id',$listing->id)->where('freelancer_id',$request->user()->id)->exists()

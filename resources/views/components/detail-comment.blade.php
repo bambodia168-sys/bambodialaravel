@@ -2,7 +2,7 @@
 <article class="detail-comment {{ $reply ? 'detail-comment--reply' : '' }}">
   <div class="detail-comment-header">
     <div class="detail-comment-author">
-      <span class="detail-comment-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($comment->user?->name ?? 'M',0,1)) }}</span>
+      <span class="detail-comment-avatar" aria-hidden="true"><x-profile-avatar :user="$comment->user" public lazy/></span>
       <div>
         <strong>{{ $comment->user?->name ?? 'Former member' }}</strong>
         <time datetime="{{ $comment->created_at->toIso8601String() }}">{{ $comment->created_at->diffForHumans() }}</time>

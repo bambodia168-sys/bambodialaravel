@@ -40,10 +40,9 @@
           <h1>{{ $entry->title }}</h1>
           @php
             $authorName = $entry->author?->name ?: 'Bambodia';
-            $authorInitial = mb_strtoupper(mb_substr($authorName, 0, 1));
           @endphp
           <div class="blog-article-byline" aria-label="Article details">
-            <span class="blog-author-avatar" aria-hidden="true">{{ $authorInitial }}</span>
+            <span class="blog-author-avatar" aria-hidden="true"><x-profile-avatar :user="$entry->author" public size="17"/></span>
             <strong class="blog-author-name">{{ $authorName }}</strong>
             <span class="blog-meta-divider" aria-hidden="true">·</span>
             <span>{{ $entry->published_at ? 'Published '.$entry->published_at->format('d M Y') : 'Not published' }}</span>
@@ -92,7 +91,7 @@
               <div class="blog-comment-list">
                 @forelse($comments as $comment)
                   <article class="blog-comment">
-                    <span class="blog-comment-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($comment->user?->name ?: 'U', 0, 1)) }}</span>
+                    <span class="blog-comment-avatar" aria-hidden="true"><x-profile-avatar :user="$comment->user" public lazy size="17"/></span>
                     <div class="blog-comment-body">
                       <div class="blog-comment-topline">
                         <strong>{{ $comment->user?->name ?: 'Former member' }}</strong>

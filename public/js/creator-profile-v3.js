@@ -85,6 +85,7 @@
     const status = $('[data-avatar-status]');
     const removal = $('[data-avatar-remove]');
     const original = preview.innerHTML;
+    const fallback = $('[data-profile-avatar-fallback]', preview);
     let objectUrl = null;
     function message(value) {
       if (!status) return;
@@ -154,10 +155,9 @@
         input.value = '';
         if (objectUrl) URL.revokeObjectURL(objectUrl);
         objectUrl = null;
-        preview.innerHTML = '';
-        const empty = document.createElement('span');
-        empty.textContent = ($('input[name="name"]')?.value || '?').charAt(0).toUpperCase();
-        preview.appendChild(empty);
+        const empty = fallback?.cloneNode(true);
+        if (empty) empty.hidden = false;
+        preview.replaceChildren(...(empty ? [empty] : []));
         message('Image will be removed after you select Save profile.');
       } else {
         preview.innerHTML = original;

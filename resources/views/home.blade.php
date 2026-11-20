@@ -91,11 +91,7 @@
         <article class="marketplace-freelancer-card">
           <div class="marketplace-freelancer-card-heading">
             <a class="marketplace-freelancer-avatar" href="{{ route('creators.show',$freelancer->public_id) }}" aria-label="View {{ $freelancer->name }} creator profile">
-              @if($freelancer->userProfile?->avatar_path)
-                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($freelancer->userProfile->avatar_path) }}" alt="{{ $freelancer->name }} profile photo" loading="lazy" decoding="async" width="112" height="112">
-              @else
-                <span aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($freelancer->name,0,1)) }}</span>
-              @endif
+              <x-profile-avatar :user="$freelancer" public lazy size="44" :alt="$freelancer->name.' profile photo'"/>
             </a>
           </div>
           <h3><a href="{{ route('creators.show',$freelancer->public_id) }}">{{ $freelancer->name }}</a></h3>

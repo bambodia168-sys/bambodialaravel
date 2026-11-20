@@ -82,6 +82,7 @@ jobs:
           php artisan migrate --force --no-interaction
           mkdir -p storage/framework
           php tests/browser/uat-seed.php
+          php artisan storage:link
           mkdir -p storage/app
           touch storage/app/installed.lock
           python3 - <<'PY'

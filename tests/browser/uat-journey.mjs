@@ -53,6 +53,28 @@ try{
     superUser=sessions.super.page,outsider=sessions.outsider.page;
   pass('Six distinct authenticated account sessions');
 
+  for (const path of ['/', '/creator']) {
+    await visit(creator, path);
+    const header = creator.locator('summary.profile-trigger, summary.workspace-profile');
+    const photo = header.locator('[data-profile-avatar-image]');
+    await photo.waitFor({state:'visible'});
+    assert(await photo.evaluate(image => image.complete && image.naturalWidth > 0 && getComputedStyle(image).objectFit === 'cover'),
+      'Saved avatar did not load or fit the header at '+path);
+    assert(!(await header.locator('[data-profile-avatar-fallback]').isVisible()), 'Fallback icon shows with a valid photo at '+path);
+  }
+  await visit(client, '/');
+  const missingPhotoHeader = client.locator('summary.profile-trigger');
+  assert(await missingPhotoHeader.locator('[data-profile-avatar-fallback] svg').isVisible(), 'Missing avatar has no user icon');
+  const avatarResource = '**/storage/profile-avatars/uat-creator.png';
+  const failAvatarRequest = route => route.abort();
+  await creator.route(avatarResource, failAvatarRequest);
+  await visit(creator, '/creator');
+  const brokenPhotoHeader = creator.locator('summary.workspace-profile');
+  assert(await brokenPhotoHeader.locator('[data-profile-avatar-fallback] svg').isVisible(), 'Failed avatar did not show the fallback icon');
+  assert(!(await brokenPhotoHeader.locator('[data-profile-avatar-image]').isVisible()), 'Failed avatar remains visible');
+  await creator.unroute(avatarResource, failAvatarRequest);
+  pass('Profile avatars and missing or failed photo fallbacks render in shared headers');
+
   await post(outsider,'/dashboard/review-queue/'+fixture.approve_id,{decision:'published'},'PATCH',403);
   await post(moderator,'/dashboard/review-queue/'+fixture.approve_id,{decision:'published'},'PATCH');
   await post(moderator,'/dashboard/review-queue/'+fixture.reject_id,{decision:'rejected'},'PATCH');

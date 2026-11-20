@@ -34,11 +34,7 @@
         <div class="profile-v3-edit-avatar">
           <div class="profile-v4-avatar-dropzone" data-avatar-dropzone role="button" tabindex="0" aria-label="Select or drag a profile image here">
             <div class="profile-v3-avatar" data-avatar-preview>
-              @if($personal?->avatar_path)
-                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($personal->avatar_path) }}" alt="Profile image preview" width="240" height="240">
-              @else
-                <span aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($member->name,0,1)) }}</span>
-              @endif
+              <x-profile-avatar :user="$member" size="64" alt="Profile image preview"/>
             </div>
             <div class="profile-v4-avatar-overlay" aria-hidden="true"><x-icon name="upload-cloud" size="26"/><strong>Drag &amp; drop</strong><span>or upload an image</span></div>
             <input id="profile-avatar" type="file" name="avatar" accept="image/jpeg,image/png,image/webp" data-avatar-file tabindex="-1" aria-label="Upload profile image">
