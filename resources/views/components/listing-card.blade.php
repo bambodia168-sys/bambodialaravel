@@ -3,10 +3,8 @@
   $featured=$listing->status === 'published' && (bool)$listing->is_featured;
   $preview=$listing->type==='product'
     ? \App\Support\MarketplaceCardPresentation::safePreviewUrl($listing->preview_url) : null;
-  $money=\App\Support\MarketplaceCardPresentation::price(
-    $listing->type==='product' ? ($listing->regular_price ?? $listing->price) : $listing->price,
-    $listing->currency
-  );
+  $amount = $listing->type === 'product' ? ($listing->regular_price ?? $listing->price) : $listing->price;
+  $money = \App\Support\MarketplaceCardPresentation::price($amount, $listing->currency);
 @endphp
 <article class="marketplace-card">
   <div class="marketplace-card-media">
@@ -40,7 +38,7 @@
       @endif
     </div>
     <div class="marketplace-card-footer">
-      <strong class="marketplace-card-price">{{ $money }}</strong>
+      <span @class(['marketplace-card-price', 'marketplace-card-price--request' => $amount === null])>{{ $money }}</span>
       @if($preview)
         <a class="marketplace-card-live-preview" href="{{ $preview }}" target="_blank"
            rel="noopener noreferrer nofollow external"
