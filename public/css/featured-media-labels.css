@@ -1,17 +1,19 @@
-/* Compact type badges keep their contrast on any artwork. */
+/* The glyph outline keeps the transparent badge readable over artwork. */
 .marketplace-card-media .marketplace-card-type,
 .listing-detail.premium-detail .premium-detail-floating-type {
   display: inline-flex;
   align-items: center;
   min-height: 0;
   padding: .25rem .55rem;
-  border: 1px solid var(--line);
+  border: 1px solid rgb(255 255 255 / .75);
   border-radius: .45rem;
-  background: var(--surface);
-  color: var(--text);
+  background: transparent;
+  color: #fff;
   box-shadow: none;
   text-shadow: none;
   backdrop-filter: none;
+  -webkit-text-stroke: 2px rgb(0 0 0 / .85);
+  paint-order: stroke fill;
   font-weight: 750;
   line-height: 1.2;
   letter-spacing: .025em;
@@ -41,4 +43,34 @@
   outline: 2px solid var(--secondary);
   outline-offset: 2px;
   border-radius: .15rem;
+}
+
+.marketplace-card-footer-actions {
+  margin-inline-start: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .375rem;
+}
+
+.marketplace-card-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  color: var(--text);
+  font-size: .8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.marketplace-card-rating svg {
+  flex: none;
+  color: var(--accent);
+  fill: currentColor;
+}
+
+.marketplace-card-rating-count {
+  color: var(--muted);
+  font-weight: 500;
 }

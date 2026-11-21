@@ -66,6 +66,7 @@ class CreatorProfileController extends Controller
             ->with(['creatorProfile', 'userProfile'])->firstOrFail();
 
         $listings=MarketplaceListing::query()->publiclyAvailable()
+            ->withVerifiedPurchaseRatings()
             ->where('user_id',$user->id)
             ->with(['coverAsset:id,public_id,alt_text,review_status','category:id,public_id,name,type,is_active','creator:id,name,public_id'])
             ->latest()->paginate(10);

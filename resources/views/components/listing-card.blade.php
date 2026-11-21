@@ -5,6 +5,8 @@
     ? \App\Support\MarketplaceCardPresentation::safePreviewUrl($listing->preview_url) : null;
   $amount = $listing->type === 'product' ? ($listing->regular_price ?? $listing->price) : $listing->price;
   $money = \App\Support\MarketplaceCardPresentation::price($amount, $listing->currency);
+  $ratingCount = \App\Support\PreviewContentReview::isPreviewTitle($listing->title)
+    ? 0 : (int) ($listing->verified_purchase_reviews_count ?? 0);
   $category = $listing->category;
   $categoryFilters = ['type' => $listing->type];
   if ($category?->is_active && $category->type === $listing->type && $category->public_id) {
@@ -48,12 +50,25 @@
     </div>
     <div class="marketplace-card-footer">
       <span @class(['marketplace-card-price', 'marketplace-card-price--request' => $amount === null])>{{ $money }}</span>
-      @if($preview)
-        <a class="marketplace-card-live-preview" href="{{ $preview }}" target="_blank"
-           rel="noopener noreferrer nofollow external"
-           aria-label="Open creator-provided live preview for {{ $listing->title }}">
-          Live Preview
-        </a>
+      @if($preview || $ratingCount > 0)
+        <div class="marketplace-card-footer-actions">
+          @if($preview)
+            <a class="marketplace-card-live-preview" href="{{ $preview }}" target="_blank"
+               rel="noopener noreferrer nofollow external"
+               aria-label="Open creator-provided live preview for {{ $listing->title }}">
+              Live Preview
+            </a>
+          @endif
+          @if($ratingCount > 0)
+            @php($rating = number_format((float) $listing->verified_purchase_reviews_avg_rating, 1))
+            <span class="marketplace-card-rating" role="img"
+                  aria-label="{{ trans_choice(':rating out of 5 from :count verified purchase rating|:rating out of 5 from :count verified purchase ratings', $ratingCount, ['rating' => $rating, 'count' => number_format($ratingCount)]) }}">
+              <x-icon name="star" size="14"/>
+              <span>{{ $rating }}</span>
+              <span class="marketplace-card-rating-count">({{ number_format($ratingCount) }})</span>
+            </span>
+          @endif
+        </div>
       @endif
     </div>
   </div>
