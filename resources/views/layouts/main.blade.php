@@ -10,7 +10,7 @@
   @include('layouts.partials.site-typography')
   @stack('page-styles')
   <link rel="stylesheet" href="{{ asset('css/marketplace-pricing.css') }}?v=1">
-  <link rel="stylesheet" href="{{ asset('css/save-star.css') }}?v=1">
+  <link rel="stylesheet" href="{{ asset('css/save-star.css') }}?v=2">
   <link rel="stylesheet" href="{{ asset('css/featured-media-labels.css') }}?v=3">
   @if(config('commerce.enabled'))
     <link rel="stylesheet" href="{{ asset('css/commerce-storefront.css') }}?v=1">
