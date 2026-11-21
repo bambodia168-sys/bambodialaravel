@@ -116,9 +116,11 @@ try {
     await viewer.setViewportSize(viewport);
     const boxes = [];
     for (const [label, key] of providers) {
-      const link = group.getByRole('link', {name: label, exact: true});
+      const buttonLabel = key === 'google' ? 'Sign in with Google' : label;
+      const link = group.getByRole('link', {name: buttonLabel, exact: true});
       assert.equal(await link.getAttribute('href'), url+'/auth/'+key+'/start');
-      assert.equal(await link.locator('svg[aria-hidden=true] + span').textContent(), label);
+      assert.equal(await link.locator('svg[aria-hidden=true] + span').textContent(), buttonLabel);
+      assert(await link.evaluate(button => button.scrollWidth <= button.clientWidth));
       const box = await link.boundingBox();
       assert(box && box.x >= 0 && box.x + box.width <= viewport.width);
       boxes.push(box);
