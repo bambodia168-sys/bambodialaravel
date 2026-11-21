@@ -63,6 +63,15 @@ foreach ([...$freelancers, 'Browser QA Private Freelancer'] as $name) {
         'biography'=>str_repeat('Original public freelancer portfolio fixture for responsive acceptance. ',3),
         'is_public'=>$name!=='Browser QA Private Freelancer',
     ]);
+    if ($name === 'Browser QA Freelancer 10') {
+        $person->userProfile()->create(['public_location' => 'Cambodia']);
+        \App\Models\CreatorBadgeGrant::query()->create([
+            'user_id' => $person->id,
+            'creator_badge_id' => \App\Models\CreatorBadge::query()->where('enabled', true)->firstOrFail()->id,
+            'source' => 'manual',
+            'evidence_note' => 'Short public badge row fixture',
+        ]);
+    }
 }
 $serviceCategory=\App\Models\MarketplaceCategory::query()->create([
     'type'=>'service',

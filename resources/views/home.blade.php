@@ -2,8 +2,8 @@
 @section('title','Home')
 @push('page-styles')
   <link rel="stylesheet" href="{{ asset('css/home-type-directory.css') }}?v=2">
-  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=4">
-  <script defer src="{{ asset('js/public-creator-cards.js') }}?v=1"></script>
+  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=5">
+  <script defer src="{{ asset('js/public-creator-cards.js') }}?v=2"></script>
 @endpush
 @section('content')
 <div class="marketplace-hero-scene">

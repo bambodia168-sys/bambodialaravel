@@ -152,8 +152,9 @@
 .public-creator-body {
   position: relative;
   isolation: isolate;
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: .9rem;
   padding: var(--card-gutter);
 }
@@ -270,15 +271,8 @@
 .public-creator-badges {
   --badge-gap: clamp(.35rem, .85vw, .6rem);
   --badge-size: clamp(2.2rem, 3vw, 2.5rem);
-  display: flex;
-  align-items: center;
-  gap: .45rem;
   min-width: 0;
-}
-
-.public-creator-badge-rail {
-  min-width: 0;
-  flex: 1;
+  margin-block-start: auto;
 }
 
 .public-creator-card .creator-badge-row--badge.creator-badge-row--compact {
@@ -305,34 +299,8 @@
   height: 100%;
 }
 
-.public-creator-badge-toggle {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 1.95rem;
-  height: 1.95rem;
-  padding: 0;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  color: inherit;
-  background: transparent;
-  opacity: .85;
-  cursor: pointer;
-}
-
-.public-creator-badge-toggle:hover {
-  opacity: 1;
-}
-
-.public-creator-badge-toggle[hidden],
-.public-creator-badge-toggle .public-creator-play,
-.public-creator-badge-toggle[aria-pressed="true"] .public-creator-pause,
 .public-creator-card .creator-badge-row--badge[data-creator-badge-copy] {
   display: none;
-}
-
-.public-creator-badge-toggle[aria-pressed="true"] .public-creator-play {
-  display: block;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -352,23 +320,23 @@
     padding-block: .25rem;
   }
 
-  .public-creator-badges[data-overflowing]:not([data-paused]) .public-creator-badge-rail:not(:focus-within) {
+  .public-creator-badges[data-overflowing] .public-creator-badge-rail:not(:focus-within) {
     overflow: hidden;
   }
 
-  .public-creator-badges[data-overflowing]:not([data-paused]) .public-creator-badge-rail:not(:focus-within) .public-creator-badge-track {
+  .public-creator-badges[data-overflowing] .public-creator-badge-rail:not(:focus-within) .public-creator-badge-track {
     animation: public-creator-badge-scroll var(--badge-duration, 24s) linear infinite;
   }
 
-  .public-creator-badges[data-overflowing]:not([data-paused]) .public-creator-badge-rail:not(:focus-within) .creator-badge-row--badge {
+  .public-creator-badges[data-overflowing] .public-creator-badge-rail:not(:focus-within) .creator-badge-row--badge {
     padding-inline-end: var(--badge-gap);
   }
 
-  .public-creator-badges[data-overflowing]:not([data-paused]) .public-creator-badge-rail:not(:focus-within) [data-creator-badge-copy] {
+  .public-creator-badges[data-overflowing] .public-creator-badge-rail:not(:focus-within) [data-creator-badge-copy] {
     display: flex;
   }
 
-  .public-creator-badges[data-overflowing]:not([data-paused]) .public-creator-badge-rail:hover .public-creator-badge-track {
+  .public-creator-badges[data-overflowing] .public-creator-badge-rail:hover .public-creator-badge-track {
     animation-play-state: paused;
   }
 }
@@ -378,7 +346,6 @@
   grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
   gap: 1rem;
-  margin-top: auto;
   padding: .6rem var(--card-gutter);
   border-top: 1px solid var(--card-edge);
   border-radius: 0 0 .6rem .6rem;
@@ -388,7 +355,8 @@
 }
 
 .public-creator-listings,
-.public-creator-location {
+.public-creator-location,
+.public-creator-location-trigger {
   display: inline-flex;
   align-items: center;
   gap: .45rem;
@@ -396,11 +364,46 @@
 }
 
 .public-creator-location {
+  position: relative;
   justify-self: end;
   min-width: 0;
+  max-width: 100%;
   padding-inline-start: .8rem;
   border-inline-start: 1px solid var(--card-edge);
   text-align: end;
+}
+
+.public-creator-location-trigger {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.public-creator-location > span:not(.public-creator-location-detail),
+.public-creator-location-trigger span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-creator-location-detail {
+  position: absolute;
+  z-index: 4;
+  inset-block-end: 100%;
+  inset-inline-end: 0;
+  width: max-content;
+  max-width: min(13rem, calc(100vw - 5rem));
+  padding: .5rem .65rem;
+  border: 1px solid var(--line);
+  border-radius: .55rem;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: start;
   overflow-wrap: anywhere;
 }
 
@@ -419,9 +422,5 @@
 @media (prefers-reduced-motion: reduce) {
   .public-creator-avatar::before {
     animation: none;
-  }
-
-  .public-creator-badge-toggle {
-    display: none;
   }
 }
