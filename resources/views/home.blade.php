@@ -1,7 +1,7 @@
 @extends('layouts.main')
 @section('title','Home')
 @push('page-styles')
-  <link rel="stylesheet" href="{{ asset('css/home-type-directory.css') }}?v=1">
+  <link rel="stylesheet" href="{{ asset('css/home-type-directory.css') }}?v=2">
   <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=2">
 @endpush
 @section('content')
@@ -51,6 +51,7 @@
     ] as $directory)
       <a class="marketplace-type-directory-tile" href="{{ route('marketplace.search',['type'=>$directory['type']]) }}">
         <span class="marketplace-directory-icon"><x-icon :name="$directory['icon']" size="23"/></span>
+        <span class="marketplace-directory-number" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
         <strong>{{ $directory['title'] }}</strong>
         <small>{{ $directory['intro'] }}</small>
         <span class="marketplace-directory-footer">
