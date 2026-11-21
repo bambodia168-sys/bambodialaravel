@@ -308,23 +308,26 @@ try {
         if(paletteSets[0].some(palette=>paletteSets[1].includes(palette)))
           throw new Error(device.name+' a creator card does not adapt to dark mode');
         await page.evaluate(()=>{document.documentElement.dataset.theme=localStorage.getItem('bambodia-theme')||'light';});
-        const badgeToggle=avatarCard.getByRole('button',{name:'Pause badge animation'});
+        const badgeRail=avatarCard.locator('.public-creator-badge-rail');
         const badgeTrack=avatarCard.locator('.public-creator-badge-track');
-        await badgeToggle.waitFor({state:'visible'});
         if(await avatarCard.locator('[data-creator-badge-copy][aria-hidden="true"][inert]').count()!==1 ||
+           await freelancerCards.locator('.public-creator-badge-toggle').count() ||
            await badgeTrack.evaluate(el=>getComputedStyle(el).animationName)!=='public-creator-badge-scroll')
           throw new Error(device.name+' long award row should scroll with an inaccessible visual repeat');
-        await badgeToggle.press('Enter');
-        if(await badgeToggle.getAttribute('aria-pressed')!=='true' ||
-           await badgeTrack.evaluate(el=>getComputedStyle(el).animationName)!=='none')
-          throw new Error(device.name+' badge animation did not pause');
-        await badgeToggle.press('Enter');
-        if(await badgeToggle.getAttribute('aria-pressed')!=='false' ||
-           await badgeTrack.evaluate(el=>getComputedStyle(el).animationName)!=='public-creator-badge-scroll')
-          throw new Error(device.name+' badge animation did not resume');
+        if(!device.mobile){
+          await badgeRail.hover();
+          if(await badgeTrack.evaluate(el=>getComputedStyle(el).animationPlayState)!=='paused')
+            throw new Error(device.name+' hover did not pause the badge row');
+          await page.mouse.move(0,0);
+          if(await badgeTrack.evaluate(el=>getComputedStyle(el).animationPlayState)!=='running')
+            throw new Error(device.name+' the badge row did not resume after hover');
+        }
+        await badgeRail.locator('.creator-badge-row:not([data-creator-badge-copy]) .creator-badge').first().focus();
+        if(await badgeTrack.evaluate(el=>getComputedStyle(el).animationName)!=='none')
+          throw new Error(device.name+' the badge row should stay still for keyboard browsing');
+        await avatarCard.locator('.public-creator-avatar').focus();
         await page.emulateMedia({reducedMotion:'reduce'});
-        if(await badgeToggle.isVisible() ||
-           await badgeTrack.evaluate(el=>getComputedStyle(el).animationName)!=='none' ||
+        if(await badgeTrack.evaluate(el=>getComputedStyle(el).animationName)!=='none' ||
            await avatarCard.locator('.public-creator-avatar').evaluate(el=>getComputedStyle(el,'::before').animationName)!=='none')
           throw new Error(device.name+' public creator effects should respect reduced motion');
         await page.emulateMedia({reducedMotion:'no-preference'});
@@ -1110,9 +1113,30 @@ try {
         if(!(await creatorCard.getByText('Original full-stack Laravel consulting',{exact:false}).isVisible())
           || !(await creatorCard.locator('.public-creator-avatar').isVisible())
           || !(await creatorCard.getByRole('link',{name:/approved listings?/}).isVisible())
-          || !(await creatorCard.locator('.public-creator-location').isVisible())
-          || !(await creatorCard.getByRole('button',{name:'Pause badge animation'}).isVisible()))
-          throw new Error(device.name+' missing public directory card details or badge animation');
+          || !(await creatorCard.locator('.public-creator-badge-rail').isVisible()))
+          throw new Error(device.name+' missing public directory card details or badges');
+        const country=creatorCard.getByRole('button',{name:'Cambodia',exact:true});
+        const fullLocation=creatorCard.locator('.public-creator-location-detail');
+        if(!(await country.isVisible()) || await fullLocation.isVisible())
+          throw new Error(device.name+' card should initially show only the country');
+        if(device.mobile) await country.tap();
+        else await country.hover();
+        if(!(await fullLocation.isVisible()) ||
+           (await fullLocation.textContent()).trim()!=='Sangkat Svay Por, A Test Province With a Very Long Name for Responsive Checks, Cambodia')
+          throw new Error(device.name+' the full public location should be available on hover or tap');
+        await country.press('Escape');
+        if(await fullLocation.isVisible())
+          throw new Error(device.name+' Escape should dismiss the location detail');
+        const shortCard=directoryGrid.locator('.public-creator-card').filter({has:page.getByRole('heading',{name:'Browser QA Designer',exact:true})});
+        if((await shortCard.locator('.public-creator-location').textContent()).trim()!=='Cambodia' ||
+           await shortCard.locator('.public-creator-location-trigger').count())
+          throw new Error(device.name+' a country-only profile should not have an empty location disclosure');
+        if(density.columns>1){
+          const longBadgeTop=await creatorCard.locator('.public-creator-badge-rail').evaluate(el=>el.getBoundingClientRect().top);
+          const shortBadgeTop=await shortCard.locator('.public-creator-badge-rail').evaluate(el=>el.getBoundingClientRect().top);
+          if(Math.abs(longBadgeTop-shortBadgeTop)>1)
+            throw new Error(device.name+' badge rows should align across cards with different text or badge counts');
+        }
         checks++;
       }
     }

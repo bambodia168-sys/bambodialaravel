@@ -128,9 +128,9 @@ class CreatorBadgePublicDisplayTest extends TestCase
                     'creator-badge-row--badge',
                     'class="public-creator-meta"',
                     '1 approved listing',
-                    'Battambang, Cambodia',
+                    '<span>Cambodia</span>',
+                    'role="tooltip" hidden>Sangkat Svay Por, Battambang, Cambodia</span>',
                 ], false)
-                ->assertDontSee('Sangkat Svay Por')
                 ->assertDontSee('Hidden expertise');
         }
     }

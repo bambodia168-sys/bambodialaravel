@@ -4,8 +4,10 @@
   $profile = $creator->creatorProfile?->is_public ? $creator->creatorProfile : null;
   $profileUrl = route('creators.show', $creator->public_id);
   $specialty = $profile ? ($creator->publicExpertise->pluck('label')->unique()->implode(' · ') ?: $profile->headline) : null;
-  $locationParts = $profile ? preg_split('/\s*,\s*/u', trim((string) $creator->userProfile?->public_location), -1, PREG_SPLIT_NO_EMPTY) : [];
-  $location = implode(', ', array_slice($locationParts ?: [], -2));
+  $publicLocation = $profile ? trim((string) $creator->userProfile?->public_location) : '';
+  $locationParts = preg_split('/\s*,\s*/u', $publicLocation, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+  $country = $locationParts ? end($locationParts) : '';
+  $locationId = 'public-creator-location-'.$creator->public_id;
   $approvedCount = (int) $creator->public_listings_count;
   $listingCountLabel = trans_choice(':count approved listing|:count approved listings', $approvedCount, ['count' => number_format($approvedCount)]);
   $style ??= random_int(1, 4);
@@ -39,10 +41,6 @@
             <x-creator-badges :badges="$badges" variant="compact" mode="badge"/>
           </div>
         </div>
-        <button type="button" class="public-creator-badge-toggle" aria-label="{{ __('Pause badge animation') }}" aria-pressed="false" hidden>
-          <x-icon name="pause" size="14" class="public-creator-pause"/>
-          <x-icon name="play" size="14" class="public-creator-play"/>
-        </button>
       </div>
     @endif
   </div>
@@ -51,11 +49,21 @@
       <x-icon name="briefcase" size="16"/>
       <span>{{ number_format($approvedCount) }}</span>
     </a>
-    @if(filled($location))
-      <span class="public-creator-location">
-        <x-icon name="globe" size="16"/>
-        <span>{{ $location }}</span>
-      </span>
+    @if(filled($country))
+      @if($country !== $publicLocation)
+        <div class="public-creator-location" data-creator-location>
+          <button type="button" class="public-creator-location-trigger" aria-expanded="false" aria-describedby="{{ $locationId }}">
+            <x-icon name="globe" size="16"/>
+            <span>{{ $country }}</span>
+          </button>
+          <span id="{{ $locationId }}" class="public-creator-location-detail" role="tooltip" hidden>{{ $publicLocation }}</span>
+        </div>
+      @else
+        <span class="public-creator-location">
+          <x-icon name="globe" size="16"/>
+          <span>{{ $country }}</span>
+        </span>
+      @endif
     @endif
   </footer>
 </article>

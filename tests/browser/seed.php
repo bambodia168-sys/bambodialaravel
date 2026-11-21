@@ -49,8 +49,8 @@ foreach (\App\Models\CreatorBadge::query()->where('enabled', true)->get() as $ba
 }
 
 // Fill two desktop rows and exercise directory pagination, with a private profile excluded.
-$freelancers = array_map(fn ($number) => "Browser QA Freelancer {$number}", range(1, 10));
-foreach ([...$freelancers, 'Browser QA Private Freelancer'] as $name) {
+$freelancers = array_map(fn ($number) => "Browser QA Freelancer {$number}", range(1, 9));
+foreach ([...$freelancers, 'Browser QA Designer', 'Browser QA Private Freelancer'] as $name) {
     $person=\App\Models\User::query()->create([
         'name'=>$name,
         'email'=>strtolower(str_replace(' ','-',$name)).'@example.test',
@@ -63,6 +63,15 @@ foreach ([...$freelancers, 'Browser QA Private Freelancer'] as $name) {
         'biography'=>str_repeat('Original public freelancer portfolio fixture for responsive acceptance. ',3),
         'is_public'=>$name!=='Browser QA Private Freelancer',
     ]);
+    if ($name === 'Browser QA Designer') {
+        $person->userProfile()->create(['public_location' => 'Cambodia']);
+        \App\Models\CreatorBadgeGrant::query()->create([
+            'user_id' => $person->id,
+            'creator_badge_id' => \App\Models\CreatorBadge::query()->where('enabled', true)->firstOrFail()->id,
+            'source' => 'manual',
+            'evidence_note' => 'Short public badge row fixture',
+        ]);
+    }
 }
 $serviceCategory=\App\Models\MarketplaceCategory::query()->create([
     'type'=>'service',
