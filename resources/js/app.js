@@ -705,7 +705,6 @@ function initializeBuilderStudio() {
         if (colorWrap) colorWrap.hidden = kind !== 'color';
         if (featuredYoutubeWrap) featuredYoutubeWrap.hidden = kind !== 'youtube';
         if (mediaSelect) {
-            let selectedValid = mediaSelect.value === '';
             Array.from(mediaSelect.options).forEach((option) => {
                 if (!option.value) return;
                 const mime = option.dataset.mediaMime || '';
@@ -715,9 +714,8 @@ function initializeBuilderStudio() {
                     : kind === 'video' ? ['video/mp4','video/webm'].includes(mime) : false;
                 option.hidden = !matches;
                 option.disabled = !matches;
-                if (option.selected && !matches) selectedValid = false;
             });
-            if (!selectedValid) mediaSelect.value = '';
+            if (mediaSelect.selectedOptions[0]?.disabled) mediaSelect.value = '';
         }
         showMediaPreview();
     }

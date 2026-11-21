@@ -1884,6 +1884,22 @@ try {
       if(await creator.locator('body').getAttribute('data-workspace')!=='creator')
         throw new Error('Creator workspace route did not render correctly');
 
+      await creator.goto(origin+'/en/builder?=197483529',{waitUntil:'networkidle'});
+      const featuredSelect=creator.locator('[data-featured-media]');
+      const featuredImage=creator.locator('[data-featured-preview] img');
+      const savedCover=await featuredSelect.locator('option[selected]').getAttribute('value');
+      if(!savedCover
+        || await featuredSelect.inputValue()!==savedCover
+        || await featuredImage.getAttribute('alt')!=='Original approved browser acceptance preview')
+        throw new Error('Builder cleared the stored cover from the creator’s draft');
+      const submittedCover=await featuredSelect.evaluate(select=>new FormData(select.form).get(select.name));
+      if(submittedCover!==savedCover)
+        throw new Error('Builder excluded the stored cover from the draft form');
+      await creator.locator('input[name="featured_kind"][value="video"]').check({force:true});
+      if(await featuredSelect.inputValue()!=='' || await featuredImage.count())
+        throw new Error('Builder retained an incompatible image after switching to video');
+      checks+=3;
+
       // Tab navigation uses real deep-linkable server URLs but switches only
       // the resource detail shell (no full-page redirect in JavaScript mode).
       await creator.goto(origin+'/search?type=service',{waitUntil:'networkidle'});
