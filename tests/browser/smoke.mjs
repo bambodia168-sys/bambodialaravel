@@ -197,9 +197,9 @@ try {
             hasCreator:!!creator.querySelector('a[href*="/creators/"]'),
             hasCategory:!!card.querySelector('.marketplace-card-category a[href*="/search?type="]'),
             typeBadge:badgeStyle.textShadow==='none' && badgeStyle.boxShadow==='none'
-              && badgeStyle.backgroundColor!=='rgba(0, 0, 0, 0)' && parseFloat(badgeStyle.borderRadius)>0,
+              && badgeStyle.backgroundColor==='rgba(0, 0, 0, 0)' && parseFloat(badgeStyle.borderRadius)>0,
             priceSymbol:price.textContent.trim().startsWith('$'),
-            hasUnsupportedRatings:!!card.querySelector('[data-rating],.rating-stars'),
+            hasUnsupportedRatings:!!card.querySelector('.marketplace-card-rating'),
             guestSave:!!card.querySelector('.marketplace-card-save, .save-star, .marketplace-card-actions'),
           };
         });

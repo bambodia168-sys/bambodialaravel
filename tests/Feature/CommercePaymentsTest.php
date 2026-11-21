@@ -449,6 +449,13 @@ Private installation report.
         $this->get(route('account.licenses.index'))->assertOk()->assertSee($product->title);
         $this->get($orderUrl)->assertOk()->assertSee('Review your purchase');
         $this->post(route('account.orders.review.store', $order->number), ['rating' => 4])->assertRedirect($orderUrl);
+        $product->update(['preview_url' => 'https://preview.example.com/verified-product']);
+        $this->get('/search?type=product')->assertOk()->assertSeeInOrder([
+            'class="marketplace-card-price"',
+            'class="marketplace-card-footer-actions"',
+            'class="marketplace-card-live-preview"',
+            'aria-label="4.0 out of 5 from 1 verified purchase rating"',
+        ], false);
         $this->actingAs($this->user('customer'))->get($download)->assertNotFound();
     }
 

@@ -3,13 +3,16 @@
 namespace Tests\Feature;
 
 use App\Models\LicenseDefinition;
+use App\Models\CommercePaymentMethod;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
+use App\Models\MarketplaceOrder;
 use App\Models\MediaAsset;
 use App\Models\User;
 use App\Support\BuilderSubmissionTerms;
 use App\Support\MarketplaceCardPresentation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class MarketplaceCompactCardsTest extends TestCase
@@ -68,7 +71,7 @@ class MarketplaceCompactCardsTest extends TestCase
 
         $response=$this->get('/')->assertOk()
             ->assertDontSee('class="marketplace-card-summary"',false)
-            ->assertDontSee('rating-stars',false)
+            ->assertDontSee('class="marketplace-card-rating"',false)
             ->assertDontSee('marketplace-card-featured',false)
             ->assertDontSee('marketplace-card-live-preview',false);
         $html=$response->getContent();
@@ -87,6 +90,58 @@ class MarketplaceCompactCardsTest extends TestCase
         $product->update(['status'=>'pending']);
         $this->get('/')->assertOk()->assertDontSee($product->title);
         $this->get('/search?type=product')->assertOk()->assertDontSee($product->title);
+    }
+
+    public function test_card_ratings_count_only_public_reviews_from_verified_delivered_orders(): void
+    {
+        config(['commerce.enabled' => true]);
+        $creator = $this->member('freelancer');
+        $buyer = $this->member('customer');
+        $listing = $this->listing($creator, 'service', 'Reviewed service card');
+        $unrated = $this->listing($creator, 'service', 'Unrated service card');
+        $method = CommercePaymentMethod::query()->where('provider', 'bank_transfer')->sole();
+
+        foreach ([
+            [5, 'completed', true, 'accepted', false],
+            [4, 'completed', true, 'accepted', false],
+            [1, 'completed', true, 'accepted', true],
+            [1, 'refunded', true, 'accepted', false],
+            [1, 'completed', false, 'accepted', false],
+            [1, 'completed', true, 'delivered', false],
+        ] as [$score, $status, $paid, $delivery, $hidden]) {
+            $order = MarketplaceOrder::query()->create([
+                'number' => (string) Str::uuid(), 'request_key' => (string) Str::uuid(),
+                'buyer_id' => $buyer->id, 'seller_id' => $creator->id, 'marketplace_listing_id' => $listing->id,
+                'listing_title' => $listing->title, 'buyer_name' => $buyer->name, 'seller_name' => $creator->name,
+                'total' => '78.00', 'currency' => 'USD', 'status' => $status,
+            ]);
+            if ($paid) {
+                $order->payments()->create([
+                    'number' => (string) Str::uuid(), 'commerce_payment_method_id' => $method->id,
+                    'provider' => $method->provider, 'method_name' => $method->name, 'status' => 'paid',
+                    'settlement_reference' => (string) Str::uuid(),
+                ]);
+            }
+            $order->serviceInquiry()->create([
+                'marketplace_listing_id' => $listing->id, 'client_id' => $buyer->id, 'creator_id' => $creator->id,
+                'subject' => $listing->title, 'delivery_status' => $delivery,
+            ]);
+            $order->review()->create(['rating' => $score, 'hidden_at' => $hidden ? now() : null]);
+        }
+
+        foreach (['/', '/search?type=service', route('creators.show', $creator->public_id), $unrated->publicUrl()] as $url) {
+            $html = $this->get($url)->assertOk()
+                ->assertSee('aria-label="4.5 out of 5 from 2 verified purchase ratings"', false)
+                ->assertDontSee('aria-label="0.0 out of 5', false)
+                ->getContent();
+            $this->assertSame(1, substr_count($html, 'class="marketplace-card-rating"'));
+        }
+
+        $this->get($listing->publicUrl())->assertOk()
+            ->assertSee('Verified purchase reviews')
+            ->assertDontSee('class="marketplace-card-rating"', false);
+        config(['commerce.enabled' => false]);
+        $this->get('/')->assertOk()->assertDontSee('class="marketplace-card-rating"', false);
     }
 
     public function test_currencies_use_real_symbols_without_fabricating_other_exchange_rates(): void

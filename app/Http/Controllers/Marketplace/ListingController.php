@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Marketplace;
 use App\Http\Controllers\Controller;
 use App\Support\BuilderGallery;
 use App\Models\MarketplaceListing;
-use App\Models\MarketplaceOrderReview;
 use App\Support\PreviewContentReview;
 use App\Models\MarketplaceCategory;
 use App\Models\MediaAsset;
@@ -43,6 +42,7 @@ class ListingController extends Controller
             ->with(['creator:id,name,public_id', 'creator.creatorProfile:user_id,is_public,headline',
                 'coverAsset:id,public_id,alt_text', 'featuredAsset:id,public_id,alt_text', 'category:id,public_id,name,type,is_active'])
             ->publiclyAvailable()
+            ->withVerifiedPurchaseRatings()
             ->when($type !== '', fn ($builder) => $builder->where('type', $type))
             ->when($selectedCategory !== '', fn ($builder) => $builder->whereHas('category', fn ($q) =>
                 $q->where('is_active', true)->where(function ($categoryQuery) use ($selectedCategory): void {
@@ -97,6 +97,7 @@ class ListingController extends Controller
                 ->where('marketplace_listing_id',$listing->id)->exists()
             : false;
         $relatedListings=MarketplaceListing::query()->publiclyAvailable()
+            ->withVerifiedPurchaseRatings()
             ->whereKeyNot($listing->id)->where('type',$listing->type)
             ->when($listing->category_id!==null,
                 fn($q)=>$q->where('category_id',$listing->category_id))
@@ -111,10 +112,9 @@ class ListingController extends Controller
 
         $screenshots = BuilderGallery::approvedFor($listing->gallery_media_ids, (int)$listing->user_id);
         $showReviews = config('commerce.enabled') && ! PreviewContentReview::isPreviewTitle($listing->title);
-        $reviews = $showReviews ? MarketplaceOrderReview::query()->whereNull('hidden_at')
-            ->whereHas('order', fn ($orders) => $orders->where('marketplace_listing_id', $listing->id)->reviewEligible()) : null;
+        $reviews = $showReviews ? $listing->verifiedPurchaseReviews() : null;
         $rating = $reviews ? (clone $reviews)->avg('rating') : null;
-        $purchaseReviews = $reviews?->latest('id')->simplePaginate(5, pageName: 'reviews')->withQueryString()->fragment('reviews');
+        $purchaseReviews = $reviews?->latest('marketplace_order_reviews.id')->simplePaginate(5, pageName: 'reviews')->withQueryString()->fragment('reviews');
 
         return view('marketplace.detail', compact('listing', 'isSaved', 'relatedListings', 'savedRelatedIds',
             'screenshots', 'purchaseReviews', 'rating'));

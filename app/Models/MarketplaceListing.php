@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
@@ -66,6 +67,25 @@ class MarketplaceListing extends Model
     public function savedBy(): HasMany
     {
         return $this->hasMany(SavedListing::class,'marketplace_listing_id');
+    }
+
+    public function verifiedPurchaseReviews(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            MarketplaceOrderReview::class,
+            MarketplaceOrder::class,
+            'marketplace_listing_id',
+            'marketplace_order_id',
+        )
+            ->whereNull('marketplace_order_reviews.hidden_at')
+            ->whereIn('marketplace_orders.id', MarketplaceOrder::query()->reviewEligible()->select('id'));
+    }
+
+    public function scopeWithVerifiedPurchaseRatings(Builder $query): Builder
+    {
+        return $query->when(config('commerce.enabled'), fn (Builder $listings) => $listings
+            ->withCount('verifiedPurchaseReviews')
+            ->withAvg('verifiedPurchaseReviews', 'rating'));
     }
 
     public function creator(): BelongsTo

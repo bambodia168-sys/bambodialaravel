@@ -32,6 +32,7 @@ class HomeController extends Controller
             $latestByType=[];
             foreach (MarketplaceListing::TYPES as $type) {
                 $latestByType[$type]=MarketplaceListing::query()->publiclyAvailable()
+                    ->withVerifiedPurchaseRatings()
                     ->where('type',$type)
                     ->latest('id')->limit($listingLimit)->get();
             }
