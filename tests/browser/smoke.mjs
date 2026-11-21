@@ -446,6 +446,21 @@ try {
               {waitUntil:'networkidle',timeout:30000});
             if(!opened || opened.status()!==200)
               throw new Error(device.name+' video article unavailable');
+            const numberedLists=await article.locator('.blog-sidebar-numbered').evaluateAll(lists=>lists.map(list=>({
+              numbers:[...list.querySelectorAll('.blog-sidebar-position')].map(position=>position.textContent.trim()),
+              aligned:[...list.querySelectorAll('li > a')].every(row=>{
+                const [position,label,detail]=row.children;
+                const title=label.getBoundingClientRect();
+                const secondary=detail.getBoundingClientRect();
+                return position.getBoundingClientRect().right<=title.left &&
+                  (row.classList.contains('blog-sidebar-story')
+                    ? Math.abs(secondary.left-title.left)<1
+                    : secondary.left>=title.right);
+              }),
+            })));
+            if(numberedLists.length!==2 || numberedLists.some(list=>list.numbers.length<2 ||
+               !list.aligned || !list.numbers.every((number,index)=>number===(index+1)+'.')))
+              throw new Error(device.name+' sidebar numbers, wrapping or category counts changed '+JSON.stringify(numberedLists));
             const player=article.locator('[data-blog-premium-player]');
             const articleVideo=player.locator('video[data-blog-player-video]');
             await article.waitForFunction(()=>

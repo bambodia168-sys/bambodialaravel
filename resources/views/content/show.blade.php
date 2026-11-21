@@ -3,6 +3,11 @@
 @if($entry->type === 'post')
   @section('meta_description', $entry->seo_description ?: $entry->excerpt ?: \Illuminate\Support\Str::limit(\App\Support\PolicyContent::plain($entry->body), 155))
 @endif
+@if($entry->type === 'post' && empty($preview))
+  @push('page-styles')
+    <link rel="stylesheet" href="{{ asset('css/blog-sidebar-numbers.css') }}?v=1">
+  @endpush
+@endif
 @section('social_image', \App\Support\SiteIdentity::featuredImage(empty($preview) && $entry->type === 'post' && $entry->featured_type === 'image' ? $entry->featuredMedia : null))
 @section('content')
 <div class="container inner-page">
@@ -137,24 +142,36 @@
       <aside class="blog-article-sidebar" aria-label="Blog sidebar">
         <section class="panel blog-sidebar-panel">
           <h2>More articles</h2>
-          @forelse($relatedPosts as $related)
-            <a class="blog-sidebar-story" href="{{ $related->publicUrl() }}">
-              <span>{{ $related->title }}</span>
-              <small>{{ $related->published_at?->format('d M Y') ?? 'Published' }}</small>
-            </a>
-          @empty
+          @if($relatedPosts->isNotEmpty())
+            <ol class="blog-sidebar-numbered" role="list">
+              @foreach($relatedPosts as $related)
+                <li>
+                  <a class="blog-sidebar-story" href="{{ $related->publicUrl() }}">
+                    <span class="blog-sidebar-position" aria-hidden="true">{{ $loop->iteration }}.</span>
+                    <span>{{ $related->title }}</span>
+                    <small>{{ $related->published_at?->format('d M Y') ?? 'Published' }}</small>
+                  </a>
+                </li>
+              @endforeach
+            </ol>
+          @else
             <p class="blog-sidebar-empty">More articles will appear here when published.</p>
-          @endforelse
+          @endif
         </section>
         @if($blogCategories->isNotEmpty())
           <section class="panel blog-sidebar-panel">
             <h2>Categories</h2>
-            <nav aria-label="Blog categories" class="blog-sidebar-categories">
-              @foreach($blogCategories as $item)
-                <a href="{{ route('blog', ['category' => $item->category]) }}">
-                  <span>{{ $item->category }}</span><span class="blog-category-count">{{ $item->total }}</span>
-                </a>
-              @endforeach
+            <nav aria-label="Blog categories">
+              <ol class="blog-sidebar-categories blog-sidebar-numbered" role="list">
+                @foreach($blogCategories as $item)
+                  <li>
+                    <a href="{{ route('blog', ['category' => $item->category]) }}">
+                      <span class="blog-sidebar-position" aria-hidden="true">{{ $loop->iteration }}.</span>
+                      <span>{{ $item->category }}</span><span class="blog-category-count">{{ $item->total }}</span>
+                    </a>
+                  </li>
+                @endforeach
+              </ol>
             </nav>
           </section>
         @endif

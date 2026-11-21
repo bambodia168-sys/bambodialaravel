@@ -468,6 +468,14 @@ class PostBuilderExperienceTest extends TestCase
             'category' => 'Design',
             'published_at' => now()->subMinute(),
         ]);
+        ContentEntry::query()->create([
+            'type' => 'post', 'author_id' => $author->id,
+            'title' => 'Earlier development article',
+            'body' => 'An earlier article for the numbered sidebar.',
+            'status' => 'published',
+            'category' => 'Development',
+            'published_at' => now()->subMinutes(2),
+        ]);
         $response = $this->get($post->publicUrl())->assertOk()
             ->assertSee('blog-article-sidebar', false)
             ->assertSee('More articles')
@@ -476,7 +484,19 @@ class PostBuilderExperienceTest extends TestCase
             ->assertSee($other->publicUrl())
             ->assertSee('class="post-public-image"', false)
             ->assertSee($asset->previewUrl())
-            ->assertSee('post-featured-figure', false);
+            ->assertSee('post-featured-figure', false)
+            ->assertSeeInOrder([
+                'More articles',
+                'aria-hidden="true">1.</span>',
+                'Related design article',
+                'aria-hidden="true">2.</span>',
+                'Earlier development article',
+                'aria-label="Blog categories"',
+                'aria-hidden="true">1.</span>',
+                '<span>Design</span><span class="blog-category-count">2</span>',
+                'aria-hidden="true">2.</span>',
+                '<span>Development</span><span class="blog-category-count">1</span>',
+            ], false);
         $html = $response->getContent();
         $this->assertLessThan(strpos($html, '<p class="post-public-excerpt">READ_ARTICLE_EXCERPT'), strpos($html, 'post-featured-figure'));
 
