@@ -153,7 +153,9 @@ class HomepageFreelancerShowcaseTest extends TestCase
                 ->assertDontSee('Unpublished freelance biography')
                 ->assertDontSee('private-showcase.png')
                 ->assertDontSee($creators['project']->email);
-            $collection = $response->viewData($url === '/' ? 'freelancers' : 'creators')->getCollection();
+            $collection = $url === '/'
+                ? $response->viewData('freelancers')
+                : $response->viewData('creators')->getCollection();
             $this->assertEqualsCanonicalizing($creators->pluck('id')->all(), $collection->pluck('id')->all());
             $this->assertSame(2, (int) $collection->firstWhere('id', $creators['project']->id)->public_listings_count);
         }
@@ -166,18 +168,23 @@ class HomepageFreelancerShowcaseTest extends TestCase
         $this->get(route('creators.show', $unlisted->public_id))->assertNotFound();
     }
 
-    public function test_homepage_freelancer_pagination_reaches_the_remaining_creators(): void
+    public function test_homepage_shows_up_to_eight_freelancers_and_the_directory_lists_everyone(): void
     {
         foreach (range(1, 11) as $number) {
             $this->profile('Public Freelancer '.$number);
         }
 
         $this->get('/')->assertOk()
-            ->assertSee('freelancers_page=2#bambodia-freelancers', false)
-            ->assertViewHas('freelancers', fn ($people) => $people->count() === 10 && $people->total() === 11);
+            ->assertDontSee('freelancers_page=', false)
+            ->assertSee(route('creators.index'))
+            ->assertViewHas('freelancers', fn ($people) => $people->count() === 8
+                && $people->first()->name === 'Public Freelancer 11'
+                && $people->last()->name === 'Public Freelancer 4');
 
-        $this->get('/?freelancers_page=2')->assertOk()
-            ->assertViewHas('freelancers', fn ($people) => $people->count() === 1
-                && $people->first()->name === 'Public Freelancer 1');
+        $this->get(route('creators.index'))->assertOk()
+            ->assertViewHas('creators', fn ($people) => $people->count() === 10 && $people->total() === 11);
+
+        $this->get(route('creators.index', ['page' => 2]))->assertOk()
+            ->assertViewHas('creators', fn ($people) => $people->count() === 1 && $people->total() === 11);
     }
 }

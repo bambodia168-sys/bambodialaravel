@@ -48,8 +48,9 @@ foreach (\App\Models\CreatorBadge::query()->where('enabled', true)->get() as $ba
     ]);
 }
 
-// Three additional public freelancers and one private profile for browser acceptance.
-foreach (['Browser QA Designer','Browser QA Developer','Browser QA Writer','Browser QA Private Freelancer'] as $name) {
+// Fill two desktop rows and exercise directory pagination, with a private profile excluded.
+$freelancers = array_map(fn ($number) => "Browser QA Freelancer {$number}", range(1, 10));
+foreach ([...$freelancers, 'Browser QA Private Freelancer'] as $name) {
     $person=\App\Models\User::query()->create([
         'name'=>$name,
         'email'=>strtolower(str_replace(' ','-',$name)).'@example.test',
