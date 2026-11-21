@@ -22,14 +22,24 @@
         <span class="marketplace-card-featured" aria-label="Administrator featured job"><x-icon name="tag" size="13"/> Featured</span>
       @endif
     </a>
-    <div class="marketplace-card-save card-save-action">
-      <x-save-star :item="$job" :is-saved="$isSaved"/>
-    </div>
+    @auth
+      <div class="marketplace-card-save card-save-action">
+        <x-save-star :item="$job" :is-saved="$isSaved"/>
+      </div>
+    @endauth
   </div>
   <div class="marketplace-card-body">
-    <span class="marketplace-card-category">{{ ucfirst($job->category) }}</span>
+    <div class="marketplace-card-category">
+      <a class="marketplace-card-metadata-link" href="{{ $job->categoryUrl() }}">{{ $job->category_label }}</a>
+    </div>
     <h3><a href="{{ $job->publicUrl() }}" title="{{ $job->title }}">{{ $job->title }}</a></h3>
-    <div class="marketplace-card-creator"><span>{{ $job->client?->name ?? 'Bambodia client' }}</span></div>
+    <div class="marketplace-card-creator">
+      @if($job->client?->public_id)
+        <a class="marketplace-card-metadata-link" href="{{ $job->publisherUrl() }}">{{ $job->client->name }}</a>
+      @else
+        <span>Bambodia client</span>
+      @endif
+    </div>
     <div class="marketplace-card-footer">
       <strong class="marketplace-card-price">{{ $job->budget !== null
         ? \App\Support\MarketplaceCardPresentation::price($job->budget,$job->currency)

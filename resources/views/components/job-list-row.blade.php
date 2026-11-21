@@ -20,8 +20,16 @@
       @endif
     </div>
     <div class="bambodia-job-meta">
-      <span><x-icon name="user" size="15"/> {{ $clientName }}</span>
-      <span><x-icon name="briefcase" size="15"/> {{ $job->category_label }}</span>
+      <span><x-icon name="user" size="15"/>
+        @if($job->client?->public_id)
+          <a class="marketplace-card-metadata-link" href="{{ $job->publisherUrl() }}">{{ $clientName }}</a>
+        @else
+          {{ $clientName }}
+        @endif
+      </span>
+      <span><x-icon name="briefcase" size="15"/>
+        <a class="marketplace-card-metadata-link" href="{{ $job->categoryUrl() }}">{{ $job->category_label }}</a>
+      </span>
       <span><x-icon name="clock" size="15"/> Created {{ $job->created_at->diffForHumans() }}</span>
     </div>
   </div>
@@ -33,6 +41,8 @@
     <a class="bambodia-job-button" href="{{ $job->publicUrl() }}" aria-label="{{ $previewOnly ? 'View preview of' : 'View job details for' }} {{ $job->title }}">
       {{ $previewOnly ? 'View preview' : 'View job' }}
     </a>
-    <div class="card-save-action"><x-save-star :item="$job" :is-saved="$isSaved"/></div>
+    @auth
+      <div class="card-save-action"><x-save-star :item="$job" :is-saved="$isSaved"/></div>
+    @endauth
   </div>
 </article>

@@ -7,6 +7,9 @@
   </div>
   <section class="marketplace-filter-panel">
     <form method="get" action="{{ route('jobs') }}" class="marketplace-filter-form">
+      @if($publisher)
+        <input type="hidden" name="client" value="{{ $publisher->public_id }}">
+      @endif
       <div class="marketplace-filter-field marketplace-filter-search">
         <label for="jobs-search">Search job briefs</label>
         <input id="jobs-search" name="q" type="search" value="{{ $search }}" maxlength="120" placeholder="Job title, expertise or keyword">
@@ -36,7 +39,7 @@
   </section>
   <section class="marketplace-section">
     <div class="marketplace-section-heading"><div><span class="eyebrow">Approved client briefs</span>
-      <h2>Open jobs <span class="count">{{ $jobs->total() }}</span></h2></div>
+      <h2>{{ $publisher ? 'Jobs from '.$publisher->name : 'Open jobs' }} <span class="count">{{ $jobs->total() }}</span></h2></div>
       @auth<a href="{{ route('account.saved-jobs') }}" class="btn subtle"><x-icon name="star" size="16"/> Saved opportunities</a>@endauth
     </div>
     @if($jobs->isNotEmpty())

@@ -214,8 +214,9 @@ class FeaturedMediaAndRelatedExperienceTest extends TestCase
             $this->assertStringContainsString('Matching approved job '.sprintf('%02d',$index),$html);
         $this->assertStringNotContainsString('Hidden draft job',$html);
         $this->assertStringNotContainsString('Other category job',$html);
-        $this->assertStringContainsString('Sign in to save Matching approved job 10',$html);
-        $this->assertStringNotContainsString('save-star-form',$html);
+        $this->assertStringNotContainsString('class="save-star',$html);
+        $this->assertStringContainsString('href="'.$related->categoryUrl().'"',$html);
+        $this->assertStringContainsString('href="'.$related->publisherUrl().'"',$html);
 
         $viewer=$this->member('freelancer');
         \App\Models\SavedJob::query()->create([

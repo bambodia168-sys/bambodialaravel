@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\LicenseDefinition;
+use App\Models\MarketplaceCategory;
 use App\Models\MarketplaceListing;
 use App\Models\MediaAsset;
 use App\Models\User;
@@ -133,5 +134,35 @@ class MarketplaceCardGridTest extends TestCase
             ->assertSee('class="marketplace-card-art" href="'.$service->publicUrl().'"',false)
             ->assertSee('href="'.$service->publicUrl().'" title="'.$service->title.'"',false);
         $this->assertSame(1,substr_count($pageTwo->getContent(),'<article class="marketplace-card">'));
+    }
+
+    public function test_public_listing_cards_link_to_category_and_creator_and_reserve_save_for_members(): void
+    {
+        $creator = $this->creator();
+        $creator->creatorProfile()->create([
+            'headline' => 'Private headline', 'biography' => 'Private profile biography.', 'is_public' => false,
+        ]);
+        $category = MarketplaceCategory::query()->create([
+            'type' => 'service', 'name' => 'Cloud Support', 'is_active' => true, 'created_by' => $creator->id,
+        ]);
+        $listing = $this->listing($creator, 'service', 1);
+        $listing->update(['category_id' => $category->id]);
+        $other = $this->listing($creator, 'service', 2);
+        $categoryUrl = route('marketplace.search', ['type' => 'service', 'category' => $category->public_id]);
+        $profileUrl = route('creators.show', $creator->public_id);
+
+        foreach (['/', route('marketplace.search'), $profileUrl] as $url) {
+            $this->get($url)->assertOk()
+                ->assertSee('href="'.e($categoryUrl).'">Cloud Support</a>', false)
+                ->assertSee('href="'.$profileUrl.'">'.$creator->name.'</a>', false)
+                ->assertDontSee('class="save-star', false)
+                ->assertDontSee('Private headline');
+        }
+
+        $this->get($categoryUrl)->assertOk()->assertSee($listing->title)->assertDontSee($other->title);
+        $this->get($listing->publicUrl())->assertOk()->assertDontSee('class="save-star', false);
+
+        $this->actingAs($creator)->get($categoryUrl)->assertOk()
+            ->assertSee('aria-label="Save '.$listing->title.'"', false);
     }
 }

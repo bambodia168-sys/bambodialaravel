@@ -67,7 +67,7 @@ class CreatorProfileController extends Controller
 
         $listings=MarketplaceListing::query()->publiclyAvailable()
             ->where('user_id',$user->id)
-            ->with(['coverAsset:id,public_id,alt_text,review_status','category:id,name'])
+            ->with(['coverAsset:id,public_id,alt_text,review_status','category:id,public_id,name,type,is_active','creator:id,name,public_id'])
             ->latest()->paginate(10);
         $savedIds=$request->user()
             ? SavedListing::query()->where('user_id',$request->user()->id)
