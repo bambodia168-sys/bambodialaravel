@@ -1,7 +1,8 @@
 @extends('layouts.main')
 @section('title','Browse Creators')
 @push('page-styles')
-  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=2">
+  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=3">
+  <script defer src="{{ asset('js/public-creator-cards.js') }}?v=1"></script>
 @endpush
 @section('content')
 <div class="container inner-page">
@@ -16,9 +17,10 @@
         <button type="submit" class="btn subtle">Search</button>
       </form>
     </div>
+    @php($freelancerStyles = \Illuminate\Support\Arr::shuffle([1, 2, 3, 4]))
     <div class="public-creator-grid public-creator-grid--directory">
       @forelse($creators as $creator)
-        <x-public-creator-card :creator="$creator" :badges="\App\Support\CreatorBadgeAwards::earned($creator, $badgeCatalog)"/>
+        <x-public-creator-card :creator="$creator" :badges="\App\Support\CreatorBadgeAwards::earned($creator, $badgeCatalog)" :style="$freelancerStyles[$loop->index] ?? null"/>
       @empty
         <div class="marketplace-empty">No public creator profiles match your search.</div>
       @endforelse

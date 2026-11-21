@@ -2,7 +2,8 @@
 @section('title','Home')
 @push('page-styles')
   <link rel="stylesheet" href="{{ asset('css/home-type-directory.css') }}?v=2">
-  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=2">
+  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=3">
+  <script defer src="{{ asset('js/public-creator-cards.js') }}?v=1"></script>
 @endpush
 @section('content')
 <div class="marketplace-hero-scene">
@@ -91,9 +92,10 @@
     <a class="btn subtle" href="{{ route('creators.index') }}">Browse creator profiles</a>
   </div>
   @if($freelancers->isNotEmpty())
+    @php($freelancerStyles = \Illuminate\Support\Arr::shuffle([1, 2, 3, 4]))
     <div class="public-creator-grid" aria-label="Public freelancer profiles">
       @foreach($freelancers as $freelancer)
-        <x-public-creator-card :creator="$freelancer" :badges="\App\Support\CreatorBadgeAwards::earned($freelancer, $badgeCatalog)"/>
+        <x-public-creator-card :creator="$freelancer" :badges="\App\Support\CreatorBadgeAwards::earned($freelancer, $badgeCatalog)" :style="$freelancerStyles[$loop->index] ?? null"/>
       @endforeach
     </div>
   @else
