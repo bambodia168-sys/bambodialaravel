@@ -70,7 +70,7 @@ class NotificationsTest extends TestCase
         $this->get('/account/notifications/tray')->assertRedirect();
         $this->actingAs($member)->get('/studio/listings')->assertOk()
             ->assertSeeInOrder(['workspace-home-link', 'data-workspace-notifications', 'data-theme-toggle'], false)
-            ->assertSee('Unread listing update')->assertSee('All notifications')
+            ->assertSee('Notifications, 1 unread')->assertSee('All notifications')
             ->assertDontSee('Previously read update')->assertDontSee('Somebody else’s update');
         $this->get('/account/notifications/tray')->assertOk()
             ->assertHeader('Cache-Control', 'no-store, private')
@@ -108,8 +108,9 @@ class NotificationsTest extends TestCase
         ]);
         $reviewAlert = AccountNotification::query()->where('event', 'marketplace.review.requested')->sole();
         $this->assertEquals($reviewer->id, $reviewAlert->user_id);
-        $this->actingAs($reviewer)->get('/dashboard')->assertOk()->assertSee('Listing ready for review');
-        $this->actingAs($staff)->get('/dashboard')->assertOk()->assertDontSee('Listing ready for review');
+        $this->actingAs($reviewer)->get('/dashboard')->assertOk()->assertSee('Notifications, 1 unread');
+        $this->get('/account/notifications/tray')->assertSee('Listing ready for review');
+        $this->actingAs($staff)->get('/account/notifications/tray')->assertOk()->assertDontSee('Listing ready for review');
         $this->actingAs($reviewer)->patch('/account/notifications/'.$reviewAlert->id)
             ->assertRedirect($reviewAlert->target_path);
         $this->get($reviewAlert->target_path)->assertOk()->assertSee('Develop a Laravel API');

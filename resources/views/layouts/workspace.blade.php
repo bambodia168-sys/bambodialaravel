@@ -300,7 +300,7 @@
           <x-storefront-mini-cart/>
         @endif
         <a class="icon-button workspace-home-link" href="{{ route('home') }}" title="Home" aria-label="Home"><x-icon name="home" size="19"/></a>
-        @include('account.partials.notification-bell', \App\Models\AccountNotification::unreadTray($user))
+        @include('account.partials.notification-bell', ['unreadCount' => \App\Models\AccountNotification::query()->forRecipient($user)->whereNull('read_at')->count()])
         <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle light or dark mode"><x-icon name="moon" size="19"/></button>
         <x-language-menu class="header-flag-only"/>
         <details class="workspace-account-menu">

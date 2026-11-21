@@ -8,6 +8,8 @@ if (notifications) {
     async function refreshNotifications() {
         if (document.hidden || refreshInProgress) return;
         refreshInProgress = true;
+        const placeholder = notifications.querySelector('[data-notification-placeholder]');
+        if (notifications.open && placeholder) placeholder.textContent = 'Loading unread notifications…';
         try {
             const response = await fetch(notifications.dataset.workspaceNotifications, {
                 credentials: 'same-origin',
@@ -26,11 +28,12 @@ if (notifications) {
 
             const current = notifications.querySelector('#workspace-notification-tray');
             // Preserve keyboard focus when an open tray is refreshed in the background.
-            if (!current.contains(document.activeElement)) current.replaceWith(tray);
+            if (notifications.open && !current.contains(document.activeElement)) current.replaceWith(tray);
         } catch {
             // The account page can still render the last successful tray.
         } finally {
             refreshInProgress = false;
+            if (placeholder?.isConnected) placeholder.textContent = 'Open your Notification Center to view alerts.';
         }
     }
 
