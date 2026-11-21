@@ -1127,7 +1127,7 @@ try {
         await country.press('Escape');
         if(await fullLocation.isVisible())
           throw new Error(device.name+' Escape should dismiss the location detail');
-        const shortCard=directoryGrid.locator('.public-creator-card').filter({has:page.getByRole('heading',{name:'Browser QA Freelancer 10',exact:true})});
+        const shortCard=directoryGrid.locator('.public-creator-card').filter({has:page.getByRole('heading',{name:'Browser QA Designer',exact:true})});
         if((await shortCard.locator('.public-creator-location').textContent()).trim()!=='Cambodia' ||
            await shortCard.locator('.public-creator-location-trigger').count())
           throw new Error(device.name+' a country-only profile should not have an empty location disclosure');
