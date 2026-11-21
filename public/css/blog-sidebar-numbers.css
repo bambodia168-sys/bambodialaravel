@@ -1,0 +1,29 @@
+.blog-sidebar-numbered {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.blog-sidebar-numbered .blog-sidebar-story {
+  display: grid;
+  grid-template-columns: 2.7ch minmax(0, 1fr);
+  align-items: start;
+  column-gap: .5rem;
+}
+
+.blog-sidebar-numbered .blog-sidebar-story small {
+  grid-column: 2;
+}
+
+.blog-sidebar-numbered.blog-sidebar-categories a {
+  display: grid;
+  grid-template-columns: 2.7ch minmax(0, 1fr) max-content;
+  column-gap: .5rem;
+}
+
+.blog-sidebar-position {
+  color: var(--muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
