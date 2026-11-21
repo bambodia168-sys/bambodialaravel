@@ -158,6 +158,17 @@ $cover=\App\Models\MediaAsset::query()->create([
     'rights_basis'=>'owned','rights_holder'=>'Browser QA Creator',
     'review_status'=>'approved','reviewed_by'=>$admin->id,'reviewed_at'=>now(),
 ]);
+$featuredDraft = new \App\Models\MarketplaceListing([
+    'user_id' => $creator->id,
+    'type' => 'freelance',
+    'title' => 'Browser QA Freelance Draft With Cover',
+    'description' => 'An unpublished freelance draft with a stored cover for testing the creator editor.',
+    'status' => 'draft',
+    'featured_kind' => 'image',
+    'featured_media_id' => $cover->id,
+]);
+$featuredDraft->public_id = '197483529';
+$featuredDraft->save();
 \App\Models\MarketplaceListing::query()->create([
     'user_id'=>$creator->id,'type'=>'product','title'=>'Browser QA Published Product',
     'description'=>str_repeat('Original licensed digital product for responsive QA acceptance. ',3),
