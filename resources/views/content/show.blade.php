@@ -5,7 +5,7 @@
 @endif
 @if($entry->type === 'post' && empty($preview))
   @push('page-styles')
-    <link rel="stylesheet" href="{{ asset('css/blog-sidebar-numbers.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('css/blog-sidebar-numbers.css') }}?v=2">
   @endpush
 @endif
 @section('social_image', \App\Support\SiteIdentity::featuredImage(empty($preview) && $entry->type === 'post' && $entry->featured_type === 'image' ? $entry->featuredMedia : null))
@@ -147,7 +147,7 @@
               @foreach($relatedPosts as $related)
                 <li>
                   <a class="blog-sidebar-story" href="{{ $related->publicUrl() }}">
-                    <span class="blog-sidebar-position" aria-hidden="true">{{ $loop->iteration }}.</span>
+                    <span class="blog-sidebar-position" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
                     <span>{{ $related->title }}</span>
                     <small>{{ $related->published_at?->format('d M Y') ?? 'Published' }}</small>
                   </a>
@@ -166,7 +166,7 @@
                 @foreach($blogCategories as $item)
                   <li>
                     <a href="{{ route('blog', ['category' => $item->category]) }}">
-                      <span class="blog-sidebar-position" aria-hidden="true">{{ $loop->iteration }}.</span>
+                      <span class="blog-sidebar-position" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
                       <span>{{ $item->category }}</span><span class="blog-category-count">{{ $item->total }}</span>
                     </a>
                   </li>

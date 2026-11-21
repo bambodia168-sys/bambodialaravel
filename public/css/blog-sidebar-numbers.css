@@ -1,4 +1,5 @@
 .blog-sidebar-numbered {
+  --blog-sidebar-number-column: 1.65rem;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -6,7 +7,7 @@
 
 .blog-sidebar-numbered .blog-sidebar-story {
   display: grid;
-  grid-template-columns: 2.7ch minmax(0, 1fr);
+  grid-template-columns: var(--blog-sidebar-number-column) minmax(0, 1fr);
   align-items: start;
   column-gap: .5rem;
 }
@@ -17,13 +18,17 @@
 
 .blog-sidebar-numbered.blog-sidebar-categories a {
   display: grid;
-  grid-template-columns: 2.7ch minmax(0, 1fr) max-content;
+  grid-template-columns: var(--blog-sidebar-number-column) minmax(0, 1fr) max-content;
+  align-items: center;
   column-gap: .5rem;
 }
 
 .blog-sidebar-position {
   color: var(--muted);
-  font-weight: 700;
+  color: color-mix(in srgb, var(--text) 48%, var(--surface));
+  font-size: 1.125rem;
+  font-weight: 750;
   font-variant-numeric: tabular-nums;
+  line-height: 1.15;
   white-space: nowrap;
 }

@@ -487,14 +487,14 @@ class PostBuilderExperienceTest extends TestCase
             ->assertSee('post-featured-figure', false)
             ->assertSeeInOrder([
                 'More articles',
-                'aria-hidden="true">1.</span>',
+                'aria-hidden="true">01</span>',
                 'Related design article',
-                'aria-hidden="true">2.</span>',
+                'aria-hidden="true">02</span>',
                 'Earlier development article',
                 'aria-label="Blog categories"',
-                'aria-hidden="true">1.</span>',
+                'aria-hidden="true">01</span>',
                 '<span>Design</span><span class="blog-category-count">2</span>',
-                'aria-hidden="true">2.</span>',
+                'aria-hidden="true">02</span>',
                 '<span>Development</span><span class="blog-category-count">1</span>',
             ], false);
         $html = $response->getContent();
