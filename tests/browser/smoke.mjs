@@ -1445,6 +1445,14 @@ try {
       await saveCard.hover();
       if(await overlay.evaluate(element=>getComputedStyle(element).opacity)!=='1')
         throw new Error('Card save star must show on hover');
+      const hasTransparentSaveStar=button=>{
+        const style=getComputedStyle(button);
+        return style.backgroundColor==='rgba(0, 0, 0, 0)' &&
+          style.borderColor==='rgba(0, 0, 0, 0)' && style.boxShadow==='none' &&
+          style.width==='44px' && style.height==='44px';
+      };
+      if(!(await save.evaluate(hasTransparentSaveStar)))
+        throw new Error('Card save star background should be transparent with the original hit area');
       await page.mouse.move(4,4);
       await saveCard.locator('.marketplace-card-art').focus();
       await page.keyboard.press('Tab');
@@ -1455,6 +1463,8 @@ try {
       await save.locator('xpath=..').locator('input[name="_method"][value="DELETE"]').waitFor({state:'attached'});
       if(await save.getAttribute('aria-pressed')!=='true')
         throw new Error('Saving must render the pressed star state');
+      if(!(await save.evaluate(hasTransparentSaveStar)))
+        throw new Error('The saved star should also have a transparent background');
       await page.goto(origin+'/account/saved-listings',{waitUntil:'networkidle'});
       await page.getByRole('link',{name:'Browser QA Published Service',exact:true}).click();
       await page.waitForURL(/\/service\?=\d{9}-browser-qa-published-service$/);

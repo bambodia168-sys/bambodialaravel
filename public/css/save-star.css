@@ -46,6 +46,12 @@
   z-index: 2;
 }
 
+.marketplace-card-save .save-star:not(.btn) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
 .marketplace-card-media .marketplace-card-type {
   box-sizing: border-box;
   max-width: calc(100% - 65px);
