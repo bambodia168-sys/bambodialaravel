@@ -178,11 +178,12 @@ try {
           const art=card?.querySelector('.marketplace-card-art');
           const title=card?.querySelector('h3 a');
           const creator=card?.querySelector('.marketplace-card-creator');
-          const saveOverlay=card?.querySelector('.marketplace-card-save');
+          const badge=card?.querySelector('.marketplace-card-type');
           const price=card?.querySelector('.marketplace-card-price');
-          if(!grid || !card || !art || !title || !creator || !price)
+          if(!grid || !card || !art || !title || !creator || !price || !badge)
             return {missing:true};
           const titleStyle=getComputedStyle(title);
+          const badgeStyle=getComputedStyle(badge);
           return {
             columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
             visibleCards:[...grid.querySelectorAll('.marketplace-card')]
@@ -193,14 +194,13 @@ try {
               - card.querySelector('h3').getBoundingClientRect().width)<2,
             sameDestination:art.href===title.href,
             hasSummary:!!card.querySelector('.marketplace-card-summary'),
-            hasCreator:creator.textContent.trim().length>0,
+            hasCreator:!!creator.querySelector('a[href*="/creators/"]'),
+            hasCategory:!!card.querySelector('.marketplace-card-category a[href*="/search?type="]'),
+            typeBadge:badgeStyle.textShadow==='none' && badgeStyle.boxShadow==='none'
+              && badgeStyle.backgroundColor!=='rgba(0, 0, 0, 0)' && parseFloat(badgeStyle.borderRadius)>0,
             priceSymbol:price.textContent.trim().startsWith('$'),
             hasUnsupportedRatings:!!card.querySelector('[data-rating],.rating-stars'),
-            saveInsideMedia:!!card.querySelector('.marketplace-card-media > .marketplace-card-save .save-star svg'),
-            saveInsideLink:!!art.querySelector('.save-star'),
-            saveReachesTouch:!matchMedia('(pointer:coarse)').matches ||
-              (!!saveOverlay && getComputedStyle(saveOverlay).opacity==='1'),
-            footerActions:!!card.querySelector('.marketplace-card-actions, .marketplace-card-body .save-star'),
+            guestSave:!!card.querySelector('.marketplace-card-save, .save-star, .marketplace-card-actions'),
           };
         });
         const expectedColumns=device.viewport.width>=1200?4:device.viewport.width>700?3:2;
@@ -208,8 +208,8 @@ try {
           || cardMetrics.visibleCards!==cards || cardMetrics.cardRight>device.viewport.width+3
           || cardMetrics.titleClamp!=='2' || !cardMetrics.fullTitleWidth
           || !cardMetrics.sameDestination || cardMetrics.hasSummary || !cardMetrics.hasCreator
-          || !cardMetrics.priceSymbol || cardMetrics.hasUnsupportedRatings || !cardMetrics.saveInsideMedia
-          || cardMetrics.saveInsideLink || !cardMetrics.saveReachesTouch || cardMetrics.footerActions)
+          || !cardMetrics.priceSymbol || cardMetrics.hasUnsupportedRatings || cardMetrics.guestSave
+          || !cardMetrics.hasCategory || !cardMetrics.typeBadge)
           throw new Error(device.name+' compact listing card regression '+JSON.stringify(cardMetrics));
         const featuredProduct=page.locator('.marketplace-home-feed .marketplace-card')
           .filter({hasText:'Browser QA Published Product'});
@@ -1093,6 +1093,7 @@ try {
       const lowerTitle=primary.locator('.premium-detail-below-title');
       const floating=preview.locator('.premium-detail-floating-type');
       if(!(await lowerTitle.isVisible()) || !(await floating.isVisible()) ||
+         await page.locator('.save-star').count() ||
          await page.locator('.premium-detail-tabs a[href*="/comments"]').count() ||
          await page.locator('.premium-detail-tabs a[href*="/support"]').count())
         throw new Error(device.name+' '+kind+' new guest detail layout is incomplete');
@@ -1341,6 +1342,8 @@ try {
       const saveCard=page.locator('article.marketplace-card').filter({hasText:'Browser QA Published Service'}).first();
       const save=saveCard.locator('.marketplace-card-save button.save-star');
       const overlay=saveCard.locator('.marketplace-card-save');
+      if(await save.locator('xpath=ancestor::a').count())
+        throw new Error('Save star must not be nested inside another link');
       await page.mouse.move(4,4);
       if(await overlay.evaluate(element=>getComputedStyle(element).opacity)!=='0')
         throw new Error('Card save star must be hidden at rest on a desktop');

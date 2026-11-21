@@ -46,4 +46,14 @@ class MarketplaceJob extends Model
     }
 
     public function publicUrl(): string { return route('jobs.show', $this->public_id.'-'.$this->slug); }
+
+    public function categoryUrl(): string
+    {
+        return route('jobs', ['category' => $this->category]);
+    }
+
+    public function publisherUrl(): string
+    {
+        return route('jobs', ['client' => $this->client?->public_id]);
+    }
 }

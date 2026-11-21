@@ -52,7 +52,7 @@ class HomeController extends Controller
                 'creator.creatorProfile:user_id,is_public',
                 'coverAsset:id,public_id,alt_text,review_status',
                 'featuredAsset:id,public_id,alt_text',
-                'category:id,name',
+                'category:id,public_id,name,type,is_active',
             ]);
 
             $listingTotals=MarketplaceListing::query()->publiclyAvailable()

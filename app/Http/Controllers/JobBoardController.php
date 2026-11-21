@@ -13,6 +13,7 @@ use App\Models\FreelancerResume;
 use App\Models\JobProposal;
 use App\Models\MarketplaceJob;
 use App\Models\SavedJob;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,11 +27,20 @@ class JobBoardController extends Controller
         $search = mb_substr(trim((string)$request->query('q','')),0,120);
         $category=(string)$request->query('category','');
         $categoryChoices = BambodiaTaxonomy::jobFilterChoices();
-        abort_unless($category === '' || array_key_exists($category, $categoryChoices), 404);
+        if ($category !== '' && ! array_key_exists($category, $categoryChoices)) {
+            abort_unless(MarketplaceJob::query()->where('status', 'published')->where('category', $category)->exists(), 404);
+            $categoryChoices[$category] = BambodiaTaxonomy::jobLabel($category);
+        }
+        $client = $request->query('client', '');
+        abort_unless(is_string($client) && ($client === '' || preg_match('/^[0-9]{8}$/D', $client) === 1), 404);
+        $publisher = $client === '' ? null : User::query()->where('public_id', $client)
+            ->whereIn('id', MarketplaceJob::query()->where('status', 'published')->select('client_id'))
+            ->firstOrFail(['id', 'public_id', 'name']);
         $sort=(string)$request->query('sort','recent');
         abort_unless(in_array($sort,['recent','budget_low','budget_high'],true),404);
         $jobs = MarketplaceJob::query()->with(['client:id,name,public_id', 'client.creatorProfile:user_id,is_public', 'client.userProfile:user_id,avatar_path', 'featuredAsset'])->withCount('proposals')
             ->where('status','published')
+            ->when($publisher, fn ($q, $publisher) => $q->where('client_id', $publisher->id))
             ->when($category!=='',fn($q)=>$q->where('category',$category))
             ->when($search !== '', fn($q)=>$q->where(function($query)use($search){
                 $query->where('title','like','%'.$search.'%')->orWhere('description','like','%'.$search.'%');
@@ -45,7 +55,7 @@ class JobBoardController extends Controller
                 ->whereIn('marketplace_job_id',$jobs->pluck('id'))
                 ->pluck('marketplace_job_id')->map(fn($id)=>(int)$id)->all()
             : [];
-        return view('jobs.index',compact('jobs','search','category','categoryChoices','sort','savedJobIds'));
+        return view('jobs.index',compact('jobs','search','category','categoryChoices','sort','savedJobIds','publisher'));
     }
 
     public function show(Request $request, string $job): View

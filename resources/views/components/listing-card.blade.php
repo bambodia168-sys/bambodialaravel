@@ -5,6 +5,11 @@
     ? \App\Support\MarketplaceCardPresentation::safePreviewUrl($listing->preview_url) : null;
   $amount = $listing->type === 'product' ? ($listing->regular_price ?? $listing->price) : $listing->price;
   $money = \App\Support\MarketplaceCardPresentation::price($amount, $listing->currency);
+  $category = $listing->category;
+  $categoryFilters = ['type' => $listing->type];
+  if ($category?->is_active && $category->type === $listing->type && $category->public_id) {
+    $categoryFilters['category'] = $category->public_id;
+  }
 @endphp
 <article class="marketplace-card">
   <div class="marketplace-card-media">
@@ -23,16 +28,20 @@
         <span class="marketplace-card-featured" aria-label="Administrator featured listing"><x-icon name="tag" size="13"/> Featured</span>
       @endif
     </a>
-    <div class="marketplace-card-save card-save-action">
-      <x-save-star :item="$listing" :is-saved="$isSaved"/>
-    </div>
+    @auth
+      <div class="marketplace-card-save card-save-action">
+        <x-save-star :item="$listing" :is-saved="$isSaved"/>
+      </div>
+    @endauth
   </div>
   <div class="marketplace-card-body">
-    <div class="marketplace-card-category">{{ $listing->category?->name ?? ucfirst($listing->type) }}</div>
+    <div class="marketplace-card-category">
+      <a class="marketplace-card-metadata-link" href="{{ route('marketplace.search', $categoryFilters) }}">{{ isset($categoryFilters['category']) ? $category->name : ucfirst($listing->type) }}</a>
+    </div>
     <h3><a href="{{ $listing->publicUrl() }}" title="{{ $listing->title }}">{{ $listing->title }}</a></h3>
     <div class="marketplace-card-creator">
-      @if($listing->creator?->creatorProfile?->is_public)
-        <a href="{{ route('creators.show',$listing->creator->public_id) }}">{{ $listing->creator->name }}</a>
+      @if($listing->creator?->public_id)
+        <a class="marketplace-card-metadata-link" href="{{ route('creators.show',$listing->creator->public_id) }}">{{ $listing->creator->name }}</a>
       @else
         <span>{{ $listing->creator?->name }}</span>
       @endif

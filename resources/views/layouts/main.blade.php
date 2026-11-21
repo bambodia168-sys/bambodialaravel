@@ -11,7 +11,7 @@
   @stack('page-styles')
   <link rel="stylesheet" href="{{ asset('css/marketplace-pricing.css') }}?v=1">
   <link rel="stylesheet" href="{{ asset('css/save-star.css') }}?v=1">
-  <link rel="stylesheet" href="{{ asset('css/featured-media-labels.css') }}?v=1">
+  <link rel="stylesheet" href="{{ asset('css/featured-media-labels.css') }}?v=2">
   @if(config('commerce.enabled'))
     <link rel="stylesheet" href="{{ asset('css/commerce-storefront.css') }}?v=1">
     <script defer src="{{ asset('js/commerce-storefront.js') }}?v=1"></script>

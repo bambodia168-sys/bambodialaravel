@@ -22,12 +22,4 @@
       @endif
     </button>
   </form>
-@else
-  <a href="{{ route('login') }}" @class(['save-star', 'btn subtle' => $labeled])
-    aria-label="Sign in to save {{ $item->title }}" title="Sign in to save">
-    <x-icon name="star" size="18"/>
-    @if($labeled)
-      Sign in to save
-    @endif
-  </a>
 @endauth

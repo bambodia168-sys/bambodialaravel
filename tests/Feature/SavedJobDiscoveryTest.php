@@ -55,6 +55,31 @@ class SavedJobDiscoveryTest extends TestCase
         $this->assertDatabaseHas('audit_events',['actor_id'=>$freelancer->id,'event'=>'job.saved']);
     }
 
+    public function test_public_job_rows_link_to_the_category_and_published_jobs_by_the_client(): void
+    {
+        $client = $this->account('customer');
+        $other = $this->account('customer');
+        $unpublished = $this->account('customer');
+        $job = $this->job($client, 'Published platform migration', category: 'legacy-platform-migration');
+        $unrelated = $this->job($other, 'Published customer research');
+        $draft = $this->job($client, 'Hidden pending migration', 'pending');
+        $this->job($unpublished, 'Confidential pending redesign', 'pending');
+
+        foreach (['/', route('jobs')] as $url) {
+            $this->get($url)->assertOk()
+                ->assertSee('href="'.$job->categoryUrl().'"', false)
+                ->assertSee('href="'.$job->publisherUrl().'"', false)
+                ->assertDontSee('class="save-star', false);
+        }
+
+        $this->get($job->categoryUrl())->assertOk()->assertSee($job->title)->assertDontSee($unrelated->title);
+        $this->get($job->publisherUrl())->assertOk()
+            ->assertSee('Jobs from '.$client->name)
+            ->assertSee('name="client" value="'.$client->public_id.'"', false)
+            ->assertSee($job->title)->assertDontSee($unrelated->title)->assertDontSee($draft->title);
+        $this->get(route('jobs', ['client' => $unpublished->public_id]))->assertNotFound();
+    }
+
     public function test_account_ownership_is_enforced_on_saved_jobs_and_closing_hides_private_job(): void
     {
         $client=$this->account('customer');
