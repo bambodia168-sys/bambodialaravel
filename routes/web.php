@@ -279,6 +279,8 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/account/saved-listings/{listing}', [SavedListingController::class,'destroy'])
         ->name('saved-listings.destroy')->middleware('throttle:20,1');
     Route::get('/account/notifications', [AccountNotificationController::class, 'index'])->name('account.notifications');
+    Route::get('/account/notifications/tray', [AccountNotificationController::class, 'tray'])
+        ->name('account.notifications.tray')->middleware('throttle:30,1');
     Route::patch('/account/notifications/read-all', [AccountNotificationController::class, 'readAll'])->name('account.notifications.read-all');
     Route::patch('/account/notifications/{notification}', [AccountNotificationController::class, 'read'])->name('account.notifications.read');
     Route::get('/account/inquiries', [ServiceInquiryController::class, 'index'])->name('account.inquiries');

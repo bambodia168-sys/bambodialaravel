@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\BuilderContent;
 use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
+use App\Support\SubmissionNotifications;
 use App\Support\BuilderFeaturedMedia;
 use App\Support\BambodiaTaxonomy;
 use App\Support\MarketplaceManagement;
@@ -170,6 +171,7 @@ class BuilderController extends Controller
             abort_unless((int) $job->client_id === (int) $request->user()->id, 404);
             abort_unless(in_array($job->status, ['draft', 'pending', 'rejected'], true), 409,
                 'Only drafts, pending jobs, or rejected jobs can be edited.');
+            $resubmitted = $job->status === 'rejected';
             $job->update([
                 ...$data,
                 'status' => $job->status === 'draft' ? 'draft' : 'pending',
@@ -178,6 +180,9 @@ class BuilderController extends Controller
             ]);
             BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, 'job', (int)$job->id);
             AuditEvent::record('job.updated', $request->user(), $request);
+            if ($resubmitted) {
+                SubmissionNotifications::send($job);
+            }
 
             return $job->status;
         });

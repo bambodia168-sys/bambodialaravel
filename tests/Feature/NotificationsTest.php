@@ -8,7 +8,10 @@ use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\ServiceInquiry;
 use App\Models\User;
+use App\Notifications\CheckoutVerification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class NotificationsTest extends TestCase
@@ -52,6 +55,92 @@ class NotificationsTest extends TestCase
         $this->actingAs($a)->patch('/account/notifications/read-all')->assertRedirect();
         $this->assertSame(0,AccountNotification::query()->where('user_id',$a->id)->whereNull('read_at')->count());
         $this->assertSame(1,AccountNotification::query()->where('user_id',$b->id)->whereNull('read_at')->count());
+    }
+
+    public function test_workspace_bell_lists_only_recipient_unread_items_and_public_headers_have_no_bell(): void
+    {
+        $member = $this->member('freelancer');
+        $other = $this->member('customer');
+        AccountNotification::deliver($member->id, 'listing.reviewed', 'Unread listing update', 'Selected for review.', '/studio/listings');
+        $unread = AccountNotification::query()->latest('id')->firstOrFail();
+        AccountNotification::deliver($member->id, 'listing.reviewed', 'Previously read update', 'Read already.', '/studio/listings');
+        AccountNotification::query()->latest('id')->firstOrFail()->update(['read_at' => now()]);
+        AccountNotification::deliver($other->id, 'listing.reviewed', 'Somebody else’s update', 'Private item.', '/account');
+
+        $this->get('/account/notifications/tray')->assertRedirect();
+        $this->actingAs($member)->get('/studio/listings')->assertOk()
+            ->assertSeeInOrder(['workspace-home-link', 'data-workspace-notifications', 'data-theme-toggle'], false)
+            ->assertSee('Unread listing update')->assertSee('All notifications')
+            ->assertDontSee('Previously read update')->assertDontSee('Somebody else’s update');
+        $this->get('/account/notifications/tray')->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertSee('Unread listing update')->assertDontSee('Previously read update');
+        $this->get('/')->assertOk()->assertDontSee('data-workspace-notifications', false)
+            ->assertDontSee('Unread listing update');
+        $this->get('/builder?type=freelance')->assertOk()->assertDontSee('data-workspace-notifications', false);
+
+        $this->patch('/account/notifications/'.$unread->id)->assertRedirect('/studio/listings');
+        $this->get('/account/notifications/tray')->assertSee('You’re all caught up.')
+            ->assertDontSee('Unread listing update');
+        $this->get('/account/notifications')->assertSee('Unread listing update')
+            ->assertSee('Previously read update')->assertDontSee('Somebody else’s update');
+    }
+
+    public function test_listing_submission_notifies_submitter_and_reviewers_with_current_permissions(): void
+    {
+        $member = $this->member('freelancer');
+        $reviewer = $this->member('admin');
+        $excluded = $this->member('admin');
+        $staff = $this->member('staff');
+        DB::table('user_permission_overrides')->insert([
+            'user_id' => $excluded->id, 'permission' => 'marketplace_review', 'allowed' => false,
+        ]);
+
+        $this->actingAs($member)->post('/studio/listings', [
+            'type' => 'freelance',
+            'title' => 'Develop a Laravel API',
+            'description' => 'I will build and document a reliable API for your Laravel application.',
+        ])->assertRedirect();
+        $listing = MarketplaceListing::query()->firstOrFail();
+        $this->assertDatabaseHas('account_notifications', [
+            'user_id' => $member->id, 'event' => 'marketplace.submission.received',
+            'target_path' => '/builder?='.$listing->public_id,
+        ]);
+        $reviewAlert = AccountNotification::query()->where('event', 'marketplace.review.requested')->sole();
+        $this->assertEquals($reviewer->id, $reviewAlert->user_id);
+        $this->actingAs($reviewer)->get('/dashboard')->assertOk()->assertSee('Listing ready for review');
+        $this->actingAs($staff)->get('/dashboard')->assertOk()->assertDontSee('Listing ready for review');
+        $this->actingAs($reviewer)->patch('/account/notifications/'.$reviewAlert->id)
+            ->assertRedirect($reviewAlert->target_path);
+        $this->get($reviewAlert->target_path)->assertOk()->assertSee('Develop a Laravel API');
+        $this->patch('/dashboard/review-queue/'.$listing->id, ['decision' => 'rejected'])->assertRedirect();
+        $this->assertDatabaseHas('account_notifications', [
+            'user_id' => $member->id, 'event' => 'listing.reviewed',
+            'target_path' => '/builder?='.$listing->public_id,
+        ]);
+
+        DB::table('user_permission_overrides')->insert([
+            'user_id' => $reviewer->id, 'permission' => 'marketplace_review', 'allowed' => false,
+        ]);
+        $this->get('/account/notifications')->assertDontSee('Listing ready for review');
+        $this->patch('/account/notifications/'.$reviewAlert->id)->assertNotFound();
+    }
+
+    public function test_checkout_verification_email_status_generates_private_notifications(): void
+    {
+        config(['commerce.enabled' => true]);
+        Notification::fake();
+        $member = $this->member('customer');
+
+        $this->actingAs($member)->post(route('checkout.verification.send'))->assertRedirect(route('checkout.verification'));
+        Notification::assertSentTo($member, CheckoutVerification::class);
+        $this->assertDatabaseHas('account_notifications', ['user_id' => $member->id, 'event' => 'account.email.verification_sent']);
+
+        $url = (new CheckoutVerification())->url($member);
+        $this->get($url)->assertRedirect(route('cart'));
+        $this->get($url)->assertRedirect(route('cart'));
+        $this->assertSame(1, AccountNotification::query()->where('user_id', $member->id)
+            ->where('event', 'account.email.verified')->count());
     }
 
     public function test_unsafe_notification_target_is_rejected(): void

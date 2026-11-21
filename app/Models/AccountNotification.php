@@ -2,12 +2,18 @@
 
 namespace App\Models;
 
+use App\Support\UserManagementAccess;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AccountNotification extends Model
 {
     public const EVENTS = [
+        'marketplace.submission.received',
+        'marketplace.review.requested',
+        'account.email.verification_sent',
+        'account.email.verified',
         'job.reviewed',
         'job.proposal.received',
         'job.proposal.decision',
@@ -55,12 +61,34 @@ class AccountNotification extends Model
     protected function casts(): array { return ['read_at'=>'datetime']; }
     public function recipient(): BelongsTo { return $this->belongsTo(User::class,'user_id'); }
 
+    public function scopeForRecipient(Builder $query, User $user): Builder
+    {
+        return $query->where('user_id', $user->id)
+            ->when(!UserManagementAccess::allows($user, 'marketplace_review'),
+                fn (Builder $query) => $query->where('event', '!=', 'marketplace.review.requested'));
+    }
+
+    public static function unreadTray(User $user): array
+    {
+        $unread = self::query()->forRecipient($user)->whereNull('read_at');
+
+        return [
+            'unreadCount' => (clone $unread)->count(),
+            'unreadNotifications' => $unread->latest()->latest('id')->limit(6)->get(),
+        ];
+    }
+
+    public static function isLocalTarget(string $path): bool
+    {
+        return str_starts_with($path, '/') && !str_starts_with($path, '//')
+            && !str_contains($path, chr(92)) && !preg_match('/[\x00-\x1f\x7f]/', $path);
+    }
+
     public static function deliver(int $userId, string $event, string $title, string $message, string $path): void
     {
         if (! in_array($event,self::EVENTS,true)
             || mb_strlen($title)>180 || mb_strlen($message)>500
-            || ! str_starts_with($path,'/') || str_starts_with($path,'//')
-            || str_contains($path,"\r") || str_contains($path,"\n") || strlen($path)>500) {
+            || !self::isLocalTarget($path) || strlen($path)>500) {
             throw new \InvalidArgumentException('Invalid application notification.');
         }
 
