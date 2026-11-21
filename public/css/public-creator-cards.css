@@ -2,16 +2,47 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
-  gap: clamp(1rem, 2.8vw, 2rem);
+  gap: clamp(1rem, 1.6vw, 1.25rem);
 }
 
-@media (min-width: 760px) {
+@media (min-width: 640px) {
   .public-creator-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-#bambodia-freelancers > :is(.public-creator-grid, .pager),
+@media (min-width: 992px) {
+  .public-creator-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1240px) {
+  .public-creator-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Limit the homepage to two rows at each grid width. */
+@media (width < 640px) {
+  #bambodia-freelancers .public-creator-grid > .public-creator-card:nth-child(n+3) {
+    display: none;
+  }
+}
+
+@media (640px <= width < 992px) {
+  #bambodia-freelancers .public-creator-grid > .public-creator-card:nth-child(n+5) {
+    display: none;
+  }
+}
+
+@media (992px <= width < 1240px) {
+  #bambodia-freelancers .public-creator-grid > .public-creator-card:nth-child(n+7) {
+    display: none;
+  }
+}
+
+#bambodia-freelancers > .public-creator-grid,
 .public-creator-grid > .marketplace-empty {
   grid-column: 1 / -1;
 }
@@ -30,8 +61,8 @@
   --card-edge: #98934e;
   --card-footer: #f3e1c4;
   --card-footer-ink: #3c301d;
-  --card-gutter: clamp(1rem, 2.55vw, 1.7rem);
-  --avatar-size: clamp(4rem, 7vw, 6rem);
+  --card-gutter: clamp(.85rem, 1.3vw, 1.125rem);
+  --avatar-size: clamp(3.5rem, 5vw, 4.25rem);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -123,7 +154,7 @@
   isolation: isolate;
   display: grid;
   align-content: start;
-  gap: clamp(.9rem, 2.1vw, 1.4rem);
+  gap: .9rem;
   padding: var(--card-gutter);
 }
 
@@ -146,7 +177,7 @@
   display: grid;
   grid-template-columns: var(--avatar-size) minmax(0, 1fr);
   align-items: center;
-  gap: clamp(.8rem, 1.8vw, 1.3rem);
+  gap: .75rem;
 }
 
 .public-creator-avatar {
@@ -206,7 +237,7 @@
 
 .public-creator-details h3 {
   color: var(--card-name);
-  font-size: clamp(1.08rem, 1.8vw, 1.6rem);
+  font-size: clamp(1rem, 1.35vw, 1.2rem);
   font-weight: 800;
   line-height: 1.18;
 }
@@ -217,7 +248,7 @@
   -webkit-line-clamp: 2;
   overflow: hidden;
   margin-top: .35rem;
-  font-size: clamp(.82rem, 1.2vw, 1rem);
+  font-size: .85rem;
   line-height: 1.42;
 }
 
@@ -238,7 +269,7 @@
 
 .public-creator-badges {
   --badge-gap: clamp(.35rem, .85vw, .6rem);
-  --badge-size: clamp(2.2rem, 3.8vw, 3rem);
+  --badge-size: clamp(2.2rem, 3vw, 2.5rem);
   display: flex;
   align-items: center;
   gap: .45rem;

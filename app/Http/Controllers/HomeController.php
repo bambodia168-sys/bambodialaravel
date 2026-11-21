@@ -71,7 +71,7 @@ class HomeController extends Controller
                 ->withCount(['publishedListings as public_listings_count'])
                 ->orderByDesc('public_listings_count')
                 ->orderByDesc('id')
-                ->paginate(10, pageName: 'freelancers_page')->withQueryString()->fragment('bambodia-freelancers');
+                ->limit(8)->get();
 
             if ($freelancers->isNotEmpty()) {
                 $badgeCatalog=CreatorBadge::query()->where('enabled', true)->orderBy('sort_order')->get();

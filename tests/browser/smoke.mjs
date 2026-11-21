@@ -12,6 +12,7 @@ const devices = [
   {name:'android-emulation',viewport:{width:412,height:915},mobile:true},
 ];
 const paths = ['/', '/search', '/jobs', '/creators', '/login', '/register', '/forgot-password'];
+const creatorColumns=width=>width>=1240?4:width>=992?3:width>=640?2:1;
 const browser = await chromium.launch({headless:true});
 let checks=0;
 try {
@@ -221,8 +222,8 @@ try {
           throw new Error(device.name+' product demo link must be creator-provided, not invented');
         // Public discovery cards keep portfolio links intact with circular avatars.
         const freelancerCards=page.locator('.public-creator-grid .public-creator-card');
-        if(await freelancerCards.count()!==4)
-          throw new Error(device.name+' expected 4 public freelancer cards');
+        if(await freelancerCards.count()!==8)
+          throw new Error(device.name+' expected 8 public freelancer preview cards');
         if(!(await page.getByRole('heading',{name:'Freelancers',exact:true}).isVisible()))
           throw new Error(device.name+' freelancer heading missing');
         const creatorDirectory=page.locator('.marketplace-freelancer-section a[href*="/creators"]')
@@ -255,7 +256,7 @@ try {
           throw new Error(device.name+' private profile leaked');
         const freelancerGeometry=await page.locator('.public-creator-grid').evaluate(grid=>({
           columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
-          items:[...grid.children].map(card=>({
+          items:[...grid.children].filter(card=>card.getClientRects().length).map(card=>({
             href:card.querySelector('h3 a')?.getAttribute('href'),
             avatarHref:card.querySelector('a.public-creator-avatar')?.getAttribute('href'),
             avatarTag:card.querySelector('.public-creator-avatar')?.tagName,
@@ -271,15 +272,26 @@ try {
             })(),
           })),
         }));
-        const expectedCreatorColumns=device.viewport.width>=760?2:1;
+        const expectedCreatorColumns=creatorColumns(device.viewport.width);
         if(freelancerGeometry.columns!==expectedCreatorColumns ||
+           freelancerGeometry.items.length!==2*expectedCreatorColumns ||
            freelancerGeometry.items.some(c=>!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(c.href??'') ||
              c.href!==c.avatarHref || c.avatarTag!=='A' ||
              c.countLink!==c.href || c.publicProfileLabel ||
              c.right>device.viewport.width+3 ||
-             c.avatarWidth<64 || c.avatarWidth>96 ||
+             c.avatarWidth<56 || c.avatarWidth>68 ||
              c.avatarWidth!==c.avatarHeight || c.avatarOffset<0))
           throw new Error(device.name+' freelancer grid regression '+JSON.stringify(freelancerGeometry));
+        if(device.name==='desktop'){
+          await page.setViewportSize({width:1100,height:900});
+          const density=await page.locator('.public-creator-grid').evaluate(grid=>({
+            columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+            cards:[...grid.children].filter(card=>card.getClientRects().length).length,
+          }));
+          await page.setViewportSize(device.viewport);
+          if(density.columns!==3 || density.cards!==6)
+            throw new Error('Smaller desktop must show two rows of three freelancers');
+        }
         const avatarCard=freelancerCards.filter({hasText:'Browser QA Creator'}).first();
         if(await avatarCard.count()!==1)
           throw new Error(device.name+' missing uploaded-avatar test creator');
@@ -1086,6 +1098,13 @@ try {
         checks+=3;
       }
       if(path==='/creators'){
+        const directoryGrid=page.locator('.public-creator-grid--directory');
+        const density=await directoryGrid.evaluate(grid=>({
+          columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+          cards:[...grid.children].filter(card=>card.getClientRects().length).length,
+        }));
+        if(density.columns!==creatorColumns(device.viewport.width) || density.cards!==10)
+          throw new Error(device.name+' public directory should show all 10 cards on the page');
         const creatorCard=page.locator('.public-creator-grid--directory .public-creator-card')
           .filter({hasText:'Browser QA Creator'}).first();
         if(!(await creatorCard.getByText('Original full-stack Laravel consulting',{exact:false}).isVisible())

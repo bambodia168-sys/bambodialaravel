@@ -2,7 +2,7 @@
 @section('title','Home')
 @push('page-styles')
   <link rel="stylesheet" href="{{ asset('css/home-type-directory.css') }}?v=2">
-  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=3">
+  <link rel="stylesheet" href="{{ asset('css/public-creator-cards.css') }}?v=4">
   <script defer src="{{ asset('js/public-creator-cards.js') }}?v=1"></script>
 @endpush
 @section('content')
@@ -106,7 +106,6 @@
       <a class="btn subtle compact" href="{{ route('creators.index') }}">Browse creator profiles</a>
     </div>
   @endif
-  <x-pagination :paginator="$freelancers"/>
 </section>
 @endif
 
