@@ -39,6 +39,15 @@ if($avatarFixture===false){
     'public_location'=>'Sangkat Svay Por, A Test Province With a Very Long Name for Responsive Checks, Cambodia',
 ]);
 
+foreach (\App\Models\CreatorBadge::query()->where('enabled', true)->get() as $badge) {
+    \App\Models\CreatorBadgeGrant::query()->create([
+        'user_id' => $creator->id,
+        'creator_badge_id' => $badge->id,
+        'source' => 'manual',
+        'evidence_note' => 'Public card animation fixture',
+    ]);
+}
+
 // Three additional public freelancers and one private profile for browser acceptance.
 foreach (['Browser QA Designer','Browser QA Developer','Browser QA Writer','Browser QA Private Freelancer'] as $name) {
     $person=\App\Models\User::query()->create([

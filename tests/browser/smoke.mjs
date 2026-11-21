@@ -219,7 +219,7 @@ try {
         const previewHref=await featuredProduct.locator('.marketplace-card-live-preview').getAttribute('href');
         if(previewHref!=='https://example.com/original-browser-product-preview')
           throw new Error(device.name+' product demo link must be creator-provided, not invented');
-        // Public creator cards follow the publisher panel, with square avatars and compact metadata.
+        // Public discovery cards keep portfolio links intact with circular avatars.
         const freelancerCards=page.locator('.public-creator-grid .public-creator-card');
         if(await freelancerCards.count()!==4)
           throw new Error(device.name+' expected 4 public freelancer cards');
@@ -271,19 +271,51 @@ try {
             })(),
           })),
         }));
-        const minimumColumns=device.viewport.width>=1200?3:device.viewport.width>=700?2:1;
-        if(freelancerGeometry.columns<minimumColumns ||
-           (device.viewport.width<700 && freelancerGeometry.columns!==1) ||
+        const expectedCreatorColumns=device.viewport.width>=760?2:1;
+        if(freelancerGeometry.columns!==expectedCreatorColumns ||
            freelancerGeometry.items.some(c=>!/^https?:\/\/[^/]+\/creators\/[0-9]{8}$/.test(c.href??'') ||
              c.href!==c.avatarHref || c.avatarTag!=='A' ||
              c.countLink!==c.href || c.publicProfileLabel ||
              c.right>device.viewport.width+3 ||
-             c.avatarWidth<55 || c.avatarWidth>68 ||
+             c.avatarWidth<64 || c.avatarWidth>96 ||
              c.avatarWidth!==c.avatarHeight || c.avatarOffset<0))
           throw new Error(device.name+' freelancer grid regression '+JSON.stringify(freelancerGeometry));
         const avatarCard=freelancerCards.filter({hasText:'Browser QA Creator'}).first();
         if(await avatarCard.count()!==1)
           throw new Error(device.name+' missing uploaded-avatar test creator');
+        const paletteSets=[];
+        for(const theme of ['light','dark']){
+          const palettes=await freelancerCards.evaluateAll((cards,theme)=>{
+            document.documentElement.dataset.theme=theme;
+            return cards.map(card=>getComputedStyle(card).backgroundImage).sort();
+          },theme);
+          if(new Set(palettes).size!==4)
+            throw new Error(device.name+' missing distinct '+theme+' creator card styles');
+          paletteSets.push(palettes);
+        }
+        if(paletteSets[0].some(palette=>paletteSets[1].includes(palette)))
+          throw new Error(device.name+' a creator card does not adapt to dark mode');
+        await page.evaluate(()=>{document.documentElement.dataset.theme=localStorage.getItem('bambodia-theme')||'light';});
+        const badgeToggle=avatarCard.getByRole('button',{name:'Pause badge animation'});
+        const badgeTrack=avatarCard.locator('.public-creator-badge-track');
+        await badgeToggle.waitFor({state:'visible'});
+        if(await avatarCard.locator('[data-creator-badge-copy][aria-hidden="true"][inert]').count()!==1 ||
+           await badgeTrack.evaluate(el=>getComputedStyle(el).animationName)!=='public-creator-badge-scroll')
+          throw new Error(device.name+' long award row should scroll with an inaccessible visual repeat');
+        await badgeToggle.press('Enter');
+        if(await badgeToggle.getAttribute('aria-pressed')!=='true' ||
+           await badgeTrack.evaluate(el=>getComputedStyle(el).animationName)!=='none')
+          throw new Error(device.name+' badge animation did not pause');
+        await badgeToggle.press('Enter');
+        if(await badgeToggle.getAttribute('aria-pressed')!=='false' ||
+           await badgeTrack.evaluate(el=>getComputedStyle(el).animationName)!=='public-creator-badge-scroll')
+          throw new Error(device.name+' badge animation did not resume');
+        await page.emulateMedia({reducedMotion:'reduce'});
+        if(await badgeToggle.isVisible() ||
+           await badgeTrack.evaluate(el=>getComputedStyle(el).animationName)!=='none' ||
+           await avatarCard.locator('.public-creator-avatar').evaluate(el=>getComputedStyle(el,'::before').animationName)!=='none')
+          throw new Error(device.name+' public creator effects should respect reduced motion');
+        await page.emulateMedia({reducedMotion:'no-preference'});
         const uploadedAvatar=avatarCard.locator('a.public-creator-avatar img');
         if(await uploadedAvatar.count()!==1)
           throw new Error(device.name+' uploaded creator avatar was replaced by an initial');
@@ -306,7 +338,9 @@ try {
           throw new Error(device.name+' uploaded creator avatar did not load '+JSON.stringify(avatarRender));
         const target=await avatarCard.locator('a.public-creator-avatar').getAttribute('href');
         const profileResponse=await page.request.get(target);
-        if(!profileResponse.ok() || !(await profileResponse.text()).includes('Browser QA Creator'))
+        const profileHtml=await profileResponse.text();
+        if(!profileResponse.ok() || !profileHtml.includes('Browser QA Creator') ||
+           profileHtml.includes('public-creator-cards.js') || profileHtml.includes('data-card-style='))
           throw new Error(device.name+' uploaded avatar links to an inaccessible creator profile');
         const firstFreelancer=freelancerCards.first();
         if(!(await firstFreelancer.getByRole('link',{name:/approved listings?/}).count()))
@@ -1057,8 +1091,9 @@ try {
         if(!(await creatorCard.getByText('Original full-stack Laravel consulting',{exact:false}).isVisible())
           || !(await creatorCard.locator('.public-creator-avatar').isVisible())
           || !(await creatorCard.getByRole('link',{name:/approved listings?/}).isVisible())
-          || !(await creatorCard.locator('.public-creator-location').isVisible()))
-          throw new Error(device.name+' missing reference-style directory card');
+          || !(await creatorCard.locator('.public-creator-location').isVisible())
+          || !(await creatorCard.getByRole('button',{name:'Pause badge animation'}).isVisible()))
+          throw new Error(device.name+' missing public directory card details or badge animation');
         checks++;
       }
     }
