@@ -14,6 +14,7 @@ use App\Models\MarketplaceListing;
 use App\Models\MediaAsset;
 use App\Models\MarketplaceCategory;
 use App\Support\ProductReadiness;
+use App\Support\SubmissionNotifications;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -67,15 +68,21 @@ class ProductController extends Controller
             );
         }
 
-        $product = MarketplaceListing::query()->create([
-            ...$data,
-            'user_id' => $request->user()->id,
-            'type' => 'product',
-            'currency' => 'USD',
-        ]);
+        $product = DB::transaction(function () use ($data, $request, $termsHash) {
+            $product = MarketplaceListing::query()->create([
+                ...$data,
+                'user_id' => $request->user()->id,
+                'type' => 'product',
+                'currency' => 'USD',
+            ]);
+            BuilderSubmissionTerms::record($termsHash, (int) $request->user()->id, 'product', (int) $product->id);
+            AuditEvent::record('product.created', $request->user(), $request);
+            if ($product->status === 'pending') {
+                SubmissionNotifications::send($product);
+            }
 
-        BuilderSubmissionTerms::record($termsHash, (int) $request->user()->id, 'product', (int) $product->id);
-        AuditEvent::record('product.created', $request->user(), $request);
+            return $product;
+        });
 
         if ($request->boolean('builder_mode')) {
             return redirect('/builder?='.$product->public_id)->with('status', 'Digital product saved.');
@@ -106,6 +113,9 @@ class ProductController extends Controller
             $record->update($data);
             BuilderSubmissionTerms::record($termsHash, (int) $request->user()->id, 'product', (int) $record->id);
             AuditEvent::record('product.updated', $request->user(), $request);
+            if ($record->status === 'pending') {
+                SubmissionNotifications::send($record);
+            }
         });
 
         return back()->with('status', 'Product changes saved.');

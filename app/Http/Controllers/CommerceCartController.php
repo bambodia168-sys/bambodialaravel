@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccountNotification;
 use App\Models\CommercePaymentMethod;
 use App\Models\FeatureFlag;
 use App\Models\MarketplaceListing;
@@ -16,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -147,6 +149,14 @@ class CommerceCartController extends Controller
             return $response->withErrors(['email' => 'The verification email could not be sent. Your cart is saved. Try again shortly.']);
         }
 
+        AccountNotification::deliver(
+            $user->id,
+            'account.email.verification_sent',
+            'Verification email sent',
+            'Open the verification link sent to your account email address to continue checkout.',
+            route('checkout.verification', absolute: false),
+        );
+
         return $response->with('status', 'Verification email sent.');
     }
 
@@ -156,9 +166,20 @@ class CommerceCartController extends Controller
         $user = $request->user();
         abort_unless(hash_equals((string) $user->getKey(), $id)
             && hash_equals(sha1($user->getEmailForVerification()), $hash), 403);
-        if (! $user->hasVerifiedEmail() && $user->markEmailAsVerified()) {
-            event(new Verified($user));
-        }
+        DB::transaction(function () use ($user, $hash) {
+            $member = User::query()->lockForUpdate()->findOrFail($user->id);
+            abort_unless(hash_equals(sha1($member->getEmailForVerification()), $hash), 403);
+            if (!$member->hasVerifiedEmail() && $member->markEmailAsVerified()) {
+                event(new Verified($member));
+                AccountNotification::deliver(
+                    $member->id,
+                    'account.email.verified',
+                    'Email address verified',
+                    'Your account email is confirmed and your cart is ready.',
+                    route('cart', absolute: false),
+                );
+            }
+        });
 
         return redirect()->route('cart')->with('status', 'Email verified. Your saved cart is ready.');
     }

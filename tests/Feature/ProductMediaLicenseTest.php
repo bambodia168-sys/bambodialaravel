@@ -177,7 +177,7 @@ class ProductMediaLicenseTest extends TestCase
         $this->assertSame('published', $product->fresh()->status);
         $this->assertDatabaseHas('account_notifications', [
             'user_id' => $creator->id, 'event' => 'listing.reviewed',
-            'target_path' => '/studio/products',
+            'target_path' => '/builder?='.$product->public_id,
         ]);
         $this->assertDatabaseHas('audit_events', [
             'actor_id' => $admin->id, 'event' => 'listing.review.published',

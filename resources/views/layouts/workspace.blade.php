@@ -9,6 +9,8 @@
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
   @include('layouts.partials.site-typography')
+  <link rel="stylesheet" href="{{ asset('css/workspace-notifications.css') }}?v=1">
+  <script defer src="{{ asset('js/workspace-notifications.js') }}?v=1"></script>
   <link rel="stylesheet" href="{{ asset('css/header-flag-scroll-top.css') }}?v=1">
   @if(request()->routeIs('dashboard.system-settings', 'dashboard.smtp.*', 'localized.*.dashboard.system-settings', 'localized.*.dashboard.smtp.*'))
     <link rel="stylesheet" href="{{ asset('css/smtp-settings.css') }}?v=1">
@@ -298,6 +300,7 @@
           <x-storefront-mini-cart/>
         @endif
         <a class="icon-button workspace-home-link" href="{{ route('home') }}" title="Home" aria-label="Home"><x-icon name="home" size="19"/></a>
+        @include('account.partials.notification-bell', ['unreadCount' => \App\Models\AccountNotification::query()->forRecipient($user)->whereNull('read_at')->count()])
         <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle light or dark mode"><x-icon name="moon" size="19"/></button>
         <x-language-menu class="header-flag-only"/>
         <details class="workspace-account-menu">

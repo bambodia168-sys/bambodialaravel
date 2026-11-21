@@ -1,0 +1,40 @@
+.workspace-notifications{flex:none}
+.workspace-notifications summary{position:relative;list-style:none;cursor:pointer}
+.workspace-notifications summary::-webkit-details-marker{display:none}
+.workspace-notifications[open] summary{border-color:var(--secondary)}
+.workspace-notifications-count{
+  position:absolute;inset-block-start:-5px;inset-inline-end:-6px;min-width:17px;height:17px;
+  padding-inline:3px;border-radius:20px;border:1px solid var(--surface);
+  background:var(--text);color:var(--surface);font-size:10px;font-weight:750;text-align:center;line-height:15px;
+}
+.workspace-notification-tray{
+  position:absolute;inset-inline-end:clamp(12px,2.5vw,36px);inset-block-start:calc(100% + 7px);
+  width:min(365px,calc(100% - 24px));z-index:165;
+  background:var(--surface);color:var(--text);border:1px solid var(--line);
+  border-radius:16px;box-shadow:0 24px 70px rgba(4,14,30,.25);overflow:hidden;
+}
+.workspace-notification-heading{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:14px 16px;
+  border-bottom:1px solid var(--line);
+}
+.workspace-notification-heading h2{margin:0;font-size:15px}
+.workspace-notification-heading span,.workspace-notification-empty{color:var(--muted)}
+.workspace-notification-heading span,.workspace-notification-copy time{font-size:12px}
+.workspace-notification-list{padding:0;margin:0;list-style:none;max-height:min(48dvh,340px);overflow:auto;overscroll-behavior:contain}
+.workspace-notification-list li+li{border-top:1px solid var(--line)}
+.workspace-notification-list button{
+  display:flex;align-items:flex-start;gap:10px;width:100%;text-align:start;padding:11px 16px;
+  background:transparent;border:0;color:var(--text);font:inherit;cursor:pointer;
+}
+.workspace-notification-list button:hover,.workspace-notification-center:hover{background:var(--surface-2)}
+.workspace-notification-list button:focus-visible,.workspace-notification-center:focus-visible{
+  outline:2px solid var(--secondary);outline-offset:-3px;
+}
+.workspace-notification-dot{flex:none;width:7px;height:7px;margin-top:7px;border-radius:50%;background:var(--accent)}
+.workspace-notification-copy{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
+.workspace-notification-copy span,.workspace-notification-copy time{color:var(--muted)}
+.workspace-notification-empty{margin:0;padding:18px 16px}
+.workspace-notification-center{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;
+  color:var(--text);font-weight:700;border-top:1px solid var(--line);
+}

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\BuilderContent;
 use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
+use App\Support\SubmissionNotifications;
 use App\Support\BuilderFeaturedMedia;
 use App\Support\BambodiaTaxonomy;
 use App\Models\AuditEvent;
@@ -123,9 +124,14 @@ class JobBoardController extends Controller
         ]);
         BuilderFeaturedMedia::check($data,(int)$request->user()->id);
         BuilderGallery::check($data, $request);
-        $job = MarketplaceJob::query()->create([...$data, 'client_id'=>$request->user()->id,'currency'=>'USD','status'=>'pending']);
-        BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, 'job', (int)$job->id);
-        AuditEvent::record('job.submitted',$request->user(),$request);
+        $job = DB::transaction(function () use ($data, $request, $termsHash) {
+            $job = MarketplaceJob::query()->create([...$data, 'client_id'=>$request->user()->id,'currency'=>'USD','status'=>'pending']);
+            BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, 'job', (int)$job->id);
+            AuditEvent::record('job.submitted',$request->user(),$request);
+            SubmissionNotifications::send($job);
+
+            return $job;
+        });
         if ($request->boolean('builder_mode')) {
             return redirect('/builder?='.$job->public_id)->with('status', 'Job submitted for administrator review.');
         }

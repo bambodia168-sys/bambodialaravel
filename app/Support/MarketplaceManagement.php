@@ -134,6 +134,7 @@ final class MarketplaceManagement
                 'Active customer records must be resolved before this listing can return to draft.');
         }
 
+        $wasAwaitingReview = in_array($record->status, self::REVIEW_STATUSES, true);
         $record->status = $target;
         $isDecision = in_array($target, ['published', 'rejected'], true);
         if ($isJob) {
@@ -151,8 +152,10 @@ final class MarketplaceManagement
                 $kind.'.reviewed',
                 $isJob ? 'Job review completed' : ($isProduct ? 'Digital product reviewed' : 'Marketplace listing reviewed'),
                 'Your submission was '.$target.' after review.',
-                $isJob ? '/my-jobs' : ($record->type === 'product' ? '/studio/products' : '/studio/listings'),
+                '/builder?='.$record->public_id,
             );
+        } elseif (!$wasAwaitingReview && in_array($target, self::REVIEW_STATUSES, true)) {
+            SubmissionNotifications::send($record);
         }
     }
 }

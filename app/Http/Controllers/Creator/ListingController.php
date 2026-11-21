@@ -7,6 +7,7 @@ use App\Support\BuilderContent;
 use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
+use App\Support\SubmissionNotifications;
 use App\Models\MarketplaceListing;
 use App\Models\FeatureFlag;
 use App\Models\MarketplaceCategory;
@@ -56,14 +57,18 @@ class ListingController extends Controller
         $this->checkCategory($data);
         BuilderFeaturedMedia::check($data, (int)$request->user()->id);
         BuilderGallery::check($data, $request);
-        $listing = MarketplaceListing::query()->create([
-            ...$data,
-            'user_id' => $request->user()->id,
-            'currency' => 'USD',
-            'status' => 'pending',
-        ]);
+        $listing = DB::transaction(function () use ($data, $request, $termsHash) {
+            $listing = MarketplaceListing::query()->create([
+                ...$data,
+                'user_id' => $request->user()->id,
+                'currency' => 'USD',
+                'status' => 'pending',
+            ]);
+            BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, $listing->type, (int)$listing->id);
+            SubmissionNotifications::send($listing);
 
-        BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, $listing->type, (int)$listing->id);
+            return $listing;
+        });
         if ($request->boolean('builder_mode')) {
             return redirect($listing->builderUrl())->with('status', 'Listing submitted for review.');
         }
@@ -96,6 +101,7 @@ class ListingController extends Controller
             $locked->update([...$data,'status'=>'pending']);
             BuilderSubmissionTerms::record($termsHash, (int)$request->user()->id, $locked->type, (int)$locked->id);
             AuditEvent::record('listing.resubmitted',$request->user(),$request);
+            SubmissionNotifications::send($locked);
         });
         return back()->with('status','Listing changes resubmitted for review.');
     }

@@ -27,10 +27,11 @@ class AccountController extends Controller
         }
 
         $user=$request->user();
+        $notifications = AccountNotification::query()->forRecipient($user);
         $stats=[
             'saved'=>SavedListing::query()->where('user_id',$user->id)->count(),
             'saved_jobs'=>SavedJob::query()->where('user_id',$user->id)->count(),
-            'unread'=>AccountNotification::query()->where('user_id',$user->id)->whereNull('read_at')->count(),
+            'unread'=>(clone $notifications)->whereNull('read_at')->count(),
             'contracts'=>FreelanceContract::query()->where(function($query)use($user){
                 $query->where('client_id',$user->id)->orWhere(function($q)use($user){
                     $q->where('freelancer_id',$user->id)->where('status','!=','draft');
@@ -47,7 +48,7 @@ class AccountController extends Controller
             $stats['listings']=MarketplaceListing::query()->inCreatorStudio()->where('user_id',$user->id)->count();
             $stats['client_inquiries']=ServiceInquiry::query()->where('creator_id',$user->id)->where('status','open')->count();
         }
-        $activity=AccountNotification::query()->where('user_id',$user->id)->latest()->limit(5)->get();
+        $activity=$notifications->latest()->latest('id')->limit(5)->get();
 
         // Only agreements in which this account participates appear in the overview.
         // A freelancer cannot see the counterparty's private draft.
