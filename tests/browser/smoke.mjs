@@ -1895,7 +1895,7 @@ try {
       const submittedCover=await featuredSelect.evaluate(select=>new FormData(select.form).get(select.name));
       if(submittedCover!==savedCover)
         throw new Error('Builder excluded the stored cover from the draft form');
-      await creator.locator('input[name="featured_kind"][value="video"]').check({force:true});
+      await creator.locator('.studio-media-option:has(input[value="video"])').click();
       if(await featuredSelect.inputValue()!=='' || await featuredImage.count())
         throw new Error('Builder retained an incompatible image after switching to video');
       checks+=3;
