@@ -2,7 +2,7 @@
 @section('title', $checkout ? 'Checkout' : 'Cart')
 @section('content')
 @if($checkout && $methods->isNotEmpty() && ($totals['USD'] ?? 0) > 0)
-  <link rel="stylesheet" href="{{ asset('css/checkout-payment-methods.css') }}?v=1">
+  <link rel="stylesheet" href="{{ asset('css/checkout-payment-methods.css') }}?v=2">
   <script defer src="{{ asset('js/checkout-payment-methods.js') }}?v=1"></script>
 @endif
 <div class="container inner-page storefront">

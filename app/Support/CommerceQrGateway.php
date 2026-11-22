@@ -12,6 +12,11 @@ final class CommerceQrGateway
 {
     private const LIFETIME_MINUTES = 6;
 
+    public function recipientName(string $payload): ?string
+    {
+        return $this->parseFields($payload)['59'] ?? null;
+    }
+
     public function issue(CommercePayment $payment): array
     {
         $credentials = $this->credentials($payment);
@@ -154,15 +159,19 @@ final class CommerceQrGateway
         return $payload.$this->crc($payload);
     }
 
-    private function parseFields(string $payload): array
+    private function parseFields(string $payload): ?array
     {
         $fields = [];
         for ($offset = 0, $size = strlen($payload); $offset < $size;) {
             $tag = substr($payload, $offset, 2);
             $length = substr($payload, $offset + 2, 2);
-            abort_unless(strlen($length) === 2 && ctype_digit($tag) && ctype_digit($length) && ! isset($fields[$tag]), 502);
+            if (strlen($length) !== 2 || ! ctype_digit($tag) || ! ctype_digit($length) || isset($fields[$tag])) {
+                return null;
+            }
             $offset += 4;
-            abort_if($offset + (int) $length > $size, 502);
+            if ($offset + (int) $length > $size) {
+                return null;
+            }
             $fields[$tag] = substr($payload, $offset, (int) $length);
             $offset += (int) $length;
         }

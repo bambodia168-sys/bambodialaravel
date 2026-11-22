@@ -71,7 +71,7 @@
     background: #efebff;
 }
 
-.payment-method-icon[data-payment-icon="khqr"] {
+.payment-method-icon:is([data-payment-icon="khqr"], [data-payment-icon="bakong"]) {
     color: #a31829;
     background: #fff0f0;
 }

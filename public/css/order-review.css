@@ -220,6 +220,112 @@
     border-radius: .625rem;
 }
 
+@font-face {
+    font-family: "Nunito Sans";
+    src: url("../fonts/nunito-sans/latin.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 400 800;
+    font-display: swap;
+}
+
+.khqr-payment-card {
+    --khqr-red: #e1232e;
+    container-type: inline-size;
+    inline-size: min(100%, 22rem);
+    aspect-ratio: 20 / 29;
+    margin: 1rem 0;
+    overflow: hidden;
+    border-radius: .9rem;
+    background: #fff;
+    color: #000;
+    box-shadow: 0 0 16px rgb(0 0 0 / 10%);
+    font-family: "Nunito Sans", system-ui, sans-serif;
+    letter-spacing: 0;
+    color-scheme: light;
+}
+
+.khqr-payment-card__header {
+    position: relative;
+    display: grid;
+    block-size: 17.4cqi;
+    place-items: center;
+    background: var(--khqr-red);
+}
+
+.khqr-payment-card__header::after {
+    position: absolute;
+    inset: 100% 0 auto auto;
+    inline-size: 8cqi;
+    aspect-ratio: 1;
+    background: var(--khqr-red);
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+    content: "";
+}
+
+.khqr-payment-card__header img {
+    inline-size: 23cqi;
+    block-size: auto;
+}
+
+.khqr-payment-card__details {
+    display: grid;
+    gap: 1cqi;
+    padding: 7.5cqi 14.5cqi 6.5cqi;
+    border-block-end: 1px dashed #b9b9b9;
+    text-align: start;
+    overflow-wrap: anywhere;
+}
+
+.khqr-payment-card__recipient,
+.khqr-payment-card__total {
+    font-size: max(.75rem, 4.35cqi);
+    line-height: 1.2;
+}
+
+.khqr-payment-card__total {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 1.75cqi;
+}
+
+.khqr-payment-card__total strong {
+    font-size: 9.425cqi;
+    font-weight: 800;
+    line-height: 1.05;
+}
+
+.khqr-payment-card__code {
+    position: relative;
+    inline-size: 80%;
+    margin: 7.5cqi auto;
+}
+
+.khqr-payment-card__code img {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    background: #fff;
+}
+
+.khqr-payment-card__currency-mark {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    display: grid;
+    inline-size: 10%;
+    aspect-ratio: 1;
+    place-items: center;
+    transform: translate(-50%, -50%);
+    border: .65cqi solid #fff;
+    border-radius: 50%;
+    background: #000;
+    color: #fff;
+    font-size: 5.5cqi;
+    font-weight: 800;
+    line-height: 1;
+    pointer-events: none;
+}
+
 .order-receipt-upload {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));

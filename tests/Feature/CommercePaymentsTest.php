@@ -909,7 +909,11 @@ Private installation report.
         $verify = route('account.orders.payment.verify', [$order->number, $attempt->number]);
         $this->actingAs($this->user('customer'))->get($qr)->assertNotFound();
         $this->actingAs($buyer)->get($qr)->assertOk()->assertHeader('Content-Type', 'image/svg+xml')->assertSee('<svg', false);
-        $this->get($orderPage)->assertSee('data-order-payment-poll', false);
+        $this->get($orderPage)->assertSee('data-order-payment-poll', false)->assertSee('data-order-payment-code', false)
+            ->assertSee('images/payments/khqr-white.svg', false)
+            ->assertSee('<span class="khqr-payment-card__recipient">Bambodia</span>', false)
+            ->assertSeeInOrder(['khqr-payment-card__total', '25.00', 'USD'], false)
+            ->assertDontSee('sandbox-token');
         $this->actingAs($admin)->patch($save, ['available'=>1, 'gateway'=>['account_id'=>'other@devb']])->assertSessionHasErrors('gateway');
         $this->patch($save, ['available'=>1, 'gateway'=>['token'=>'refreshed-token']])->assertRedirect();
 
@@ -927,6 +931,7 @@ Private installation report.
         $this->postJson($verify)->assertOk()->assertJson(['status'=>'paid']);
         $this->assertSame($receipt, $order->refresh()->receipt_number);
         $this->get($qr)->assertNotFound();
+        $this->get($orderPage)->assertDontSee('data-order-payment-code', false);
         Http::assertSentCount(3);
         Http::assertSent(fn ($request) => $request->hasHeader('Authorization', 'Bearer refreshed-token') && $request['md5'] === $attempt->remote_id);
     }
@@ -952,6 +957,8 @@ Private installation report.
         $start = route('account.orders.payment.start', $order->number);
         $this->actingAs($buyer)->post($start, ['method'=>$method->id])->assertRedirect();
         $attempt = $order->payments()->sole();
+        $this->get(route('account.orders.show', $order->number))->assertOk()->assertSee('data-order-payment-code', false)
+            ->assertSee('OLD ME 25 CHAR WINNER IP');
         Http::assertSent(fn ($request) => $request->url() === 'https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/generate-qr'
             && $request['tran_id'] === $attempt->remote_id
             && $request['hash'] === base64_encode(hash_hmac('sha512',

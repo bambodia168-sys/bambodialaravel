@@ -87,9 +87,8 @@
       <div>
         <h3>{{ $activePayment->method_name }} payment · USD {{ $order->total }}</h3>
         @if($collectingPayments && $activePayment->qrVisible())
-          <p data-payment-qr-hint>Scan this code in your banking app. It expires in six minutes from creation.</p>
-          <img data-order-payment-qr src="{{ route('account.orders.payment.order-qr', [$order->number, $activePayment->number]) }}"
-               alt="{{ $activePayment->method_name }} payment QR for this order" width="288" height="288">
+          <x-khqr-payment-card :order="$order" :payment="$activePayment"/>
+          <p data-payment-qr-hint>Scan with Bakong or a KHQR-compatible banking app. The code expires six minutes after creation.</p>
         @endif
         <p role="status" data-order-payment-status>
           @if(!$collectingPayments)
@@ -106,7 +105,7 @@
         </form>
       </div>
     </div>
-    <script defer src="{{ asset('js/commerce-payment-poll.js') }}"></script>
+    <script defer src="{{ asset('js/commerce-payment-poll.js') }}?v=2"></script>
   @else
     <div class="panel-head">
       @if($collectingPayments)
