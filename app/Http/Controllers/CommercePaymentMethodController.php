@@ -96,7 +96,7 @@ class CommercePaymentMethodController extends Controller
             'gateway' => [$gatewayKeys ? 'array:'.implode(',', $gatewayKeys) : 'prohibited'],
             'stripe_environment' => $stripe ? ['sometimes', 'required', Rule::in(['sandbox', 'live'])] : ['prohibited'],
             'activate_stripe_environment' => $stripe ? ['sometimes', 'boolean'] : ['prohibited'],
-            'bakong_environment' => $bakong ? ['nullable', Rule::in(['sandbox', 'live'])] : ['prohibited'],
+            'bakong_environment' => $bakong ? ['nullable', 'string', Rule::in(['sandbox', 'live'])] : ['prohibited'],
         ];
         foreach ($fields as $field) {
             $rules['gateway.'.$field] = ['nullable', 'string', 'max:2048', 'regex:/^[!-~]+$/D'];
@@ -194,6 +194,10 @@ class CommercePaymentMethodController extends Controller
     {
         $field = $provider.'_environment';
         if (! CommerceGateway::ready($provider, $selectedMode)) {
+            if ($provider === 'bakong' && $currentMode === $selectedMode) {
+                return false;
+            }
+
             throw ValidationException::withMessages([
                 $field => $provider === 'stripe'
                     ? 'Save the API secret key and webhook signing secret for this environment before activating it.'
