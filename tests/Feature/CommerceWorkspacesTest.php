@@ -7,6 +7,7 @@ use App\Models\LicenseDefinition;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
 use App\Models\MediaAsset;
+use App\Models\Policy;
 use App\Models\User;
 use App\Support\OrderReceipt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,19 +46,34 @@ class CommerceWorkspacesTest extends TestCase
         $this->assertNotNull($order->receipt_number);
         $this->assertSame('0.00', $order->total);
         $listing->update(['title' => 'Renamed listing']);
+        $buyer->userProfile()->create(['public_location' => 'Customer receipt city']);
+        $seller->userProfile()->create(['public_location' => 'Seller receipt city']);
+        $terms = Policy::query()->create([
+            'title' => 'Terms of Service', 'body' => 'Receipt terms.', 'category' => 'terms',
+            'status' => 'published', 'published_at' => now(),
+        ]);
         $this->get(route('localized.en.account.orders.receipt', $order->number))->assertOk()
-            ->assertHeader('Cache-Control', 'no-store, private')->assertSee('Original listing')->assertSee('No payment required');
+            ->assertHeader('Cache-Control', 'no-store, private')->assertSee('Original listing')->assertSee('No payment required')
+            ->assertSee('Customer receipt city')->assertSee('Seller receipt city')
+            ->assertSee('mailto:'.$buyer->email)->assertDontSee('mailto:'.$seller->email)
+            ->assertSee(OrderReceipt::TELEGRAM_URL)->assertSee($terms->publicUrl());
         $this->patch(route('account.orders.cancel', $order->number))->assertConflict();
-        $this->actingAs($seller)->get(route('studio.orders.receipt', $order->number))->assertOk();
+        $this->actingAs($seller)->get(route('studio.orders.receipt', $order->number))->assertOk()
+            ->assertSee('mailto:'.$seller->email)->assertDontSee('mailto:'.$buyer->email);
         $this->get(route('account.orders.receipt', $order->number))->assertNotFound();
         $this->actingAs($this->user('freelancer'))
             ->get(route('studio.orders.receipt', $order->number))->assertNotFound();
         $staff = $this->user('staff');
         $this->actingAs($staff)->get(route('dashboard.orders.show', $order->number))->assertForbidden();
+        $this->get(route('dashboard.orders.receipt', $order->reference()))->assertForbidden();
         DB::table('user_permission_overrides')->insert([
             'user_id' => $staff->id, 'permission' => 'commerce_orders', 'allowed' => true,
         ]);
         $this->get(route('dashboard.orders.show', $order->number))->assertOk();
+        $this->get(route('dashboard.orders.receipt', $order->reference()))->assertOk()
+            ->assertSee('mailto:'.$buyer->email)->assertSee('mailto:'.$seller->email);
+        $this->get(OrderReceipt::verificationUrl($order))->assertOk()
+            ->assertDontSee($buyer->email)->assertDontSee($seller->email);
         $this->get(route('dashboard.payment-methods.index'))->assertForbidden();
     }
 
