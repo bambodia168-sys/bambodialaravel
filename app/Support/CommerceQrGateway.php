@@ -92,7 +92,7 @@ final class CommerceQrGateway
             return ['paid', $payment->remote_id];
         }
 
-        $base = $payment->live_mode ? 'https://api-bakong.nbc.gov.kh' : 'https://sit-api-bakong.nbc.gov.kh';
+        $base = self::bakongBaseUrl($payment->live_mode);
         $result = $this->post($this->client($base)->withToken($credentials['token']), '/v1/check_transaction_by_md5', ['md5' => $payment->remote_id]);
         if (($result['responseCode'] ?? null) === 1 && in_array($result['errorCode'] ?? null, [1, 3], true)) {
             // Keep checking briefly after QR expiry for a payment made just before the deadline.
@@ -106,6 +106,11 @@ final class CommerceQrGateway
             && $this->amountMatches(data_get($result, 'data.amount'), $payment->order->total), 409, 'Bakong payment does not match this order.');
 
         return ['paid', strtolower($hash)];
+    }
+
+    public static function bakongBaseUrl(bool $live): string
+    {
+        return $live ? 'https://api-bakong.nbc.gov.kh' : 'https://sit-api-bakong.nbc.gov.kh';
     }
 
     private function payway(CommercePayment $payment, string $secret, string $operation, array $body): array

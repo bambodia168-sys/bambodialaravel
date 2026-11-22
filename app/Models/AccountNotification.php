@@ -24,6 +24,7 @@ class AccountNotification extends Model
         'commerce.payment.approved',
         'commerce.payment.rejected',
         'commerce.delivery.delayed',
+        'commerce.bakong.token_alert',
         'commerce.refund.confirmed',
         'commerce.service.purchased',
         'commerce.service.requirements',

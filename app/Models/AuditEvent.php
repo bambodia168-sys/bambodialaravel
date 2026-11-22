@@ -112,6 +112,7 @@ class AuditEvent extends Model
         'commerce.payment_method.created',
         'commerce.payment_method.availability_changed',
         'commerce.payment_method.configured',
+        'commerce.bakong.token_renewed',
         'commerce.payment.submitted',
         'commerce.payment.rejected',
         'commerce.payment.verified',

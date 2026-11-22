@@ -28,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Credentials are never echoed into validation redirects or flash data.
-        $exceptions->dontFlash(['access_key_id','secret_access_key','secret_key','cf-turnstile-response', 'gateway', 'client_secret', 'credential']);
+        $exceptions->dontFlash(['access_key_id','secret_access_key','secret_key','cf-turnstile-response', 'gateway', 'bakong_renewal', 'client_secret', 'credential']);
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
