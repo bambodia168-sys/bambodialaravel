@@ -9,6 +9,11 @@ class CommerceGatewaySetting extends Model
 {
     public const STRIPE_LIVE_FLAG = 'commerce_stripe_live';
 
+    public const ENVIRONMENT_FLAGS = [
+        'stripe' => self::STRIPE_LIVE_FLAG,
+        'bakong' => 'commerce_bakong_live',
+    ];
+
     public const FIELDS = [
         'stripe' => ['secret' => 'API secret key', 'webhook_secret' => 'Webhook signing secret'],
         'paypal' => ['client_id' => 'Client ID', 'secret' => 'Client secret', 'merchant_id' => 'Merchant ID', 'webhook_id' => 'Webhook ID'],
@@ -31,11 +36,12 @@ class CommerceGatewaySetting extends Model
     public static function checkoutIsLive(string $provider): bool
     {
         $default = (bool) config('commerce.live_gateways');
-        if ($provider !== 'stripe') {
+        $flag = self::ENVIRONMENT_FLAGS[$provider] ?? null;
+        if ($flag === null) {
             return $default;
         }
 
-        return (bool) (FeatureFlag::query()->where('key', self::STRIPE_LIVE_FLAG)->value('enabled') ?? $default);
+        return (bool) (FeatureFlag::query()->where('key', $flag)->value('enabled') ?? $default);
     }
 
     public static function effective(string $provider, bool $live): array
