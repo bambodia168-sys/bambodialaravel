@@ -156,7 +156,10 @@ class CommercePaymentMethodController extends Controller
                 };
                 if ($locked->available && ((! $stripe && ! $bakong) || $locked->isDirty('available'))
                     && CommerceCollection::enabled() && ! $locked->availableForCheckout()) {
-                    throw ValidationException::withMessages(['available' => 'Configure the method before making it available.']);
+                    $message = $bakong && app()->isProduction() && ! CommerceGatewaySetting::checkoutIsLive('bakong')
+                        ? 'Bakong Sandbox can be used for checkout on a test installation. Select Production and configure its credentials to make Bakong available here.'
+                        : 'Configure the method before making it available.';
+                    throw ValidationException::withMessages(['available' => $message]);
                 }
                 $locked->save();
                 if ($locked->wasChanged() || $credentialsChanged || $activationChanged) {

@@ -795,6 +795,7 @@ Private installation report.
         $this->app->instance('env', 'production');
         $this->withSession(['_token' => 'bakong-mode-csrf-fixture'])->withHeader('X-CSRF-TOKEN', 'bakong-mode-csrf-fixture');
         $method = $this->method('bakong');
+        $method->update(['available'=>false]);
         [$buyer, $order] = $this->order();
         $page = route('dashboard.payment-methods.index');
         $save = route('dashboard.payment-methods.update', $method);
@@ -818,8 +819,15 @@ Private installation report.
         $this->assertNull(CommerceGatewaySetting::forMode('bakong', false)->firstOrFail()->credentials);
         $this->assertNull(session()->getOldInput('gateway'));
         $this->patch($save, [
-            'available'=>true, 'gateway'=>['sandbox'=>$sandbox, 'live'=>$production],
+            'available'=>false, 'gateway'=>['sandbox'=>$sandbox, 'live'=>$production],
         ])->assertRedirect($page)->assertSessionHasNoErrors();
+        $this->patch($save, [
+            'available'=>true, 'bakong_environment'=>'sandbox',
+            'gateway'=>['sandbox'=>array_fill_keys(array_keys($sandbox), null)],
+        ])->assertRedirect($page)->assertSessionHasErrors([
+            'available'=>'Bakong Sandbox can be used for checkout on a test installation. Select Production and configure its credentials to make Bakong available here.',
+        ]);
+        $this->assertFalse($method->fresh()->available);
         $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('bakong'));
         foreach ([0=>$sandbox, 1=>$production] as $live => $credentials) {
             $settings = CommerceGatewaySetting::forMode('bakong', (bool) $live)->sole();
@@ -830,7 +838,7 @@ Private installation report.
             ->assertSee('name="bakong_environment" value="sandbox" checked', false)
             ->assertDontSee($sandbox['token'])->assertDontSee($production['token']);
         $this->assertMatchesRegularExpression('/data-bakong-fields="live"\s+hidden disabled/', $response->getContent());
-        $this->actingAs($buyer)->post($start, ['method'=>$method->id])->assertUnprocessable();
+        $this->actingAs($buyer)->post($start, ['method'=>$method->id])->assertNotFound();
         $this->assertFalse($order->payments()->exists());
 
         $this->actingAs($admin)->patch($save, ['available'=>true, 'bakong_environment'=>'live'])
