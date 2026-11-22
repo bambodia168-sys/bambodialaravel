@@ -25,7 +25,7 @@
     @php($configured = \App\Support\CommerceGateway::ready('bakong', $mode === 'live'))
     <fieldset class="payment-method-dialog__environment" data-bakong-fields="{{ $mode }}" @if($selection !== $mode) hidden disabled @endif>
       <legend>{{ $label }} credentials</legend>
-      <p>{{ $configured ? 'Credentials saved' : 'Credentials required' }}</p>
+      <p>{{ $configured ? 'Credentials saved. Leave fields blank to keep them.' : 'Enter the recipient details and API token for this environment.' }}</p>
       @foreach(\App\Models\CommerceGatewaySetting::FIELDS['bakong'] as $field => $fieldLabel)
         <label>{{ $field === 'token' ? $label.' API token' : $fieldLabel }}
           <input name="gateway[{{ $mode }}][{{ $field }}]" type="{{ $field === 'token' ? 'password' : 'text' }}"
@@ -34,5 +34,4 @@
       @endforeach
     </fieldset>
   @endforeach
-  <p>Leave a field blank to keep its saved value.</p>
 </div>
