@@ -35,7 +35,7 @@
         <summary>Open a private support ticket</summary>
         <form method="post" action="{{ route('support.store') }}" class="creator-application-form">
           @csrf
-          <input type="hidden" name="order_number" value="{{ $inquiry->order->number }}">
+          <input type="hidden" name="order_number" value="{{ $inquiry->order->reference() }}">
           <label for="order-support-subject">Subject</label>
           <input id="order-support-subject" name="subject" maxlength="180" minlength="5" required value="{{ old('subject') }}">
           @error('subject')<p class="hint" role="alert">{{ $message }}</p>@enderror

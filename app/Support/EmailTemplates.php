@@ -31,7 +31,7 @@ final class EmailTemplates
             'account.social_sign_in' => ['Social sign-in alert', 'Account', true, 'New sign-in to {{site_name}}', 'New social sign-in',
                 "Hello {{name}},\n\n{{message}}\n\nIf you did not sign in, review your account security.", 'Review account security'],
             'commerce.receipt' => ['Purchase receipt', 'Commerce', true, 'Your Bambodia receipt for {{title}}', 'Payment confirmed',
-                "Hello {{name}},\n\nWe received {{amount}} for {{title}} via {{payment_method}}.\n\nOrder {{order_number}}\nReceipt {{receipt_number}}", 'View your receipt'],
+                "Hello {{name}},\n\nWe received {{amount}} for {{title}} via {{payment_method}}.\n\nOrder {{order_number}}", 'View your receipt'],
             'commerce.seller_purchase' => ['New sale for listing owner', 'Commerce', true, 'New Bambodia sale for {{title}}', 'You have a new sale',
                 "Hello {{name}},\n\nA buyer paid {{amount}} for {{title}}. Open Sales Orders for delivery details.\n\nOrder {{order_number}}", 'View sales order'],
             'listing.published' => ['Listing published', 'Marketplace', true, $activity, 'Your listing is live', $body, 'Open listing'],

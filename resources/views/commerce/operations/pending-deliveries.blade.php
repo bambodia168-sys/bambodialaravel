@@ -18,8 +18,8 @@
             @php($order = $delivery['order'])
             <tr>
               <td>
-                <a class="listing-title-link" href="{{ route('dashboard.orders.show', $order->number) }}">{{ $order->listing_title }}</a>
-                <div class="text-muted mono">{{ $order->number }}</div>
+                <a class="listing-title-link" href="{{ route('dashboard.orders.show', $order->reference()) }}">{{ $order->listing_title }}</a>
+                <div class="text-muted mono">{{ $order->reference() }}</div>
               </td>
               <td>
                 {{ $order->currency }} {{ $order->total }}

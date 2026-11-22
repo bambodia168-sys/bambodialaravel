@@ -161,17 +161,17 @@ final class OrderFulfillment
     {
         return EmailOutbox::queue('commerce.receipt', $order->buyer_id, 'order-'.$order->number, [
             'title' => $order->listing_title, 'amount' => $order->currency.' '.$order->total,
-            'order_number' => $order->number, 'receipt_number' => $order->receipt_number,
+            'order_number' => $order->reference(), 'receipt_number' => $order->reference(),
             'payment_method' => $order->payment_method,
-        ], route('account.orders.receipt', $order->number, false));
+        ], route('account.orders.receipt', $order->reference(), false));
     }
 
     public static function queueSellerPurchase(MarketplaceOrder $order): void
     {
         EmailOutbox::queue('commerce.seller_purchase', $order->seller_id, 'order-'.$order->number, [
             'title' => $order->listing_title, 'amount' => $order->currency.' '.$order->total,
-            'order_number' => $order->number, 'payment_method' => $order->payment_method,
-        ], route('studio.orders.show', $order->number, false));
+            'order_number' => $order->reference(), 'payment_method' => $order->payment_method,
+        ], route('studio.orders.show', $order->reference(), false));
     }
 
     public static function notifyBuyer(MarketplaceOrder $order): void

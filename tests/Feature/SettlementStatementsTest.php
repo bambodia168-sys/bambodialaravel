@@ -40,9 +40,9 @@ class SettlementStatementsTest extends TestCase
         $this->app->instance('env', 'production');
         try {
             $this->get(route($sellerRoute, $day + ['queue' => 'unmatched']))->assertOk()
-                ->assertSee('Sales Settlements')->assertSee('Download CSV')->assertSee($own->number)
-                ->assertDontSee($other->number)->assertDontSee($old->number)
-                ->assertDontSee($sandbox->number)->assertDontSee($unpaid->number);
+                ->assertSee('Sales Settlements')->assertSee('Download CSV')->assertSee($own->reference())
+                ->assertDontSee($other->reference())->assertDontSee($old->reference())
+                ->assertDontSee($sandbox->reference())->assertDontSee($unpaid->reference());
             $this->get(route($sellerRoute, ['queue' => 'recovery_due']))
                 ->assertOk()->assertSee('No verified orders match your filters.');
 
@@ -55,7 +55,7 @@ class SettlementStatementsTest extends TestCase
                 $this->assertStringNotContainsString($excluded, $rows);
             }
             $this->actingAs($admin)->get(route($adminRoute, $day))->assertOk()
-                ->assertSee('Commerce Operations')->assertSee($own->number)->assertSee($other->number);
+                ->assertSee('Commerce Operations')->assertSee($own->reference())->assertSee($other->reference());
             $this->assertStringContainsString($other->number, $this->get(route($adminRoute.'.statement', $day))
                 ->assertDownload('bambodia-commerce-settlements.csv')->streamedContent());
         } finally {

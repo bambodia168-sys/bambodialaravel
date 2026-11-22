@@ -165,7 +165,9 @@ async function order(page, listing, {guest = false} = {}) {
   const repeated = await page.request.post(payload.action, {form: payload.form, maxRedirects: 0});
   assert.equal(repeated.status(), 302);
   assert.equal(new URL(repeated.headers().location, origin).pathname, orderPath);
-  return orderPath;
+  const reference = (await page.locator('.order-review .page-intro .mono').innerText()).trim();
+  assert.match(reference, /^[1-9][0-9]{9}$/);
+  return {path: orderPath, reference};
 }
 async function chooseOrderMethod(page, name) {
   await page.getByText('Change payment method', {exact: true}).click();
@@ -184,9 +186,9 @@ async function uploadReceipt(page, ref) {
   await page.locator('.checkout-progress').getByText('Payment pending', {exact: true}).waitFor();
   assert.equal(await page.locator('.checkout-progress [data-step="payment"] .checkout-progress-marker svg').count(), 0);
 }
-async function reviewPayment(page, orderPath, ref, approve, total) {
+async function reviewPayment(page, order, ref, approve, total) {
   await visit(page, '/dashboard/commerce-operations');
-  const link = page.getByRole('row').filter({hasText: orderPath.split('/').at(-1)})
+  const link = page.getByRole('row').filter({hasText: order.reference})
     .getByRole('link', {name: 'Review receipt', exact: true});
   await link.click();
   await page.getByText('Review transfer', {exact: true}).click();
@@ -256,7 +258,7 @@ try {
   await uploadReceipt(buyer, 'PILOT-PRODUCT-REJECT');
   assert.equal(await buyer.getByRole('link', {name: 'Download product'}).count(), 0);
   await reviewPayment(admin, productOrder, 'PILOT-PRODUCT-REJECT', false);
-  await visit(buyer, productOrder);
+  await visit(buyer, productOrder.path);
   await buyer.getByText('Your payment receipt was rejected.', {exact: false}).waitFor();
   await buyer.locator('[data-payment-stamp="unpaid"]').getByText('Unpaid', {exact: true}).waitFor();
   assert.equal(await buyer.getByRole('link', {name: 'Download product'}).count(), 0);
@@ -268,7 +270,7 @@ try {
   await admin.getByRole('button', {name: 'Pause new payments', exact: true}).click();
   await admin.getByRole('button', {name: 'Enable payments', exact: true}).waitFor();
   await reviewPayment(admin, productOrder, 'PILOT-PRODUCT-APPROVE', true, '29.00');
-  await visit(buyer, productOrder);
+  await visit(buyer, productOrder.path);
   await currentCheckoutStep(buyer, 'review');
   assert.equal(await buyer.locator('.checkout-progress [data-step="payment"]').getAttribute('data-state'), 'completed');
   assert.equal(await buyer.locator('.checkout-progress-status').count(), 0);
@@ -277,7 +279,14 @@ try {
   await receiptLink.click();
   await buyer.locator('.commerce-receipt [data-payment-stamp="paid"]').waitFor();
   await currentCheckoutStep(buyer, 'review');
-  await visit(buyer, productOrder);
+  const verification = await browser.newPage({viewport: {width: 390, height: 844}});
+  await visit(verification, await buyer.getByRole('link', {name: 'Open verification page'}).getAttribute('href'));
+  await verification.getByRole('heading', {name: 'Receipt verified', exact: true}).waitFor();
+  await verification.getByText(productOrder.reference, {exact: true}).waitFor();
+  assert.equal(await verification.getByText('Billed to', {exact: true}).count(), 0);
+  await verification.close();
+  record('A receipt QR opens public verification with the 10-digit order ID');
+  await visit(buyer, productOrder.path);
   record('Checkout progress keeps Payment pending until verification and opens Review afterward');
   const download = buyer.getByRole('link', {name: 'Download product', exact: true});
   await download.waitFor();
@@ -298,7 +307,7 @@ try {
   await uploadReceipt(buyer, 'PILOT-SERVICE');
   assert.equal(await buyer.getByRole('link', {name: 'Open service workspace'}).count(), 0);
   await reviewPayment(admin, serviceOrder, 'PILOT-SERVICE', true, '75.00');
-  await visit(buyer, serviceOrder);
+  await visit(buyer, serviceOrder.path);
   await buyer.getByRole('link', {name: 'Open service workspace', exact: true}).click();
   const workspace = new URL(buyer.url()).pathname;
   assert.equal((await outsider.request.get(origin+workspace)).status(), 404);
@@ -334,7 +343,7 @@ try {
   await buyer.getByText('Related order', {exact: false}).waitFor();
   assert.equal((await outsider.request.get(buyer.url())).status(), 404);
 
-  await visit(buyer, serviceOrder);
+  await visit(buyer, serviceOrder.path);
   await buyer.getByLabel('Rating', {exact: true}).selectOption('5');
   await buyer.getByLabel('Public review (optional)').fill('Pilot installation and handoff delivered as described.');
   await buyer.getByRole('button', {name: 'Post review', exact: true}).click();

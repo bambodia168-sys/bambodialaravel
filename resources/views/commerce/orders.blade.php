@@ -24,13 +24,13 @@
         <tbody>
         @forelse($orders as $order)
           <tr>
-            <td><a class="listing-title-link" href="{{ route($section.'.show', $order->number) }}">{{ $order->listing_title }}</a>
-              <div class="text-muted mono">{{ $order->number }}</div></td>
+            <td><a class="listing-title-link" href="{{ route($section.'.show', $order->reference()) }}">{{ $order->listing_title }}</a>
+              <div class="text-muted mono">{{ $order->reference() }}</div></td>
             <td>{{ $order->created_at->format('d M Y') }}</td>
             <td class="mono">{{ $order->currency }} {{ $order->total }}</td>
             <td><span class="role-pill">{{ \App\Models\MarketplaceOrder::STATUSES[$order->status] }}</span></td>
             <td>@if($order->receipt_number)
-              <a class="btn subtle compact" href="{{ route($section.'.receipt', $order->number) }}">View receipt</a>
+              <a class="btn subtle compact" href="{{ route($section.'.receipt', $order->reference()) }}">View receipt</a>
             @else — @endif</td>
           </tr>
         @empty

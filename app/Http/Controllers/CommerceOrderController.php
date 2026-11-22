@@ -13,6 +13,7 @@ use App\Support\CommerceCollection;
 use App\Support\CommerceOffers;
 use App\Support\CommercePaymentStart;
 use App\Support\OrderFulfillment;
+use App\Support\OrderReceipt;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,7 +41,7 @@ class CommerceOrderController extends Controller
         $search = trim($filters['q'] ?? '');
         $orders = $orders->when($status, fn (Builder $query) => $query->where('status', $status))
             ->when($search !== '', fn (Builder $query) => $query->where(
-                fn (Builder $match) => $match->where('number', $search)->orWhere('listing_title', 'like', '%'.$search.'%')
+                fn (Builder $match) => $match->matchingReference($search)->orWhere('listing_title', 'like', '%'.$search.'%')
             ))
             ->latest('id')->paginate(10)->withQueryString();
 
@@ -50,7 +51,7 @@ class CommerceOrderController extends Controller
     public function show(Request $request, string $number): Response
     {
         [$orders, $section, $workspace] = $this->workspace($request);
-        $order = $orders->where('number', $number)->firstOrFail();
+        $order = $orders->matchingReference($number)->firstOrFail();
         if ($section !== 'dashboard.orders' && in_array($order->status, ['completed', 'refunded'], true)) {
             $order->load('serviceInquiry');
             if ($section === 'account.orders') {
@@ -84,17 +85,39 @@ class CommerceOrderController extends Controller
     public function receipt(Request $request, string $number): Response
     {
         [$orders, $section, $workspace] = $this->workspace($request);
-        $order = $orders->where('number', $number)->whereIn('status', ['completed', 'refunded'])
-            ->whereNotNull('receipt_number')->firstOrFail();
+        $order = $orders->matchingReference($number)->whereIn('status', ['completed', 'refunded'])
+            ->whereNotNull('receipt_number')->withExists('paidAttempt')->firstOrFail();
+        $receiptStatus = OrderReceipt::status($order);
+        $verificationUrl = $receiptStatus ? OrderReceipt::verificationUrl($order) : null;
+        $qr = $verificationUrl ? OrderReceipt::qrSource($verificationUrl) : null;
 
-        return response()->view('commerce.receipt', compact('order', 'section', 'workspace'))
+        return response()->view('commerce.receipt', compact('order', 'section', 'workspace', 'receiptStatus', 'verificationUrl', 'qr'))
             ->header('Cache-Control', 'private, no-store');
+    }
+
+    public function verifyReceipt(string $reference, string $token): Response
+    {
+        $order = MarketplaceOrder::query()->select(['id', 'public_reference', 'receipt_number', 'status', 'total', 'currency', 'completed_at'])
+            ->where('public_reference', $reference)->whereNotNull('receipt_number')->withExists('paidAttempt')->firstOrFail();
+        $status = OrderReceipt::status($order);
+        abort_unless($status && hash_equals(OrderReceipt::token($order), $token), 404);
+
+        return response()->view('commerce.receipt-verification', [
+            'reference' => $order->reference(),
+            'status' => $status,
+            'amount' => $order->currency.' '.$order->total,
+            'recorded' => $order->completed_at->setTimezone('Asia/Phnom_Penh')->format('d M Y, H:i'),
+        ])->withHeaders([
+            'Cache-Control' => 'private, no-store',
+            'X-Robots-Tag' => 'noindex, nofollow, noarchive',
+            'Referrer-Policy' => 'no-referrer',
+        ]);
     }
 
     public function emailReceipt(Request $request, string $number): RedirectResponse
     {
         [$orders] = $this->workspace($request);
-        $order = $orders->where('number', $number)->where('status', 'completed')
+        $order = $orders->matchingReference($number)->where('status', 'completed')
             ->where('total', '>', 0)->whereNotNull('receipt_number')->whereHas('paidAttempt')->firstOrFail();
         $delivery = OrderFulfillment::queueReceipt($order);
         if (! $delivery) {
