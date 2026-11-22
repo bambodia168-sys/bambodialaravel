@@ -2,7 +2,9 @@
 
 namespace App\Notifications;
 
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\PlatformEmail;
+use App\Support\EmailOutbox;
+use App\Support\EmailTemplates;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
 
@@ -21,12 +23,14 @@ class CheckoutVerification extends Notification
         ]);
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): PlatformEmail
     {
-        return (new MailMessage)
-            ->subject('Verify your email to continue on Bambodia')
-            ->line('Verify your email to return to your saved Bambodia cart.')
-            ->action('Verify email and return to cart', $this->url($notifiable))
-            ->line('This link expires in one hour. If you did not request it, you can ignore this email.');
+        $copy = EmailTemplates::render(EmailOutbox::template(EmailTemplates::VERIFY), [
+            'name' => $notifiable->name,
+            'site_name' => config('app.name'),
+        ]);
+        $copy['button'] = $copy['button'] ?: EmailTemplates::defaults(EmailTemplates::VERIFY)['button'];
+
+        return (new PlatformEmail($copy, $this->url($notifiable)))->to($notifiable->email);
     }
 }

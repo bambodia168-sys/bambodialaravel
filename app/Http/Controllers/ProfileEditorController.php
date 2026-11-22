@@ -9,11 +9,13 @@ use App\Models\CreatorProfileSection;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Support\CreatorBadgeAwards;
+use App\Support\EmailOutbox;
 use App\Support\ManualAccountReview;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -114,8 +116,9 @@ final class ProfileEditorController extends Controller
                 }
                 $personal->save();
 
+                $creator = null;
                 if ($locked->isCreator()) {
-                    CreatorProfile::query()->updateOrCreate(
+                    $creator = CreatorProfile::query()->updateOrCreate(
                         ['user_id' => $locked->id],
                         [
                             'headline' => $data['headline'],
@@ -126,6 +129,11 @@ final class ProfileEditorController extends Controller
                     );
                 }
                 AuditEvent::record($locked->isCreator() ? 'creator.profile.updated' : 'profile.public.updated', $request->user(), $request);
+                if ($locked->wasChanged('name') || $personal->wasChanged() || $personal->wasRecentlyCreated
+                    || $creator?->wasChanged() || $creator?->wasRecentlyCreated) {
+                    EmailOutbox::queue('account.details_changed', $locked->id, (string) Str::uuid(), [],
+                        route('account.profile.edit', absolute: false));
+                }
             });
         } catch (\Throwable $error) {
             if ($newAvatar) Storage::disk('public')->delete($newAvatar);

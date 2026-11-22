@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\CommerceCart;
+use App\Models\CreatorBadge;
 use App\Models\EmailCampaign;
 use App\Models\EmailDelivery;
 use App\Models\EmailTemplate;
 use App\Models\MarketplaceListing;
 use App\Models\User;
+use App\Notifications\CheckoutVerification;
 use App\Support\EmailOutbox;
 use App\Support\EmailTemplates;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -111,6 +114,83 @@ final class EmailDeliveryTest extends TestCase
         $this->assertSame('Explore this new service', $email->getSubject());
         $this->assertStringContainsString('Unsubscribe', $email->getHtmlBody());
         $this->assertStringContainsString('/email/unsubscribe/'.$subscriber->public_id, $email->getHeaders()->get('List-Unsubscribe')->getBodyAsString());
+    }
+
+    public function test_builder_saves_safe_formatted_copy_and_previews_without_changing_saved_copy(): void
+    {
+        $event = 'commerce.receipt';
+        $path = fn ($action) => route('dashboard.email-templates.'.$action, $event);
+        $values = [
+            'subject' => 'Receipt for {{title}}',
+            'heading' => 'Receipt details',
+            'body_html' => '<p onclick="alert(1)">Amount <strong>{{amount}}</strong></p>'
+                .'<iframe src="https://www.youtube-nocookie.com/embed/1a2b3c4d5ef"></iframe>'
+                .'<a href="https://example.test/{{name}}">Unsafe link token</a>',
+            'button' => 'View receipt',
+        ];
+
+        $this->actingAs($this->user())->get($path('edit'))->assertForbidden();
+        $this->actingAs($this->user('super_admin'))->get($path('edit'))->assertOk()
+            ->assertSee('Message formatting')->assertSee('Preview draft')->assertSee('Personalization')
+            ->assertSee('data-email-token="{{amount}}"', false);
+        $this->post($path('preview-draft'), $values)->assertOk()
+            ->assertSee('<strong>USD 10.00</strong>', false)->assertDontSee('<iframe', false)
+            ->assertDontSee('onclick', false)->assertDontSee('href="https://example.test/', false);
+        $this->assertDatabaseCount('email_templates', 0);
+        $this->from($path('edit'))->put($path('update'), $values)->assertRedirect($path('edit'))
+            ->assertSessionHasNoErrors();
+        $this->assertStringContainsString('Amount {{amount}}', EmailTemplate::query()->findOrFail($event)->body);
+        $this->get($path('preview'))->assertOk()->assertSee('<strong>USD 10.00</strong>', false);
+        $this->delete($path('destroy'))->assertRedirect();
+        $this->assertNull(EmailTemplate::query()->findOrFail($event)->body_html);
+    }
+
+    public function test_verification_template_uses_the_existing_signed_link(): void
+    {
+        $member = $this->user();
+        $verification = new CheckoutVerification;
+        $mail = $verification->toMail($member);
+        $this->assertStringContainsString('/verify-email/', $mail->actionUrl);
+        $this->assertStringContainsString('signature=', $mail->actionUrl);
+        $this->assertSame($member->email, $mail->to[0]['address']);
+        $this->actingAs($this->user('super_admin'))->patch(
+            route('dashboard.email-templates.status', EmailTemplates::VERIFY), ['enabled' => 0]
+        )->assertConflict();
+    }
+
+    public function test_badge_email_is_queued_only_when_the_award_is_new(): void
+    {
+        $creator = $this->user('freelancer');
+        $badge = CreatorBadge::query()->where('enabled', true)->firstOrFail();
+        $this->actingAs($this->user('super_admin'));
+        $route = route('dashboard.badges.grant', $creator);
+        foreach (['Details from the initial review.', 'Updated notes after the review.'] as $note) {
+            $this->post($route, ['badge_id' => $badge->id, 'evidence_note' => $note])->assertRedirect();
+        }
+        $delivery = EmailDelivery::query()->where('event', 'creator.badge_awarded')->sole();
+        $this->assertSame($creator->id, $delivery->user_id);
+        $this->assertSame($badge->name, $delivery->context['badge']);
+    }
+
+    public function test_cart_reminders_are_opt_in_and_recheck_the_cart_at_delivery(): void
+    {
+        config(['commerce.enabled' => true]);
+        $recipient = $this->user();
+        $recipient->forceFill(['marketing_subscribed_at' => now()->subWeeks(2)])->save();
+        $other = $this->user();
+        foreach ([$recipient, $other] as $user) {
+            $cart = CommerceCart::query()->create(['user_id' => $user->id, 'items' => ['123456789' => ['tier' => 'standard']]]);
+            $cart->forceFill(['updated_at' => now()->subHours(26)])->saveQuietly();
+        }
+        $event = 'commerce.abandoned_cart';
+        EmailTemplate::query()->create(['event' => $event, 'enabled' => true]);
+        Artisan::call('mail:queue-reminders');
+        Artisan::call('mail:queue-reminders');
+        $delivery = EmailDelivery::query()->sole();
+        $this->assertSame($recipient->id, $delivery->user_id);
+        CommerceCart::query()->findOrFail($recipient->id)->update(['items' => []]);
+        Artisan::call('mail:deliver-platform');
+        $this->assertSame('skipped', $delivery->fresh()->status);
     }
 
     private function user(string $role = 'customer'): User

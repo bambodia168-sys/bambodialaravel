@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Support\CreatorBadgeAwards;
 use App\Support\CreatorBadgeDisplay;
 use App\Support\UserManagementAccess;
+use App\Support\EmailOutbox;
+use Illuminate\Support\Str;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -182,10 +184,14 @@ class CreatorBadgeController extends Controller
         abort_unless($badge->enabled,422,'Disabled badges cannot be granted.');
         // An explicit manual grant can override an automatic source; it must carry evidence.
         DB::transaction(function()use($creator,$badge,$request,$data){
-            CreatorBadgeGrant::query()->updateOrCreate(
+            User::query()->whereKey($creator->id)->lockForUpdate()->firstOrFail();
+            $grant = CreatorBadgeGrant::query()->updateOrCreate(
                 ['creator_badge_id'=>$badge->id,'user_id'=>$creator->id],
                 ['source'=>'manual','granted_by'=>$request->user()->id,'evidence_note'=>$data['evidence_note']]
             );
+            if ($grant->wasRecentlyCreated || $grant->wasChanged('source')) {
+                self::notifyBadge($creator->id, $badge->name);
+            }
             $this->activity($request,'grant','single',$creator,$badge,1,$data['evidence_note']);
             AuditEvent::record('creator.badge.granted',$request->user(),$request);
         });
@@ -272,17 +278,42 @@ class CreatorBadgeController extends Controller
 
     private function insertGrants(array $userIds,$badges,int $actor,string $reason): void
     {
-        if(!$userIds)return;
-        $rows=[];$now=now();
-        foreach($userIds as $id)foreach($badges as $badge){
-            $rows[]=[
-                'user_id'=>$id,'creator_badge_id'=>$badge->id,
-                'granted_by'=>$actor,'source'=>'manual','evidence_note'=>$reason,
-                'created_at'=>$now,'updated_at'=>$now,
-            ];
+        if ($userIds === []) {
+            return;
         }
-        // Existing manually reviewed grants are left intact; bulk action never overwrites evidence.
-        foreach(array_chunk($rows,500) as $chunk) DB::table('creator_badge_grants')->insertOrIgnore($chunk);
+        User::query()->whereIn('id', $userIds)->orderBy('id')->lockForUpdate()->get(['id']);
+        $existing = CreatorBadgeGrant::query()->whereIn('user_id', $userIds)
+            ->whereIn('creator_badge_id', $badges->modelKeys())->get(['user_id', 'creator_badge_id'])
+            ->groupBy('user_id')->map(fn ($grants) => $grants->pluck('creator_badge_id')->flip());
+        $rows = [];
+        $awards = [];
+        $now = now();
+        foreach ($userIds as $id) {
+            foreach ($badges as $badge) {
+                if ($existing->get($id)?->has($badge->id)) {
+                    continue;
+                }
+                $rows[] = [
+                    'user_id' => $id, 'creator_badge_id' => $badge->id,
+                    'granted_by' => $actor, 'source' => 'manual', 'evidence_note' => $reason,
+                    'created_at' => $now, 'updated_at' => $now,
+                ];
+                $awards[$id][] = $badge->name;
+            }
+        }
+        foreach (array_chunk($rows, 500) as $chunk) {
+            DB::table('creator_badge_grants')->insertOrIgnore($chunk);
+        }
+        foreach ($awards as $id => $names) {
+            $label = count($names) === 1 ? $names[0] : count($names).' new Bambodia badges';
+            self::notifyBadge($id, $label);
+        }
+    }
+
+    private static function notifyBadge(int $userId, string $label): void
+    {
+        EmailOutbox::queue('creator.badge_awarded', $userId, (string) Str::uuid(), ['badge' => $label],
+            route('account.profile.edit', absolute: false));
     }
 
     private function activity(Request $request,string $action,string $scope,?User $creator,

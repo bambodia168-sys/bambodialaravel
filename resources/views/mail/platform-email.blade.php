@@ -14,9 +14,13 @@
       </td></tr>
       <tr><td style="padding:30px 28px">
         <h1 style="margin:0 0 20px;font-size:26px;line-height:1.25;color:#16253c">{{ $copy['heading'] }}</h1>
+        @if(!empty($copy['body_html']))
+          <div style="font-size:16px;line-height:1.6;color:#35465e">{!! $copy['body_html'] !!}</div>
+        @else
         @foreach(preg_split('/\R{2,}/', $copy['body']) as $paragraph)
           <p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#35465e">{!! nl2br(e($paragraph)) !!}</p>
         @endforeach
+        @endif
         @if($actionUrl && $copy['button'] !== '')
           <p style="margin:24px 0 0"><a href="{{ $actionUrl }}" style="display:inline-block;padding:13px 20px;border-radius:9px;background:#b63908;color:#fff;font-size:16px;font-weight:bold;text-decoration:none">{{ $copy['button'] }}</a></p>
         @endif

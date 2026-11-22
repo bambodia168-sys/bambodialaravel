@@ -6,7 +6,7 @@
 <div class="page-intro"><div class="eyebrow">Account · Activity</div><h1>Notification Center</h1><p>Your private updates from actual Bambodia workflows. You have {{ number_format($unread) }} unread notifications.</p></div>
 <section class="panel">
   <div class="panel-head">
-    <div><h2>Marketplace email updates</h2><p>Get listing promotions and announcements at your verified email address.</p></div>
+    <div><h2>Marketplace email updates</h2><p>Get listing promotions, announcements, reminders, and greetings at your verified email address.</p></div>
     <form method="post" action="{{ route('account.marketing.update') }}">
       @csrf @method('PATCH')
       <button name="enabled" value="{{ auth()->user()->marketing_subscribed_at ? '0' : '1' }}" class="btn subtle compact">

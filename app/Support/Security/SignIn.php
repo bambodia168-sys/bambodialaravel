@@ -27,21 +27,18 @@ final class SignIn
         Auth::login($user);
         $request->session()->regenerate();
         AuditEvent::record('auth.login.success', $user, $request);
-        self::socialAlert($request, $user, $provider);
+        self::notify($request, $user, $provider);
 
         return CheckoutCart::afterLogin($request, $user);
     }
 
-    public static function socialAlert(Request $request, User $user, ?string $provider): void
+    public static function notify(Request $request, User $user, ?string $provider = null): void
     {
-        if ($provider === null || ! isset(SocialLoginProvider::PROVIDERS[$provider])) {
-            return;
-        }
-
-        $label = SocialLoginProvider::PROVIDERS[$provider][0];
-        EmailOutbox::queue('account.social_sign_in', $user->id, 'sign-in-'.$request->session()->getId(), [
-            'title' => 'New '.$label.' sign-in',
-            'message' => 'A successful sign-in to your account used '.$label.'.',
+        $label = SocialLoginProvider::PROVIDERS[$provider][0] ?? null;
+        $event = $label === null ? 'account.sign_in' : 'account.social_sign_in';
+        EmailOutbox::queue($event, $user->id, 'sign-in-'.hash('sha256', $request->session()->getId()), [
+            'title' => $label ? 'New '.$label.' sign-in' : 'New sign-in',
+            'message' => $label ? 'A successful sign-in to your account used '.$label.'.' : 'Your account was signed in successfully.',
         ], route('account.security', absolute: false));
     }
 

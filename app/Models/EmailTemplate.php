@@ -9,7 +9,7 @@ final class EmailTemplate extends Model
     protected $primaryKey = 'event';
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['event', 'enabled', 'subject', 'heading', 'body', 'button'];
+    protected $fillable = ['event', 'enabled', 'subject', 'heading', 'body', 'button', 'body_html'];
 
     protected function casts(): array
     {

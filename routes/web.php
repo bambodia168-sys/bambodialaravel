@@ -546,6 +546,8 @@ Route::middleware('auth')->group(function (): void {
                     Route::get('/', [EmailTemplateController::class, 'index'])->name('index');
                     Route::post('/delivery/{delivery}/retry', [EmailTemplateController::class, 'retry'])->whereNumber('delivery')
                         ->middleware('throttle:8,1,email-delivery-retry:')->name('retry');
+                    Route::get('/{event}/edit', [EmailTemplateController::class, 'edit'])->name('edit');
+                    Route::post('/{event}/preview', [EmailTemplateController::class, 'previewDraft'])->middleware('throttle:20,1,email-template-preview:')->name('preview-draft');
                     Route::get('/{event}/preview', [EmailTemplateController::class, 'preview'])->name('preview');
                     Route::post('/{event}/test', [EmailTemplateController::class, 'test'])->middleware('throttle:4,1,email-template-test:')->name('test');
                     Route::put('/{event}', [EmailTemplateController::class, 'update'])->middleware('throttle:15,1,email-template-update:')->name('update');

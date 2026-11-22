@@ -41,7 +41,7 @@ final class BuilderContent
         $request->merge(['description_html' => $html, 'description' => $text]);
     }
 
-    public static function sanitize(?string $html): ?string
+    public static function sanitize(?string $html, bool $email = false): ?string
     {
         if (! is_string($html) || trim($html) === '') {
             return null;
@@ -61,7 +61,7 @@ final class BuilderContent
                 return null;
             }
 
-            self::clean($container);
+            self::clean($container, $email);
             $safe = '';
             foreach ($container->childNodes as $child) {
                 $safe .= $document->saveHTML($child);
@@ -90,14 +90,14 @@ final class BuilderContent
         return trim(preg_replace('/\n{3,}/', "\n\n", $text));
     }
 
-    private static function clean(DOMNode $parent): void
+    private static function clean(DOMNode $parent, bool $email): void
     {
         for ($node = $parent->firstChild; $node !== null;) {
             $next = $node->nextSibling;
             if ($node instanceof DOMElement) {
                 $tag = strtolower($node->tagName);
                 if ($tag === 'iframe') {
-                    $src = self::verifiedYoutubeEmbed((string) $node->getAttribute('src'));
+                    $src = $email ? null : self::verifiedYoutubeEmbed((string) $node->getAttribute('src'));
                     if ($src === null) {
                         $parent->removeChild($node);
                     } else {
@@ -119,7 +119,7 @@ final class BuilderContent
                     $parent->removeChild($node);
                 } elseif (! in_array($tag, self::ALLOWED, true)) {
                     // Unwrap unknown structural elements, but keep their readable text.
-                    self::clean($node);
+                    self::clean($node, $email);
                     while ($node->firstChild) {
                         $parent->insertBefore($node->firstChild, $node);
                     }
@@ -131,7 +131,8 @@ final class BuilderContent
                     while ($node->attributes->length) {
                         $node->removeAttributeNode($node->attributes->item(0));
                     }
-                    if ($tag === 'a' && preg_match('~^https?://[^\s<>"\x00-\x1f]+$~i', $href)) {
+                    if ($tag === 'a' && (! $email || (str_starts_with($href, 'https://')
+                        && ! strpbrk($href, '{}\\') && filter_var($href, FILTER_VALIDATE_URL))) && preg_match('~^https?://[^\s<>"\x00-\x1f]+$~i', $href)) {
                         $node->setAttribute('href', $href);
                         $node->setAttribute('rel', 'nofollow noopener noreferrer');
                         $node->setAttribute('target', '_blank');
@@ -142,7 +143,7 @@ final class BuilderContent
                     if ($style !== '') {
                         $node->setAttribute('style', $style);
                     }
-                    self::clean($node);
+                    self::clean($node, $email);
                 }
             } elseif (! in_array($node->nodeType, [XML_TEXT_NODE], true)) {
                 $parent->removeChild($node);
