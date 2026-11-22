@@ -1,25 +1,30 @@
 @php
   $live = \App\Models\CommerceGatewaySetting::checkoutIsLive('bakong');
-  $activeLabel = $live ? 'Production' : 'Sandbox';
-  $selection = $retry ? old('bakong_environment') : null;
+  $active = $live ? 'live' : 'sandbox';
+  $modes = ['sandbox' => 'Sandbox', 'live' => 'Production'];
+  $previous = $retry ? old('bakong_environment') : null;
+  $selection = in_array($previous, array_keys($modes), true) ? $previous : $active;
 @endphp
 
-<p>Active Bakong environment <strong>{{ $activeLabel }}</strong></p>
-<p>Bakong generates a USD QR for each order. Use the National Bank of Cambodia API token and recipient details for each environment. Leave fields blank to keep their saved values.</p>
+<div data-bakong-settings>
+  <p>Current environment <strong>{{ $modes[$active] }}</strong></p>
+  <fieldset class="payment-method-dialog__mode" aria-describedby="bakong-mode-help-{{ $method->id }}">
+    <legend>Use for new Bakong checkouts</legend>
+    <div class="payment-method-dialog__mode-options">
+      @foreach($modes as $mode => $label)
+        <label>
+          <input type="radio" name="bakong_environment" value="{{ $mode }}" @checked($selection === $mode) required>
+          {{ $label }}
+        </label>
+      @endforeach
+    </div>
+  </fieldset>
+  <p id="bakong-mode-help-{{ $method->id }}">Select one environment, then save. Sandbox is for test installations. Public checkout uses Production when Bakong is available and payments are enabled.</p>
 
-<label for="bakong-environment-{{ $method->id }}">Use for new Bakong checkouts</label>
-<select id="bakong-environment-{{ $method->id }}" name="bakong_environment" aria-describedby="bakong-mode-help-{{ $method->id }}">
-  <option value="" @selected($selection === null)>Keep current ({{ $activeLabel }})</option>
-  <option value="sandbox" @selected($selection === 'sandbox')>Sandbox</option>
-  <option value="live" @selected($selection === 'live')>Production</option>
-</select>
-<p id="bakong-mode-help-{{ $method->id }}">Sandbox checkout runs on test installations. Public checkout requires Production, an available Bakong method, and enabled payment processing.</p>
-
-<div class="payment-method-dialog__environments">
-  @foreach(['sandbox' => 'Sandbox', 'live' => 'Production'] as $mode => $label)
+  @foreach($modes as $mode => $label)
     @php($configured = \App\Support\CommerceGateway::ready('bakong', $mode === 'live'))
-    <fieldset class="payment-method-dialog__environment">
-      <legend>{{ $label }}</legend>
+    <fieldset class="payment-method-dialog__environment" data-bakong-fields="{{ $mode }}" @if($selection !== $mode) hidden disabled @endif>
+      <legend>{{ $label }} credentials</legend>
       <p>{{ $configured ? 'Credentials saved' : 'Credentials required' }}</p>
       @foreach(\App\Models\CommerceGatewaySetting::FIELDS['bakong'] as $field => $fieldLabel)
         <label>{{ $field === 'token' ? $label.' API token' : $fieldLabel }}
@@ -29,4 +34,5 @@
       @endforeach
     </fieldset>
   @endforeach
+  <p>Leave a field blank to keep its saved value.</p>
 </div>
