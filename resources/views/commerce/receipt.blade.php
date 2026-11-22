@@ -40,12 +40,18 @@
           <p class="receipt-party-name">{{ $name }}</p>
           <dl class="receipt-contact">
             <div>
-              <dt aria-label="Location"><x-icon name="map-pin" size="16"/></dt>
+              <dt>
+                <x-icon name="map-pin" size="16"/>
+                <span class="receipt-contact-label">Location</span>
+              </dt>
               <dd>{{ filled($contacts[$party]['location']) ? $contacts[$party]['location'] : 'Location unavailable' }}</dd>
             </div>
             @if(filled($contacts[$party]['email']))
               <div>
-                <dt aria-label="Email"><x-icon name="mail" size="16"/></dt>
+                <dt>
+                  <x-icon name="mail" size="16"/>
+                  <span class="receipt-contact-label">Email</span>
+                </dt>
                 <dd><a href="mailto:{{ $contacts[$party]['email'] }}">{{ $contacts[$party]['email'] }}</a></dd>
               </div>
             @endif
