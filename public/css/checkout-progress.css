@@ -75,16 +75,51 @@
     color: var(--accent);
 }
 
+.checkout-progress-track [data-state="completed"] .checkout-progress-marker svg {
+    stroke-width: 2.5;
+}
+
 .checkout-progress-track [aria-current="step"] .checkout-progress-step {
     color: var(--text);
     font-weight: 800;
 }
 
 .checkout-progress-track [aria-current="step"] .checkout-progress-marker {
+    position: relative;
     border-color: var(--accent);
     background: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, var(--surface));
     color: var(--accent-contrast, #fff);
+}
+
+.checkout-progress-track [aria-current="step"] .checkout-progress-marker::after {
+    position: absolute;
+    inset: -5px;
+    border: 2px solid color-mix(in srgb, var(--accent) 24%, var(--surface));
+    border-block-start-color: var(--accent);
+    border-inline-end-color: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    content: "";
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .checkout-progress-track [aria-current="step"] .checkout-progress-marker::after {
+        animation: checkout-progress-orbit 1.8s linear 2;
+    }
+
+    .checkout-progress-track [data-state="completed"] .checkout-progress-marker svg {
+        animation: checkout-progress-check 420ms ease-out both;
+    }
+}
+
+@keyframes checkout-progress-orbit {
+    to { transform: rotate(1turn); }
+}
+
+@keyframes checkout-progress-check {
+    0% { opacity: .45; transform: scale(.55); }
+    65% { opacity: 1; transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
 .checkout-progress-status {

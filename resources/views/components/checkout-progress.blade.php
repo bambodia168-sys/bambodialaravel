@@ -10,7 +10,7 @@
   $activePosition = array_search($step, array_keys($steps), true);
 @endphp
 
-<link rel="stylesheet" href="{{ asset('css/checkout-progress.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/checkout-progress.css') }}?v=2">
 <nav class="checkout-progress" aria-label="Checkout progress">
   <ol class="checkout-progress-track">
     @foreach($steps as $key => $label)
@@ -30,7 +30,7 @@
         @endif
           <span class="checkout-progress-marker" aria-hidden="true">
             @if($state === 'completed')
-              <x-icon name="check" size="16"/>
+              <x-icon name="check" size="22"/>
             @elseif($state === 'skipped')
               &ndash;
             @else
