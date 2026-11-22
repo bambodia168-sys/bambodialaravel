@@ -202,24 +202,101 @@
 .receipt-footer a:not(.receipt-qr) { display: inline-block; margin-top: .3rem; color: #26568a; text-decoration: underline; }
 .receipt-footer .receipt-issued { margin-top: .35rem; }
 
+/* Public verification uses the same A4 paper and receipt typography. */
 .receipt-verification {
-    display: grid;
-    justify-items: center;
+    box-sizing: border-box;
     margin: 0;
-    padding: clamp(1rem, 4vw, 2.5rem);
+    padding: clamp(.75rem, 4vw, 2rem);
     background: #edf2f8;
-    line-height: 1.5;
+    line-height: 1.45;
 }
 
-.receipt-verification main { width: min(100%, 31rem); }
-.receipt-verification-logo { width: 10.5rem; max-width: 100%; margin-bottom: 1.2rem; }
-.receipt-verification section { padding: clamp(1rem, 5vw, 1.8rem); background: #fff; border: 1px solid var(--receipt-line); border-radius: .75rem; box-shadow: 0 12px 35px #16263d14; }
-.receipt-verification h1 { margin: .55rem 0 .2rem; font-size: clamp(1.55rem, 6vw, 2rem); line-height: 1.2; }
-.receipt-verification p { margin: 0; color: var(--receipt-muted); }
-.receipt-verification dl { margin: 1rem 0 0; }
-.receipt-verification dl > div { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: .25rem 1rem; padding: .65rem 0; border-top: 1px solid var(--receipt-line); }
-.receipt-verification dd { margin: 0; }
-.receipt-verification main > a { display: inline-block; margin-block: 1rem; color: #26568a; font-weight: 650; }
+.verification-page { max-width: 210mm; margin-inline: auto; }
+.verification-paper { width: 100%; }
+.verification-toolbar,
+.verification-header,
+.verification-platform,
+.verification-legal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+}
+
+.verification-toolbar {
+    margin-bottom: .75rem;
+    font-size: .88rem;
+    font-weight: 700;
+}
+
+.receipt-verification a { color: #244f81; text-underline-offset: .18em; }
+.receipt-verification a:hover { color: #132e50; }
+.receipt-verification a:focus-visible,
+.verification-toolbar button:focus-visible { outline: 2px solid #2969ac; outline-offset: 3px; }
+
+.verification-toolbar button,
+.verification-telegram a {
+    padding: .5rem .75rem;
+    border: 1px solid var(--receipt-line);
+    border-radius: .4rem;
+    color: var(--receipt-ink);
+    background: #fff;
+    font: inherit;
+    font-weight: 700;
+}
+
+.verification-toolbar button { cursor: pointer; }
+.verification-header { align-items: flex-start; }
+.verification-header > a { flex: 0 1 10rem; min-width: 0; }
+.verification-header img { display: block; width: 100%; height: auto; }
+.verification-header > div { text-align: end; }
+.verification-header h1 { margin: .35rem 0 0; font-size: clamp(1.35rem, 4vw, 2.1rem); line-height: 1.12; }
+
+.verification-facts {
+    display: grid;
+    grid-template-columns: 1fr .85fr 1.2fr;
+    gap: .55rem 1rem;
+    margin: 0;
+    padding: .85rem 1rem;
+    border: 1px solid var(--receipt-line);
+    border-radius: .45rem;
+    background: var(--receipt-fill);
+}
+
+.verification-facts dd { font-size: 1.05em; }
+.verification-facts > div + div { padding-inline-start: .85rem; border-inline-start: 1px solid var(--receipt-line); }
+.verification-listing { padding: .75rem 0; border-block: 1px solid var(--receipt-line); }
+.verification-listing h2 { color: var(--receipt-muted); font-size: .78em; letter-spacing: .045em; text-transform: uppercase; }
+.verification-listing-link { font-size: 1.15em; font-weight: 750; overflow-wrap: anywhere; }
+
+.verification-parties { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.verification-card, .verification-platform { min-width: 0; padding: .8rem 1rem; border: 1px solid var(--receipt-line); border-radius: .45rem; }
+.verification-card dl { display: grid; gap: .55rem; margin: .55rem 0 0; }
+.verification-card .verification-sign-in { display: inline-block; margin-top: .25rem; font-size: .9em; }
+.verification-platform { background: var(--receipt-fill); }
+.verification-platform address { margin: .25rem 0 .55rem; color: var(--receipt-muted); font-style: normal; white-space: pre-line; overflow-wrap: anywhere; }
+.verification-contact { display: flex; flex-wrap: wrap; gap: .3rem 1rem; font-size: .9em; }
+.verification-contact a { overflow-wrap: anywhere; }
+
+.verification-telegram {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .84em;
+}
+.verification-telegram a { text-align: center; }
+.verification-telegram img { width: 4.7rem; height: auto; }
+.verification-footer { margin-top: auto; }
+.verification-legal { flex-wrap: wrap; margin-top: .65rem; padding-top: .6rem; border-top: 1px solid var(--receipt-line); color: var(--receipt-muted); font-size: .78em; }
+.verification-legal nav { display: flex; flex-wrap: wrap; gap: .2rem .8rem; }
+
+@media screen and (max-width: 550px) {
+    .verification-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .65rem; }
+    .verification-facts > div:last-child { grid-column: 1 / -1; padding: .4rem 0 0; border-inline-start: 0; border-top: 1px solid var(--receipt-line); }
+    .verification-card, .verification-platform { padding: .65rem; }
+    .verification-platform { flex-wrap: wrap; }
+    .verification-telegram img { width: 4rem; }
+}
 
 @media screen and (max-width: 600px) {
     .receipt-paper { min-height: 0; gap: .95rem; }
@@ -271,4 +348,12 @@
 
     .receipt-qr img { inline-size: 27mm; }
     .receipt-footer a:not(.receipt-qr) { display: none; }
+
+    .receipt-verification { padding: 0; background: #fff; }
+    .verification-toolbar, .verification-sign-in { display: none; }
+    .verification-page { max-width: none; }
+    .verification-paper { min-height: 268mm; }
+    .verification-telegram img { width: 19mm; }
+    .verification-header, .verification-facts, .verification-listing, .verification-parties,
+    .verification-platform, .verification-footer { break-inside: avoid; }
 }
