@@ -789,6 +789,76 @@ Private installation report.
         $sendEvent(true, 'whsec_active_fixture')->assertNoContent();
     }
 
+    public function test_bakong_keeps_environments_separate_and_switches_new_checkouts_to_production(): void
+    {
+        config(['commerce.live_gateways' => false, 'app.url' => 'https://bambodia.example.test']);
+        $this->app->instance('env', 'production');
+        $this->withSession(['_token' => 'bakong-mode-csrf-fixture'])->withHeader('X-CSRF-TOKEN', 'bakong-mode-csrf-fixture');
+        $method = $this->method('bakong');
+        [$buyer, $order] = $this->order();
+        $page = route('dashboard.payment-methods.index');
+        $save = route('dashboard.payment-methods.update', $method);
+        $start = route('account.orders.payment.start', $order->number);
+        $admin = $this->user('super_admin');
+        $sandbox = ['account_id'=>'sandbox@devb', 'merchant_name'=>'Sandbox Shop', 'merchant_city'=>'Phnom Penh', 'token'=>'sandbox-mode-token'];
+        $production = ['account_id'=>'production@bank', 'merchant_name'=>'Bambodia', 'merchant_city'=>'Battambang', 'token'=>'production-mode-token'];
+
+        $this->actingAs($this->user('admin'))->patch($save, [
+            'available'=>true, 'bakong_environment'=>'live', 'gateway'=>['live'=>$production],
+        ])->assertForbidden();
+        $this->actingAs($admin)->from($page)->patch($save, [
+            'available'=>true, 'bakong_environment'=>'live',
+        ])->assertRedirect($page)->assertSessionHasErrors('bakong_environment');
+        $this->patch($save, [
+            'available'=>true, 'gateway'=>['sandbox'=>$sandbox, 'live'=>['token'=>$production['token']]],
+        ])->assertRedirect($page)->assertSessionHasErrors('gateway');
+        $this->assertNull(CommerceGatewaySetting::forMode('bakong', false)->firstOrFail()->credentials);
+        $this->assertNull(session()->getOldInput('gateway'));
+        $this->patch($save, [
+            'available'=>true, 'gateway'=>['sandbox'=>$sandbox, 'live'=>$production],
+        ])->assertRedirect($page)->assertSessionHasNoErrors();
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('bakong'));
+        foreach ([0=>$sandbox, 1=>$production] as $live => $credentials) {
+            $settings = CommerceGatewaySetting::forMode('bakong', (bool) $live)->sole();
+            $this->assertSame($credentials, $settings->credentials);
+            $this->assertStringNotContainsString($credentials['token'], $settings->getRawOriginal('credentials'));
+        }
+        $this->get($page)->assertOk()->assertSee('Sandbox API token')->assertSee('Production API token')
+            ->assertSee('Keep current (Sandbox)')->assertDontSee($sandbox['token'])->assertDontSee($production['token']);
+        $this->actingAs($buyer)->post($start, ['method'=>$method->id])->assertUnprocessable();
+        $this->assertFalse($order->payments()->exists());
+
+        $this->actingAs($admin)->patch($save, ['available'=>true, 'bakong_environment'=>'live'])
+            ->assertRedirect($page)->assertSessionHasNoErrors();
+        $this->assertTrue(CommerceGatewaySetting::checkoutIsLive('bakong'));
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('stripe'));
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('aba'));
+
+        $this->actingAs($buyer)->post($start, ['method'=>$method->id])->assertRedirect();
+        $attempt = $order->payments()->sole();
+        $this->assertTrue($attempt->live_mode);
+        $this->assertStringContainsString($production['account_id'], $attempt->qr_payload);
+        $this->actingAs($admin)->patch($save, ['available'=>true, 'bakong_environment'=>'sandbox'])
+            ->assertRedirect($page)->assertSessionHasErrors('bakong_environment');
+        $this->assertTrue(CommerceGatewaySetting::checkoutIsLive('bakong'));
+
+        Http::fake(['https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5'=>Http::response([
+            'responseCode'=>0, 'data'=>['hash'=>str_repeat('cd', 32), 'toAccountId'=>$production['account_id'], 'currency'=>'USD', 'amount'=>25],
+        ])]);
+        $this->actingAs($buyer)->postJson(route('account.orders.payment.verify', [$order->number, $attempt->number]))
+            ->assertOk()->assertJsonPath('status', 'paid');
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request) => $request->url() === 'https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5'
+            && $request->hasHeader('Authorization', 'Bearer '.$production['token']) && $request['md5'] === $attempt->remote_id);
+        $this->assertNotNull($order->refresh()->receipt_number);
+
+        $this->actingAs($admin)->patch($save, ['available'=>true, 'bakong_environment'=>'sandbox'])
+            ->assertRedirect($page)->assertSessionHasNoErrors();
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('bakong'));
+        $this->assertFalse($method->fresh()->availableForCheckout());
+        $this->assertSame($production, CommerceGatewaySetting::effective('bakong', true));
+    }
+
     public function test_bakong_order_qr_has_bill_and_expiry_and_only_verified_payment_issues_receipt(): void
     {
         [$buyer, $order] = $this->order();
