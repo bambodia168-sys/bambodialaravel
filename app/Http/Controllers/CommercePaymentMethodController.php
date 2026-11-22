@@ -97,6 +97,7 @@ class CommercePaymentMethodController extends Controller
             'stripe_environment' => $stripe ? ['sometimes', 'required', Rule::in(['sandbox', 'live'])] : ['prohibited'],
             'activate_stripe_environment' => $stripe ? ['sometimes', 'boolean'] : ['prohibited'],
             'bakong_environment' => $bakong ? ['nullable', 'string', Rule::in(['sandbox', 'live'])] : ['prohibited'],
+            'activate_bakong_environment' => $bakong ? ['sometimes', 'boolean'] : ['prohibited'],
             'bakong_renewal' => $bakong ? ['sometimes', 'array:sandbox,live'] : ['prohibited'],
         ];
         foreach ($fields as $field) {
@@ -153,7 +154,7 @@ class CommercePaymentMethodController extends Controller
                 $activationChanged = match (true) {
                     $stripe && ($values['activate_stripe_environment'] ?? false)
                         => $this->activateEnvironment('stripe', $currentMode, $credentialsMode),
-                    $bakong && isset($values['bakong_environment'])
+                    $bakong && isset($values['bakong_environment']) && ($values['activate_bakong_environment'] ?? true)
                         => $this->activateEnvironment('bakong', $currentMode, $values['bakong_environment'] === 'live'),
                     default => false,
                 };

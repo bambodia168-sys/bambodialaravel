@@ -117,15 +117,19 @@ class BakongTokenRenewalTest extends TestCase
         $admin = $this->admin();
         $settings = route('dashboard.payment-methods.index');
         $save = route('dashboard.payment-methods.update', $method);
+        $sandboxToken = $this->token(now()->addDays(11)->timestamp);
 
         $this->actingAs($admin)->from($settings)->patch($save, [
             'available' => false, 'bakong_renewal' => ['sandbox' => 'sandbox@example.test', 'live' => ''],
+            'bakong_environment' => 'sandbox', 'activate_bakong_environment' => '0',
+            'gateway' => ['sandbox' => ['token' => $sandboxToken]],
         ])->assertRedirect($settings)->assertSessionHasNoErrors();
 
         $this->get($settings)->assertOk()->assertHeader('Cache-Control', 'no-store, private')
             ->assertSee('Automatic token renewal')->assertSee('sandbox@example.test')
             ->assertDontSee($live->credentials['token'])->assertDontSee($sandbox->credentials['token']);
         $this->assertSame('sandbox@example.test', $sandbox->fresh()->credentials['renewal_email']);
+        $this->assertSame($sandboxToken, $sandbox->fresh()->credentials['token']);
         $this->assertNull($live->fresh()->credentials['renewal_email']);
         $this->assertSame($live->credentials['token'], $live->fresh()->credentials['token']);
         $this->assertTrue(CommerceGatewaySetting::checkoutIsLive('bakong'));
