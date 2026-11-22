@@ -112,6 +112,9 @@ Route::get('/site.webmanifest', SiteManifestController::class)->name('site.manif
 Route::get('/receipts/verify/{reference}/{token}', [CommerceOrderController::class, 'verifyReceipt'])
     ->where(['reference' => OrderReference::DIGITS, 'token' => '[0-9a-f]{32}'])
     ->middleware('throttle:30,1,receipt-verification:')->name('commerce.receipts.verify');
+Route::get('/receipts/verify/{reference}/{token}/details', [CommerceOrderController::class, 'verifyReceipt'])
+    ->where(['reference' => OrderReference::DIGITS, 'token' => '[0-9a-f]{32}'])
+    ->middleware(['auth', 'throttle:30,1,receipt-verification:'])->name('commerce.receipts.verify.details');
 Route::get('/email/unsubscribe/{user}', [MarketingPreferenceController::class, 'confirm'])
     ->where('user', '[0-9]{8}')->middleware('signed:relative')->name('marketing.unsubscribe');
 Route::post('/email/unsubscribe/{user}', [MarketingPreferenceController::class, 'unsubscribe'])

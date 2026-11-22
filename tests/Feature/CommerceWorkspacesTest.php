@@ -122,13 +122,24 @@ class CommerceWorkspacesTest extends TestCase
         $this->get($receipt)->assertOk()->assertSee($verification)->assertSee('data:image/svg+xml;base64,', false)
             ->assertSee('Private fixture buyer');
         $this->get(route('account.orders.index', ['q' => $order->reference()]))->assertOk()->assertSee($listing->title);
+        $buyer->userProfile()->create(['public_location' => 'Customer fixture city']);
+        $seller->userProfile()->create(['public_location' => 'Seller fixture city']);
+        \App\Models\SiteSetting::query()->create(['key' => 'identity.receipt_address', 'value' => 'Public office fixture']);
+
+        $this->get($verification)->assertOk()->assertSee('Private fixture buyer')->assertSee('Customer fixture city')
+            ->assertSee('Private fixture seller')->assertSee('Seller fixture city');
         $this->actingAs($this->user('customer'))->get($receipt)->assertNotFound();
+        $this->get($verification)->assertOk()->assertDontSee('Private fixture buyer')->assertDontSee('Customer fixture city')
+            ->assertDontSee('Seller fixture city');
         auth()->logout();
 
         $this->get($verification)->assertOk()->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
             ->assertHeader('Cache-Control', 'no-store, private')->assertSee('Receipt verified')
             ->assertSee($order->reference())->assertSee('USD 12.50')
-            ->assertDontSee('Private fixture')->assertDontSee($listing->title)
+            ->assertSee('Public office fixture')->assertSee('support@bambodia.com')->assertSee('Join the Telegram group')
+            ->assertSee('Verify this receipt')->assertSee('Sign in to view order details')
+            ->assertSee($listing->publicUrl())
+            ->assertDontSee('Private fixture')->assertSee($listing->title)
             ->assertDontSee($order->number)->assertDontSee($order->receipt_number)
             ->assertDontSee('verified-fixture-balance');
         $this->get(route('commerce.receipts.verify', ['reference' => $order->reference(), 'token' => str_repeat('0', 32)]))
@@ -136,6 +147,8 @@ class CommerceWorkspacesTest extends TestCase
 
         $order->update(['status' => 'refunded']);
         $this->get($verification)->assertOk()->assertSee('Refunded')->assertSee('Total refunded')->assertDontSee('Total paid');
+        $listing->update(['status' => 'archived']);
+        $this->get($verification)->assertOk()->assertSee('Listing unavailable')->assertDontSee($listing->title);
         $order->update(['status' => 'cancelled']);
         $this->get($verification)->assertNotFound();
     }

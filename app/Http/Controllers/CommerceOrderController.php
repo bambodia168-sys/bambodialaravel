@@ -8,12 +8,16 @@ use App\Models\CommercePayment;
 use App\Models\AuditEvent;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
+use App\Models\Policy;
+use App\Models\SiteBrandAsset;
+use App\Models\SiteSetting;
 use App\Models\User;
 use App\Support\CommerceCollection;
 use App\Support\CommerceOffers;
 use App\Support\CommercePaymentStart;
 use App\Support\OrderFulfillment;
 use App\Support\OrderReceipt;
+use App\Support\UserManagementAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -95,15 +99,56 @@ class CommerceOrderController extends Controller
             ->header('Cache-Control', 'private, no-store');
     }
 
-    public function verifyReceipt(string $reference, string $token): Response
+    public function verifyReceipt(Request $request, string $reference, string $token): Response
     {
-        $order = MarketplaceOrder::query()->select(['id', 'public_reference', 'receipt_number', 'status', 'total', 'currency', 'completed_at'])
+        $order = MarketplaceOrder::query()->select([
+            'id', 'public_reference', 'receipt_number', 'status', 'total', 'currency', 'completed_at',
+            'marketplace_listing_id', 'buyer_id', 'seller_id',
+        ])
             ->where('public_reference', $reference)->whereNotNull('receipt_number')->withExists('paidAttempt')->firstOrFail();
         $status = OrderReceipt::status($order);
         abort_unless($status && hash_equals(OrderReceipt::token($order), $token), 404);
 
+        $viewer = $request->user();
+        $authorized = $viewer?->account_status === 'active'
+            && (in_array((int) $viewer->id, [(int) $order->buyer_id, (int) $order->seller_id], true)
+                || UserManagementAccess::allows($viewer, 'commerce_orders'));
+        $listing = MarketplaceListing::query()->publiclyAvailable()->with([
+            'creator:id,name,account_status',
+            'creator.creatorProfile:user_id,is_public',
+            'creator.userProfile:user_id,public_location',
+        ])->find($order->marketplace_listing_id);
+        $seller = $listing?->creator;
+        $publicSeller = $seller?->account_status === 'active' && (int) $seller->id === (int) $order->seller_id;
+        $parties = $authorized ? $this->receiptParties($order) : [];
+        if (! $authorized && $publicSeller) {
+            $parties['seller'] = [
+                'name' => $seller->name,
+                'location' => $seller->creatorProfile?->is_public ? $seller->userProfile?->public_location : null,
+            ];
+        }
+        $policies = Policy::query()->where('status', 'published')
+            ->where(fn (Builder $query) => $query->whereIn('category', ['privacy', 'cookies'])
+                ->orWhere('slug', 'terms-of-service'))
+            ->latest('published_at')->latest('id')->get()->unique('category')->keyBy('category');
+        $verificationUrl = OrderReceipt::verificationUrl($order);
+        $telegramUrl = 'https://t.me/+taf6FFmqH2djZjM1';
+
         return response()->view('commerce.receipt-verification', [
             'reference' => $order->reference(),
+            'listing' => $authorized ? $parties['listing'] : $listing?->title,
+            'listingUrl' => $listing?->publicUrl(),
+            'customer' => $parties['customer'] ?? null,
+            'seller' => $parties['seller'] ?? null,
+            'signInUrl' => $viewer ? null : route('commerce.receipts.verify.details', compact('reference', 'token')),
+            'platform' => SiteSetting::setting('identity.name'),
+            'platformAddress' => trim(SiteSetting::setting('identity.receipt_address')),
+            'logo' => SiteBrandAsset::urlFor('logo_light'),
+            'policies' => $policies,
+            'verificationUrl' => $verificationUrl,
+            'receiptQr' => OrderReceipt::qrSource($verificationUrl),
+            'telegramUrl' => $telegramUrl,
+            'telegramQr' => OrderReceipt::qrSource($telegramUrl),
             'status' => $status,
             'amount' => $order->currency.' '.$order->total,
             'recorded' => $order->completed_at->setTimezone('Asia/Phnom_Penh')->format('d M Y, H:i'),
@@ -112,6 +157,19 @@ class CommerceOrderController extends Controller
             'X-Robots-Tag' => 'noindex, nofollow, noarchive',
             'Referrer-Policy' => 'no-referrer',
         ]);
+    }
+
+    private function receiptParties(MarketplaceOrder $order): array
+    {
+        $snapshot = MarketplaceOrder::query()->whereKey($order->id)->firstOrFail(['listing_title', 'buyer_name', 'seller_name']);
+        $people = User::query()->whereKey([$order->buyer_id, $order->seller_id])
+            ->with('userProfile:user_id,public_location')->get(['id'])->keyBy('id');
+
+        return [
+            'listing' => $snapshot->listing_title,
+            'customer' => ['name' => $snapshot->buyer_name, 'location' => $people->get($order->buyer_id)?->userProfile?->public_location],
+            'seller' => ['name' => $snapshot->seller_name, 'location' => $people->get($order->seller_id)?->userProfile?->public_location],
+        ];
     }
 
     public function emailReceipt(Request $request, string $number): RedirectResponse
