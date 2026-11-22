@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Http;
 
 final class BakongTokenRenewal
 {
+    public static function tokensMatch(?string $sandbox, ?string $production): bool
+    {
+        return filled($sandbox) && filled($production) && hash_equals($production, $sandbox);
+    }
+
     public static function expiresAt(?string $token): ?CarbonImmutable
     {
         if ($token === null || strlen($token) > 2048
@@ -79,6 +84,12 @@ final class BakongTokenRenewal
             }
 
             return 'automatic renewal off';
+        }
+
+        if (! $live && self::tokensMatch($credentials['token'], CommerceGatewaySetting::effective('bakong', true)['token'] ?? null)) {
+            $this->alert($mode, 'token shared with Production', 'Save a separate Bakong Sandbox token to run automatic renewal or an early Sandbox test.');
+
+            return 'sandbox shares production token';
         }
 
         // Each environment gets at most one attempt per hour while Bakong is unavailable.

@@ -10,7 +10,7 @@
 <div data-bakong-settings>
   <p>Current environment <strong>{{ $modes[$active] }}</strong></p>
   <fieldset class="payment-method-dialog__mode" aria-describedby="bakong-mode-help-{{ $method->id }}">
-    <legend>Use for new Bakong checkouts</legend>
+    <legend>Credentials environment</legend>
     <div class="payment-method-dialog__mode-options">
       @foreach($modes as $mode => $label)
         <label>
@@ -20,7 +20,7 @@
       @endforeach
     </div>
   </fieldset>
-  <p id="bakong-mode-help-{{ $method->id }}">Select one environment, then save. Sandbox is for test installations. Public checkout uses Production when Bakong is available and payments are enabled.</p>
+  <p id="bakong-mode-help-{{ $method->id }}">Select the credentials you want to edit. Sandbox checkout is for test installations.</p>
 
   @foreach($modes as $mode => $label)
     @php
@@ -38,9 +38,18 @@
     </fieldset>
   @endforeach
 
+  <input type="hidden" name="activate_bakong_environment" value="0">
+  <label>
+    <input type="checkbox" name="activate_bakong_environment" value="1" @checked($retry && old('activate_bakong_environment'))>
+    Use the selected environment for new Bakong checkouts
+  </label>
+
   <fieldset class="payment-method-dialog__environment">
     <legend>Automatic token renewal</legend>
     <p>Save the email registered with Bakong for each environment you want to renew after expiry. Clear the email to turn off automatic renewal.</p>
+    @if(\App\Support\BakongTokenRenewal::tokensMatch($saved['sandbox']['token'] ?? null, $saved['live']['token'] ?? null))
+      <p>Sandbox shares the Production token. Save a separate Sandbox token to enable Sandbox renewal.</p>
+    @endif
     @foreach($modes as $mode => $label)
       @php
         $credentials = $saved[$mode];
