@@ -5,6 +5,18 @@
  * Arrow-only back-to-top: uses the existing accessible JS scroll handler.
  */
 
+/* Equal outer columns center the category icon and search bar as one group. */
+@media (min-width: 1200px) {
+  .site-body .site-header .site-nav:has(> .nav-search) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content minmax(0, 500px) minmax(0, 1fr);
+  }
+
+  .site-body .site-header .site-nav:has(> .nav-search) > .brand {
+    justify-self: start;
+  }
+}
+
 /* Preserve the SVG flag and screen-reader language label; hide only the
  * visible language name and dropdown chevron in HEADER triggers. */
 .site-body .site-header .nav-language-menu.header-flag-only > .language-trigger,
