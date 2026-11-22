@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\CommerceCartController;
 use App\Support\CheckoutCart;
+use App\Support\EmailOutbox;
 use App\Models\User;
 use App\Models\UserTwoFactor;
 use App\Models\AuditEvent;
@@ -98,6 +99,7 @@ class AuthController extends Controller
             ]);
             AuditEvent::record('auth.registration.terms_accepted', $user, $request);
             CheckoutCart::attach($guestItems, $user);
+            EmailOutbox::queue('account.welcome', $user->id, 'registration', [], route('account', absolute: false));
 
             return $user;
         });

@@ -91,6 +91,22 @@ class CommerceOrderController extends Controller
             ->header('Cache-Control', 'private, no-store');
     }
 
+    public function emailReceipt(Request $request, string $number): RedirectResponse
+    {
+        [$orders] = $this->workspace($request);
+        $order = $orders->where('number', $number)->where('status', 'completed')
+            ->where('total', '>', 0)->whereNotNull('receipt_number')->whereHas('paidAttempt')->firstOrFail();
+        $delivery = OrderFulfillment::queueReceipt($order);
+        if (! $delivery) {
+            return back()->with('error', 'Receipt email is currently disabled.');
+        }
+        $delivery->retryFailed();
+
+        return back()->with('status', $delivery->status === 'sent'
+            ? 'Your receipt email was already accepted by the mail transport.'
+            : 'Receipt email requested. You can also view and print the receipt here.');
+    }
+
     public function create(Request $request, string $listing): Response
     {
         abort_unless(config('commerce.enabled'), 404);

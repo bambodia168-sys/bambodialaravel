@@ -4,6 +4,17 @@
 @section('content')
 <div class="container inner-page">
 <div class="page-intro"><div class="eyebrow">Account · Activity</div><h1>Notification Center</h1><p>Your private updates from actual Bambodia workflows. You have {{ number_format($unread) }} unread notifications.</p></div>
+<section class="panel">
+  <div class="panel-head">
+    <div><h2>Marketplace email updates</h2><p>Get listing promotions and announcements at your verified email address.</p></div>
+    <form method="post" action="{{ route('account.marketing.update') }}">
+      @csrf @method('PATCH')
+      <button name="enabled" value="{{ auth()->user()->marketing_subscribed_at ? '0' : '1' }}" class="btn subtle compact">
+        {{ auth()->user()->marketing_subscribed_at ? 'Unsubscribe' : 'Subscribe to marketplace emails' }}
+      </button>
+    </form>
+  </div>
+</section>
 <section class="panel"><div class="panel-head"><h2>{{ ucfirst($filter) }} notifications <span class="count">{{ $notifications->total() }}</span></h2>
 <div class="toolbar-actions">
 <a class="btn subtle compact" href="{{ route('account.notifications',array_merge(['filter'=>'all'],$event==='all'?[]:['event'=>$event])) }}">All</a>

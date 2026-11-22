@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Support\EmailOutbox;
 use App\Models\AuditEvent;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
@@ -71,6 +72,7 @@ class UserManagerController extends Controller
             $this->saveProfile($user,$data);
             $this->savePermissions($user,$data['permissions']??[]);
             AuditEvent::record('user.created',$request->user(),$request);
+            EmailOutbox::queue('account.created_by_admin', $user->id, 'registration', [], route('login', absolute: false));
             $this->recordAction($request,$user,'created',['name','username','email','role','locale','profile','permissions']);
             return $user;
         });

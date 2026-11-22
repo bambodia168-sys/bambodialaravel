@@ -112,11 +112,19 @@ class SystemConfigurationTest extends TestCase
         $this->assertDatabaseHas('social_login_identities', ['user_id' => $user->id, 'provider' => 'google']);
         $this->assertSame(hash('sha256', 'google-subject'), SocialLoginIdentity::query()->sole()->subject_hash);
 
-        UserTwoFactor::query()->create(['user_id' => $user->id, 'secret' => Totp::createSecret(), 'recovery_hashes' => [], 'enabled_at' => now()]);
+        $recovery = Totp::recoveryCodes()[0];
+        UserTwoFactor::query()->create([
+            'user_id' => $user->id, 'secret' => Totp::createSecret(),
+            'recovery_hashes' => [hash('sha256', $recovery)], 'enabled_at' => now(),
+        ]);
         $this->post(route('logout'));
         $this->withSession(['social_login.attempt' => $attempt])->get($callback)->assertRedirect(route('login.two-factor'))
             ->assertSessionHas('twofactor.pending_id', $user->id);
         $this->assertGuest();
+        $this->assertDatabaseMissing('email_deliveries', ['user_id'=>$user->id, 'event'=>'account.social_sign_in']);
+        $this->post(route('login.two-factor.verify'), ['code' => $recovery])->assertRedirect();
+        $this->assertAuthenticatedAs($user);
+        $this->assertDatabaseHas('email_deliveries', ['user_id'=>$user->id, 'event'=>'account.social_sign_in']);
     }
 
     public function test_passkey_ceremonies_are_feature_gated_and_bound_to_one_session_attempt(): void

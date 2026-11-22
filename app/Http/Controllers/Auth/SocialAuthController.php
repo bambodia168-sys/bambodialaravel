@@ -60,7 +60,7 @@ final class SocialAuthController extends Controller
             ]);
         }
 
-        return SignIn::external($request, $identity->user);
+        return SignIn::external($request, $identity->user, $provider);
     }
 
     public function disconnect(Request $request, string $provider): RedirectResponse

@@ -7,6 +7,7 @@ use App\Models\AuditEvent;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Models\UserTwoFactor;
+use App\Support\Security\SignIn;
 use App\Support\Security\Totp;
 use App\Support\SystemSecurity;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -249,6 +250,7 @@ final class TwoFactorController extends Controller
         }
 
         $remember=(bool)$request->session()->get('twofactor.pending_remember',false);
+        $provider = $request->session()->pull('twofactor.pending_social_provider');
         $request->session()->forget([
             'twofactor.pending_id','twofactor.pending_at','twofactor.pending_remember',
         ]);
@@ -256,6 +258,7 @@ final class TwoFactorController extends Controller
         $request->session()->regenerate();
         AuditEvent::record('auth.two_factor.challenge.passed',$user,$request);
         AuditEvent::record('auth.login.success',$user,$request);
+        SignIn::socialAlert($request, $user, $provider);
 
         return CheckoutCart::afterLogin($request, $user);
     }
@@ -290,7 +293,7 @@ final class TwoFactorController extends Controller
         $at=(int)$request->session()->get('twofactor.pending_at',0);
         if (! is_numeric($id) || $at<=0 || now()->timestamp-$at>300) {
             $request->session()->forget([
-                'twofactor.pending_id','twofactor.pending_at','twofactor.pending_remember',
+                'twofactor.pending_id','twofactor.pending_at','twofactor.pending_remember','twofactor.pending_social_provider',
             ]);
             return null;
         }

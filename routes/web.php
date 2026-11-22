@@ -34,6 +34,9 @@ use App\Http\Controllers\Dashboard\ContractOversightController;
 use App\Http\Controllers\Dashboard\SiteSettingsController;
 use App\Http\Controllers\Dashboard\VideoPlayerSettingsController;
 use App\Http\Controllers\Dashboard\SmtpSettingsController;
+use App\Http\Controllers\Dashboard\EmailTemplateController;
+use App\Http\Controllers\Dashboard\EmailCampaignController;
+use App\Http\Controllers\MarketingPreferenceController;
 use App\Http\Controllers\Dashboard\SiteBrandingController;
 use App\Http\Controllers\Dashboard\SiteSeoController;
 use App\Http\Controllers\Dashboard\SiteSocialController;
@@ -105,6 +108,10 @@ Route::get('/creators/{creator}', [CreatorProfileController::class,'show'])
     ->where('creator','[0-9]{8}')->name('creators.show');
 Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 Route::get('/site.webmanifest', SiteManifestController::class)->name('site.manifest');
+Route::get('/email/unsubscribe/{user}', [MarketingPreferenceController::class, 'confirm'])
+    ->where('user', '[0-9]{8}')->middleware('signed:relative')->name('marketing.unsubscribe');
+Route::post('/email/unsubscribe/{user}', [MarketingPreferenceController::class, 'unsubscribe'])
+    ->where('user', '[0-9]{8}')->middleware(['signed:relative', 'throttle:10,1']);
 Route::get('/blog', [ContentController::class, 'blog'])->name('blog');
 Route::post('/blog/{content}/comments', [PostCommentController::class, 'store'])
     ->where('content', '[0-9]{9}_[a-z0-9-]+')
@@ -249,6 +256,8 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/{number}/review', [MarketplaceOrderReviewController::class, 'store'])->whereUuid('number')
             ->middleware('throttle:10,1,commerce-review-create:')->name('review.store');
         Route::get('/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('receipt');
+        Route::post('/{number}/receipt/email', [CommerceOrderController::class, 'emailReceipt'])->whereUuid('number')
+            ->middleware('throttle:5,1,commerce-email-receipt:')->name('receipt.email');
         Route::patch('/{number}/cancel', [CommerceOrderController::class, 'cancel'])->whereUuid('number')
             ->middleware('throttle:10,1')->name('cancel');
         Route::patch('/{number}/payment-method', [CommerceOrderController::class, 'updatePaymentMethod'])->whereUuid('number')
@@ -279,6 +288,8 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/account/saved-listings/{listing}', [SavedListingController::class,'destroy'])
         ->name('saved-listings.destroy')->middleware('throttle:20,1');
     Route::get('/account/notifications', [AccountNotificationController::class, 'index'])->name('account.notifications');
+    Route::patch('/account/notifications/marketplace-news', [MarketingPreferenceController::class, 'update'])
+        ->middleware('throttle:10,1,marketplace-news-preference:')->name('account.marketing.update');
     Route::get('/account/notifications/tray', [AccountNotificationController::class, 'tray'])
         ->name('account.notifications.tray')->middleware('throttle:30,1');
     Route::patch('/account/notifications/read-all', [AccountNotificationController::class, 'readAll'])->name('account.notifications.read-all');
@@ -531,6 +542,24 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/appearance', [SiteSettingsController::class, 'appearance'])->name('dashboard.appearance');
             Route::patch('/appearance', [SiteSettingsController::class, 'updateAppearance'])->name('dashboard.appearance.update');
             Route::prefix('system-configuration')->middleware('role:super_admin')->group(function (): void {
+                Route::prefix('email-templates')->name('dashboard.email-templates.')->group(function (): void {
+                    Route::get('/', [EmailTemplateController::class, 'index'])->name('index');
+                    Route::post('/delivery/{delivery}/retry', [EmailTemplateController::class, 'retry'])->whereNumber('delivery')
+                        ->middleware('throttle:8,1,email-delivery-retry:')->name('retry');
+                    Route::get('/{event}/preview', [EmailTemplateController::class, 'preview'])->name('preview');
+                    Route::post('/{event}/test', [EmailTemplateController::class, 'test'])->middleware('throttle:4,1,email-template-test:')->name('test');
+                    Route::put('/{event}', [EmailTemplateController::class, 'update'])->middleware('throttle:15,1,email-template-update:')->name('update');
+                    Route::patch('/{event}', [EmailTemplateController::class, 'status'])->middleware('throttle:20,1,email-template-status:')->name('status');
+                    Route::delete('/{event}', [EmailTemplateController::class, 'destroy'])->middleware('throttle:8,1,email-template-delete:')->name('destroy');
+                });
+                Route::prefix('email-campaigns')->name('dashboard.email-campaigns.')->group(function (): void {
+                    Route::get('/', [EmailCampaignController::class, 'index'])->name('index');
+                    Route::post('/', [EmailCampaignController::class, 'store'])->middleware('throttle:10,1,email-campaign-save:')->name('store');
+                    Route::post('/{campaign}/queue', [EmailCampaignController::class, 'queue'])->whereNumber('campaign')
+                        ->middleware('throttle:4,1,email-campaign-queue:')->name('queue');
+                    Route::delete('/{campaign}', [EmailCampaignController::class, 'destroy'])->whereNumber('campaign')
+                        ->middleware('throttle:8,1,email-campaign-delete:')->name('destroy');
+                });
                 Route::get('/security', [SystemSecurityController::class, 'index'])->name('dashboard.system-security.index');
                 Route::patch('/security/{control}', [SystemSecurityController::class, 'update'])
                     ->middleware('throttle:15,1,system-security:')->name('dashboard.system-security.update');

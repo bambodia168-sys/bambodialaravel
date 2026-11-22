@@ -3,27 +3,46 @@
 namespace App\Support\Security;
 
 use App\Models\AuditEvent;
+use App\Models\SocialLoginProvider;
 use App\Models\User;
 use App\Models\UserTwoFactor;
 use App\Support\CheckoutCart;
+use App\Support\EmailOutbox;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 final class SignIn
 {
-    public static function external(Request $request, User $user): RedirectResponse
+    public static function external(Request $request, User $user, ?string $provider = null): RedirectResponse
     {
         abort_unless($user->account_status === 'active', 403);
         if (UserTwoFactor::query()->whereKey($user->id)->exists()) {
-            return self::challenge($request, $user);
+            $response = self::challenge($request, $user);
+            $request->session()->put('twofactor.pending_social_provider', $provider);
+
+            return $response;
         }
 
         Auth::login($user);
         $request->session()->regenerate();
         AuditEvent::record('auth.login.success', $user, $request);
+        self::socialAlert($request, $user, $provider);
 
         return CheckoutCart::afterLogin($request, $user);
+    }
+
+    public static function socialAlert(Request $request, User $user, ?string $provider): void
+    {
+        if ($provider === null || ! isset(SocialLoginProvider::PROVIDERS[$provider])) {
+            return;
+        }
+
+        $label = SocialLoginProvider::PROVIDERS[$provider][0];
+        EmailOutbox::queue('account.social_sign_in', $user->id, 'sign-in-'.$request->session()->getId(), [
+            'title' => 'New '.$label.' sign-in',
+            'message' => 'A successful sign-in to your account used '.$label.'.',
+        ], route('account.security', absolute: false));
     }
 
     public static function challenge(Request $request, User $user, bool $remember = false): RedirectResponse

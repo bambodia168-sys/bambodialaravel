@@ -186,3 +186,16 @@ Artisan::command('commerce:alert-delayed-delivery', function (): int {
 })->purpose('Notify Super Admins once per verified order with delayed delivery');
 
 Schedule::command('commerce:alert-delayed-delivery')->everyFifteenMinutes()->withoutOverlapping();
+
+
+Artisan::command('mail:deliver-platform', function (): int {
+    if (! \Illuminate\Support\Facades\Schema::hasTable('email_deliveries')) {
+        return 0;
+    }
+
+    $this->info(app(\App\Support\EmailOutbox::class)->run().' platform email(s) accepted by the mail transport.');
+
+    return 0;
+})->purpose('Deliver transactional emails and queued opt-in campaigns');
+
+Schedule::command('mail:deliver-platform')->everyMinute()->withoutOverlapping(15)->runInBackground();

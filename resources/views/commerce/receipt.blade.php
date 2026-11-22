@@ -33,6 +33,12 @@
     <div class="panel-head commerce-receipt-actions">
       <a class="btn subtle" href="{{ route($section.'.show', $order->number) }}">Back to order</a>
       <button type="button" class="btn primary" data-print-page>Print receipt</button>
+      @if($section === 'account.orders' && $order->status === 'completed' && $order->total !== '0.00')
+        <form method="post" action="{{ route('account.orders.receipt.email', $order->number) }}">
+          @csrf
+          <button class="btn subtle">Email receipt</button>
+        </form>
+      @endif
     </div>
   </section>
 </article>

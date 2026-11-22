@@ -337,6 +337,8 @@ class CommercePaymentController extends Controller
         $order->update(['status'=>'completed', 'completed_at'=>now(),
             'receipt_number'=>(string) Str::uuid(), 'payment_method'=>$payment->method_name]);
         AuditEvent::record('commerce.payment.verified', request()->user(), request());
+        OrderFulfillment::queueReceipt($order);
+        OrderFulfillment::queueSellerPurchase($order);
     }
 
     private function findPayment(string $number, string $payment): CommercePayment

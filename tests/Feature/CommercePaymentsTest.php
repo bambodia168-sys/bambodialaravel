@@ -930,6 +930,10 @@ Private installation report.
         $this->assertNotNull($receipt);
         $this->postJson($verify)->assertOk()->assertJson(['status'=>'paid']);
         $this->assertSame($receipt, $order->refresh()->receipt_number);
+        $this->assertDatabaseHas('email_deliveries', ['event' => 'commerce.receipt', 'user_id' => $buyer->id, 'status' => 'queued']);
+        $this->assertDatabaseHas('email_deliveries', ['event' => 'commerce.seller_purchase', 'user_id' => $order->seller_id, 'status' => 'queued']);
+        $this->post(route('account.orders.receipt.email', $order->number))->assertRedirect()->assertSessionHas('status');
+        $this->assertSame(1, \App\Models\EmailDelivery::query()->where('event', 'commerce.receipt')->count());
         $this->get($qr)->assertNotFound();
         $this->get($orderPage)->assertDontSee('data-order-payment-code', false);
         Http::assertSentCount(3);
