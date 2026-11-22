@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\CommerceCartController;
 use App\Support\CheckoutCart;
 use App\Support\EmailOutbox;
+use App\Support\Security\SignIn;
 use App\Models\User;
 use App\Models\UserTwoFactor;
 use App\Models\AuditEvent;
@@ -47,10 +48,11 @@ class AuthController extends Controller
         }
 
         if (UserTwoFactor::query()->whereKey($request->user()->id)->exists()) {
-            return \App\Support\Security\SignIn::challenge($request, $request->user(), $request->boolean('remember'));
+            return SignIn::challenge($request, $request->user(), $request->boolean('remember'));
         }
         $request->session()->regenerate();
         AuditEvent::record('auth.login.success', $request->user(), $request);
+        SignIn::notify($request, $request->user());
 
         return CheckoutCart::afterLogin($request, $request->user());
     }

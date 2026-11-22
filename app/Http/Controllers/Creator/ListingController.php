@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
 use App\Support\BuilderContent;
+use App\Support\EmailOutbox;
+use Illuminate\Support\Str;
 use App\Support\BuilderGallery;
 use App\Support\BuilderSubmissionTerms;
 use App\Support\BuilderFeaturedMedia;
@@ -147,6 +149,11 @@ class ListingController extends Controller
             // Preserve references from contracts, inquiries, and other historical records.
             $locked->update(['status' => $status]);
             AuditEvent::record('listing.creator.'.$status, $request->user(), $request);
+            if ($status === 'archived') {
+                EmailOutbox::queue('listing.archived', $locked->user_id, (string) Str::uuid(), [
+                    'title' => $locked->title,
+                ], route('studio.listings', ['status' => 'archived'], false));
+            }
         }, 3);
     }
 

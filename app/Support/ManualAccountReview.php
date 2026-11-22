@@ -6,6 +6,7 @@ use App\Models\AuditEvent;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class ManualAccountReview
 {
@@ -51,6 +52,10 @@ final class ManualAccountReview
             $locked->account_review_note = $note;
             $locked->save();
             self::event($locked, $actor, $decision, $method, $note);
+            EmailOutbox::queue('account.profile_verified', $locked->id, (string) Str::uuid(), [
+                'title' => $decision === 'verified' ? 'Your profile was verified' : 'Your profile verification was revoked',
+                'message' => 'Open your account to review the current verification status.',
+            ], route('account', absolute: false));
             AuditEvent::record(
                 $decision === 'verified' ? 'user.account.verified' : 'user.account.revoked',
                 $actor, $request

@@ -36,7 +36,7 @@ final class EmailOutbox
 
     private static function store(string $event, int $userId, string $key, array $context, string $path, ?int $campaignId = null): EmailDelivery
     {
-        $context = array_intersect_key($context, array_flip(EmailTemplates::VARIABLES));
+        $context = array_intersect_key($context, array_flip([...EmailTemplates::VARIABLES, 'source_id', 'snapshot']));
         $context['target_path'] = AccountNotification::isLocalTarget($path) ? $path : null;
         return EmailDelivery::query()->firstOrCreate([
             'deduplication_key' => hash('sha256', $event.':'.$userId.':'.$key),
@@ -82,7 +82,9 @@ final class EmailOutbox
             $template = self::template($delivery->event);
             $recipient = $delivery->recipient;
             $campaign = $delivery->email_campaign_id ? EmailCampaign::query()->find($delivery->email_campaign_id) : null;
+            $reminder = EmailTemplates::isReminder($delivery->event);
             if (! ($template['enabled'] ?? false) || ! $recipient || $recipient->account_status !== 'active'
+                || ($reminder && ! EmailReminders::stillApplies($delivery, $recipient))
                 || ($delivery->email_campaign_id && (! $campaign || ! $recipient->hasVerifiedEmail()
                     || $recipient->email_verified_at->gt($campaign->queued_at)
                     || ! $recipient->marketing_subscribed_at || $recipient->marketing_subscribed_at->gt($campaign->queued_at)))) {
@@ -92,7 +94,7 @@ final class EmailOutbox
             }
 
             try {
-                $message = self::message($template, $recipient, $delivery->context, $campaign !== null);
+                $message = self::message($template, $recipient, $delivery->context, $campaign !== null || $reminder);
                 if (! Mail::to($recipient->email)->send($message)) {
                     throw new \RuntimeException('Mail transport did not accept the message.');
                 }

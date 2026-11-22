@@ -199,3 +199,13 @@ Artisan::command('mail:deliver-platform', function (): int {
 })->purpose('Deliver transactional emails and queued opt-in campaigns');
 
 Schedule::command('mail:deliver-platform')->everyMinute()->withoutOverlapping(15)->runInBackground();
+
+Artisan::command('mail:queue-reminders', function (): int {
+    if (\Illuminate\Support\Facades\Schema::hasTable('email_deliveries')) {
+        \App\Support\EmailReminders::queueDue();
+    }
+
+    return 0;
+})->purpose('Queue enabled reminders and greetings for eligible subscribers');
+
+Schedule::command('mail:queue-reminders')->dailyAt('09:00')->timezone('Asia/Phnom_Penh')->withoutOverlapping();

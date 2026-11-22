@@ -141,6 +141,10 @@ class UserManagerController extends Controller
             $this->savePermissions($locked,$data['permissions']??[]);
             AuditEvent::record('user.updated',$request->user(),$request);
             $this->recordAction($request,$locked,'updated',array_keys($data));
+            if ($changedIdentity || $changedRole || $changedStatus || $locked->wasChanged(['locale', 'password'])) {
+                EmailOutbox::queue('account.details_changed', $locked->id, (string) Str::uuid(), [],
+                    route('account', absolute: false));
+            }
             if ($changedRole) AuditEvent::record('user.role.changed',$request->user(),$request);
             if ($changedStatus) AuditEvent::record('user.status.changed',$request->user(),$request);
             if (!empty($data['password'])) AuditEvent::record('user.password.reset',$request->user(),$request);

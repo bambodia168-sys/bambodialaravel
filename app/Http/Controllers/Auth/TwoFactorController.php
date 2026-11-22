@@ -7,6 +7,7 @@ use App\Models\AuditEvent;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Models\UserTwoFactor;
+use App\Support\EmailOutbox;
 use App\Support\Security\SignIn;
 use App\Support\Security\Totp;
 use App\Support\SystemSecurity;
@@ -118,6 +119,7 @@ final class TwoFactorController extends Controller
                 abort_if($credential->devices()->count() >= self::DEVICE_LIMIT - 1, 409, 'Remove an authenticator to add another.');
                 $credential->devices()->create(['name' => $enrollment['name'], 'secret' => $enrollment['secret']]);
                 AuditEvent::record('auth.two_factor.authenticator.added', $user, $request);
+                self::authenticationChanged($user, 'An authenticator was added to your account.');
 
                 return [];
             }
@@ -132,6 +134,7 @@ final class TwoFactorController extends Controller
                 'enabled_at' => now(),
             ]);
             AuditEvent::record('auth.two_factor.enabled', $user, $request);
+            self::authenticationChanged($user, 'Two-factor authentication was enabled on your account.');
 
             return $recovery;
         });
@@ -171,9 +174,18 @@ final class TwoFactorController extends Controller
             }
             $removed->delete();
             AuditEvent::record('auth.two_factor.authenticator.removed', $request->user(), $request);
+            self::authenticationChanged($request->user(), 'An authenticator was removed from your account.');
         });
 
         return redirect()->to(route('account.security').'#account-two-factor')->with('authenticator_status', 'Authenticator removed.');
+    }
+
+    private static function authenticationChanged(User $user, string $message): void
+    {
+        EmailOutbox::queue('account.two_factor_changed', $user->id, (string) Str::uuid(), [
+            'title' => 'Two-factor authentication changed',
+            'message' => $message.' If you did not make this change, review your account security.',
+        ], route('account.security', absolute: false));
     }
 
     private function enrollment(Request $request): ?array
@@ -216,6 +228,7 @@ final class TwoFactorController extends Controller
             }
             $credential->delete();
             AuditEvent::record('auth.two_factor.disabled',$user,$request);
+            self::authenticationChanged($user, 'Two-factor authentication was disabled on your account.');
         });
         $this->clearEnrollment($request);
 
@@ -258,7 +271,7 @@ final class TwoFactorController extends Controller
         $request->session()->regenerate();
         AuditEvent::record('auth.two_factor.challenge.passed',$user,$request);
         AuditEvent::record('auth.login.success',$user,$request);
-        SignIn::socialAlert($request, $user, $provider);
+        SignIn::notify($request, $user, $provider);
 
         return CheckoutCart::afterLogin($request, $user);
     }

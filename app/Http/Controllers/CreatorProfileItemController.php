@@ -6,6 +6,8 @@ use App\Models\AuditEvent;
 use App\Models\CreatorProfileItem;
 use App\Models\CreatorProfileSection;
 use App\Models\User;
+use App\Support\EmailOutbox;
+use Illuminate\Support\Str;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -73,6 +75,9 @@ final class CreatorProfileItemController extends Controller
             'is_visible' => (bool) $data['is_visible'],
         ]);
         AuditEvent::record('profile.item.created', $request->user(), $request);
+        if ($kind === 'link') {
+            self::linkChanged($owner);
+        }
         return back()->with('status', 'Profile section item added.');
     }
 
@@ -99,6 +104,9 @@ final class CreatorProfileItemController extends Controller
             'is_visible' => (bool) $data['is_visible'],
         ]);
         AuditEvent::record('profile.item.updated', $request->user(), $request);
+        if ($item->kind === 'link' && $item->wasChanged(['label', 'detail', 'url', 'is_visible'])) {
+            self::linkChanged($owner);
+        }
         return back()->with('status', 'Profile section item updated.');
     }
 
@@ -118,6 +126,15 @@ final class CreatorProfileItemController extends Controller
         abort_unless((int) $item->user_id === (int) $owner->id, 404);
         $item->delete();
         AuditEvent::record('profile.item.deleted', $request->user(), $request);
+        if ($item->kind === 'link') {
+            self::linkChanged($owner);
+        }
         return back()->with('status', 'Profile section item removed.');
+    }
+
+    private static function linkChanged(User $owner): void
+    {
+        EmailOutbox::queue('account.profile_links_changed', $owner->id, (string) Str::uuid(), [],
+            route('account.profile.edit', absolute: false));
     }
 }
