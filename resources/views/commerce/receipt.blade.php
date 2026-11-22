@@ -3,7 +3,7 @@
 @section('title', 'Order Receipt '.$order->reference())
 @push('head')
   <link rel="stylesheet" href="{{ asset('css/order-review.css') }}?v=1">
-  <link rel="stylesheet" href="{{ asset('css/order-receipt.css') }}?v=3">
+  <link rel="stylesheet" href="{{ asset('css/order-receipt.css') }}?v=4">
 @endpush
 @section('content')
 <article class="container inner-page commerce-receipt">
@@ -40,12 +40,18 @@
           <p class="receipt-party-name">{{ $name }}</p>
           <dl class="receipt-contact">
             <div>
-              <dt>Location</dt>
+              <dt>
+                <x-icon name="map-pin" size="16"/>
+                <span class="receipt-contact-label">Location</span>
+              </dt>
               <dd>{{ filled($contacts[$party]['location']) ? $contacts[$party]['location'] : 'Location unavailable' }}</dd>
             </div>
             @if(filled($contacts[$party]['email']))
               <div>
-                <dt>Email</dt>
+                <dt>
+                  <x-icon name="mail" size="16"/>
+                  <span class="receipt-contact-label">Email</span>
+                </dt>
                 <dd><a href="mailto:{{ $contacts[$party]['email'] }}">{{ $contacts[$party]['email'] }}</a></dd>
               </div>
             @endif
