@@ -145,6 +145,25 @@ Artisan::command('commerce:reconcile-qr', function (): int {
 
 Schedule::command('commerce:reconcile-qr')->everyMinute()->withoutOverlapping()->runInBackground();
 
+Artisan::command('commerce:renew-bakong-token {--sandbox-early : Try renewal before expiry in Sandbox only}', function (): int {
+    if (! config('commerce.enabled')) {
+        return 0;
+    }
+
+    $sandboxEarly = (bool) $this->option('sandbox-early');
+    $renewal = app(\App\Support\BakongTokenRenewal::class);
+    $failed = false;
+    foreach ($sandboxEarly ? [false] : [false, true] as $live) {
+        $result = $renewal->run($live, $sandboxEarly);
+        $this->line(($live ? 'Bakong Production' : 'Bakong Sandbox').' · '.$result);
+        $failed = $failed || $result === 'renewal failed' || ($sandboxEarly && $result !== 'renewed');
+    }
+
+    return $failed ? 1 : 0;
+})->purpose('Renew eligible Bakong tokens and notify administrators of expiring credentials');
+
+Schedule::command('commerce:renew-bakong-token')->everyFiveMinutes()->withoutOverlapping(5)->runInBackground();
+
 Artisan::command('commerce:alert-delayed-delivery', function (): int {
     if (! config('commerce.enabled')) {
         return 0;

@@ -16,17 +16,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
 
 class CommercePaymentMethodController extends Controller
 {
-    public function index(): View
+    public function index(): Response
     {
         abort_unless(config('commerce.enabled'), 404);
         $methods = CommercePaymentMethod::query()->orderBy('name')->paginate(10);
         $collectingPayments = CommerceCollection::enabled();
 
-        return view('commerce.methods', compact('methods', 'collectingPayments'));
+        return response()->view('commerce.methods', compact('methods', 'collectingPayments'))
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function processing(Request $request): RedirectResponse
@@ -97,6 +97,7 @@ class CommercePaymentMethodController extends Controller
             'stripe_environment' => $stripe ? ['sometimes', 'required', Rule::in(['sandbox', 'live'])] : ['prohibited'],
             'activate_stripe_environment' => $stripe ? ['sometimes', 'boolean'] : ['prohibited'],
             'bakong_environment' => $bakong ? ['nullable', 'string', Rule::in(['sandbox', 'live'])] : ['prohibited'],
+            'bakong_renewal' => $bakong ? ['sometimes', 'array:sandbox,live'] : ['prohibited'],
         ];
         foreach ($fields as $field) {
             $rules['gateway.'.$field] = ['nullable', 'string', 'max:2048', 'regex:/^[!-~]+$/D'];
@@ -115,6 +116,8 @@ class CommercePaymentMethodController extends Controller
             ];
             foreach (['sandbox' => 'Sandbox', 'live' => 'Production'] as $mode => $label) {
                 $rules['gateway.'.$mode] = ['sometimes', 'array:'.implode(',', $fields)];
+                $rules['bakong_renewal.'.$mode] = ['nullable', 'email:rfc', 'max:30'];
+                $labels['bakong_renewal.'.$mode] = $label.' Bakong registered email';
                 foreach ($bakongRules as $field => $constraints) {
                     $rules["gateway.{$mode}.{$field}"] = $constraints;
                     $labels["gateway.{$mode}.{$field}"] = $label.' '.CommerceGatewaySetting::FIELDS['bakong'][$field];
@@ -145,7 +148,7 @@ class CommercePaymentMethodController extends Controller
                     ? $values['stripe_environment'] === 'live' : $currentMode;
                 $gateway = $values['gateway'] ?? [];
                 $credentialsChanged = $bakong
-                    ? $this->saveBakongCredentials($currentMode, $gateway)
+                    ? $this->saveBakongCredentials($currentMode, $gateway, $values['bakong_renewal'] ?? [])
                     : $locked->usesGateway() && $this->saveCredentials($locked->provider, $credentialsMode, $gateway);
                 $activationChanged = match (true) {
                     $stripe && ($values['activate_stripe_environment'] ?? false)
@@ -181,16 +184,22 @@ class CommercePaymentMethodController extends Controller
         return back()->with('status', 'Payment method settings saved.');
     }
 
-    private function saveBakongCredentials(bool $currentMode, array $input): bool
+    private function saveBakongCredentials(bool $currentMode, array $input, array $renewal): bool
     {
         if (! array_key_exists('sandbox', $input) && ! array_key_exists('live', $input)) {
-            return $this->saveCredentials('bakong', $currentMode, $input);
+            $input = [($currentMode ? 'live' : 'sandbox') => $input];
         }
 
-        $sandboxChanged = $this->saveCredentials('bakong', false, $input['sandbox'] ?? []);
-        $productionChanged = $this->saveCredentials('bakong', true, $input['live'] ?? []);
+        $changed = false;
+        foreach (['sandbox' => false, 'live' => true] as $mode => $live) {
+            $credentials = $input[$mode] ?? [];
+            if (array_key_exists($mode, $renewal)) {
+                $credentials['renewal_email'] = $renewal[$mode];
+            }
+            $changed = $this->saveCredentials('bakong', $live, $credentials) || $changed;
+        }
 
-        return $sandboxChanged || $productionChanged;
+        return $changed;
     }
 
     private function activateEnvironment(string $provider, bool $currentMode, bool $selectedMode): bool
@@ -224,13 +233,16 @@ class CommercePaymentMethodController extends Controller
     private function saveCredentials(string $provider, bool $live, array $input): bool
     {
         $new = array_filter($input, fn (?string $value) => filled($value));
+        if ($provider === 'bakong' && array_key_exists('renewal_email', $input)) {
+            $new['renewal_email'] = $input['renewal_email'];
+        }
         if ($new === []) {
             return false;
         }
 
         $settings = CommerceGatewaySetting::forMode($provider, $live)->lockForUpdate()->firstOrFail();
         $effective = CommerceGatewaySetting::effective($provider, $live);
-        $changed = array_filter($new, fn (string $value, string $field) => ($effective[$field] ?? null) !== $value, ARRAY_FILTER_USE_BOTH);
+        $changed = array_filter($new, fn (?string $value, string $field) => ($effective[$field] ?? null) !== $value, ARRAY_FILTER_USE_BOTH);
         if ($changed === []) {
             return false;
         }
@@ -245,13 +257,17 @@ class CommercePaymentMethodController extends Controller
             throw ValidationException::withMessages(['gateway' => 'Enter all required credentials for this environment.']);
         }
 
-        $rotatingBakongToken = $provider === 'bakong' && array_keys($changed) === ['token'];
-        if (! $rotatingBakongToken && CommercePayment::query()->where('provider', $provider)
+        $onlyBakongRenewal = $provider === 'bakong' && ! array_diff(array_keys($changed), ['token', 'renewal_email']);
+        if (! $onlyBakongRenewal && CommercePayment::query()->where('provider', $provider)
             ->where('live_mode', $live)->whereIn('status', ['starting', 'checkout_open'])->exists()) {
             throw ValidationException::withMessages(['gateway' => 'Resolve open checkouts before changing gateway credentials.']);
         }
 
-        $settings->credentials = array_intersect_key($credentials, CommerceGatewaySetting::FIELDS[$provider]);
+        $allowed = CommerceGatewaySetting::FIELDS[$provider];
+        if ($provider === 'bakong') {
+            $allowed['renewal_email'] = true;
+        }
+        $settings->credentials = array_intersect_key($credentials, $allowed);
         $settings->save();
 
         return true;
