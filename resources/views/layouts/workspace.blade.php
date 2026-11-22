@@ -111,6 +111,8 @@
         ['route'=>'dashboard.system-settings','label'=>'Basic Settings','icon'=>'settings'],
         ['route'=>'dashboard.cloud-storage.index','label'=>'Cloud Storage','icon'=>'archive','roles'=>['super_admin']],
         ['route'=>'dashboard.smtp.index','label'=>'SMTP','icon'=>'mail','roles'=>['super_admin']],
+        ['route'=>'dashboard.email-templates.index','label'=>'Email Templates','icon'=>'mail','roles'=>['super_admin']],
+        ['route'=>'dashboard.email-campaigns.index','label'=>'Email Campaigns','icon'=>'bell','roles'=>['super_admin']],
         ['route'=>'dashboard.ai-draft.index','label'=>'AI Draft Studio','icon'=>'sparkles','roles'=>['super_admin']],
         ['route'=>'dashboard.system-security.index','label'=>'Security','icon'=>'shield-check','roles'=>['super_admin']],
         ['route'=>'dashboard.social-auth.index','label'=>'Social Auth','icon'=>'key-round','roles'=>['super_admin']],

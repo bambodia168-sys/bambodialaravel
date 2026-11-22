@@ -116,6 +116,7 @@ class AuthExperienceTest extends TestCase
         $customer=User::query()->where('email','new-customer@example.test')->firstOrFail();
         $this->assertAuthenticatedAs($customer);
         $this->assertSame('customer',$customer->role);
+        $this->assertDatabaseHas('email_deliveries', ['user_id'=>$customer->id, 'event'=>'account.welcome']);
         $this->assertDatabaseHas('policy_acknowledgements',[
             'policy_publication_id'=>$terms->id,
             'user_id'=>$customer->id,

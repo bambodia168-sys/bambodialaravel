@@ -151,8 +151,9 @@ final class MarketplaceManagement
                 (int) ($isJob ? $record->client_id : $record->user_id),
                 $kind.'.reviewed',
                 $isJob ? 'Job review completed' : ($isProduct ? 'Digital product reviewed' : 'Marketplace listing reviewed'),
-                'Your submission was '.$target.' after review.',
+                mb_substr('Your submission “'.$record->title.'” was '.$target.' after review.', 0, 500),
                 '/builder?='.$record->public_id,
+                emailTemplate: $target === 'published' ? $kind.'.published' : null,
             );
         } elseif (!$wasAwaitingReview && in_array($target, self::REVIEW_STATUSES, true)) {
             SubmissionNotifications::send($record);

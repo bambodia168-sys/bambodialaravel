@@ -1,0 +1,145 @@
+.email-configuration {
+    display: grid;
+    gap: clamp(1rem, 2vw, 1.5rem);
+}
+
+.email-configuration .page-intro {
+    margin-block-end: 0;
+}
+
+.email-transport,
+.email-actions,
+.email-dialog-heading,
+.email-dialog-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .75rem;
+}
+
+.email-transport,
+.email-dialog-heading,
+.email-dialog-footer {
+    justify-content: space-between;
+    padding: clamp(1rem, 2.6vw, 1.5rem);
+}
+
+.email-transport {
+    background: linear-gradient(120deg, var(--surface-2), var(--surface) 80%);
+}
+
+.email-transport p,
+.email-dialog-heading p,
+.email-table td p {
+    margin: .35rem 0 0;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.email-table td:first-child {
+    min-inline-size: 13rem;
+}
+
+.email-dialog {
+    inline-size: min(44rem, calc(100% - 1.5rem));
+    max-block-size: calc(100dvh - 1.5rem);
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.email-dialog::backdrop {
+    background: rgb(10 22 42 / 65%);
+}
+
+.email-dialog-heading {
+    border-block-end: 1px solid var(--line);
+}
+
+.email-dialog-heading h2 {
+    margin: 0;
+    font-size: clamp(1.2rem, 3vw, 1.5rem);
+    overflow-wrap: anywhere;
+}
+
+.email-dialog-footer {
+    border-block-start: 1px solid var(--line);
+}
+
+.email-edit-form {
+    display: grid;
+    gap: .875rem;
+    padding: clamp(1rem, 2.6vw, 1.5rem);
+}
+
+.email-edit-form label:not(.email-opt-in) {
+    display: grid;
+    gap: .35rem;
+    min-inline-size: 0;
+    font-weight: 650;
+}
+
+.email-edit-form :is(input:not([type="checkbox"]), textarea, select) {
+    inline-size: 100%;
+    min-inline-size: 0;
+    padding: .7rem .8rem;
+    border: 1px solid var(--line);
+    border-radius: .625rem;
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-weight: 400;
+}
+
+.email-edit-form textarea {
+    resize: vertical;
+}
+
+.email-field-help,
+.email-variables p,
+.email-delete p {
+    margin: 0;
+    color: var(--muted);
+    font-size: .875rem;
+}
+
+.email-variables,
+.email-delete {
+    padding: .7rem;
+    border: 1px solid var(--line);
+    border-radius: .625rem;
+}
+
+.email-variables[open] p,
+.email-delete[open] p {
+    margin-block: .5rem;
+}
+
+.email-variables summary,
+.email-delete summary {
+    cursor: pointer;
+    font-weight: 650;
+}
+
+.email-form-columns {
+    display: grid;
+    gap: .75rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+}
+
+.email-queue-form {
+    padding: .875rem 0;
+    border-block-start: 1px solid var(--line);
+}
+
+.email-edit-form button {
+    justify-self: start;
+}
+
+.email-campaign-message {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

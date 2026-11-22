@@ -97,6 +97,7 @@ final class UserManagerCrudTest extends TestCase
         $this->assertSame('added_pro',$member->username);
         $this->assertSame('active',$member->account_status);
         $this->assertNull($member->email_verified_at);
+        $this->assertDatabaseHas('email_deliveries', ['user_id'=>$member->id, 'event'=>'account.created_by_admin']);
         $this->assertSame('Cambodian',$member->userProfile->nationality);
         $this->assertDatabaseHas('user_permission_overrides',[
             'user_id'=>$member->id,'permission'=>'badge_awards','allowed'=>0,

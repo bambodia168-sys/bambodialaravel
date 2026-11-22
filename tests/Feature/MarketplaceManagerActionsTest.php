@@ -84,6 +84,7 @@ class MarketplaceManagerActionsTest extends TestCase
             $this->patch($status, ['expected_status' => $from, 'status' => $to])->assertRedirect();
         }
         $this->patch($status, ['expected_status' => 'in_review', 'status' => 'published'])->assertRedirect();
+        $this->assertDatabaseHas('email_deliveries', ['user_id' => $owner->id, 'event' => 'listing.published']);
         $this->patch($status, ['expected_status' => 'published', 'status' => 'draft'])->assertRedirect();
         $this->assertSame('draft', $record->fresh()->status);
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\EmailOutbox;
 use App\Support\UserManagementAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -84,7 +85,7 @@ class AccountNotification extends Model
             && !str_contains($path, chr(92)) && !preg_match('/[\x00-\x1f\x7f]/', $path);
     }
 
-    public static function deliver(int $userId, string $event, string $title, string $message, string $path): void
+    public static function deliver(int $userId, string $event, string $title, string $message, string $path, ?string $emailTemplate = null): void
     {
         if (! in_array($event,self::EVENTS,true)
             || mb_strlen($title)>180 || mb_strlen($message)>500
@@ -92,9 +93,12 @@ class AccountNotification extends Model
             throw new \InvalidArgumentException('Invalid application notification.');
         }
 
-        self::query()->create([
+        $notification = self::query()->create([
             'user_id'=>$userId,'event'=>$event,'title'=>$title,
             'message'=>$message,'target_path'=>$path,
         ]);
+        EmailOutbox::queue($emailTemplate ?? $event, $userId, 'notification-'.$notification->id, [
+            'title' => $title, 'message' => $message,
+        ], $path);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\AccountNotification;
+use App\Models\EmailDelivery;
 use App\Models\LicenseDefinition;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
@@ -154,6 +155,23 @@ final class OrderFulfillment
         ]);
         AccountNotification::deliver((int) $order->seller_id, 'commerce.service.purchased', 'New service purchase',
             'Open the private conversation to coordinate delivery with the buyer.', route('inquiries.show', $inquiry, false));
+    }
+
+    public static function queueReceipt(MarketplaceOrder $order): ?EmailDelivery
+    {
+        return EmailOutbox::queue('commerce.receipt', $order->buyer_id, 'order-'.$order->number, [
+            'title' => $order->listing_title, 'amount' => $order->currency.' '.$order->total,
+            'order_number' => $order->number, 'receipt_number' => $order->receipt_number,
+            'payment_method' => $order->payment_method,
+        ], route('account.orders.receipt', $order->number, false));
+    }
+
+    public static function queueSellerPurchase(MarketplaceOrder $order): void
+    {
+        EmailOutbox::queue('commerce.seller_purchase', $order->seller_id, 'order-'.$order->number, [
+            'title' => $order->listing_title, 'amount' => $order->currency.' '.$order->total,
+            'order_number' => $order->number, 'payment_method' => $order->payment_method,
+        ], route('studio.orders.show', $order->number, false));
     }
 
     public static function notifyBuyer(MarketplaceOrder $order): void
