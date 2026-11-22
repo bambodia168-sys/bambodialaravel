@@ -3,14 +3,27 @@
 namespace App\Support;
 
 use App\Models\MarketplaceOrder;
+use App\Models\Policy;
 use BaconQrCode\Common\ErrorCorrectionLevel;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 final class OrderReceipt
 {
+    public const TELEGRAM_URL = 'https://t.me/+taf6FFmqH2djZjM1';
+
+    public static function legalPolicies(): Collection
+    {
+        return Policy::query()->where('status', 'published')
+            ->where(fn (Builder $query) => $query->whereIn('category', ['privacy', 'cookies'])
+                ->orWhere('slug', 'terms-of-service'))
+            ->latest('published_at')->latest('id')->get()->unique('category')->keyBy('category');
+    }
+
     public static function status(MarketplaceOrder $order): ?string
     {
         if (! $order->public_reference || ! $order->receipt_number || ! $order->completed_at) {

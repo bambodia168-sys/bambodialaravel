@@ -3,7 +3,7 @@
 @section('title', 'Order Receipt '.$order->reference())
 @push('head')
   <link rel="stylesheet" href="{{ asset('css/order-review.css') }}?v=1">
-  <link rel="stylesheet" href="{{ asset('css/order-receipt.css') }}?v=1">
+  <link rel="stylesheet" href="{{ asset('css/order-receipt.css') }}?v=3">
 @endpush
 @section('content')
 <article class="container inner-page commerce-receipt">
@@ -33,10 +33,26 @@
       </div>
     </header>
 
-    <dl class="receipt-parties">
-      <div><dt>Billed to</dt><dd>{{ $order->buyer_name }}</dd></div>
-      <div><dt>Seller</dt><dd>{{ $order->seller_name }}</dd></div>
-    </dl>
+    <div class="receipt-parties">
+      @foreach(['buyer' => ['Billed to', $order->buyer_name], 'seller' => ['Seller', $order->seller_name]] as $party => [$label, $name])
+        <div>
+          <h2>{{ $label }}</h2>
+          <p class="receipt-party-name">{{ $name }}</p>
+          <dl class="receipt-contact">
+            <div>
+              <dt>Location</dt>
+              <dd>{{ filled($contacts[$party]['location']) ? $contacts[$party]['location'] : 'Location unavailable' }}</dd>
+            </div>
+            @if(filled($contacts[$party]['email']))
+              <div>
+                <dt>Email</dt>
+                <dd><a href="mailto:{{ $contacts[$party]['email'] }}">{{ $contacts[$party]['email'] }}</a></dd>
+              </div>
+            @endif
+          </dl>
+        </div>
+      @endforeach
+    </div>
     <dl class="receipt-metadata">
       <div><dt>Order ID</dt><dd class="receipt-reference">{{ $order->reference() }}</dd></div>
       <div><dt>Date recorded <span>(ICT)</span></dt><dd>{{ $order->completed_at?->setTimezone('Asia/Phnom_Penh')->format('d M Y, H:i') ?? 'Unavailable' }}</dd></div>
@@ -90,19 +106,28 @@
       </dl>
     </div>
 
-    <footer class="receipt-footer">
+    <footer class="order-receipt-footer">
       @if($verificationUrl)
-        <a class="receipt-qr" href="{{ $verificationUrl }}" aria-label="Verify receipt for order {{ $order->reference() }}">
-          <img src="{{ $qr }}" width="112" height="112" alt="">
-        </a>
+        <div class="receipt-footer">
+          <a class="receipt-qr" href="{{ $verificationUrl }}" aria-label="Verify receipt for order {{ $order->reference() }}">
+            <img src="{{ $qr }}" width="112" height="112" alt="">
+          </a>
+          <div>
+            <h2>Verify this receipt</h2>
+            <p>Scan the QR code to check this receipt on Bambodia.</p>
+            <a href="{{ $verificationUrl }}">Open verification page</a>
+          </div>
+        </div>
       @endif
-      <div>
-        @if($verificationUrl)
-          <h2>Verify this receipt</h2>
-          <p>Scan the QR code to check this receipt on Bambodia.</p>
-          <a href="{{ $verificationUrl }}">Open verification page</a>
-        @endif
-        <p class="receipt-issued">Issued electronically by {{ \App\Models\SiteSetting::setting('identity.name') }}.</p>
+      <div class="order-receipt-publisher">
+        <div class="order-receipt-legal">
+          <p>Issued electronically by {{ \App\Models\SiteSetting::setting('identity.name') }}.</p>
+          @include('commerce.receipt-legal-links')
+        </div>
+        <a class="order-receipt-telegram" href="{{ $telegramUrl }}" target="_blank" rel="noopener noreferrer">
+          Telegram group
+          <img src="{{ $telegramQr }}" width="80" height="80" alt="">
+        </a>
       </div>
     </footer>
   </section>

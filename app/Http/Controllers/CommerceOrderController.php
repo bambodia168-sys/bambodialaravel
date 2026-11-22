@@ -8,7 +8,6 @@ use App\Models\CommercePayment;
 use App\Models\AuditEvent;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
-use App\Models\Policy;
 use App\Models\SiteBrandAsset;
 use App\Models\SiteSetting;
 use App\Models\User;
@@ -19,6 +18,7 @@ use App\Support\OrderFulfillment;
 use App\Support\OrderReceipt;
 use App\Support\UserManagementAccess;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -95,8 +95,22 @@ class CommerceOrderController extends Controller
         $verificationUrl = $receiptStatus ? OrderReceipt::verificationUrl($order) : null;
         $qr = $verificationUrl ? OrderReceipt::qrSource($verificationUrl) : null;
 
-        return response()->view('commerce.receipt', compact('order', 'section', 'workspace', 'receiptStatus', 'verificationUrl', 'qr'))
-            ->header('Cache-Control', 'private, no-store');
+        $people = $this->receiptPeople($order, withEmail: true);
+        $contacts = [];
+        foreach (['buyer' => $order->buyer_id, 'seller' => $order->seller_id] as $party => $id) {
+            $person = $people->get($id);
+            $canSeeEmail = $section === 'dashboard.orders' || (int) $request->user()->id === (int) $id;
+            $contacts[$party] = [
+                'location' => $person?->userProfile?->public_location,
+                'email' => $canSeeEmail ? $person?->email : null,
+            ];
+        }
+
+        return response()->view('commerce.receipt', compact('order', 'section', 'workspace', 'receiptStatus', 'verificationUrl', 'qr', 'contacts') + [
+            'policies' => OrderReceipt::legalPolicies(),
+            'telegramUrl' => OrderReceipt::TELEGRAM_URL,
+            'telegramQr' => OrderReceipt::qrSource(OrderReceipt::TELEGRAM_URL),
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function verifyReceipt(Request $request, string $reference, string $token): Response
@@ -127,12 +141,7 @@ class CommerceOrderController extends Controller
                 'location' => $seller->creatorProfile?->is_public ? $seller->userProfile?->public_location : null,
             ];
         }
-        $policies = Policy::query()->where('status', 'published')
-            ->where(fn (Builder $query) => $query->whereIn('category', ['privacy', 'cookies'])
-                ->orWhere('slug', 'terms-of-service'))
-            ->latest('published_at')->latest('id')->get()->unique('category')->keyBy('category');
         $verificationUrl = OrderReceipt::verificationUrl($order);
-        $telegramUrl = 'https://t.me/+taf6FFmqH2djZjM1';
 
         return response()->view('commerce.receipt-verification', [
             'reference' => $order->reference(),
@@ -144,11 +153,11 @@ class CommerceOrderController extends Controller
             'platform' => SiteSetting::setting('identity.name'),
             'platformAddress' => trim(SiteSetting::setting('identity.receipt_address')),
             'logo' => SiteBrandAsset::urlFor('logo_light'),
-            'policies' => $policies,
+            'policies' => OrderReceipt::legalPolicies(),
             'verificationUrl' => $verificationUrl,
             'receiptQr' => OrderReceipt::qrSource($verificationUrl),
-            'telegramUrl' => $telegramUrl,
-            'telegramQr' => OrderReceipt::qrSource($telegramUrl),
+            'telegramUrl' => OrderReceipt::TELEGRAM_URL,
+            'telegramQr' => OrderReceipt::qrSource(OrderReceipt::TELEGRAM_URL),
             'status' => $status,
             'amount' => $order->currency.' '.$order->total,
             'recorded' => $order->completed_at->setTimezone('Asia/Phnom_Penh')->format('d M Y, H:i'),
@@ -162,14 +171,21 @@ class CommerceOrderController extends Controller
     private function receiptParties(MarketplaceOrder $order): array
     {
         $snapshot = MarketplaceOrder::query()->whereKey($order->id)->firstOrFail(['listing_title', 'buyer_name', 'seller_name']);
-        $people = User::query()->whereKey([$order->buyer_id, $order->seller_id])
-            ->with('userProfile:user_id,public_location')->get(['id'])->keyBy('id');
+        $people = $this->receiptPeople($order);
 
         return [
             'listing' => $snapshot->listing_title,
             'customer' => ['name' => $snapshot->buyer_name, 'location' => $people->get($order->buyer_id)?->userProfile?->public_location],
             'seller' => ['name' => $snapshot->seller_name, 'location' => $people->get($order->seller_id)?->userProfile?->public_location],
         ];
+    }
+
+    private function receiptPeople(MarketplaceOrder $order, bool $withEmail = false): Collection
+    {
+        return User::query()->whereKey([$order->buyer_id, $order->seller_id])
+            ->with('userProfile:user_id,public_location')
+            ->get($withEmail ? ['id', 'email'] : ['id'])
+            ->keyBy('id');
     }
 
     public function emailReceipt(Request $request, string $number): RedirectResponse

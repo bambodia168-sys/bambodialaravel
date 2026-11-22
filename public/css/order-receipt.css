@@ -173,6 +173,12 @@
 }
 
 .receipt-paper p { margin: 0; color: var(--receipt-muted); }
+.receipt-parties h2 { color: var(--receipt-muted); font-size: .78em; letter-spacing: .04em; text-transform: uppercase; }
+.receipt-paper .receipt-party-name { color: var(--receipt-ink); font-weight: 750; overflow-wrap: anywhere; }
+.receipt-contact { display: grid; gap: .3rem; margin: .6rem 0 0; }
+.receipt-contact > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 .55rem; }
+.receipt-contact dd { min-width: 0; margin: 0; font-size: .9em; font-weight: 500; }
+.receipt-contact a, .order-receipt-footer a { color: #26568a; text-decoration: underline; text-underline-offset: .16em; }
 
 .receipt-total { margin: 0; }
 .receipt-total > div {
@@ -200,7 +206,12 @@
 .receipt-qr { flex: 0 0 auto; display: block; }
 .receipt-qr img { display: block; inline-size: 7rem; block-size: auto; }
 .receipt-footer a:not(.receipt-qr) { display: inline-block; margin-top: .3rem; color: #26568a; text-decoration: underline; }
-.receipt-footer .receipt-issued { margin-top: .35rem; }
+.order-receipt-footer { margin-top: auto; }
+.order-receipt-publisher { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; padding-top: .55rem; border-top: 1px solid var(--receipt-line); font-size: .8em; }
+.receipt-footer + .order-receipt-publisher { margin-top: .55rem; }
+.order-receipt-legal nav { display: flex; flex-wrap: wrap; gap: .2rem .8rem; margin-top: .25rem; }
+.order-receipt-telegram { display: inline-flex; align-items: center; gap: .5rem; font-weight: 700; }
+.order-receipt-telegram img { display: block; width: 3.8rem; height: auto; }
 
 /* Public verification uses the same A4 paper and receipt typography. */
 .receipt-verification {
@@ -344,9 +355,11 @@
     .receipt-metadata,
     .receipt-table-wrap,
     .receipt-summary,
-    .receipt-footer { break-inside: avoid; }
+    .receipt-footer,
+    .order-receipt-footer { break-inside: avoid; }
 
     .receipt-qr img { inline-size: 27mm; }
+    .order-receipt-telegram img { width: 18mm; }
     .receipt-footer a:not(.receipt-qr) { display: none; }
 
     .receipt-verification { padding: 0; background: #fff; }
