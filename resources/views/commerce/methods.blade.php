@@ -85,6 +85,21 @@
   .payment-method-dialog__body { padding: .35rem clamp(1rem, 4vw, 1.5rem) 1.25rem; }
   .payment-method-dialog__body code { overflow-wrap: anywhere; }
   .payment-method-dialog__body input[type="checkbox"] { display: inline; width: auto; }
+  .payment-method-dialog__environments {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: .75rem;
+    margin: .9rem 0;
+  }
+  .payment-method-dialog__environment {
+    margin: 0;
+    min-inline-size: 0;
+    padding: .65rem .9rem .9rem;
+    border: 1px solid var(--line);
+    border-radius: .75rem;
+  }
+  .payment-method-dialog__environment legend { padding-inline: .35rem; font-weight: 700; }
+  .payment-method-dialog__environment p { margin: .2rem 0 .65rem; color: var(--muted); }
   .payment-method-dialog :is(input,textarea,select):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
   .payment-method-dialog__close { font-size: 1.35rem; }
   dialog.payment-method-dialog--add { width: min(29rem, calc(100% - 2rem)); }
@@ -156,7 +171,9 @@
             @endforeach
           </ul>
         @endif
-        @if($method->usesGateway())
+        @if($method->provider === 'bakong')
+          @include('commerce.partials.bakong-settings', ['method' => $method, 'retry' => $retry])
+        @elseif($method->usesGateway())
           @php($live = \App\Models\CommerceGatewaySetting::checkoutIsLive($method->provider))
           @if($method->provider === 'stripe')
             @php($environment = $retry ? old('stripe_environment', $live ? 'live' : 'sandbox') : ($live ? 'live' : 'sandbox'))
@@ -174,12 +191,8 @@
             <p>Enter credentials for this environment and register the webhook endpoint in your {{ $method->name }} dashboard.</p>
             <p><code>{{ route('commerce.webhook', $method->provider) }}</code></p>
           @else
-            <p>Creates a separate USD QR for each order and checks payment with {{ $method->provider === 'aba' ? 'ABA PayWay' : 'Bakong' }}.</p>
-            @if($method->provider === 'aba')
-              <p>Use your ABA PayWay merchant ID and API key. Arrange API access and server allowlisting with ABA.</p>
-            @else
-              <p>Enter the recipient's Bakong account details and NBC Open API access token.</p>
-            @endif
+            <p>Creates a separate USD QR for each order and checks payment with ABA PayWay.</p>
+            <p>Use your ABA PayWay merchant ID and API key. Arrange API access and server allowlisting with ABA.</p>
           @endif
           <p>Leave a field blank to keep its saved value{{ $method->provider === 'stripe' ? ' for the selected environment' : '' }}.</p>
           @foreach(\App\Models\CommerceGatewaySetting::FIELDS[$method->provider] as $field => $label)
