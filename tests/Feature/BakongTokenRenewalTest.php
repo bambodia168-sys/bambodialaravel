@@ -134,6 +134,23 @@ class BakongTokenRenewalTest extends TestCase
             ->assertSessionHasErrors('bakong_renewal.live')->assertSessionMissing('_old_input.bakong_renewal');
     }
 
+    public function test_sandbox_does_not_request_renewal_with_the_production_token(): void
+    {
+        $this->admin();
+        $expiry = now()->addDays(2)->timestamp;
+        $live = $this->gateway(true, $expiry);
+        $sandbox = $this->gateway(false, $expiry);
+        Http::fake();
+
+        $this->artisan('commerce:renew-bakong-token --sandbox-early')
+            ->expectsOutput('Bakong Sandbox · sandbox shares production token')->assertFailed();
+
+        Http::assertNothingSent();
+        $this->assertSame($sandbox->credentials, $sandbox->fresh()->credentials);
+        $this->assertSame($live->credentials, $live->fresh()->credentials);
+        $this->assertSame('Bakong Sandbox token shared with Production', AccountNotification::query()->sole()->title);
+    }
+
     private function admin(): User
     {
         return User::query()->create([

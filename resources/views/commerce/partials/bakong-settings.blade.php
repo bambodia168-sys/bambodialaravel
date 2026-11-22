@@ -41,6 +41,9 @@
   <fieldset class="payment-method-dialog__environment">
     <legend>Automatic token renewal</legend>
     <p>Save the email registered with Bakong for each environment you want to renew after expiry. Clear the email to turn off automatic renewal.</p>
+    @if(\App\Support\BakongTokenRenewal::tokensMatch($saved['sandbox']['token'] ?? null, $saved['live']['token'] ?? null))
+      <p>Sandbox shares the Production token. Save a separate Sandbox token to enable Sandbox renewal.</p>
+    @endif
     @foreach($modes as $mode => $label)
       @php
         $credentials = $saved[$mode];
