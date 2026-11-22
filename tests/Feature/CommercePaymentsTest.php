@@ -810,6 +810,9 @@ Private installation report.
             'available'=>true, 'bakong_environment'=>'live',
         ])->assertRedirect($page)->assertSessionHasErrors('bakong_environment');
         $this->patch($save, [
+            'available'=>true, 'bakong_environment'=>['sandbox', 'live'],
+        ])->assertRedirect($page)->assertSessionHasErrors('bakong_environment');
+        $this->patch($save, [
             'available'=>true, 'gateway'=>['sandbox'=>$sandbox, 'live'=>['token'=>$production['token']]],
         ])->assertRedirect($page)->assertSessionHasErrors('gateway');
         $this->assertNull(CommerceGatewaySetting::forMode('bakong', false)->firstOrFail()->credentials);
@@ -823,8 +826,10 @@ Private installation report.
             $this->assertSame($credentials, $settings->credentials);
             $this->assertStringNotContainsString($credentials['token'], $settings->getRawOriginal('credentials'));
         }
-        $this->get($page)->assertOk()->assertSee('Sandbox API token')->assertSee('Production API token')
-            ->assertSee('Keep current (Sandbox)')->assertDontSee($sandbox['token'])->assertDontSee($production['token']);
+        $response = $this->get($page)->assertOk()->assertSee('Sandbox API token')->assertSee('Production API token')
+            ->assertSee('name="bakong_environment" value="sandbox" checked', false)
+            ->assertDontSee($sandbox['token'])->assertDontSee($production['token']);
+        $this->assertMatchesRegularExpression('/data-bakong-fields="live"\s+hidden disabled/', $response->getContent());
         $this->actingAs($buyer)->post($start, ['method'=>$method->id])->assertUnprocessable();
         $this->assertFalse($order->payments()->exists());
 
@@ -857,6 +862,21 @@ Private installation report.
         $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('bakong'));
         $this->assertFalse($method->fresh()->availableForCheckout());
         $this->assertSame($production, CommerceGatewaySetting::effective('bakong', true));
+    }
+
+    public function test_bakong_can_save_hidden_settings_with_the_current_environment_selected_before_configuration(): void
+    {
+        config(['commerce.live_gateways' => false]);
+        $method = $this->method('bakong');
+
+        $this->actingAs($this->user('super_admin'))->patch(route('dashboard.payment-methods.update', $method), [
+            'available'=>false, 'bakong_environment'=>'sandbox',
+            'gateway'=>['sandbox'=>['token'=>null]],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertFalse($method->fresh()->available);
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('bakong'));
+        $this->assertNull(CommerceGatewaySetting::forMode('bakong', false)->sole()->credentials);
     }
 
     public function test_bakong_order_qr_has_bill_and_expiry_and_only_verified_payment_issues_receipt(): void
