@@ -56,7 +56,7 @@ class CommerceWorkspacesTest extends TestCase
             ->assertHeader('Cache-Control', 'no-store, private')->assertSee('Original listing')->assertSee('No payment required')
             ->assertSee('Customer receipt city')->assertSee('Seller receipt city')
             ->assertSee('mailto:'.$buyer->email)->assertDontSee('mailto:'.$seller->email)
-            ->assertSee(OrderReceipt::TELEGRAM_URL)->assertSee($terms->publicUrl());
+            ->assertSee(OrderReceipt::TELEGRAM_URL)->assertSee('/policies/'.$terms->public_code.'-'.$terms->slug);
         $this->patch(route('account.orders.cancel', $order->number))->assertConflict();
         $this->actingAs($seller)->get(route('studio.orders.receipt', $order->number))->assertOk()
             ->assertSee('mailto:'.$seller->email)->assertDontSee('mailto:'.$buyer->email);
