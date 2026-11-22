@@ -85,11 +85,30 @@
   .payment-method-dialog__body { padding: .35rem clamp(1rem, 4vw, 1.5rem) 1.25rem; }
   .payment-method-dialog__body code { overflow-wrap: anywhere; }
   .payment-method-dialog__body input[type="checkbox"] { display: inline; width: auto; }
-  .payment-method-dialog__environments {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  .payment-method-dialog__mode { min-inline-size: 0; margin: .9rem 0 0; border: 0; padding: 0; }
+  .payment-method-dialog__mode legend { font-weight: 700; }
+  .payment-method-dialog__mode-options {
+    display: flex;
+    flex-wrap: wrap;
     gap: .75rem;
-    margin: .9rem 0;
+    margin-block-start: .45rem;
+  }
+  .payment-method-dialog__mode-options label {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: .55rem;
+    margin: 0;
+    padding: .6rem .8rem;
+    border: 1px solid var(--line);
+    border-radius: .65rem;
+    cursor: pointer;
+  }
+  .payment-method-dialog__mode-options label:has(:checked) { border-color: var(--accent); }
+  .payment-method-dialog__mode-options input[type="radio"] {
+    width: auto;
+    margin: 0;
+    accent-color: var(--accent);
   }
   .payment-method-dialog__environment {
     margin: 0;
@@ -245,6 +264,21 @@
   </dialog>
 @endforeach
 <script>
+  for (const settings of document.querySelectorAll('[data-bakong-settings]')) {
+    const radios = settings.querySelectorAll('input[name="bakong_environment"]');
+    const panels = settings.querySelectorAll('[data-bakong-fields]');
+    const updatePanels = () => {
+      const selected = settings.querySelector('input[name="bakong_environment"]:checked')?.value;
+      for (const panel of panels) {
+        const inactive = panel.dataset.bakongFields !== selected;
+        panel.hidden = inactive;
+        panel.disabled = inactive;
+      }
+    };
+    radios.forEach(radio => radio.addEventListener('change', updatePanels));
+    updatePanels();
+  }
+
   for (const group of document.querySelectorAll('[data-payment-qr]')) {
     const input = group.querySelector('input[type="file"]');
     const saved = group.querySelector('[data-saved-qr]');
