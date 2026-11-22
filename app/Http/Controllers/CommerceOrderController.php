@@ -11,6 +11,7 @@ use App\Models\MarketplaceOrder;
 use App\Models\User;
 use App\Support\CommerceCollection;
 use App\Support\CommerceOffers;
+use App\Support\CommercePaymentStart;
 use App\Support\OrderFulfillment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -22,9 +23,12 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class CommerceOrderController extends Controller
 {
+    public function __construct(private readonly CommercePaymentStart $paymentStart) {}
+
     public function index(Request $request): View
     {
         [$orders, $section, $workspace, $heading] = $this->workspace($request);
@@ -132,7 +136,7 @@ class CommerceOrderController extends Controller
             'payment_method' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $order = DB::transaction(function () use ($request, $listing, $data, $fromCart): MarketplaceOrder {
+        [$order, $method] = DB::transaction(function () use ($request, $listing, $data, $fromCart): array {
             $buyer = User::query()->lockForUpdate()->findOrFail($request->user()->id);
             abort_unless($buyer->account_status === 'active' && (! $fromCart || $buyer->hasVerifiedEmail()), 403);
             $existing = MarketplaceOrder::query()->where('buyer_id', $buyer->id)
@@ -142,7 +146,7 @@ class CommerceOrderController extends Controller
                     ->where('public_id', $listing)->exists();
                 abort_unless($matches && ($existing->license_tier ?? 'standard') === $data['tier'], 409);
 
-                return $existing;
+                return [$existing, null];
             }
 
             $cart = $fromCart ? CommerceCart::query()->whereKey($buyer->id)->lockForUpdate()->first() : null;
@@ -210,10 +214,10 @@ class CommerceOrderController extends Controller
             }
             AuditEvent::record('commerce.order.created', $buyer, $request);
 
-            return $order;
+            return [$order, $method];
         }, 3);
 
-        return redirect()->route('account.orders.show', $order->number)->with('status', 'Order recorded.');
+        return $this->showAfterPaymentSelection($order, $method, 'Order recorded.');
     }
 
     public function cancel(Request $request, string $number): RedirectResponse
@@ -237,18 +241,39 @@ class CommerceOrderController extends Controller
         [$orders] = $this->workspace($request);
         $data = $request->validate(['payment_method' => ['present', 'nullable', 'integer', 'min:1']]);
 
-        DB::transaction(function () use ($orders, $number, $data, $request): void {
+        [$order, $method] = DB::transaction(function () use ($orders, $number, $data, $request): array {
             $order = $orders->where('number', $number)->lockForUpdate()->firstOrFail();
             abort_unless($order->status === 'awaiting_payment', 409);
             abort_if($order->payments()->whereIn('status', CommercePayment::ACTIVE)->exists(), 409, 'An existing payment is still open.');
             $method = $this->availableMethod($data['payment_method'] ?? null);
+            if ($method && CommerceCollection::enabled() && ! $method->availableForCheckout()) {
+                throw ValidationException::withMessages(['payment_method' => 'That payment method is unavailable. Choose another method.']);
+            }
             $order->update(['payment_method' => $method?->name]);
             if ($order->wasChanged('payment_method')) {
                 AuditEvent::record('commerce.order.payment_method_changed', $request->user(), $request);
             }
+
+            return [$order, $method];
         }, 3);
 
-        return redirect()->route('account.orders.show', $number)->with('status', 'Payment preference updated.');
+        return $this->showAfterPaymentSelection($order, $method, 'Payment preference updated.');
+    }
+
+    private function showAfterPaymentSelection(MarketplaceOrder $order, ?CommercePaymentMethod $method, string $status): RedirectResponse
+    {
+        $redirect = redirect()->route('account.orders.show', $order->number);
+        if ($method?->dynamicQr() && $order->currency === 'USD' && CommerceCollection::enabled()) {
+            try {
+                $this->paymentStart->prepare($order, $method->id, requireSelectedQr: true);
+            } catch (Throwable $exception) {
+                report($exception);
+
+                return $redirect->with('error', 'Your order is saved. The payment QR could not be opened automatically. Continue from your order.');
+            }
+        }
+
+        return $redirect->with('status', $status);
     }
 
     private function workspace(Request $request): array

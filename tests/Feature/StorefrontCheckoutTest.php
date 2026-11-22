@@ -16,6 +16,7 @@ use App\Support\CommerceOffers;
 use App\Support\Security\Totp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -207,13 +208,67 @@ class StorefrontCheckoutTest extends TestCase
             ->assertSee('data-step="payment" data-state="current"', false)
             ->assertDontSee('Payment pending')
             ->assertSee('data-payment-stamp="awaiting"', false)
-            ->assertSee('name="order-payment-choice"  open', false)
+            ->assertSee('id="order-payment-method-name">Local transfer</h3>', false)
             ->assertSee('Local transfer');
         $this->getJson(route('cart'))->assertOk()->assertJsonPath('count', 0);
         $this->patch(route('account.orders.cancel', $order->number))->assertRedirect(route('account.orders.show', $order->number));
         $this->getJson(route('cart'))->assertOk()->assertJsonPath('count', 0);
         $this->assertDatabaseCount('marketplace_orders', 1);
         $this->assertDatabaseCount('commerce_payments', 0);
+    }
+
+    public function test_checkout_opens_the_selected_bakong_qr_once_and_allows_switching_after_expiry(): void
+    {
+        config(['commerce.enabled' => true, 'commerce.payments_enabled' => true, 'commerce.live_gateways' => false]);
+        Http::fake([
+            'https://sit-api-bakong.nbc.gov.kh/v1/check_transaction_by_md5' => Http::response(['responseCode' => 1, 'errorCode' => 1]),
+        ]);
+        $buyer = $this->user();
+        $offer = $this->listing('QR checkout fixture', '0.30');
+        $bakong = CommercePaymentMethod::query()->where('provider', 'bakong')->sole();
+        $transfer = CommercePaymentMethod::query()->where('provider', 'bank_transfer')->sole();
+        $transfer->update(['available' => true, 'instructions' => 'Use the isolated bank account.']);
+        $this->actingAs($this->user('super_admin'))->patch(route('dashboard.payment-methods.update', $bakong), [
+            'available' => true, 'bakong_environment' => 'sandbox', 'gateway' => ['sandbox' => [
+                'account_id' => 'merchant@devb', 'merchant_name' => 'Bambodia',
+                'merchant_city' => 'Battambang', 'token' => 'sandbox-fixture-token',
+            ]],
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($buyer)->post(route('cart.add', $offer->public_id), ['tier' => 'standard'])->assertRedirect(route('cart'));
+        $form = $this->orderForm($buyer, $offer) + ['payment_method' => $bakong->id];
+        $place = route('checkout.place', $offer->public_id);
+        $this->post($place, $form)->assertRedirect()->assertSessionHasNoErrors();
+        $order = MarketplaceOrder::query()->sole();
+        $payment = $order->payments()->sole();
+        $this->assertSame('checkout_open', $payment->status);
+        $this->assertSame('awaiting_payment', $order->status);
+        $this->assertNull($order->receipt_number);
+        $page = route('account.orders.show', $order->number);
+        $change = route('account.orders.payment-method', $order->number);
+        $this->post($place, $form)->assertRedirect($page);
+        $this->get($page)->assertOk()
+            ->assertSee('data-order-payment-code', false)
+            ->assertSee('Change payment method')->assertDontSee('Use selected method')
+            ->assertDontSee('Generate QR for Bakong');
+        $this->get(route('account.orders.payment.order-qr', [$order->number, $payment->number]))->assertOk();
+        $this->assertSame($payment->id, $order->payments()->sole()->id);
+        $this->patch($change, ['payment_method' => $transfer->id])->assertConflict();
+        Http::assertNothingSent();
+
+        $this->travel(9)->minutes();
+        $this->postJson(route('account.orders.payment.verify', [$order->number, $payment->number]))
+            ->assertOk()->assertJsonPath('status', 'expired');
+        $this->get($page)->assertOk()->assertSee('Use selected method')->assertDontSee('data-order-payment-code', false);
+        $this->patch($change, ['payment_method' => $transfer->id])->assertRedirect($page);
+        $this->get($page)->assertOk()->assertSee('Upload your transfer receipt');
+        $this->assertSame($transfer->name, $order->refresh()->payment_method);
+        $this->assertDatabaseCount('commerce_payments', 1);
+
+        $this->patch($change, ['payment_method' => $bakong->id])->assertRedirect($page);
+        $this->get($page)->assertOk()->assertSee('data-order-payment-code', false);
+        $this->assertDatabaseCount('commerce_payments', 2);
+        $this->assertNotSame($payment->remote_id, $order->payments()->latest('id')->firstOrFail()->remote_id);
     }
 
     public function test_changed_payment_availability_keeps_the_item_in_the_cart(): void

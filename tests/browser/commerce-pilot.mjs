@@ -148,17 +148,18 @@ async function order(page, listing, {guest = false} = {}) {
   await cart.getByText('Your cart is empty.', {exact: true}).waitFor();
   assert.equal(await badge.isVisible(), false);
   await page.keyboard.press('Escape');
-  const preferred = page.locator('.order-review-method[open]');
+  const preferred = page.locator('.order-review-method');
   await preferred.getByText('Selected', {exact: true}).waitFor();
   await preferred.getByText('Bank Transfer', {exact: true}).first().waitFor();
   await page.locator('[data-payment-stamp="awaiting"]').getByText('Awaiting Payment', {exact: true}).waitFor();
-  const methods = page.locator('.order-review-method');
-  await methods.locator('summary').getByText('KHQR', {exact: true}).click();
+  const picker = page.locator('.order-review-method-picker');
+  assert.equal(await picker.getByRole('radio', {name: 'KHQR', exact: true}).isVisible(), false);
+  await chooseOrderMethod(page, 'KHQR');
   assert.equal(await preferred.count(), 1);
   await preferred.getByText('KHQR', {exact: true}).waitFor();
   assert.equal(await page.getByRole('button', {name: 'Submit receipt', exact: true}).count(), 1);
   assert.equal(await page.locator('.order-review').evaluate(review => review.scrollWidth <= review.clientWidth), true);
-  await methods.locator('summary').getByText('Bank Transfer', {exact: true}).click();
+  await chooseOrderMethod(page, 'Bank Transfer');
   await preferred.getByText('Bank Transfer', {exact: true}).waitFor();
   const orderPath = new URL(page.url()).pathname;
   const repeated = await page.request.post(payload.action, {form: payload.form, maxRedirects: 0});
@@ -166,10 +167,14 @@ async function order(page, listing, {guest = false} = {}) {
   assert.equal(new URL(repeated.headers().location, origin).pathname, orderPath);
   return orderPath;
 }
+async function chooseOrderMethod(page, name) {
+  await page.getByText('Change payment method', {exact: true}).click();
+  await page.getByRole('radio', {name, exact: true}).check();
+  await page.getByRole('button', {name: 'Use selected method', exact: true}).click();
+  await page.locator('.order-review-method').getByRole('heading', {name, exact: true}).waitFor();
+}
 async function uploadReceipt(page, ref) {
-  const transfer = page.locator('.order-review-method > summary').getByText('Bank Transfer', {exact: true});
-  if (!(await transfer.evaluate(label => label.closest('details').open))) await transfer.click();
-  const form = page.locator('.order-review-method[open] .order-receipt-upload');
+  const form = page.locator('.order-review-method .order-receipt-upload');
   await form.getByLabel('Transfer reference').fill(ref);
   await form.getByLabel('Payment receipt', {exact: true}).setInputFiles({name: 'pilot-receipt.png', mimeType: 'image/png', buffer: receipt});
   await form.getByRole('button', {name: 'Submit receipt', exact: true}).click();

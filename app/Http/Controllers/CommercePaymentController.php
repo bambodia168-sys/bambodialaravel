@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\AuditEvent;
 use App\Models\AccountNotification;
 use App\Models\CommercePayment;
-use App\Models\CommerceGatewaySetting;
 use App\Models\CommercePaymentMethod;
 use App\Models\MarketplaceOrder;
 use App\Support\CommerceGateway;
 use App\Support\CommerceCollection;
 use App\Support\CommerceQrGateway;
+use App\Support\CommercePaymentStart;
 use App\Support\OrderFulfillment;
 use BaconQrCode\Common\ErrorCorrectionLevel;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -30,51 +30,20 @@ use Throwable;
 
 class CommercePaymentController extends Controller
 {
-    public function __construct(private readonly CommerceGateway $gateway, private readonly CommerceQrGateway $qrGateway) {}
+    public function __construct(
+        private readonly CommerceGateway $gateway,
+        private readonly CommerceQrGateway $qrGateway,
+        private readonly CommercePaymentStart $paymentStart,
+    ) {}
 
     public function start(Request $request, string $number): RedirectResponse
     {
         abort_unless(CommerceCollection::enabled(), 404);
         $order = $this->buyerOrder($request, $number);
         $data = $request->validate(['method'=>['required', 'integer', 'min:1']]);
-        $payment = DB::transaction(function () use ($order, $data): CommercePayment {
-            $locked = MarketplaceOrder::query()->lockForUpdate()->findOrFail($order->id);
-            $this->awaiting($locked);
-            $active = $locked->payments()->whereIn('status', CommercePayment::ACTIVE)->first();
-            if ($active) {
-                abort_unless($active->commerce_payment_method_id === (int) $data['method']
-                    && in_array($active->status, ['starting', 'checkout_open'], true), 409, 'An existing payment is still open.');
-
-                return $active;
-            }
-            $method = CommercePaymentMethod::query()->where('available', true)->lockForUpdate()->findOrFail($data['method']);
-            abort_unless($method->usesGateway(), 422, 'This gateway is unavailable.');
-            $live = CommerceGatewaySetting::checkoutIsLive($method->provider);
-            CommerceGatewaySetting::forMode($method->provider, $live)->lockForUpdate()->firstOrFail();
-            abort_unless($method->availableForCheckout(), 422, 'This gateway is unavailable.');
-            OrderFulfillment::ensureReady($locked);
-
-            return $locked->payments()->create([
-                'number'=>(string) Str::uuid(), 'commerce_payment_method_id'=>$method->id,
-                'method_name'=>$method->name, 'provider'=>$method->provider, 'live_mode'=>$live, 'status'=>'starting',
-            ]);
-        }, 3);
-        $live = CommerceGatewaySetting::checkoutIsLive($payment->provider);
-        abort_unless($payment->live_mode === $live && CommerceGateway::ready($payment->provider, $live)
-            && ($live || ! app()->environment('production')), 503);
+        $payment = $this->paymentStart->prepare($order, (int) $data['method']);
+        $live = $payment->live_mode;
         if ($payment->dynamicQr()) {
-            if ($payment->remote_id === null) {
-                // Serialize generation so concurrent clicks never open two bank bills.
-                DB::transaction(function () use ($payment): void {
-                    $locked = CommercePayment::query()->lockForUpdate()->findOrFail($payment->id);
-                    if ($locked->status === 'starting' && $locked->remote_id === null) {
-                        abort_if($locked->provider === 'aba' && $locked->created_at->lt(now()->subMinutes(5)),
-                            409, 'This QR payment needs settlement review.');
-                        $locked->update($this->qrGateway->issue($locked) + ['status' => 'checkout_open']);
-                    }
-                }, 1);
-            }
-
             return redirect()->route('account.orders.show', $number);
         }
         if ($payment->remote_id) {
@@ -147,7 +116,9 @@ class CommercePaymentController extends Controller
         abort_unless($attempt->dynamicQr() && $attempt->qrVisible() && ($attempt->live_mode || ! app()->environment('production')), 404);
         $writer = new Writer(new ImageRenderer(new RendererStyle(288, 4), new SvgImageBackEnd));
 
-        return response($writer->writeString($attempt->qr_payload, ecLevel: ErrorCorrectionLevel::H()), 200, [
+        $svg = $writer->writeString($attempt->qr_payload, ecLevel: ErrorCorrectionLevel::H());
+
+        return response(str_replace('<svg ', '<svg shape-rendering="crispEdges" ', $svg), 200, [
             'Content-Type' => 'image/svg+xml',
             'Cache-Control' => 'private, no-store',
             'Content-Security-Policy' => "default-src 'none'; sandbox",
