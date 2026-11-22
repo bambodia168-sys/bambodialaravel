@@ -17,7 +17,7 @@
     <script defer src="{{ asset('js/commerce-storefront.js') }}?v=1"></script>
     @include('layouts.partials.mini-cart-assets')
   @endif
-  <link rel="stylesheet" href="{{ asset('css/header-flag-scroll-top.css') }}?v=1">
+  <link rel="stylesheet" href="{{ asset('css/header-flag-scroll-top.css') }}?v=2">
   <link rel="stylesheet" href="{{ asset('css/footer-two-tone-themes.css') }}?v=2">
   <link rel="stylesheet" href="{{ asset('css/home-hero-aurora.css') }}?v=1">
   {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
