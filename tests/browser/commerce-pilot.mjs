@@ -274,7 +274,16 @@ try {
   await currentCheckoutStep(buyer, 'review');
   assert.equal(await buyer.locator('.checkout-progress [data-step="payment"]').getAttribute('data-state'), 'completed');
   assert.equal(await buyer.locator('.checkout-progress-status').count(), 0);
-  await buyer.locator('[data-payment-stamp="paid"]').getByText('Paid', {exact: true}).waitFor();
+  const customerSheet = buyer.locator('.admin-order-sheet');
+  await customerSheet.locator('[data-status="paid"]').getByText('Completed / Paid', {exact: true}).waitFor();
+  const sellerOrderPath = '/studio/orders/' + productOrder.reference;
+  await visit(seller, sellerOrderPath);
+  const sellerSheet = seller.locator('.admin-order-sheet');
+  await sellerSheet.getByRole('heading', {name: 'Official receipt', exact: true}).waitFor();
+  await sellerSheet.locator('[data-status="paid"]').getByText('Completed / Paid', {exact: true}).waitFor();
+  assert.equal(new URL(await sellerSheet.getByRole('link', {name: 'View receipt', exact: true}).getAttribute('href')).pathname, sellerOrderPath + '/receipt');
+  assert.equal(await sellerSheet.getByRole('link', {name: 'Download payment receipt'}).count(), 0);
+  record('Seller and customer have a paid A4 order sheet with workspace-specific receipt links');
   const receiptLink = buyer.getByRole('link', {name: 'View receipt', exact: true});
   await receiptLink.click();
   await buyer.locator('.commerce-receipt [data-payment-stamp="paid"]').waitFor();

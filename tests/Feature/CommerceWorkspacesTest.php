@@ -63,6 +63,7 @@ class CommerceWorkspacesTest extends TestCase
         $this->get(route('account.orders.receipt', $order->number))->assertNotFound();
         $this->actingAs($this->user('freelancer'))
             ->get(route('studio.orders.receipt', $order->number))->assertNotFound();
+        $this->get(route('studio.orders.show', $order->reference()))->assertNotFound();
         $staff = $this->user('staff');
         $this->actingAs($staff)->get(route('dashboard.orders.show', $order->number))->assertForbidden();
         $this->get(route('dashboard.orders.receipt', $order->reference()))->assertForbidden();
@@ -139,6 +140,13 @@ class CommerceWorkspacesTest extends TestCase
             ->assertSee('Completed / Paid')->assertSee('Payment activity')->assertSee('USD 12.50')
             ->assertSee(route('dashboard.orders.receipt', $order->reference()))->assertSee($verification)
             ->assertSee('data:image/svg+xml;base64,', false)->assertDontSee('verified-fixture-balance');
+        foreach ([[$seller, 'studio.orders'], [$buyer, 'account.orders']] as [$viewer, $workspace]) {
+            $this->actingAs($viewer)->get(route($workspace.'.show', $order->reference()))
+                ->assertOk()->assertHeader('Cache-Control', 'no-store, private')->assertSee('Official receipt')
+                ->assertSee('Completed / Paid')->assertSee('Payment activity')->assertSee($verification)
+                ->assertSee(route($workspace.'.receipt', $order->reference()))
+                ->assertDontSee('Review transfer')->assertDontSee('verified-fixture-balance');
+        }
         $this->actingAs($buyer)->get($legacy)->assertOk()->assertSee($order->reference());
         $this->get($receipt)->assertOk()->assertSee($verification)->assertSee('data:image/svg+xml;base64,', false)
             ->assertSee('Private fixture buyer');
@@ -150,6 +158,7 @@ class CommerceWorkspacesTest extends TestCase
         $this->get($verification)->assertOk()->assertSee('Private fixture buyer')->assertSee('Customer fixture city')
             ->assertSee('Private fixture seller')->assertSee('Seller fixture city');
         $this->actingAs($this->user('customer'))->get($receipt)->assertNotFound();
+        $this->get(route('account.orders.show', $order->reference()))->assertNotFound();
         $this->get($verification)->assertOk()->assertDontSee('Private fixture buyer')->assertDontSee('Customer fixture city')
             ->assertDontSee('Seller fixture city');
         auth()->logout();
