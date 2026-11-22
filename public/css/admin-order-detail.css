@@ -1,0 +1,143 @@
+.admin-order-detail > .panel,
+.admin-order-toolbar {
+    width: min(100%, 210mm);
+    margin-inline: auto;
+}
+
+.admin-order-detail > .panel { margin-block: 1rem 0; }
+
+.admin-order-toolbar {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .6rem;
+    margin-bottom: .85rem;
+}
+
+.admin-order-toolbar .btn { gap: .35rem; }
+
+.admin-order-sheet {
+    color-scheme: light;
+    min-width: 0;
+    gap: clamp(1rem, 2.5vw, 1.55rem);
+    --line: var(--receipt-line);
+    --muted: var(--receipt-muted);
+    --text: var(--receipt-ink);
+    --surface: #fff;
+    --surface-2: var(--receipt-fill);
+}
+
+.admin-order-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: clamp(.8rem, 2.3vw, 1.55rem);
+    border-bottom: 3px solid #d47b38;
+}
+
+.admin-order-brand img { display: block; width: clamp(6.6rem, 19vw, 12.75rem); height: auto; }
+.admin-order-brand p { margin-top: .3rem; overflow-wrap: anywhere; }
+.admin-order-heading { text-align: end; }
+.admin-order-heading h1 {
+    margin: 0 0 .3rem;
+    color: var(--receipt-ink);
+    font-size: clamp(1.15rem, 3vw, 2.05rem);
+    font-weight: 800;
+    line-height: 1.12;
+    text-transform: uppercase;
+}
+.admin-order-heading .receipt-reference { margin-bottom: .45rem; color: var(--receipt-ink); font-size: .95rem; }
+.admin-order-heading .receipt-status { border: 0; border-radius: 1rem; letter-spacing: .025em; }
+
+.admin-order-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 1.5rem;
+    margin: 0;
+}
+
+.admin-order-items {
+    border-block: 1px solid var(--receipt-line);
+    table-layout: fixed;
+}
+
+.admin-order-items :is(th, td) { border-inline-end: 0; overflow-wrap: anywhere; }
+.admin-order-items th { background: #e8edf5; }
+.admin-order-items :is(th, td):nth-child(1) { width: 39%; }
+.admin-order-items :is(th, td):nth-child(2) { width: 20%; }
+.admin-order-items :is(th, td):nth-child(3) { width: 8%; }
+.admin-order-items :is(th, td):nth-child(n+4) { width: 16.5%; }
+
+.admin-order-totals { align-self: flex-end; width: min(100%, 17rem); margin: -.2rem 0 0; }
+.admin-order-totals > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: .5rem;
+    padding: .4rem 0;
+}
+.admin-order-totals > div + div { border-top: 1px solid var(--receipt-line); }
+.admin-order-totals dt, .admin-order-totals dd { margin: 0; letter-spacing: normal; text-transform: none; }
+.admin-order-totals > div:last-child :is(dt, dd) { color: var(--receipt-ink); font-weight: 800; font-size: 1em; }
+
+.admin-order-activity { border: 1px solid var(--receipt-line); border-radius: .5rem; }
+.admin-order-activity .panel-head { padding: .8rem 1rem; }
+.admin-order-activity .data-table { min-width: 0; color: var(--receipt-ink); }
+.admin-order-activity .data-table :is(th, td) { padding: .65rem 1rem; white-space: normal; overflow-wrap: anywhere; }
+.admin-order-activity .data-table th { color: var(--receipt-muted); background: var(--receipt-fill); }
+.admin-order-activity .order-activity-review { min-width: 10rem; text-align: start; }
+.admin-order-activity .order-activity-review details { min-width: 12rem; }
+.admin-order-activity .data-table tbody tr:last-child td { border-bottom: 0; }
+
+.admin-order-footer { margin-top: auto; }
+.admin-order-receipt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem 1rem;
+}
+.admin-order-receipt-actions .receipt-qr img { inline-size: 6rem; }
+.admin-order-receipt-link { margin-inline-start: auto; }
+.admin-order-verify-copy { font-size: .86em; }
+.admin-order-footer .admin-order-issued {
+    margin-top: .65rem;
+    padding-top: .55rem;
+    border-top: 1px solid var(--receipt-line);
+    font-size: .8em;
+}
+
+@media screen and (max-width: 600px) {
+    .admin-order-sheet { gap: 1rem; }
+    .admin-order-heading .receipt-reference { font-size: .85rem; }
+    .admin-order-items :is(th, td) { padding: .5rem .25rem; }
+    .admin-order-activity .data-table :is(th, td) { padding: .55rem .5rem; font-size: .84em; }
+    .admin-order-receipt-actions .receipt-qr img { inline-size: 4.6rem; }
+    .admin-order-verify-copy { flex: 1 1 8rem; }
+}
+
+@media print {
+    html:has(.admin-order-detail), body:has(.admin-order-detail) { background: #fff; }
+
+    body:has(.admin-order-detail) :is(.workspace-shell, .workspace-main, .workspace-content, .admin-order-detail) {
+        display: block;
+        width: auto;
+        max-width: none;
+        height: auto;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+        background: #fff;
+    }
+
+    body:has(.admin-order-detail) :is(.workspace-sidebar, .workspace-topbar, .workspace-backdrop),
+    .admin-order-detail > :not(.admin-order-sheet),
+    .admin-order-sheet :is(.order-activity-review, .admin-order-receipt-link) { display: none !important; }
+
+    .admin-order-sheet { gap: 5mm; }
+    .admin-order-header, .admin-order-facts, .admin-order-totals, .admin-order-footer,
+    .admin-order-sheet tr { break-inside: avoid; }
+    .admin-order-activity .table-scroll { overflow: visible; }
+    .admin-order-receipt-actions .receipt-qr img { inline-size: 25mm; }
+}
