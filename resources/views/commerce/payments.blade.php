@@ -1,6 +1,5 @@
 @php
   $buyerView = $section === 'account.orders';
-  $canReview = $section === 'dashboard.orders' && auth()->user()->role === 'super_admin';
   $activePayment = $payments->first(fn ($payment) => in_array($payment->status, \App\Models\CommercePayment::ACTIVE, true));
   $rejectedReceipt = $payments->firstWhere('status', 'rejected');
 @endphp
@@ -154,41 +153,4 @@
     </div>
   @endif
 @endif
-@if($payments->isNotEmpty())
-  <div class="panel-head"><h2>Payment activity</h2></div>
-  <div class="table-scroll">
-    <table class="data-table">
-      <thead><tr><th>Method</th><th>Status</th><th>Submitted</th>@if($canReview)<th>Review</th>@endif</tr></thead>
-      <tbody>
-      @foreach($payments as $payment)
-        <tr>
-          <td>{{ $payment->method_name }}</td>
-          <td>{{ \App\Models\CommercePayment::LABELS[$payment->status] }}</td>
-          <td>{{ $payment->created_at->format('d M Y H:i') }}</td>
-          @if($canReview)
-            <td>
-              @if($payment->submitted_reference)<p class="mono">{{ $payment->submitted_reference }}</p>@endif
-              @if($payment->proof_path)<a class="btn subtle compact" href="{{ route('dashboard.orders.payment.proof', [$order->number, $payment->number]) }}">Download payment receipt</a>@endif
-              @if($payment->review_note)<p>{{ $payment->review_note }}</p>@endif
-              @if($payment->status === 'manual_review' && !in_array((int) auth()->id(), [(int) $order->buyer_id, (int) $order->seller_id], true))
-                <details>
-                  <summary>Review transfer</summary>
-                  <p>Verify the amount, currency, recipient, and reference against your bank or wallet records before approving.</p>
-                  <form method="post" action="{{ route('dashboard.orders.payment.review', [$order->number, $payment->number]) }}" class="form-stack">
-                    @csrf @method('PATCH')
-                    <label>Verified reference<input name="verified_reference" maxlength="100"></label>
-                    <label>Verified USD amount<input name="verified_amount" inputmode="decimal" placeholder="0.00"></label>
-                    <label>Review note<input name="note" maxlength="300" required></label>
-                    <button class="btn primary" name="decision" value="approve">Approve transfer</button>
-                    <button class="btn subtle" name="decision" value="reject">Reject transfer</button>
-                  </form>
-                </details>
-              @endif
-            </td>
-          @endif
-        </tr>
-      @endforeach
-      </tbody>
-    </table>
-  </div>
-@endif
+@include('commerce.payment-activity')

@@ -134,6 +134,11 @@ class CommerceWorkspacesTest extends TestCase
             'method_name' => $method->name, 'provider' => 'bank_transfer', 'status' => 'paid',
             'live_mode' => true, 'settlement_reference' => 'verified-fixture-balance',
         ]);
+        $this->actingAs($this->user('super_admin'))->get(route('dashboard.orders.show', $order->reference()))
+            ->assertOk()->assertHeader('Cache-Control', 'no-store, private')->assertSee('Official receipt')
+            ->assertSee('Completed / Paid')->assertSee('Payment activity')->assertSee('USD 12.50')
+            ->assertSee(route('dashboard.orders.receipt', $order->reference()))->assertSee($verification)
+            ->assertSee('data:image/svg+xml;base64,', false)->assertDontSee('verified-fixture-balance');
         $this->actingAs($buyer)->get($legacy)->assertOk()->assertSee($order->reference());
         $this->get($receipt)->assertOk()->assertSee($verification)->assertSee('data:image/svg+xml;base64,', false)
             ->assertSee('Private fixture buyer');

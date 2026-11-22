@@ -3,6 +3,7 @@
 @section('title', 'Order Details')
 @php
   $buyerView = $section === 'account.orders';
+  $adminView = $section === 'dashboard.orders';
   $paymentOpen = $payments->contains(fn ($payment) => in_array($payment->status, \App\Models\CommercePayment::ACTIVE, true));
 @endphp
 @if($buyerView)
@@ -10,17 +11,26 @@
     <link rel="stylesheet" href="{{ asset('css/checkout-payment-methods.css') }}?v=2">
     <link rel="stylesheet" href="{{ asset('css/order-review.css') }}?v=3">
   @endpush
+@elseif($adminView)
+  @push('head')
+    <link rel="stylesheet" href="{{ asset('css/order-receipt.css') }}?v=4">
+    <link rel="stylesheet" href="{{ asset('css/admin-order-detail.css') }}?v=1">
+  @endpush
 @endif
 @section('content')
-<div @class(['container', 'inner-page', 'order-review' => $buyerView])>
+<div @class(['container', 'inner-page', 'order-review' => $buyerView, 'admin-order-detail' => $adminView])>
   @if($buyerView)
     <x-checkout-progress :order="$order" :payment-pending="$paymentOpen"/>
   @endif
-  <div class="page-intro">
-    <a class="btn subtle compact" href="{{ route($section.'.index') }}">Back to orders</a>
-    <h1>{{ $order->listing_title }}</h1>
-    <p class="mono">{{ $order->reference() }}</p>
-  </div>
+  @if($adminView)
+    @include('commerce.admin-order-sheet')
+  @else
+    <div class="page-intro">
+      <a class="btn subtle compact" href="{{ route($section.'.index') }}">Back to orders</a>
+      <h1>{{ $order->listing_title }}</h1>
+      <p class="mono">{{ $order->reference() }}</p>
+    </div>
+  @endif
   @if($buyerView)
     <section class="panel order-review-summary">
       <div class="order-review-summary-head">
@@ -121,6 +131,7 @@
   @if($canRecordStripeRefund)
     @include('commerce.operations.stripe-refund')
   @endif
+  @unless($adminView)
   @php($showOrderPanel = !$buyerView || $payments->isNotEmpty() || $order->receipt_number || $order->status === 'awaiting_payment')
   <section class="panel" @if(!$showOrderPanel) hidden @endif>
     @unless($buyerView)
@@ -174,6 +185,7 @@
       </div>
     @endif
   </section>
+  @endunless
   @if($order->relationLoaded('review') && ($canReview || $order->review))
     @include('commerce.review')
   @endif

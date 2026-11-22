@@ -69,6 +69,9 @@ class CommercePaymentsTest extends TestCase
         $this->actingAs($admin)->patch($toggle, ['enabled' => false])->assertRedirect();
         $this->get($settings)->assertOk()->assertSee('Enable payments');
         $this->get(route('dashboard.orders.payment.proof', [$order->number, $attempt->number]))->assertDownload();
+        $this->get(route('dashboard.orders.show', $order->reference()))->assertOk()
+            ->assertSee('Pending review')->assertSee('Review transfer')->assertSee('Download payment receipt')
+            ->assertDontSee('Official receipt')->assertDontSee('Verify this receipt');
         $this->actingAs($buyer)->get($orderPage)->assertOk()->assertSee('payment receipt is awaiting review');
         $this->get($qr)->assertNotFound();
         $this->post($submit, $receipt)->assertNotFound();
