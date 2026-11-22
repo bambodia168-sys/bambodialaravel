@@ -86,14 +86,17 @@ class CommercePaymentMethodController extends Controller
     {
         abort_unless(config('commerce.enabled'), 404);
         $stripe = $method->provider === 'stripe';
+        $bakong = $method->provider === 'bakong';
         $fields = array_keys(CommerceGatewaySetting::FIELDS[$method->provider] ?? []);
+        $gatewayKeys = $bakong ? [...$fields, 'sandbox', 'live'] : $fields;
         $rules = [
             'available'=>['required', 'boolean'], 'instructions'=>['sometimes', 'nullable', 'string', 'max:2500'],
             'qr'=>['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'remove_qr'=>['nullable', 'boolean'],
-            'gateway' => [$fields ? 'array:'.implode(',', $fields) : 'prohibited'],
+            'gateway' => [$gatewayKeys ? 'array:'.implode(',', $gatewayKeys) : 'prohibited'],
             'stripe_environment' => $stripe ? ['sometimes', 'required', Rule::in(['sandbox', 'live'])] : ['prohibited'],
             'activate_stripe_environment' => $stripe ? ['sometimes', 'boolean'] : ['prohibited'],
+            'bakong_environment' => $bakong ? ['nullable', Rule::in(['sandbox', 'live'])] : ['prohibited'],
         ];
         foreach ($fields as $field) {
             $rules['gateway.'.$field] = ['nullable', 'string', 'max:2048', 'regex:/^[!-~]+$/D'];
@@ -101,19 +104,33 @@ class CommercePaymentMethodController extends Controller
         if ($method->provider === 'aba') {
             $rules['gateway.merchant_id'] = ['nullable', 'string', 'regex:/^[A-Za-z0-9_.-]{1,30}$/D'];
         }
-        if ($method->provider === 'bakong') {
-            $rules['gateway.account_id'] = ['nullable', 'string', 'regex:/^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+$/D', 'max:32'];
-            $rules['gateway.merchant_name'] = ['nullable', 'string', 'regex:/^[ -~]+$/D', 'max:25'];
-            $rules['gateway.merchant_city'] = ['nullable', 'string', 'regex:/^[ -~]+$/D', 'max:15'];
+        $labels = collect(CommerceGatewaySetting::FIELDS[$method->provider] ?? [])
+            ->mapWithKeys(fn (string $label, string $key) => ['gateway.'.$key => $label])->all();
+        if ($bakong) {
+            $bakongRules = [
+                'account_id' => ['nullable', 'string', 'regex:/^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+$/D', 'max:32'],
+                'merchant_name' => ['nullable', 'string', 'regex:/^[ -~]+$/D', 'max:25'],
+                'merchant_city' => ['nullable', 'string', 'regex:/^[ -~]+$/D', 'max:15'],
+                'token' => ['nullable', 'string', 'max:2048', 'regex:/^[!-~]+$/D'],
+            ];
+            foreach (['sandbox' => 'Sandbox', 'live' => 'Production'] as $mode => $label) {
+                $rules['gateway.'.$mode] = ['sometimes', 'array:'.implode(',', $fields)];
+                foreach ($bakongRules as $field => $constraints) {
+                    $rules["gateway.{$mode}.{$field}"] = $constraints;
+                    $labels["gateway.{$mode}.{$field}"] = $label.' '.CommerceGatewaySetting::FIELDS['bakong'][$field];
+                }
+            }
+            foreach ($bakongRules as $field => $constraints) {
+                $rules['gateway.'.$field] = [...$constraints, 'prohibits:gateway.sandbox,gateway.live'];
+            }
         }
-        $values = $request->validate($rules, attributes: collect(CommerceGatewaySetting::FIELDS[$method->provider] ?? [])
-            ->mapWithKeys(fn (string $label, string $key) => ['gateway.'.$key => $label])->all());
+        $values = $request->validate($rules, attributes: $labels);
         abort_if($method->usesGateway() && ($request->hasFile('qr') || array_key_exists('instructions', $values)
             || $request->boolean('remove_qr')), 422);
         $path = $request->file('qr')?->store('commerce/payment-qr', 'local');
         abort_if($path === false, 503);
         try {
-            $previous = DB::transaction(function () use ($method, $values, $path, $request, $stripe): ?string {
+            $previous = DB::transaction(function () use ($method, $values, $path, $request, $stripe, $bakong): ?string {
                 $locked = CommercePaymentMethod::query()->lockForUpdate()->findOrFail($method->id);
                 $old = $locked->qr_path;
                 $locked->fill(['available'=>$values['available']]);
@@ -126,11 +143,18 @@ class CommercePaymentMethodController extends Controller
                 $currentMode = CommerceGatewaySetting::checkoutIsLive($locked->provider);
                 $credentialsMode = $stripe && array_key_exists('stripe_environment', $values)
                     ? $values['stripe_environment'] === 'live' : $currentMode;
-                $credentialsChanged = $locked->usesGateway()
-                    && $this->saveCredentials($locked->provider, $credentialsMode, $values['gateway'] ?? []);
-                $activationChanged = $stripe && ($values['activate_stripe_environment'] ?? false)
-                    && $this->activateStripeEnvironment($currentMode, $credentialsMode);
-                if ($locked->available && (! $stripe || $locked->isDirty('available'))
+                $gateway = $values['gateway'] ?? [];
+                $credentialsChanged = $bakong
+                    ? $this->saveBakongCredentials($currentMode, $gateway)
+                    : $locked->usesGateway() && $this->saveCredentials($locked->provider, $credentialsMode, $gateway);
+                $activationChanged = match (true) {
+                    $stripe && ($values['activate_stripe_environment'] ?? false)
+                        => $this->activateEnvironment('stripe', $currentMode, $credentialsMode),
+                    $bakong && isset($values['bakong_environment'])
+                        => $this->activateEnvironment('bakong', $currentMode, $values['bakong_environment'] === 'live'),
+                    default => false,
+                };
+                if ($locked->available && ((! $stripe && ! $bakong) || $locked->isDirty('available'))
                     && CommerceCollection::enabled() && ! $locked->availableForCheckout()) {
                     throw ValidationException::withMessages(['available' => 'Configure the method before making it available.']);
                 }
@@ -154,22 +178,37 @@ class CommercePaymentMethodController extends Controller
         return back()->with('status', 'Payment method settings saved.');
     }
 
-    private function activateStripeEnvironment(bool $currentMode, bool $selectedMode): bool
+    private function saveBakongCredentials(bool $currentMode, array $input): bool
     {
-        if (! CommerceGateway::ready('stripe', $selectedMode)) {
+        if (! array_key_exists('sandbox', $input) && ! array_key_exists('live', $input)) {
+            return $this->saveCredentials('bakong', $currentMode, $input);
+        }
+
+        $sandboxChanged = $this->saveCredentials('bakong', false, $input['sandbox'] ?? []);
+        $productionChanged = $this->saveCredentials('bakong', true, $input['live'] ?? []);
+
+        return $sandboxChanged || $productionChanged;
+    }
+
+    private function activateEnvironment(string $provider, bool $currentMode, bool $selectedMode): bool
+    {
+        $field = $provider.'_environment';
+        if (! CommerceGateway::ready($provider, $selectedMode)) {
             throw ValidationException::withMessages([
-                'stripe_environment' => 'Save the API secret key and webhook signing secret for this environment before activating it.',
+                $field => $provider === 'stripe'
+                    ? 'Save the API secret key and webhook signing secret for this environment before activating it.'
+                    : 'Save the Bakong recipient details and API token for this environment before activating it.',
             ]);
         }
-        if ($currentMode !== $selectedMode && CommercePayment::query()->where('provider', 'stripe')
+        if ($currentMode !== $selectedMode && CommercePayment::query()->where('provider', $provider)
             ->whereIn('status', ['starting', 'checkout_open'])->exists()) {
             throw ValidationException::withMessages([
-                'stripe_environment' => 'Resolve open Stripe checkouts before switching environments.',
+                $field => 'Resolve open '.CommercePaymentMethod::PROVIDERS[$provider].' checkouts before switching environments.',
             ]);
         }
 
         $setting = FeatureFlag::query()->updateOrCreate(
-            ['key' => CommerceGatewaySetting::STRIPE_LIVE_FLAG], ['enabled' => $selectedMode],
+            ['key' => CommerceGatewaySetting::ENVIRONMENT_FLAGS[$provider]], ['enabled' => $selectedMode],
         );
 
         return $setting->wasRecentlyCreated || $setting->wasChanged('enabled');
