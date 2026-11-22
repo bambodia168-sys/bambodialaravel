@@ -7,8 +7,8 @@
 @endphp
 @if($buyerView)
   @push('head')
-    <link rel="stylesheet" href="{{ asset('css/checkout-payment-methods.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('css/order-review.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('css/checkout-payment-methods.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('css/order-review.css') }}?v=2">
   @endpush
 @endif
 @section('content')

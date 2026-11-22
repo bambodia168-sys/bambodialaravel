@@ -12,6 +12,7 @@ use App\Support\CommerceGateway;
 use App\Support\CommerceCollection;
 use App\Support\CommerceQrGateway;
 use App\Support\OrderFulfillment;
+use BaconQrCode\Common\ErrorCorrectionLevel;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -146,7 +147,7 @@ class CommercePaymentController extends Controller
         abort_unless($attempt->dynamicQr() && $attempt->qrVisible() && ($attempt->live_mode || ! app()->environment('production')), 404);
         $writer = new Writer(new ImageRenderer(new RendererStyle(288, 4), new SvgImageBackEnd));
 
-        return response($writer->writeString($attempt->qr_payload), 200, [
+        return response($writer->writeString($attempt->qr_payload, ecLevel: ErrorCorrectionLevel::H()), 200, [
             'Content-Type' => 'image/svg+xml',
             'Cache-Control' => 'private, no-store',
             'Content-Security-Policy' => "default-src 'none'; sandbox",

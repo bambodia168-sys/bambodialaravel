@@ -30,7 +30,8 @@ if (paymentForm) {
                 return;
             }
             if (!payment.qr_visible) {
-                document.querySelector('[data-order-payment-qr]')?.remove();
+                const code = document.querySelector('[data-order-payment-code]') ?? document.querySelector('[data-order-payment-qr]');
+                code?.remove();
                 document.querySelector('[data-payment-qr-hint]')?.remove();
             }
             if (payment.collection_paused) {
