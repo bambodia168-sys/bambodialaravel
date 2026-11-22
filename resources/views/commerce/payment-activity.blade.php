@@ -1,6 +1,6 @@
 @php
-  $activityOnOrderSheet = $section === 'dashboard.orders';
-  $canReview = $activityOnOrderSheet && auth()->user()->role === 'super_admin';
+  $activityOnOrderSheet = $showOrderSheet;
+  $canReview = $section === 'dashboard.orders' && auth()->user()->role === 'super_admin';
   $canReviewTransfer = $canReview && !in_array((int) auth()->id(), [(int) $order->buyer_id, (int) $order->seller_id], true);
   $showReviewColumn = $canReview && $payments->contains(fn ($payment) => $payment->submitted_reference || $payment->proof_path
       || $payment->review_note || ($canReviewTransfer && $payment->status === 'manual_review'));

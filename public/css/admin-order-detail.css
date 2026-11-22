@@ -1,10 +1,12 @@
-.admin-order-detail > .panel,
+.order-sheet-page > .panel,
+.order-sheet-page > .checkout-progress,
 .admin-order-toolbar {
     width: min(100%, 210mm);
     margin-inline: auto;
 }
 
-.admin-order-detail > .panel { margin-block: 1rem 0; }
+.order-sheet-page > .panel { margin-block: 1rem 0; }
+.order-sheet-page > .panel + .admin-order-toolbar { margin-top: 1rem; }
 
 .admin-order-toolbar {
     display: flex;
@@ -117,9 +119,9 @@
 }
 
 @media print {
-    html:has(.admin-order-detail), body:has(.admin-order-detail) { background: #fff; }
+    html:has(.order-sheet-page), body:has(.order-sheet-page) { background: #fff; }
 
-    body:has(.admin-order-detail) :is(.workspace-shell, .workspace-main, .workspace-content, .admin-order-detail) {
+    body:has(.order-sheet-page) :is(.workspace-shell, .workspace-main, .workspace-content, .order-sheet-page) {
         display: block;
         width: auto;
         max-width: none;
@@ -131,8 +133,8 @@
         background: #fff;
     }
 
-    body:has(.admin-order-detail) :is(.workspace-sidebar, .workspace-topbar, .workspace-backdrop),
-    .admin-order-detail > :not(.admin-order-sheet),
+    body:has(.order-sheet-page) :is(.workspace-sidebar, .workspace-topbar, .workspace-backdrop),
+    .order-sheet-page > :not(.admin-order-sheet),
     .admin-order-sheet :is(.order-activity-review, .admin-order-receipt-link) { display: none !important; }
 
     .admin-order-sheet { gap: 5mm; }

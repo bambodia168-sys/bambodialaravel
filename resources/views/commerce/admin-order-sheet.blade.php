@@ -1,5 +1,4 @@
 @php
-  $hasReceipt = $order->receipt_number && in_array($order->status, ['completed', 'refunded'], true);
   $isPaid = $receiptStatus === 'Paid';
   $attempt = in_array($receiptStatus, ['Paid', 'Refunded'], true)
       ? $payments->first(fn ($payment) => $payment->status === 'paid' && $payment->settlement_reference
@@ -29,7 +28,7 @@
   };
 @endphp
 <div class="admin-order-toolbar">
-  <a class="btn subtle compact" href="{{ route('dashboard.orders.index') }}"><x-icon name="chevron-left" size="16"/> Back to orders</a>
+  <a class="btn subtle compact" href="{{ route($section.'.index') }}"><x-icon name="chevron-left" size="16"/> Back to orders</a>
   <button type="button" class="btn subtle compact" data-print-page>Print order</button>
 </div>
 <article class="receipt-paper admin-order-sheet" aria-labelledby="admin-order-heading">
@@ -98,7 +97,7 @@
             <p>Scan to confirm the order and payment status.</p>
           </div>
         @endif
-        <a class="btn primary admin-order-receipt-link" href="{{ route('dashboard.orders.receipt', $order->reference()) }}">View receipt</a>
+        <a class="btn primary admin-order-receipt-link" href="{{ route($section.'.receipt', $order->reference()) }}">View receipt</a>
       </div>
       <p class="admin-order-issued">Issued electronically by {{ \App\Models\SiteSetting::setting('identity.name') }}.</p>
     </footer>

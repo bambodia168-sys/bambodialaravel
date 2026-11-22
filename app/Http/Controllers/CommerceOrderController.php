@@ -55,9 +55,8 @@ class CommerceOrderController extends Controller
     public function show(Request $request, string $number): Response
     {
         [$orders, $section, $workspace] = $this->workspace($request);
-        $adminView = $section === 'dashboard.orders';
         $order = $orders->matchingReference($number)
-            ->when($adminView, fn (Builder $query) => $query->withExists('paidAttempt'))->firstOrFail();
+            ->withExists('paidAttempt')->firstOrFail();
         if ($section !== 'dashboard.orders' && in_array($order->status, ['completed', 'refunded'], true)) {
             $order->load('serviceInquiry');
             if ($section === 'account.orders') {
@@ -83,13 +82,15 @@ class CommerceOrderController extends Controller
             $order->load('review');
         }
         $canReview = $section === 'account.orders' && $order->review === null && $order->isReviewEligible();
-        $receiptStatus = $adminView ? OrderReceipt::status($order) : null;
+        $hasReceipt = $order->receipt_number !== null && in_array($order->status, ['completed', 'refunded'], true);
+        $showOrderSheet = $section !== 'account.orders' || $hasReceipt;
+        $receiptStatus = $hasReceipt ? OrderReceipt::status($order) : null;
         $verificationUrl = $receiptStatus ? OrderReceipt::verificationUrl($order) : null;
         $verificationQr = $verificationUrl ? OrderReceipt::qrSource($verificationUrl) : null;
 
         return response()->view('commerce.show', compact(
             'order', 'section', 'workspace', 'methods', 'payments', 'canReview', 'collectingPayments', 'canRecordStripeRefund',
-            'receiptStatus', 'verificationUrl', 'verificationQr',
+            'hasReceipt', 'showOrderSheet', 'receiptStatus', 'verificationUrl', 'verificationQr',
         ))
             ->header('Cache-Control', 'private, no-store');
     }
