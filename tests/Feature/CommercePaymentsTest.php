@@ -945,8 +945,13 @@ Private installation report.
         ])->assertRedirect();
         $payload = '00020101021230510016abaakhppxxx@abaa01151250212145328460208ABA Bank520459875303840540525.005802KH5925OLD ME 25 CHAR WINNER IP26010Phnom Penh62570115MC-REF-KH-1500068340010PAYWAY@ABA0208104514230604A2279934001317598053453370113175980552533763043138';
         $verified = 24;
-        Http::fake(function ($request) use ($payload, &$verified) {
+        $billReferences = [];
+        Http::fake(function ($request) use ($payload, &$verified, &$billReferences) {
             if (str_ends_with($request->url(), '/generate-qr')) {
+                $billReferences[] = $request['tran_id'];
+                if (count($billReferences) === 1) {
+                    return Http::response([], 502);
+                }
                 return Http::response(['status'=>['code'=>'0'], 'currency'=>'USD', 'amount'=>25, 'qrString'=>$payload]);
             }
 
@@ -954,10 +959,16 @@ Private installation report.
                 'payment_status'=>'APPROVED', 'payment_status_code'=>0, 'payment_currency'=>'USD', 'payment_amount'=>$verified, 'refund_amount'=>0,
             ]]);
         });
+        $page = route('account.orders.show', $order->number);
+        $this->actingAs($buyer)->patch(route('account.orders.payment-method', $order->number), ['payment_method'=>$method->id])
+            ->assertRedirect($page)->assertSessionHas('error');
+        $this->get($page)->assertOk()->assertSee('Retry QR generation');
+        $this->assertSame('starting', $order->payments()->sole()->status);
         $start = route('account.orders.payment.start', $order->number);
-        $this->actingAs($buyer)->post($start, ['method'=>$method->id])->assertRedirect();
+        $this->post($start, ['method'=>$method->id])->assertRedirect();
         $attempt = $order->payments()->sole();
-        $this->get(route('account.orders.show', $order->number))->assertOk()->assertSee('data-order-payment-code', false)
+        $this->assertSame([$attempt->remote_id, $attempt->remote_id], $billReferences);
+        $this->get($page)->assertOk()->assertSee('data-order-payment-code', false)
             ->assertSee('OLD ME 25 CHAR WINNER IP');
         Http::assertSent(fn ($request) => $request->url() === 'https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/generate-qr'
             && $request['tran_id'] === $attempt->remote_id
