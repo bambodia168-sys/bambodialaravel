@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\SupportTicket;
 use App\Models\MarketplaceOrder;
 use App\Models\AuditEvent;
+use App\Support\OrderReference;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,12 +27,12 @@ class SupportController extends Controller
         $data = $request->validate([
             'subject' => ['required', 'string', 'min:5', 'max:180'],
             'message' => ['required', 'string', 'min:10', 'max:10000'],
-            'order_number' => ['nullable', 'uuid'],
+            'order_number' => ['nullable', 'string', 'regex:/^(?:'.OrderReference::ROUTE.')$/D'],
         ]);
 
         $ticket = DB::transaction(function () use ($request, $data): SupportTicket {
             $order = isset($data['order_number'])
-                ? MarketplaceOrder::query()->where('number', $data['order_number'])
+                ? MarketplaceOrder::query()->matchingReference($data['order_number'])
                     ->where(fn ($query) => $query->where('buyer_id', $request->user()->id)
                         ->orWhere('seller_id', $request->user()->id))
                     ->where('status', 'completed')->whereHas('paidAttempt')->whereHas('serviceInquiry')->firstOrFail()

@@ -36,9 +36,9 @@ final class EmailReminders
                 ->chunkById(100, function ($orders): void {
                     foreach ($orders as $order) {
                         EmailOutbox::queue('commerce.unpaid_order', $order->buyer_id, $order->number, [
-                            'source_id' => $order->id, 'order_number' => $order->number, 'title' => $order->listing_title,
+                            'source_id' => $order->id, 'order_number' => $order->reference(), 'title' => $order->listing_title,
                             'amount' => $order->currency.' '.$order->total, 'payment_method' => $order->payment_method,
-                        ], route('account.orders.show', $order->number, false));
+                        ], route('account.orders.show', $order->reference(), false));
                     }
                 });
         }

@@ -278,9 +278,9 @@ class CommercePaymentsTest extends TestCase
             'proof' => UploadedFile::fake()->image('proof.png'),
         ])->assertRedirect($orderUrl);
         $this->actingAs($seller)->get(route('studio.commerce-operations'))
-            ->assertOk()->assertDontSee('Receipts awaiting review')->assertDontSee($order->number);
+            ->assertOk()->assertDontSee('Receipts awaiting review')->assertDontSee($order->reference());
         $this->actingAs($admin)->get(route('dashboard.commerce-operations'))
-            ->assertOk()->assertSee('Receipts awaiting review')->assertSee($order->number);
+            ->assertOk()->assertSee('Receipts awaiting review')->assertSee($order->reference());
         $this->patch(route('dashboard.orders.payment.review', [$order->number, $order->payments()->sole()->number]), [
             'decision' => 'approve', 'verified_reference' => 'SERVICE-TRANSFER',
             'verified_amount' => '25.00', 'note' => 'Verified against the statement.',
@@ -347,11 +347,11 @@ Private installation report.
         $this->patch(route('dashboard.orders.review.visibility', $order->number), ['visible' => false])->assertRedirect();
         $this->get($listingUrl)->assertOk()->assertDontSee('Installation was completed as agreed.');
 
-        $ticket = ['order_number' => $order->number, 'subject' => 'Delivery support', 'message' => 'Please help with access to the final delivery.'];
+        $ticket = ['order_number' => $order->reference(), 'subject' => 'Delivery support', 'message' => 'Please help with access to the final delivery.'];
         $this->actingAs($outsider)->post(route('support.store'), $ticket)->assertNotFound();
         $response = $this->actingAs($buyer)->post(route('support.store'), $ticket)->assertRedirect();
         $this->assertDatabaseHas('support_tickets', ['user_id' => $buyer->id, 'context_type' => 'order', 'context_id' => $order->id]);
-        $this->get($response->headers->get('Location'))->assertOk()->assertSee($order->number);
+        $this->get($response->headers->get('Location'))->assertOk()->assertSee($order->reference());
     }
 
     public function test_product_checkout_rejects_missing_download_at_entry_and_submission(): void

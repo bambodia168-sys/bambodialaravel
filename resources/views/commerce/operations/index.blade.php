@@ -19,10 +19,10 @@
           <tbody>
             @foreach($pendingReceipts as $pending)
               <tr>
-                <td><strong>{{ $pending->listing_title }}</strong><div class="text-muted mono">{{ $pending->number }}</div></td>
+                <td><strong>{{ $pending->listing_title }}</strong><div class="text-muted mono">{{ $pending->reference() }}</div></td>
                 <td>{{ $pending->currency }} {{ $pending->total }}</td>
                 <td>{{ $pending->payments->first()->created_at->toDateTimeString() }} UTC</td>
-                <td><a class="btn subtle compact" href="{{ route('dashboard.orders.show', $pending->number) }}">Review receipt</a></td>
+                <td><a class="btn subtle compact" href="{{ route('dashboard.orders.show', $pending->reference()) }}">Review receipt</a></td>
               </tr>
             @endforeach
           </tbody>
@@ -89,8 +89,8 @@
           @php($record = \App\Support\CommerceSettlementReport::record($order))
           <tr>
             <td>
-              <a class="listing-title-link" href="{{ route($creator ? 'studio.orders.show' : 'dashboard.orders.show', $order->number) }}">{{ $order->listing_title }}</a>
-              <div class="text-muted mono">{{ $order->number }}</div>
+              <a class="listing-title-link" href="{{ route($creator ? 'studio.orders.show' : 'dashboard.orders.show', $order->reference()) }}">{{ $order->listing_title }}</a>
+              <div class="text-muted mono">{{ $order->reference() }}</div>
             </td>
             <td>{{ $order->completed_at?->toDateString() ?? '—' }}</td>
             <td>{{ $order->currency }} {{ $order->total }}</td>

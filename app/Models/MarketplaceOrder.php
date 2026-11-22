@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\OrderReference;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -26,6 +27,27 @@ class MarketplaceOrder extends Model
     protected function casts(): array
     {
         return ['total' => 'decimal:2', 'completed_at' => 'datetime', 'cancelled_at' => 'datetime'];
+    }
+
+    protected function performInsert(Builder $query)
+    {
+        return OrderReference::assign(function (string $reference) use ($query): bool {
+            $this->public_reference = $reference;
+
+            return $query->withSavepointIfNeeded(fn () => parent::performInsert($query));
+        });
+    }
+
+    public function reference(): string
+    {
+        return $this->public_reference ?? $this->number;
+    }
+
+    public function scopeMatchingReference(Builder $orders, string $reference): Builder
+    {
+        $column = preg_match('/^'.OrderReference::DIGITS.'$/D', $reference) ? 'public_reference' : 'number';
+
+        return $orders->where($column, $reference);
     }
 
     public function payments(): HasMany

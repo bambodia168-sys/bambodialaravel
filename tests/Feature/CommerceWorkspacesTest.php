@@ -8,8 +8,10 @@ use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
 use App\Models\MediaAsset;
 use App\Models\User;
+use App\Support\OrderReceipt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class CommerceWorkspacesTest extends TestCase
@@ -89,6 +91,81 @@ class CommerceWorkspacesTest extends TestCase
         $this->assertSame('cancelled', $order->refresh()->status);
         $this->get(route('account.orders.index', ['status' => 'cancelled', 'q' => 'Original']))
             ->assertOk()->assertSee('Original listing');
+    }
+
+    public function test_a_receipt_verifies_publicly_with_its_qr_token_and_reports_a_refund(): void
+    {
+        config(['commerce.enabled' => true]);
+        $buyer = $this->user('customer');
+        $seller = $this->user('freelancer');
+        $listing = $this->listing($seller, '12.50');
+        $method = CommercePaymentMethod::query()->create(['name' => 'Test bank transfer']);
+        $order = MarketplaceOrder::query()->create([
+            'number' => (string) Str::uuid(), 'request_key' => (string) Str::uuid(),
+            'buyer_id' => $buyer->id, 'seller_id' => $seller->id, 'marketplace_listing_id' => $listing->id,
+            'listing_title' => $listing->title, 'buyer_name' => 'Private fixture buyer', 'seller_name' => 'Private fixture seller',
+            'currency' => 'USD', 'total' => '12.50', 'status' => 'completed',
+            'payment_method' => $method->name, 'completed_at' => now(), 'receipt_number' => (string) Str::uuid(),
+        ]);
+        $this->assertMatchesRegularExpression('/^[1-9][0-9]{9}$/', $order->reference());
+        $legacy = route('account.orders.receipt', $order->number);
+        $receipt = route('account.orders.receipt', $order->reference());
+        $verification = OrderReceipt::verificationUrl($order);
+        $this->get($verification)->assertNotFound();
+
+        $order->payments()->create([
+            'number' => (string) Str::uuid(), 'commerce_payment_method_id' => $method->id,
+            'method_name' => $method->name, 'provider' => 'bank_transfer', 'status' => 'paid',
+            'live_mode' => true, 'settlement_reference' => 'verified-fixture-balance',
+        ]);
+        $this->actingAs($buyer)->get($legacy)->assertOk()->assertSee($order->reference());
+        $this->get($receipt)->assertOk()->assertSee($verification)->assertSee('data:image/svg+xml;base64,', false)
+            ->assertSee('Private fixture buyer');
+        $this->get(route('account.orders.index', ['q' => $order->reference()]))->assertOk()->assertSee($listing->title);
+        $this->actingAs($this->user('customer'))->get($receipt)->assertNotFound();
+        auth()->logout();
+
+        $this->get($verification)->assertOk()->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
+            ->assertHeader('Cache-Control', 'no-store, private')->assertSee('Receipt verified')
+            ->assertSee($order->reference())->assertSee('USD 12.50')
+            ->assertDontSee('Private fixture')->assertDontSee($listing->title)
+            ->assertDontSee($order->number)->assertDontSee($order->receipt_number)
+            ->assertDontSee('verified-fixture-balance');
+        $this->get(route('commerce.receipts.verify', ['reference' => $order->reference(), 'token' => str_repeat('0', 32)]))
+            ->assertNotFound();
+
+        $order->update(['status' => 'refunded']);
+        $this->get($verification)->assertOk()->assertSee('Refunded')->assertSee('Total refunded')->assertDontSee('Total paid');
+        $order->update(['status' => 'cancelled']);
+        $this->get($verification)->assertNotFound();
+    }
+
+    public function test_order_reference_backfill_keeps_legacy_uuids_and_unique_references(): void
+    {
+        $buyer = $this->user('customer');
+        $seller = $this->user('freelancer');
+        $listing = $this->listing($seller, '0.00');
+        $legacy = [];
+        for ($i = 0; $i < 3; $i++) {
+            $legacy[] = (string) Str::uuid();
+            DB::table('marketplace_orders')->insert([
+                'number' => end($legacy), 'request_key' => (string) Str::uuid(),
+                'buyer_id' => $buyer->id, 'seller_id' => $seller->id, 'marketplace_listing_id' => $listing->id,
+                'listing_title' => $listing->title, 'buyer_name' => $buyer->name, 'seller_name' => $seller->name,
+                'currency' => 'USD', 'total' => '0.00', 'status' => 'completed',
+            ]);
+        }
+
+        $migration = require database_path('migrations/2026_11_22_150000_add_marketplace_order_public_reference.php');
+        $migration->up();
+        $references = MarketplaceOrder::query()->orderBy('id')->pluck('public_reference', 'number');
+        $this->assertSame($legacy, $references->keys()->all());
+        $this->assertCount(3, $references->unique());
+        foreach ($references as $reference) {
+            $this->assertMatchesRegularExpression('/^[1-9][0-9]{9}$/', $reference);
+        }
+        $migration->up();
+        $this->assertSame($references->all(), MarketplaceOrder::query()->orderBy('id')->pluck('public_reference', 'number')->all());
     }
 
     public function test_super_admin_can_register_and_toggle_payment_methods(): void

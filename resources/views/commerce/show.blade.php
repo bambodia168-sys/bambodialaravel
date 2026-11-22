@@ -19,7 +19,7 @@
   <div class="page-intro">
     <a class="btn subtle compact" href="{{ route($section.'.index') }}">Back to orders</a>
     <h1>{{ $order->listing_title }}</h1>
-    <p class="mono">{{ $order->number }}</p>
+    <p class="mono">{{ $order->reference() }}</p>
   </div>
   @if($buyerView)
     <section class="panel order-review-summary">
@@ -164,7 +164,7 @@
     @if($order->receipt_number || (!$paymentOpen && $section === 'account.orders' && $order->status === 'awaiting_payment'))
       <div class="panel-head">
         @if($order->receipt_number)
-          <a class="btn primary" href="{{ route($section.'.receipt', $order->number) }}">View receipt</a>
+          <a class="btn primary" href="{{ route($section.'.receipt', $order->reference()) }}">View receipt</a>
         @else
           <form method="post" action="{{ route('account.orders.cancel', $order->number) }}">
             @csrf @method('PATCH')

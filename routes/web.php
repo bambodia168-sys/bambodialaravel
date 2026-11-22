@@ -100,6 +100,7 @@ use App\Http\Controllers\Dashboard\FeatureManagerController;
 use App\Http\Controllers\Dashboard\ContentManagerController;
 use App\Http\Controllers\Dashboard\PostManagerController;
 use App\Http\Controllers\Dashboard\PolicyManagerController;
+use App\Support\OrderReference;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class,'index'])->name('home');
@@ -108,6 +109,9 @@ Route::get('/creators/{creator}', [CreatorProfileController::class,'show'])
     ->where('creator','[0-9]{8}')->name('creators.show');
 Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 Route::get('/site.webmanifest', SiteManifestController::class)->name('site.manifest');
+Route::get('/receipts/verify/{reference}/{token}', [CommerceOrderController::class, 'verifyReceipt'])
+    ->where(['reference' => OrderReference::DIGITS, 'token' => '[0-9a-f]{32}'])
+    ->middleware('throttle:30,1,receipt-verification:')->name('commerce.receipts.verify');
 Route::get('/email/unsubscribe/{user}', [MarketingPreferenceController::class, 'confirm'])
     ->where('user', '[0-9]{8}')->middleware('signed:relative')->name('marketing.unsubscribe');
 Route::post('/email/unsubscribe/{user}', [MarketingPreferenceController::class, 'unsubscribe'])
@@ -252,11 +256,11 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/new/{listing}', [CommerceOrderController::class, 'create'])->where('listing', '[0-9]{9}')->name('create');
         Route::post('/new/{listing}', [CommerceOrderController::class, 'store'])->where('listing', '[0-9]{9}')
             ->middleware('throttle:10,1,commerce-order-create:')->name('store');
-        Route::get('/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('show');
+        Route::get('/{number}', [CommerceOrderController::class, 'show'])->where('number', OrderReference::ROUTE)->name('show');
         Route::post('/{number}/review', [MarketplaceOrderReviewController::class, 'store'])->whereUuid('number')
             ->middleware('throttle:10,1,commerce-review-create:')->name('review.store');
-        Route::get('/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('receipt');
-        Route::post('/{number}/receipt/email', [CommerceOrderController::class, 'emailReceipt'])->whereUuid('number')
+        Route::get('/{number}/receipt', [CommerceOrderController::class, 'receipt'])->where('number', OrderReference::ROUTE)->name('receipt');
+        Route::post('/{number}/receipt/email', [CommerceOrderController::class, 'emailReceipt'])->where('number', OrderReference::ROUTE)
             ->middleware('throttle:5,1,commerce-email-receipt:')->name('receipt.email');
         Route::patch('/{number}/cancel', [CommerceOrderController::class, 'cancel'])->whereUuid('number')
             ->middleware('throttle:10,1')->name('cancel');
@@ -405,8 +409,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/creator/apply', [CreatorApplicationController::class, 'submit'])->name('creator.apply.store')->middleware('throttle:3,1');
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
         Route::get('/orders', [CommerceOrderController::class, 'index'])->name('studio.orders.index');
-        Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('studio.orders.show');
-        Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('studio.orders.receipt');
+        Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->where('number', OrderReference::ROUTE)->name('studio.orders.show');
+        Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->where('number', OrderReference::ROUTE)->name('studio.orders.receipt');
         Route::get('/sales-settlements', [CommerceSettlementController::class, 'index'])->name('studio.commerce-operations');
         Route::get('/sales-settlements/statement.csv', [CommerceSettlementController::class, 'statement'])
             ->middleware('throttle:10,1')->name('studio.commerce-operations.statement');
@@ -439,8 +443,8 @@ Route::middleware('auth')->group(function (): void {
     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
         Route::middleware('capability:commerce_orders')->group(function (): void {
             Route::get('/orders', [CommerceOrderController::class, 'index'])->name('dashboard.orders.index');
-            Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->whereUuid('number')->name('dashboard.orders.show');
-            Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->whereUuid('number')->name('dashboard.orders.receipt');
+            Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->where('number', OrderReference::ROUTE)->name('dashboard.orders.show');
+            Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->where('number', OrderReference::ROUTE)->name('dashboard.orders.receipt');
             Route::patch('/orders/{number}/review', [MarketplaceOrderReviewController::class, 'visibility'])->whereUuid('number')
                 ->middleware(['capability:marketplace_review', 'throttle:15,1'])->name('dashboard.orders.review.visibility');
         });
