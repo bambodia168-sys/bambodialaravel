@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class CommercePaymentMethod extends Model
 {
     public const PROVIDERS = [
-        'stripe'=>'Stripe', 'paypal'=>'PayPal', 'bank_transfer'=>'Bank Transfer', 'khqr'=>'KHQR',
+        'stripe'=>'Stripe', 'paypal'=>'PayPal', 'baray'=>'Baray', 'bank_transfer'=>'Bank Transfer', 'khqr'=>'KHQR',
         'aba'=>'ABA', 'bakong'=>'Bakong', 'wing'=>'Wing', 'other'=>'Other manual method',
     ];
 
@@ -20,7 +20,7 @@ class CommercePaymentMethod extends Model
 
     public function automatic(): bool
     {
-        return in_array($this->provider, ['stripe', 'paypal'], true);
+        return in_array($this->provider, ['stripe', 'paypal', 'baray'], true);
     }
 
     public function dynamicQr(): bool
