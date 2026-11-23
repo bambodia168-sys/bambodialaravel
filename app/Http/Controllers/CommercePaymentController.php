@@ -11,6 +11,7 @@ use App\Support\CommerceGateway;
 use App\Support\CommerceCollection;
 use App\Support\CommerceQrGateway;
 use App\Support\CommercePaymentStart;
+use App\Support\BarayGateway;
 use App\Support\OrderFulfillment;
 use BaconQrCode\Common\ErrorCorrectionLevel;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -153,6 +154,22 @@ class CommercePaymentController extends Controller
     public function webhook(Request $request, string $provider): Response
     {
         $this->enabled();
+        if ($provider === 'baray') {
+            $payment = app(BarayGateway::class)->confirmedPayment($request);
+            DB::transaction(function () use ($payment): void {
+                $order = MarketplaceOrder::query()->lockForUpdate()->findOrFail($payment->marketplace_order_id);
+                $current = $order->payments()->lockForUpdate()->findOrFail($payment->id);
+                if ($current->status === 'paid' && $current->settlement_reference !== null) {
+                    $this->fulfillGatewayPurchase($order);
+                    return;
+                }
+                abort_unless($current->status === 'checkout_open' && filled($current->remote_id), 409);
+                $this->awaiting($order);
+                $this->settle($order, $current, $current->remote_id);
+                $this->fulfillGatewayPurchase($order);
+            }, 3);
+            return response()->noContent();
+        }
         $event = $this->gateway->webhook($request, $provider);
         if ($event !== null) {
             [$remote, $live] = $event;
@@ -327,7 +344,7 @@ class CommercePaymentController extends Controller
     private function settle(MarketplaceOrder $order, CommercePayment $payment, ?string $reference): void
     {
         abort_unless(is_string($reference) && preg_match('/^[A-Za-z0-9_.-]{1,200}$/D', $reference), 409);
-        $provider = $payment->dynamicQr() || in_array($payment->provider, ['stripe','paypal'], true) ? $payment->provider : 'manual';
+        $provider = $payment->dynamicQr() || in_array($payment->provider, ['stripe','paypal','baray'], true) ? $payment->provider : 'manual';
         $reference = $provider.':'.$reference;
         try {
             $payment->update(['status'=>'paid', 'settlement_reference'=>$reference]);
