@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
+use App\Models\FeatureFlag;
+use App\Models\PolicyPublication;
 use App\Models\SocialLoginIdentity;
 use App\Models\SocialLoginProvider;
 use App\Models\User;
@@ -71,9 +73,29 @@ final class SocialAuthController extends Controller
         // identities were introduced, but never trust an unverified email or
         // use an email match to relink a different Google subject.
         if ($provider === 'google') {
-            $user = $this->recoverVerifiedGoogleAccount($request, $profile, $subject);
-            if ($user) {
-                return SignIn::external($request, $user, $provider);
+            $verifiedEmail = $this->verifiedGoogleEmail($profile);
+            if ($verifiedEmail !== null) {
+                $user = $this->recoverVerifiedGoogleAccount($request, $profile, $subject);
+                if ($user) {
+                    return SignIn::external($request, $user, $provider);
+                }
+
+                // A Google identity with no Bambodia account is a new
+                // registration, not an account-recovery operation. Require
+                // explicit acceptance of the current registration terms.
+                $existing = User::query()->whereRaw('LOWER(email) = ?', [$verifiedEmail])->exists();
+                if (! $existing && FeatureFlag::isEnabled('registration')
+                    && PolicyPublication::currentRegistrationTerms() !== null) {
+                    $name = trim((string) $profile->getName());
+                    $request->session()->put('social_google.registration', [
+                        'email' => $verifiedEmail,
+                        'name' => $name !== '' ? mb_substr($name, 0, 120) : 'Bambodia Member',
+                        'subject_hash' => $subject,
+                        'at' => now()->timestamp,
+                    ]);
+
+                    return redirect()->route('social.google.registration');
+                }
             }
         }
 
@@ -99,18 +121,8 @@ final class SocialAuthController extends Controller
      */
     private function recoverVerifiedGoogleAccount(Request $request, SocialiteUser $profile, string $subject): ?User
     {
-        $email = $profile->getEmail();
-        $raw = $profile->user;
-
-        if (! is_string($email) || ! is_array($raw)
-            || ($raw['email_verified'] ?? false) !== true
-            || ! is_string($raw['email'] ?? null)
-            || strtolower(trim($raw['email'])) !== strtolower(trim($email))) {
-            return null;
-        }
-
-        $email = strtolower(trim($email));
-        if (! preg_match('/\\A[^@\\s]+@(?:gmail|googlemail)\\.com\\z/D', $email)) {
+        $email = $this->verifiedGoogleEmail($profile);
+        if ($email === null || ! preg_match('/\\A[^@\\s]+@(?:gmail|googlemail)\\.com\\z/D', $email)) {
             return null;
         }
 
@@ -144,9 +156,32 @@ final class SocialAuthController extends Controller
         }
     }
 
+    /**
+     * Google explicitly verified this email. This alone does not authorize
+     * attaching an existing Bambodia account on custom domains.
+     */
+    private function verifiedGoogleEmail(SocialiteUser $profile): ?string
+    {
+        $email = $profile->getEmail();
+        $raw = $profile->user;
+
+        if (! is_string($email) || ! is_array($raw)
+            || ($raw['email_verified'] ?? false) !== true
+            || ! is_string($raw['email'] ?? null)
+            || strtolower(trim($raw['email'])) !== strtolower(trim($email))) {
+            return null;
+        }
+
+        $email = strtolower(trim($email));
+
+        return strlen($email) <= 254 && filter_var($email, FILTER_VALIDATE_EMAIL)
+            ? $email : null;
+    }
+
     private function redirectToProvider(Request $request, string $provider, ?int $userId = null): RedirectResponse
     {
         $driver = $this->driver($provider);
+        $request->session()->forget('social_google.registration');
         $request->session()->put('social_login.attempt', ['provider' => $provider, 'user' => $userId, 'at' => now()->timestamp]);
 
         return $driver->redirect();
