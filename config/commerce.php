@@ -8,6 +8,11 @@ return [
         'secret' => env('COMMERCE_STRIPE_SECRET'),
         'webhook_secret' => env('COMMERCE_STRIPE_WEBHOOK_SECRET'),
     ],
+    'baray' => [
+        'api_key' => env('COMMERCE_BARAY_API_KEY'),
+        'sk' => env('COMMERCE_BARAY_SK'),
+        'iv' => env('COMMERCE_BARAY_IV'),
+    ],
     'paypal' => [
         'client_id' => env('COMMERCE_PAYPAL_CLIENT_ID'),
         'secret' => env('COMMERCE_PAYPAL_SECRET'),
