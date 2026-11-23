@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\AbstractProvider;
+use Laravel\Socialite\Two\User as SocialiteUser;
 use Throwable;
 
 final class SocialAuthController extends Controller
@@ -41,7 +42,8 @@ final class SocialAuthController extends Controller
 
         $driver = $this->driver($provider);
         try {
-            $sub = $driver->user()->getId();
+            $profile = $driver->user();
+            $sub = $profile->getId();
         } catch (Throwable) {
             return redirect()->route($target)->withErrors(['social_auth' => 'The provider could not verify your sign-in. Try again.']);
         }
@@ -54,13 +56,30 @@ final class SocialAuthController extends Controller
 
         $identity = SocialLoginIdentity::query()->with('user')
             ->where('provider', $provider)->where('subject_hash', $subject)->first();
-        if (! $identity?->user || $identity->user->account_status !== 'active') {
-            return redirect()->route('login')->withErrors([
-                'social_auth' => 'Sign in with your password and link this provider from Account Security first.',
-            ]);
+        if ($identity) {
+            if (! $identity->user || $identity->user->account_status !== 'active') {
+                return redirect()->route('login')->withErrors([
+                    'social_auth' => 'This Bambodia account is unavailable. Contact support if you need help.',
+                ]);
+            }
+
+            return SignIn::external($request, $identity->user, $provider);
         }
 
-        return SignIn::external($request, $identity->user, $provider);
+        // Google is authoritative for verified @gmail.com / @googlemail.com
+        // addresses. Recover existing accounts from before explicit social
+        // identities were introduced, but never trust an unverified email or
+        // use an email match to relink a different Google subject.
+        if ($provider === 'google') {
+            $user = $this->recoverVerifiedGoogleAccount($request, $profile, $subject);
+            if ($user) {
+                return SignIn::external($request, $user, $provider);
+            }
+        }
+
+        return redirect()->route('login')->withErrors([
+            'social_auth' => 'Sign in with your password and link this provider from Account Security first.',
+        ]);
     }
 
     public function disconnect(Request $request, string $provider): RedirectResponse
@@ -71,6 +90,58 @@ final class SocialAuthController extends Controller
         AuditEvent::record('auth.social.disconnected', $request->user(), $request);
 
         return back()->with('status', SocialLoginProvider::PROVIDERS[$provider][0].' disconnected.');
+    }
+
+    /**
+     * Restore Google sign-in for an existing account when its older Google
+     * identity was never persisted. Restrict this recovery to authoritative
+     * Google-managed Gmail domains; other addresses require explicit linking.
+     */
+    private function recoverVerifiedGoogleAccount(Request $request, SocialiteUser $profile, string $subject): ?User
+    {
+        $email = $profile->getEmail();
+        $raw = $profile->user;
+
+        if (! is_string($email) || ! is_array($raw)
+            || ($raw['email_verified'] ?? false) !== true
+            || ! is_string($raw['email'] ?? null)
+            || strtolower(trim($raw['email'])) !== strtolower(trim($email))) {
+            return null;
+        }
+
+        $email = strtolower(trim($email));
+        if (! preg_match('/\\A[^@\\s]+@(?:gmail|googlemail)\\.com\\z/D', $email)) {
+            return null;
+        }
+
+        try {
+            return DB::transaction(function () use ($request, $email, $subject): ?User {
+                $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->lockForUpdate()->first();
+                if (! $user || $user->account_status !== 'active') {
+                    return null;
+                }
+
+                // Never replace an existing binding, even if the submitted
+                // Gmail address matches this account.
+                if (SocialLoginIdentity::query()->where('user_id', $user->id)
+                    ->where('provider', 'google')->exists()) {
+                    return null;
+                }
+
+                SocialLoginIdentity::query()->create([
+                    'user_id' => $user->id,
+                    'provider' => 'google',
+                    'subject_hash' => $subject,
+                ]);
+                AuditEvent::record('auth.social.connected', $user, $request);
+
+                return $user;
+            }, 3);
+        } catch (UniqueConstraintViolationException) {
+            // Another request linked the account before this transaction.
+            // A fresh sign-in can use its established immutable identity.
+            return null;
+        }
     }
 
     private function redirectToProvider(Request $request, string $provider, ?int $userId = null): RedirectResponse
