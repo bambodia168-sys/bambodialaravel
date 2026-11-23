@@ -19,6 +19,9 @@ final class CommerceGateway
 
     public function start(CommercePayment $payment): array
     {
+        if ($payment->provider === 'baray') {
+            return app(BarayGateway::class)->start($payment);
+        }
         $order = $payment->order;
         $returnUrl = $this->url('account.orders.payment.return', [$order->number, $payment->number]);
         $cancelUrl = $this->url('account.orders.show', [$order->number]);
@@ -57,6 +60,11 @@ final class CommerceGateway
     {
         abort_unless(self::ready($payment->provider, $payment->live_mode), 503, 'Payment verification is temporarily unavailable.');
         $order = $payment->order;
+        if ($payment->provider === 'baray') {
+            // Baray has no documented general checkout-status endpoint.
+            // Only its confirmed webhook may mark the order paid.
+            return ['checkout_open', null, app(BarayGateway::class)->checkoutUrl($payment->remote_id)];
+        }
         if ($payment->provider === 'stripe') {
             $data = $this->send($this->stripe($payment->live_mode), 'GET', '/checkout/sessions/'.$payment->remote_id);
             abort_unless(($data['id'] ?? null) === $payment->remote_id
@@ -171,7 +179,11 @@ final class CommerceGateway
             return false;
         }
         $parts = parse_url($url);
-        $host = $provider === 'stripe' ? 'checkout.stripe.com' : ($live ? 'www.paypal.com' : 'www.sandbox.paypal.com');
+        $host = match ($provider) {
+            'stripe' => 'checkout.stripe.com',
+            'baray' => 'pay.baray.io',
+            default => $live ? 'www.paypal.com' : 'www.sandbox.paypal.com',
+        };
 
         return ($parts['scheme'] ?? null) === 'https' && strtolower($parts['host'] ?? '') === $host
             && ! isset($parts['user']) && ! isset($parts['pass']) && ! isset($parts['port']);

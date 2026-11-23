@@ -13,6 +13,10 @@
       @case('aba')
         <path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 13v3h3v-3h3v4m-8 2v2h4v-2m4 2h.01"/>
         @break
+      @case('baray')
+        <rect x="2" y="4" width="20" height="16" rx="3"/>
+        <path d="M7 8h5a3 3 0 0 1 0 6H7V8zm0 6h6a3 3 0 0 1 0 5H7"/>
+        @break
       @case('stripe')
         <rect x="2" y="5" width="20" height="14" rx="2"/>
         <path d="M2 10h20M6 15h4"/>

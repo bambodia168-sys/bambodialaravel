@@ -990,6 +990,150 @@ Private installation report.
         $this->assertSame('aba:'.$attempt->remote_id, $attempt->refresh()->settlement_reference);
     }
 
+    public function test_baray_sandbox_and_production_settings_are_saved_independently_and_switch_requires_confirmation(): void
+    {
+        $admin = $this->user('super_admin');
+        $method = $this->method('baray');
+        $save = route('dashboard.payment-methods.update', $method);
+
+        $dev = [
+            'api_key' => 'baray_dev_test_key',
+            'sk' => base64_encode(str_repeat('d', 32)),
+            'iv' => base64_encode(str_repeat('s', 16)),
+        ];
+        $prod = [
+            'api_key' => 'baray_live_test_key',
+            'sk' => base64_encode(str_repeat('p', 32)),
+            'iv' => base64_encode(str_repeat('l', 16)),
+        ];
+
+        $this->actingAs($admin)->get(route('dashboard.payment-methods.index'))->assertOk()
+            ->assertSee('Sandbox / Development')->assertSee('Production credentials')
+            ->assertSee('gateway[sandbox][api_key]', false)
+            ->assertSee('gateway[live][api_key]', false)
+            ->assertDontSee('baray_dev_test_key');
+
+        $this->patch($save, [
+            'available' => false,
+            'baray_environment' => 'sandbox',
+            'gateway' => ['sandbox' => $dev, 'live' => $prod],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame($dev, CommerceGatewaySetting::forMode('baray', false)->sole()->credentials);
+        $this->assertSame($prod, CommerceGatewaySetting::forMode('baray', true)->sole()->credentials);
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('baray'));
+        $this->assertFalse($method->fresh()->available);
+
+        // Configuration alone must not activate Production.
+        $this->patch($save, [
+            'available' => false,
+            'baray_environment' => 'live',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('baray'));
+
+        $this->patch($save, [
+            'available' => false,
+            'baray_environment' => 'live',
+            'activate_baray_environment' => '1',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertTrue(CommerceGatewaySetting::checkoutIsLive('baray'));
+        $this->assertSame($dev, CommerceGatewaySetting::forMode('baray', false)->sole()->credentials);
+        $this->assertSame($prod, CommerceGatewaySetting::forMode('baray', true)->sole()->credentials);
+        $this->assertFalse($method->fresh()->available);
+
+        $this->patch($save, [
+            'available' => false,
+            'baray_environment' => 'sandbox',
+            'gateway' => ['sandbox' => ['api_key' => 'baray_dev_rotated']],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('baray_dev_rotated',
+            CommerceGatewaySetting::forMode('baray', false)->sole()->credentials['api_key']);
+        $this->assertSame($prod, CommerceGatewaySetting::forMode('baray', true)->sole()->credentials);
+        $this->assertTrue(CommerceGatewaySetting::checkoutIsLive('baray'));
+
+        // Never leak either environment's key into the admin HTML.
+        $this->get(route('dashboard.payment-methods.index'))->assertOk()
+            ->assertDontSee('baray_live_test_key')->assertDontSee('baray_dev_rotated');
+    }
+
+    public function test_baray_encrypted_checkout_only_fulfills_on_bank_confirmed_webhook(): void
+    {
+        $key = base64_encode(str_repeat('k', 32));
+        $iv = base64_encode(str_repeat('v', 16));
+        config(['commerce.baray' => ['api_key' => 'bry_dev_fixture_key', 'sk' => $key, 'iv' => $iv]]);
+        [$buyer, $order] = $this->order();
+        $method = $this->method('baray');
+
+        Http::fake(function ($request) use ($key, $iv) {
+            $this->assertSame('https://api.baray.io/pay', $request->url());
+            $this->assertTrue($request->hasHeader('x-api-key', 'bry_dev_fixture_key'));
+            $payload = json_decode(openssl_decrypt(base64_decode($request['data'], true),
+                'aes-256-cbc', base64_decode($key), OPENSSL_RAW_DATA, base64_decode($iv)), true);
+            $this->assertSame('USD', $payload['currency']);
+            $this->assertSame('25.00', $payload['amount']);
+            $this->assertNotEmpty($payload['order_id']);
+            $this->assertStringContainsString('/return', $payload['custom_success_url']);
+
+            return Http::response([
+                '_id' => 'itn-fixture-123', 'order_id' => $payload['order_id'],
+                'amount' => '25.00', 'currency' => 'USD', 'target' => 'DEVELOPMENT',
+            ]);
+        });
+
+        $this->actingAs($buyer)
+            ->post(route('account.orders.payment.start', $order->number), ['method' => $method->id])
+            ->assertRedirect('https://pay.baray.io/itn-fixture-123');
+        $attempt = $order->payments()->sole();
+        $this->assertSame('checkout_open', $attempt->status);
+
+        $this->post(route('account.orders.payment.start', $order->number), ['method' => $method->id])
+            ->assertRedirect('https://pay.baray.io/itn-fixture-123');
+        Http::assertSentCount(1);
+        $this->get(route('account.orders.payment.return', [$order->number, $attempt->number]))->assertRedirect();
+        $this->post(route('account.orders.payment.verify', [$order->number, $attempt->number]))->assertRedirect();
+        $this->assertSame('awaiting_payment', $order->refresh()->status);
+        $this->assertNull($order->receipt_number);
+
+        $hook = route('commerce.webhook', 'baray');
+        $this->postJson($hook, ['encrypted_order_id' => 'not-a-valid-webhook'])->assertBadRequest();
+        $this->assertSame('awaiting_payment', $order->refresh()->status);
+
+        $encrypted = base64_encode(openssl_encrypt($attempt->number,
+            'aes-256-cbc', base64_decode($key), OPENSSL_RAW_DATA, base64_decode($iv)));
+        $this->postJson($hook, ['encrypted_order_id' => $encrypted, 'bank' => 'aba'])->assertNoContent();
+        $this->assertSame('completed', $order->refresh()->status);
+        $this->assertSame('baray:itn-fixture-123', $attempt->refresh()->settlement_reference);
+        $receipt = $order->receipt_number;
+        $this->assertNotNull($receipt);
+
+        $this->postJson($hook, ['encrypted_order_id' => $encrypted, 'bank' => 'aba'])->assertNoContent();
+        $this->assertSame($receipt, $order->refresh()->receipt_number);
+        $this->assertSame('paid', $attempt->refresh()->status);
+    }
+
+    public function test_baray_rejects_mismatched_intent_and_does_not_complete_an_order(): void
+    {
+        config(['commerce.baray' => [
+            'api_key' => 'bry_dev_fixture_key',
+            'sk' => base64_encode(str_repeat('k', 32)),
+            'iv' => base64_encode(str_repeat('v', 16)),
+        ]]);
+        [$buyer, $order] = $this->order();
+        $method = $this->method('baray');
+        Http::fake(['https://api.baray.io/pay' => Http::response([
+            '_id' => 'itn-fixture-incorrect', 'order_id' => 'different',
+            'currency' => 'USD', 'amount' => '25.00', 'target' => 'DEVELOPMENT',
+        ])]);
+
+        $this->actingAs($buyer)
+            ->post(route('account.orders.payment.start', $order->number), ['method' => $method->id])
+            ->assertConflict();
+        $this->assertSame('awaiting_payment', $order->refresh()->status);
+        $this->assertNull($order->receipt_number);
+        $this->assertSame('starting', $order->payments()->sole()->status);
+    }
+
     private function product(User $seller, User $admin): array
     {
         $definition = LicenseDefinition::query()->create([

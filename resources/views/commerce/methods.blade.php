@@ -119,6 +119,14 @@
   }
   .payment-method-dialog__environment legend { padding-inline: .35rem; font-weight: 700; }
   .payment-method-dialog__environment p { margin: .2rem 0 .65rem; color: var(--muted); }
+  .payment-method-dialog__mode-options small { display: block; margin-top: .2rem; color: var(--muted); font-size: .78rem; }
+  .payment-method-dialog__environment[hidden] { display: none; }
+  .payment-method-dialog__mode-options span { min-width: 0; overflow-wrap: anywhere; }
+  .payment-method-dialog__mode-options input { flex: 0 0 auto; }
+  @media (max-width: 480px) {
+    .payment-method-dialog__mode-options { flex-direction: column; gap: .45rem; }
+    .payment-method-dialog__mode-options label { flex-basis: auto; }
+  }
   .payment-method-dialog :is(input,textarea,select):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
   .payment-method-dialog__close { font-size: 1.35rem; }
   dialog.payment-method-dialog--add { width: min(29rem, calc(100% - 2rem)); }
@@ -203,6 +211,36 @@
               <option value="live" @selected($environment === 'live')>Live Production</option>
             </select>
             <p>Sandbox {{ \App\Support\CommerceGateway::ready('stripe', false) ? 'credentials saved' : 'credentials required' }} · Live Production {{ \App\Support\CommerceGateway::ready('stripe', true) ? 'credentials saved' : 'credentials required' }}</p>
+          @elseif($method->provider === 'baray')
+            @php($environment = $retry ? old('baray_environment', $live ? 'live' : 'sandbox') : ($live ? 'live' : 'sandbox'))
+            <p>Currently selected for checkout: <strong>{{ $live ? 'Production' : 'Sandbox (Development)' }}</strong>. Saving credentials does not switch environments or enable payments.</p>
+            <fieldset class="payment-method-dialog__mode" data-baray-settings>
+              <legend>Select the Baray environment to configure</legend>
+              <div class="payment-method-dialog__mode-options" role="group" aria-label="Baray environment">
+                @foreach(['sandbox' => 'Sandbox / Development', 'live' => 'Production'] as $mode => $label)
+                  @php($isReady = \App\Support\CommerceGateway::ready('baray', $mode === 'live'))
+                  <label>
+                    <input type="radio" name="baray_environment" value="{{ $mode }}" @checked($environment === $mode)>
+                    <span><strong>{{ $label }}</strong><small class="payment-method-dialog__status">{{ $isReady ? 'Credentials saved' : 'Not configured' }}</small></span>
+                  </label>
+                @endforeach
+              </div>
+              @foreach(['sandbox' => false, 'live' => true] as $mode => $isProduction)
+                <fieldset class="payment-method-dialog__environment" data-baray-fields="{{ $mode }}" @if($environment !== $mode) hidden @endif>
+                  <legend>{{ $isProduction ? 'Production' : 'Sandbox / Development' }} credentials</legend>
+                  <p>{{ $isProduction ? 'Real-money transactions. Keep the method hidden until the bank connection and webhook are verified.' : 'Simulated payments with Development keys. Use an isolated QA website and database.' }}</p>
+                  @foreach(\App\Models\CommerceGatewaySetting::FIELDS['baray'] as $field => $label)
+                    <label for="baray-{{ $mode }}-{{ $field }}-{{ $method->id }}">{{ $label }}
+                      <input id="baray-{{ $mode }}-{{ $field }}-{{ $method->id }}"
+                             name="gateway[{{ $mode }}][{{ $field }}]" type="password"
+                             autocomplete="new-password" autocapitalize="off" spellcheck="false"
+                             placeholder="Leave empty to keep existing value">
+                    </label>
+                  @endforeach
+                </fieldset>
+              @endforeach
+            </fieldset>
+            <p>Baray hosts the bank selection and payment page. The webhook confirms payment; the browser return alone never marks an order paid.</p>
           @else
             <p>{{ $live ? 'Live environment' : 'Sandbox environment' }} · {{ \App\Support\CommerceGateway::ready($method->provider, $live) ? 'Credentials saved' : 'Credentials required' }}</p>
           @endif
@@ -213,19 +251,27 @@
             <p>Creates a separate USD QR for each order and checks payment with ABA PayWay.</p>
             <p>Use your ABA PayWay merchant ID and API key. Arrange API access and server allowlisting with ABA.</p>
           @endif
-          <p>Leave a field blank to keep its saved value{{ $method->provider === 'stripe' ? ' for the selected environment' : '' }}.</p>
-          @foreach(\App\Models\CommerceGatewaySetting::FIELDS[$method->provider] as $field => $label)
-            <label>{{ $label }}
-              <input name="gateway[{{ $field }}]" type="{{ in_array($field, ['secret', 'webhook_secret', 'token'], true) ? 'password' : 'text' }}"
-                     autocomplete="new-password" autocapitalize="off" spellcheck="false">
-            </label>
-          @endforeach
+          <p>Leave a field blank to keep its saved value{{ in_array($method->provider, ['stripe', 'baray'], true) ? ' for the selected environment' : '' }}.</p>
+          @unless($method->provider === 'baray')
+            @foreach(\App\Models\CommerceGatewaySetting::FIELDS[$method->provider] as $field => $label)
+              <label>{{ $label }}
+                <input name="gateway[{{ $field }}]" type="{{ in_array($field, ['secret', 'webhook_secret', 'token', 'sk', 'iv', 'api_key'], true) ? 'password' : 'text' }}"
+                       autocomplete="new-password" autocapitalize="off" spellcheck="false">
+              </label>
+            @endforeach
+          @endunless
           @if($method->provider === 'stripe')
             <label>
               <input type="checkbox" name="activate_stripe_environment" value="1" @checked($retry && old('activate_stripe_environment'))>
               Use this environment for new Stripe checkouts
             </label>
             <p>Live Production can accept real payments when Stripe is available and site-wide payment processing is enabled. Test checkouts run on the sandbox site.</p>
+          @elseif($method->provider === 'baray')
+            <label>
+              <input type="checkbox" name="activate_baray_environment" value="1" @checked($retry && old('activate_baray_environment'))>
+              Use this environment for new Baray checkouts
+            </label>
+            <p>Use <strong>Save settings</strong> to store either or both credential sets. To switch checkout mode, select the environment and check the box above. Production must not be activated until live bank confirmation, webhook authentication and QA acceptance are verified.</p>
           @endif
         @else
           <p>Enter the recipient and account details buyers need to complete the transfer. Buyers upload their receipt from the order page for review.</p>
@@ -264,6 +310,20 @@
   </dialog>
 @endforeach
 <script>
+  for (const settings of document.querySelectorAll('[data-baray-settings]')) {
+    const radios = settings.querySelectorAll('input[name="baray_environment"]');
+    const panels = settings.querySelectorAll('[data-baray-fields]');
+    const updatePanels = () => {
+      const selected = settings.querySelector('input[name="baray_environment"]:checked')?.value;
+      for (const panel of panels) {
+        panel.hidden = panel.dataset.barayFields !== selected;
+        // Hidden fields stay enabled so saving both modes at once preserves their values.
+      }
+    };
+    radios.forEach(radio => radio.addEventListener('change', updatePanels));
+    updatePanels();
+  }
+
   for (const settings of document.querySelectorAll('[data-bakong-settings]')) {
     const radios = settings.querySelectorAll('input[name="bakong_environment"]');
     const panels = settings.querySelectorAll('[data-bakong-fields]');

@@ -12,11 +12,13 @@ class CommerceGatewaySetting extends Model
     public const ENVIRONMENT_FLAGS = [
         'stripe' => self::STRIPE_LIVE_FLAG,
         'bakong' => 'commerce_bakong_live',
+        'baray' => 'commerce_baray_live',
     ];
 
     public const FIELDS = [
         'stripe' => ['secret' => 'API secret key', 'webhook_secret' => 'Webhook signing secret'],
         'paypal' => ['client_id' => 'Client ID', 'secret' => 'Client secret', 'merchant_id' => 'Merchant ID', 'webhook_id' => 'Webhook ID'],
+        'baray' => ['api_key' => 'Baray API key', 'sk' => 'Baray AES secret (Base64)', 'iv' => 'Baray AES IV (Base64)'],
         'aba' => ['merchant_id' => 'PayWay merchant ID', 'secret' => 'PayWay API key'],
         'bakong' => ['account_id' => 'Bakong account ID', 'merchant_name' => 'Recipient name', 'merchant_city' => 'Recipient city', 'token' => 'Bakong API access token'],
     ];
@@ -63,6 +65,10 @@ class CommerceGatewaySetting extends Model
         return match ($provider) {
             'stripe' => str_starts_with($credentials['secret'], $live ? 'sk_live_' : 'sk_test_')
                 && str_starts_with($credentials['webhook_secret'], 'whsec_'),
+            'baray' => is_string(base64_decode($credentials['sk'], true))
+                && strlen(base64_decode($credentials['sk'], true)) === 32
+                && is_string(base64_decode($credentials['iv'], true))
+                && strlen(base64_decode($credentials['iv'], true)) === 16,
             'paypal', 'aba', 'bakong' => true,
             default => false,
         };

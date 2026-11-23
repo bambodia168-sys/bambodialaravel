@@ -62,7 +62,10 @@
                   <button class="btn primary">{{ $activePayment->dynamicQr() ? 'Retry QR generation' : 'Continue '.$activePayment->method_name.' checkout' }}</button>
                 </form>
               @endif
-              @if($activePayment->remote_id)
+              @if($activePayment->provider === 'baray')
+                <p>Baray will confirm payment after the bank verifies it. Returning from checkout does not mark an order paid.</p>
+              @endif
+              @if($activePayment->remote_id && $activePayment->provider !== 'baray')
                 <form method="post" action="{{ route('account.orders.payment.verify', [$order->number, $activePayment->number]) }}">
                   @csrf
                   <button class="btn subtle">Verify payment status</button>
