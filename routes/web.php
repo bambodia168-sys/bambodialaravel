@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\PasskeyController;
 use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\Auth\SocialGoogleRegistrationController;
 use App\Http\Controllers\Dashboard\SocialAuthSettingsController;
 use App\Http\Controllers\Dashboard\SystemSecurityController;
 use App\Http\Controllers\AccountController;
@@ -187,6 +188,10 @@ Route::middleware('auth')->prefix('checkout')->name('checkout.')->group(function
 });
 
 Route::middleware('guest')->group(function (): void {
+    Route::get('/auth/google/registration', [SocialGoogleRegistrationController::class, 'show'])
+        ->middleware('throttle:10,1')->name('social.google.registration');
+    Route::post('/auth/google/registration', [SocialGoogleRegistrationController::class, 'store'])
+        ->middleware('throttle:5,1')->block()->name('social.google.registration.store');
     Route::get('/auth/{provider}/start', [SocialAuthController::class, 'start'])
         ->whereIn('provider', ['google', 'facebook', 'linkedin', 'github'])
         ->middleware('throttle:10,1,social-start:')->name('social.start');
