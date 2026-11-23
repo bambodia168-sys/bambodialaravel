@@ -1057,6 +1057,81 @@ Private installation report.
             ->assertDontSee('baray_live_test_key')->assertDontSee('baray_dev_rotated');
     }
 
+    public function test_baray_accepts_bundled_secret_key_and_iv_for_each_environment_without_exposing_values(): void
+    {
+        $method = $this->method('baray');
+        $save = route('dashboard.payment-methods.update', $method);
+        $this->actingAs($this->user('super_admin'));
+
+        $sandbox = [
+            'api_key' => 'baray_dev_bundle_fixture',
+            'secret_bundle' => json_encode(['secret_key' => [
+                'sk' => base64_encode(str_repeat('d', 32)),
+                'iv' => base64_encode(str_repeat('s', 16)),
+            ]]),
+        ];
+        $production = [
+            'secret_bundle' => json_encode([
+                'api_key' => 'baray_prod_bundle_fixture',
+                'secret_key' => [
+                    'sk' => base64_encode(str_repeat('p', 32)),
+                    'iv' => base64_encode(str_repeat('l', 16)),
+                ],
+            ]),
+        ];
+
+        $this->patch($save, [
+            'available' => false, 'baray_environment' => 'sandbox',
+            'gateway' => ['sandbox' => $sandbox, 'live' => $production],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame([
+            'api_key' => 'baray_dev_bundle_fixture',
+            'sk' => base64_encode(str_repeat('d', 32)),
+            'iv' => base64_encode(str_repeat('s', 16)),
+        ], CommerceGatewaySetting::forMode('baray', false)->sole()->credentials);
+        $this->assertSame([
+            'api_key' => 'baray_prod_bundle_fixture',
+            'sk' => base64_encode(str_repeat('p', 32)),
+            'iv' => base64_encode(str_repeat('l', 16)),
+        ], CommerceGatewaySetting::forMode('baray', true)->sole()->credentials);
+
+        $this->assertFalse($method->fresh()->available);
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('baray'));
+        $this->get(route('dashboard.payment-methods.index'))->assertOk()
+            ->assertSee('gateway[sandbox][secret_bundle]', false)
+            ->assertSee('gateway[live][secret_bundle]', false)
+            ->assertDontSee('baray_dev_bundle_fixture')
+            ->assertDontSee('baray_prod_bundle_fixture');
+    }
+
+    public function test_baray_rejects_malformed_or_conflicting_secret_bundle_without_overwriting_saved_keys(): void
+    {
+        $method = $this->method('baray');
+        $this->actingAs($this->user('super_admin'));
+        $save = route('dashboard.payment-methods.update', $method);
+
+        $this->patch($save, [
+            'available' => false, 'baray_environment' => 'sandbox',
+            'gateway' => ['sandbox' => ['api_key' => 'dev_fixture', 'secret_bundle' => 'not-json']],
+        ])->assertRedirect()->assertSessionHasErrors('gateway.sandbox.secret_bundle');
+
+        $this->assertNull(CommerceGatewaySetting::forMode('baray', false)->sole()->credentials);
+
+        $this->patch($save, [
+            'available' => false, 'baray_environment' => 'sandbox',
+            'gateway' => ['sandbox' => [
+                'api_key' => 'one-key',
+                'secret_bundle' => json_encode(['api_key' => 'different-key', 'secret_key' => [
+                    'sk' => base64_encode(str_repeat('k', 32)),
+                    'iv' => base64_encode(str_repeat('v', 16)),
+                ]]),
+            ]],
+        ])->assertRedirect()->assertSessionHasErrors('gateway.sandbox.secret_bundle');
+
+        $this->assertNull(CommerceGatewaySetting::forMode('baray', false)->sole()->credentials);
+    }
+
     public function test_baray_encrypted_checkout_only_fulfills_on_bank_confirmed_webhook(): void
     {
         $key = base64_encode(str_repeat('k', 32));
