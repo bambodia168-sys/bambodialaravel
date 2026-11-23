@@ -990,6 +990,83 @@ Private installation report.
         $this->assertSame('aba:'.$attempt->remote_id, $attempt->refresh()->settlement_reference);
     }
 
+    public function test_baray_encrypted_checkout_only_fulfills_on_bank_confirmed_webhook(): void
+    {
+        $key = base64_encode(str_repeat('k', 32));
+        $iv = base64_encode(str_repeat('v', 16));
+        config(['commerce.baray' => ['api_key' => 'bry_dev_fixture_key', 'sk' => $key, 'iv' => $iv]]);
+        [$buyer, $order] = $this->order();
+        $method = $this->method('baray');
+
+        Http::fake(function ($request) use ($key, $iv) {
+            $this->assertSame('https://api.baray.io/pay', $request->url());
+            $this->assertTrue($request->hasHeader('x-api-key', 'bry_dev_fixture_key'));
+            $payload = json_decode(openssl_decrypt(base64_decode($request['data'], true),
+                'aes-256-cbc', base64_decode($key), OPENSSL_RAW_DATA, base64_decode($iv)), true);
+            $this->assertSame('USD', $payload['currency']);
+            $this->assertSame('25.00', $payload['amount']);
+            $this->assertNotEmpty($payload['order_id']);
+            $this->assertStringContainsString('/return', $payload['custom_success_url']);
+
+            return Http::response([
+                '_id' => 'itn-fixture-123', 'order_id' => $payload['order_id'],
+                'amount' => '25.00', 'currency' => 'USD', 'target' => 'DEVELOPMENT',
+            ]);
+        });
+
+        $this->actingAs($buyer)
+            ->post(route('account.orders.payment.start', $order->number), ['method' => $method->id])
+            ->assertRedirect('https://pay.baray.io/itn-fixture-123');
+        $attempt = $order->payments()->sole();
+        $this->assertSame('checkout_open', $attempt->status);
+
+        $this->post(route('account.orders.payment.start', $order->number), ['method' => $method->id])
+            ->assertRedirect('https://pay.baray.io/itn-fixture-123');
+        Http::assertSentCount(1);
+        $this->get(route('account.orders.payment.return', [$order->number, $attempt->number]))->assertRedirect();
+        $this->post(route('account.orders.payment.verify', [$order->number, $attempt->number]))->assertRedirect();
+        $this->assertSame('awaiting_payment', $order->refresh()->status);
+        $this->assertNull($order->receipt_number);
+
+        $hook = route('commerce.webhook', 'baray');
+        $this->postJson($hook, ['encrypted_order_id' => 'not-a-valid-webhook'])->assertBadRequest();
+        $this->assertSame('awaiting_payment', $order->refresh()->status);
+
+        $encrypted = base64_encode(openssl_encrypt($attempt->number,
+            'aes-256-cbc', base64_decode($key), OPENSSL_RAW_DATA, base64_decode($iv)));
+        $this->postJson($hook, ['encrypted_order_id' => $encrypted, 'bank' => 'aba'])->assertNoContent();
+        $this->assertSame('completed', $order->refresh()->status);
+        $this->assertSame('baray:itn-fixture-123', $attempt->refresh()->settlement_reference);
+        $receipt = $order->receipt_number;
+        $this->assertNotNull($receipt);
+
+        $this->postJson($hook, ['encrypted_order_id' => $encrypted, 'bank' => 'aba'])->assertNoContent();
+        $this->assertSame($receipt, $order->refresh()->receipt_number);
+        $this->assertSame('paid', $attempt->refresh()->status);
+    }
+
+    public function test_baray_rejects_mismatched_intent_and_does_not_complete_an_order(): void
+    {
+        config(['commerce.baray' => [
+            'api_key' => 'bry_dev_fixture_key',
+            'sk' => base64_encode(str_repeat('k', 32)),
+            'iv' => base64_encode(str_repeat('v', 16)),
+        ]]);
+        [$buyer, $order] = $this->order();
+        $method = $this->method('baray');
+        Http::fake(['https://api.baray.io/pay' => Http::response([
+            '_id' => 'itn-fixture-incorrect', 'order_id' => 'different',
+            'currency' => 'USD', 'amount' => '25.00', 'target' => 'DEVELOPMENT',
+        ])]);
+
+        $this->actingAs($buyer)
+            ->post(route('account.orders.payment.start', $order->number), ['method' => $method->id])
+            ->assertConflict();
+        $this->assertSame('awaiting_payment', $order->refresh()->status);
+        $this->assertNull($order->receipt_number);
+        $this->assertSame('starting', $order->payments()->sole()->status);
+    }
+
     private function product(User $seller, User $admin): array
     {
         $definition = LicenseDefinition::query()->create([
