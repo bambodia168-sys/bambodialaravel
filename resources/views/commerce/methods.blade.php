@@ -203,6 +203,16 @@
               <option value="live" @selected($environment === 'live')>Live Production</option>
             </select>
             <p>Sandbox {{ \App\Support\CommerceGateway::ready('stripe', false) ? 'credentials saved' : 'credentials required' }} · Live Production {{ \App\Support\CommerceGateway::ready('stripe', true) ? 'credentials saved' : 'credentials required' }}</p>
+          @elseif($method->provider === 'baray')
+            @php($environment = $retry ? old('baray_environment', $live ? 'live' : 'sandbox') : ($live ? 'live' : 'sandbox'))
+            <p>Baray checkout environment <strong>{{ $live ? 'Live Production' : 'Development' }}</strong></p>
+            <label for="baray-environment-{{ $method->id }}">Credentials environment</label>
+            <select id="baray-environment-{{ $method->id }}" name="baray_environment">
+              <option value="sandbox" @selected($environment === 'sandbox')>Development (simulated banks)</option>
+              <option value="live" @selected($environment === 'live')>Live Production</option>
+            </select>
+            <p>Development {{ \App\Support\CommerceGateway::ready('baray', false) ? 'credentials saved' : 'credentials required' }} · Live {{ \App\Support\CommerceGateway::ready('baray', true) ? 'credentials saved' : 'credentials required' }}</p>
+            <p>Baray hosts bank selection and KHQR. Bambodia marks the order paid only after Baray sends a bank-confirmed webhook.</p>
           @else
             <p>{{ $live ? 'Live environment' : 'Sandbox environment' }} · {{ \App\Support\CommerceGateway::ready($method->provider, $live) ? 'Credentials saved' : 'Credentials required' }}</p>
           @endif
@@ -213,10 +223,10 @@
             <p>Creates a separate USD QR for each order and checks payment with ABA PayWay.</p>
             <p>Use your ABA PayWay merchant ID and API key. Arrange API access and server allowlisting with ABA.</p>
           @endif
-          <p>Leave a field blank to keep its saved value{{ $method->provider === 'stripe' ? ' for the selected environment' : '' }}.</p>
+          <p>Leave a field blank to keep its saved value{{ in_array($method->provider, ['stripe', 'baray'], true) ? ' for the selected environment' : '' }}.</p>
           @foreach(\App\Models\CommerceGatewaySetting::FIELDS[$method->provider] as $field => $label)
             <label>{{ $label }}
-              <input name="gateway[{{ $field }}]" type="{{ in_array($field, ['secret', 'webhook_secret', 'token'], true) ? 'password' : 'text' }}"
+              <input name="gateway[{{ $field }}]" type="{{ in_array($field, ['secret', 'webhook_secret', 'token', 'sk', 'iv', 'api_key'], true) ? 'password' : 'text' }}"
                      autocomplete="new-password" autocapitalize="off" spellcheck="false">
             </label>
           @endforeach
@@ -226,6 +236,12 @@
               Use this environment for new Stripe checkouts
             </label>
             <p>Live Production can accept real payments when Stripe is available and site-wide payment processing is enabled. Test checkouts run on the sandbox site.</p>
+          @elseif($method->provider === 'baray')
+            <label>
+              <input type="checkbox" name="activate_baray_environment" value="1" @checked($retry && old('activate_baray_environment'))>
+              Use this environment for new Baray checkouts
+            </label>
+            <p>Development keys simulate payments. Do not enable Live Production until Baray's bank connection and webhook security are verified.</p>
           @endif
         @else
           <p>Enter the recipient and account details buyers need to complete the transfer. Buyers upload their receipt from the order page for review.</p>
