@@ -113,7 +113,9 @@ class CommercePaymentMethodController extends Controller
             ->mapWithKeys(fn (string $label, string $key) => ['gateway.'.$key => $label])->all();
         if ($baray) {
             foreach (['sandbox' => 'Development', 'live' => 'Production'] as $mode => $label) {
-                $rules["gateway.{$mode}"] = ['sometimes', 'array:'.implode(',', $fields)];
+                $rules["gateway.{$mode}"] = ['sometimes', 'array:'.implode(',', [...$fields, 'secret_bundle'])];
+                $rules["gateway.{$mode}.secret_bundle"] = ['nullable', 'string', 'max:8192'];
+                $labels["gateway.{$mode}.secret_bundle"] = $label.' Baray secret key and IV bundle';
                 foreach ($fields as $field) {
                     $rules["gateway.{$mode}.{$field}"] = ['nullable', 'string', 'max:2048', 'regex:/^[!-~]+$/D'];
                     $labels["gateway.{$mode}.{$field}"] = $label.' '.CommerceGatewaySetting::FIELDS['baray'][$field];
@@ -210,10 +212,57 @@ class CommercePaymentMethodController extends Controller
     {
         $changed = false;
         foreach (['sandbox' => false, 'live' => true] as $mode => $live) {
-            $changed = $this->saveCredentials('baray', $live, $input[$mode] ?? []) || $changed;
+            $credentials = $input[$mode] ?? [];
+            if (filled($credentials['secret_bundle'] ?? null)) {
+                $credentials = $this->decodeBaraySecretBundle($mode, $credentials);
+            }
+            unset($credentials['secret_bundle']);
+            $changed = $this->saveCredentials('baray', $live, $credentials) || $changed;
         }
 
         return $changed;
+    }
+
+    /**
+     * Baray displays the AES sk/iv together in one key record. Accept the bundled
+     * JSON without changing the encrypted-at-rest database columns or checkout code.
+     */
+    private function decodeBaraySecretBundle(string $mode, array $credentials): array
+    {
+        $field = "gateway.{$mode}.secret_bundle";
+        try {
+            $document = json_decode($credentials['secret_bundle'], true, 6, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw ValidationException::withMessages([$field => 'Paste the Baray secret key and IV as JSON, or enter them separately under Advanced.']);
+        }
+
+        if (! is_array($document) || array_is_list($document)) {
+            throw ValidationException::withMessages([$field => 'The Baray secret bundle must be a JSON object.']);
+        }
+
+        $pair = $document['secret_key'] ?? $document;
+        if (! is_array($pair) || array_is_list($pair)
+            || ! is_string($pair['sk'] ?? null) || ! is_string($pair['iv'] ?? null)) {
+            throw ValidationException::withMessages([$field => 'The Baray secret bundle must contain sk and iv strings.']);
+        }
+
+        if (isset($document['api_key'])) {
+            if (! is_string($document['api_key'])
+                || (filled($credentials['api_key'] ?? null) && $credentials['api_key'] !== $document['api_key'])) {
+                throw ValidationException::withMessages([$field => 'The API key inside the bundle must match the API key field.']);
+            }
+            $credentials['api_key'] = $document['api_key'];
+        }
+
+        if ((filled($credentials['sk'] ?? null) && $credentials['sk'] !== $pair['sk'])
+            || (filled($credentials['iv'] ?? null) && $credentials['iv'] !== $pair['iv'])) {
+            throw ValidationException::withMessages([$field => 'The secret bundle and Advanced fields disagree. Enter one set of values.']);
+        }
+
+        $credentials['sk'] = $pair['sk'];
+        $credentials['iv'] = $pair['iv'];
+
+        return $credentials;
     }
 
     private function saveBakongCredentials(bool $currentMode, array $input, array $renewal): bool
