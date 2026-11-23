@@ -26,6 +26,19 @@ Baray is an API integration service for licensed Cambodian banks, not a custodia
 
 The ABA HMAC secret in the **Banks → Connect ABA** dialog is for the *Baray-to-ABA* connection. It is **not** the Baray `api_key`, `sk` or `iv` required by Bambodia. Never paste any secrets in a GitHub issue, chat transcript, repository, log, or screenshot.
 
+## Baray dashboard key-record format
+
+One **Baray Developers key record** contains the API key and its **Secret key and IV** bundle. The record is created for either Development or Production. These are **not three independent Baray API-key records**.
+
+In Bambodia's Baray modal, select **Sandbox / Development** or **Production** and enter:
+- **Baray API key** — the API key of that one record.
+- **Secret key and IV (combined JSON)** — paste a JSON object revealed by Baray, with either `{"sk":"...","iv":"..."}` or `{"secret_key":{"sk":"...","iv":"..."}}`. A full JSON object that also contains `api_key` is supported; it must match any separately entered API key.
+- **Advanced** — use the separate Base64 `sk` and `iv` fields only if Baray reveals them independently.
+
+Bambodia parses the JSON server-side, validates 32-byte AES key and 16-byte IV, and retains the existing encrypted-at-rest `api_key`, `sk` and `iv` structure. It never echoes the pasted values or displays them back in the admin HTML. Both environments are stored independently.
+
+Do not paste credentials into chat, GitHub, or screenshots. Credentials remain masked by default.
+
 ## Payment operational guarantees
 
 - Only one active payment per order; retry uses the same attempt `order_id`.
