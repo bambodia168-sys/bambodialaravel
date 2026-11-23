@@ -229,14 +229,31 @@
                 <fieldset class="payment-method-dialog__environment" data-baray-fields="{{ $mode }}" @if($environment !== $mode) hidden @endif>
                   <legend>{{ $isProduction ? 'Production' : 'Sandbox / Development' }} credentials</legend>
                   <p>{{ $isProduction ? 'Real-money transactions. Keep the method hidden until the bank connection and webhook are verified.' : 'Simulated payments with Development keys. Use an isolated QA website and database.' }}</p>
-                  @foreach(\App\Models\CommerceGatewaySetting::FIELDS['baray'] as $field => $label)
-                    <label for="baray-{{ $mode }}-{{ $field }}-{{ $method->id }}">{{ $label }}
-                      <input id="baray-{{ $mode }}-{{ $field }}-{{ $method->id }}"
-                             name="gateway[{{ $mode }}][{{ $field }}]" type="password"
-                             autocomplete="new-password" autocapitalize="off" spellcheck="false"
-                             placeholder="Leave empty to keep existing value">
-                    </label>
-                  @endforeach
+                  <p>Each Baray API-key record includes its API key and a secret key + IV pair. Copy the pair from Baray's <strong>Secret key and IV → Reveal</strong> control.</p>
+                  <label for="baray-{{ $mode }}-api-key-{{ $method->id }}">Baray API key
+                    <input id="baray-{{ $mode }}-api-key-{{ $method->id }}"
+                           name="gateway[{{ $mode }}][api_key]" type="password"
+                           autocomplete="new-password" autocapitalize="off" spellcheck="false"
+                           placeholder="Paste the API key from this Baray key record">
+                  </label>
+                  <label for="baray-{{ $mode }}-secret-bundle-{{ $method->id }}">Secret key and IV (combined JSON)
+                    <input id="baray-{{ $mode }}-secret-bundle-{{ $method->id }}"
+                           name="gateway[{{ $mode }}][secret_bundle]" type="password"
+                           autocomplete="new-password" autocapitalize="off" spellcheck="false"
+                           placeholder='Paste the JSON with "sk" and "iv"'>
+                  </label>
+                  <p>Accepts either <code>{"sk":"…","iv":"…"}</code> or the Baray credentials JSON with a nested <code>secret_key</code> object. Saving stores only the verified sk/iv values, encrypted at rest. Leave blank to retain saved credentials.</p>
+                  <details>
+                    <summary>Advanced: enter the secret key and IV separately instead</summary>
+                    @foreach(['sk' => 'AES secret key (Base64)', 'iv' => 'AES IV (Base64)'] as $field => $label)
+                      <label for="baray-{{ $mode }}-{{ $field }}-{{ $method->id }}">{{ $label }}
+                        <input id="baray-{{ $mode }}-{{ $field }}-{{ $method->id }}"
+                               name="gateway[{{ $mode }}][{{ $field }}]" type="password"
+                               autocomplete="new-password" autocapitalize="off" spellcheck="false"
+                               placeholder="Leave empty to keep existing value">
+                      </label>
+                    @endforeach
+                  </details>
                 </fieldset>
               @endforeach
             </fieldset>
