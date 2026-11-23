@@ -990,6 +990,73 @@ Private installation report.
         $this->assertSame('aba:'.$attempt->remote_id, $attempt->refresh()->settlement_reference);
     }
 
+    public function test_baray_sandbox_and_production_settings_are_saved_independently_and_switch_requires_confirmation(): void
+    {
+        $admin = $this->user('super_admin');
+        $method = $this->method('baray');
+        $save = route('dashboard.payment-methods.update', $method);
+
+        $dev = [
+            'api_key' => 'baray_dev_test_key',
+            'sk' => base64_encode(str_repeat('d', 32)),
+            'iv' => base64_encode(str_repeat('s', 16)),
+        ];
+        $prod = [
+            'api_key' => 'baray_live_test_key',
+            'sk' => base64_encode(str_repeat('p', 32)),
+            'iv' => base64_encode(str_repeat('l', 16)),
+        ];
+
+        $this->actingAs($admin)->get(route('dashboard.payment-methods.index'))->assertOk()
+            ->assertSee('Sandbox / Development')->assertSee('Production credentials')
+            ->assertSee('gateway[sandbox][api_key]', false)
+            ->assertSee('gateway[live][api_key]', false)
+            ->assertDontSee('baray_dev_test_key');
+
+        $this->patch($save, [
+            'available' => false,
+            'baray_environment' => 'sandbox',
+            'gateway' => ['sandbox' => $dev, 'live' => $prod],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame($dev, CommerceGatewaySetting::forMode('baray', false)->sole()->credentials);
+        $this->assertSame($prod, CommerceGatewaySetting::forMode('baray', true)->sole()->credentials);
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('baray'));
+        $this->assertFalse($method->fresh()->available);
+
+        // Configuration alone must not activate Production.
+        $this->patch($save, [
+            'available' => false,
+            'baray_environment' => 'live',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertFalse(CommerceGatewaySetting::checkoutIsLive('baray'));
+
+        $this->patch($save, [
+            'available' => false,
+            'baray_environment' => 'live',
+            'activate_baray_environment' => '1',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertTrue(CommerceGatewaySetting::checkoutIsLive('baray'));
+        $this->assertSame($dev, CommerceGatewaySetting::forMode('baray', false)->sole()->credentials);
+        $this->assertSame($prod, CommerceGatewaySetting::forMode('baray', true)->sole()->credentials);
+        $this->assertFalse($method->fresh()->available);
+
+        $this->patch($save, [
+            'available' => false,
+            'baray_environment' => 'sandbox',
+            'gateway' => ['sandbox' => ['api_key' => 'baray_dev_rotated']],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('baray_dev_rotated',
+            CommerceGatewaySetting::forMode('baray', false)->sole()->credentials['api_key']);
+        $this->assertSame($prod, CommerceGatewaySetting::forMode('baray', true)->sole()->credentials);
+        $this->assertTrue(CommerceGatewaySetting::checkoutIsLive('baray'));
+
+        // Never leak either environment's key into the admin HTML.
+        $this->get(route('dashboard.payment-methods.index'))->assertOk()
+            ->assertDontSee('baray_live_test_key')->assertDontSee('baray_dev_rotated');
+    }
+
     public function test_baray_encrypted_checkout_only_fulfills_on_bank_confirmed_webhook(): void
     {
         $key = base64_encode(str_repeat('k', 32));
