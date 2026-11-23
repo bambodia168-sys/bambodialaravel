@@ -86,6 +86,7 @@ class CommercePaymentMethodController extends Controller
     {
         abort_unless(config('commerce.enabled'), 404);
         $stripe = $method->provider === 'stripe';
+        $baray = $method->provider === 'baray';
         $bakong = $method->provider === 'bakong';
         $fields = array_keys(CommerceGatewaySetting::FIELDS[$method->provider] ?? []);
         $gatewayKeys = $bakong ? [...$fields, 'sandbox', 'live'] : $fields;
@@ -96,6 +97,8 @@ class CommercePaymentMethodController extends Controller
             'gateway' => [$gatewayKeys ? 'array:'.implode(',', $gatewayKeys) : 'prohibited'],
             'stripe_environment' => $stripe ? ['sometimes', 'required', Rule::in(['sandbox', 'live'])] : ['prohibited'],
             'activate_stripe_environment' => $stripe ? ['sometimes', 'boolean'] : ['prohibited'],
+            'baray_environment' => $baray ? ['sometimes', 'required', Rule::in(['sandbox', 'live'])] : ['prohibited'],
+            'activate_baray_environment' => $baray ? ['sometimes', 'boolean'] : ['prohibited'],
             'bakong_environment' => $bakong ? ['nullable', 'string', Rule::in(['sandbox', 'live'])] : ['prohibited'],
             'activate_bakong_environment' => $bakong ? ['sometimes', 'boolean'] : ['prohibited'],
             'bakong_renewal' => $bakong ? ['sometimes', 'array:sandbox,live'] : ['prohibited'],
@@ -134,7 +137,7 @@ class CommercePaymentMethodController extends Controller
         $path = $request->file('qr')?->store('commerce/payment-qr', 'local');
         abort_if($path === false, 503);
         try {
-            $previous = DB::transaction(function () use ($method, $values, $path, $request, $stripe, $bakong): ?string {
+            $previous = DB::transaction(function () use ($method, $values, $path, $request, $stripe, $baray, $bakong): ?string {
                 $locked = CommercePaymentMethod::query()->lockForUpdate()->findOrFail($method->id);
                 $old = $locked->qr_path;
                 $locked->fill(['available'=>$values['available']]);
@@ -146,7 +149,9 @@ class CommercePaymentMethodController extends Controller
                 }
                 $currentMode = CommerceGatewaySetting::checkoutIsLive($locked->provider);
                 $credentialsMode = $stripe && array_key_exists('stripe_environment', $values)
-                    ? $values['stripe_environment'] === 'live' : $currentMode;
+                    ? $values['stripe_environment'] === 'live'
+                    : ($baray && array_key_exists('baray_environment', $values)
+                        ? $values['baray_environment'] === 'live' : $currentMode);
                 $gateway = $values['gateway'] ?? [];
                 $credentialsChanged = $bakong
                     ? $this->saveBakongCredentials($currentMode, $gateway, $values['bakong_renewal'] ?? [])
@@ -154,11 +159,13 @@ class CommercePaymentMethodController extends Controller
                 $activationChanged = match (true) {
                     $stripe && ($values['activate_stripe_environment'] ?? false)
                         => $this->activateEnvironment('stripe', $currentMode, $credentialsMode),
+                    $baray && ($values['activate_baray_environment'] ?? false)
+                        => $this->activateEnvironment('baray', $currentMode, $credentialsMode),
                     $bakong && isset($values['bakong_environment']) && ($values['activate_bakong_environment'] ?? true)
                         => $this->activateEnvironment('bakong', $currentMode, $values['bakong_environment'] === 'live'),
                     default => false,
                 };
-                if ($locked->available && ((! $stripe && ! $bakong) || $locked->isDirty('available'))
+                if ($locked->available && ((! $stripe && ! $baray && ! $bakong) || $locked->isDirty('available'))
                     && CommerceCollection::enabled() && ! $locked->availableForCheckout()) {
                     $message = $bakong && app()->isProduction() && ! CommerceGatewaySetting::checkoutIsLive('bakong')
                         ? 'Bakong Sandbox can be used for checkout on a test installation. Select Production and configure its credentials to make Bakong available here.'
@@ -212,9 +219,11 @@ class CommercePaymentMethodController extends Controller
             }
 
             throw ValidationException::withMessages([
-                $field => $provider === 'stripe'
-                    ? 'Save the API secret key and webhook signing secret for this environment before activating it.'
-                    : 'Save the Bakong recipient details and API token for this environment before activating it.',
+                $field => match ($provider) {
+                    'stripe' => 'Save the API secret key and webhook signing secret for this environment before activating it.',
+                    'baray' => 'Save a Baray API key, Base64 AES secret and IV for this environment before activating it.',
+                    default => 'Save the Bakong recipient details and API token for this environment before activating it.',
+                },
             ]);
         }
         if ($currentMode !== $selectedMode && CommercePayment::query()->where('provider', $provider)
