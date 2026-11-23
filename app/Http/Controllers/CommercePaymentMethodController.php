@@ -89,7 +89,7 @@ class CommercePaymentMethodController extends Controller
         $baray = $method->provider === 'baray';
         $bakong = $method->provider === 'bakong';
         $fields = array_keys(CommerceGatewaySetting::FIELDS[$method->provider] ?? []);
-        $gatewayKeys = $bakong ? [...$fields, 'sandbox', 'live'] : $fields;
+        $gatewayKeys = ($bakong || $baray) ? [...$fields, 'sandbox', 'live'] : $fields;
         $rules = [
             'available'=>['required', 'boolean'], 'instructions'=>['sometimes', 'nullable', 'string', 'max:2500'],
             'qr'=>['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
@@ -111,6 +111,18 @@ class CommercePaymentMethodController extends Controller
         }
         $labels = collect(CommerceGatewaySetting::FIELDS[$method->provider] ?? [])
             ->mapWithKeys(fn (string $label, string $key) => ['gateway.'.$key => $label])->all();
+        if ($baray) {
+            foreach (['sandbox' => 'Development', 'live' => 'Production'] as $mode => $label) {
+                $rules["gateway.{$mode}"] = ['sometimes', 'array:'.implode(',', $fields)];
+                foreach ($fields as $field) {
+                    $rules["gateway.{$mode}.{$field}"] = ['nullable', 'string', 'max:2048', 'regex:/^[!-~]+$/D'];
+                    $labels["gateway.{$mode}.{$field}"] = $label.' '.CommerceGatewaySetting::FIELDS['baray'][$field];
+                }
+            }
+            foreach ($fields as $field) {
+                $rules['gateway.'.$field] = ['prohibited'];
+            }
+        }
         if ($bakong) {
             $bakongRules = [
                 'account_id' => ['nullable', 'string', 'regex:/^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+$/D', 'max:32'],
@@ -153,9 +165,11 @@ class CommercePaymentMethodController extends Controller
                     : ($baray && array_key_exists('baray_environment', $values)
                         ? $values['baray_environment'] === 'live' : $currentMode);
                 $gateway = $values['gateway'] ?? [];
-                $credentialsChanged = $bakong
-                    ? $this->saveBakongCredentials($currentMode, $gateway, $values['bakong_renewal'] ?? [])
-                    : $locked->usesGateway() && $this->saveCredentials($locked->provider, $credentialsMode, $gateway);
+                $credentialsChanged = match (true) {
+                    $bakong => $this->saveBakongCredentials($currentMode, $gateway, $values['bakong_renewal'] ?? []),
+                    $baray => $this->saveBarayCredentials($gateway),
+                    default => $locked->usesGateway() && $this->saveCredentials($locked->provider, $credentialsMode, $gateway),
+                };
                 $activationChanged = match (true) {
                     $stripe && ($values['activate_stripe_environment'] ?? false)
                         => $this->activateEnvironment('stripe', $currentMode, $credentialsMode),
@@ -190,6 +204,16 @@ class CommercePaymentMethodController extends Controller
         }
 
         return back()->with('status', 'Payment method settings saved.');
+    }
+
+    private function saveBarayCredentials(array $input): bool
+    {
+        $changed = false;
+        foreach (['sandbox' => false, 'live' => true] as $mode => $live) {
+            $changed = $this->saveCredentials('baray', $live, $input[$mode] ?? []) || $changed;
+        }
+
+        return $changed;
     }
 
     private function saveBakongCredentials(bool $currentMode, array $input, array $renewal): bool
