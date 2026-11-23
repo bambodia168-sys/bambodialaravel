@@ -28,7 +28,7 @@ final class GoogleSignInRecoveryTest extends TestCase
         ]);
     }
 
-    private function callback(
+    private function runGoogleCallback(
         string $subject = 'google-subject-123',
         string $email = 'member@gmail.com',
         bool $verified = true,
@@ -56,7 +56,7 @@ final class GoogleSignInRecoveryTest extends TestCase
     {
         $user = $this->existingUser();
 
-        $this->callback()->assertRedirect();
+        $this->runGoogleCallback()->assertRedirect();
         $this->assertAuthenticatedAs($user);
         $this->assertDatabaseHas('social_login_identities', [
             'user_id' => $user->id,
@@ -69,10 +69,10 @@ final class GoogleSignInRecoveryTest extends TestCase
     public function test_recovered_google_identity_is_reused_on_later_signins(): void
     {
         $user = $this->existingUser();
-        $this->callback()->assertRedirect();
+        $this->runGoogleCallback()->assertRedirect();
         $this->post(route('logout'))->assertRedirect();
 
-        $this->callback()->assertRedirect();
+        $this->runGoogleCallback()->assertRedirect();
         $this->assertAuthenticatedAs($user);
         $this->assertDatabaseCount('social_login_identities', 1);
     }
@@ -80,7 +80,7 @@ final class GoogleSignInRecoveryTest extends TestCase
     public function test_unverified_google_email_cannot_take_over_existing_account(): void
     {
         $this->existingUser();
-        $this->callback(verified: false)->assertRedirect(route('login'))
+        $this->runGoogleCallback(verified: false)->assertRedirect(route('login'))
             ->assertSessionHasErrors('social_auth');
         $this->assertGuest();
         $this->assertDatabaseCount('social_login_identities', 0);
@@ -89,7 +89,7 @@ final class GoogleSignInRecoveryTest extends TestCase
     public function test_google_profile_email_mismatch_is_not_trusted(): void
     {
         $this->existingUser();
-        $this->callback(rawEmail: 'someone-else@gmail.com')->assertRedirect(route('login'))
+        $this->runGoogleCallback(rawEmail: 'someone-else@gmail.com')->assertRedirect(route('login'))
             ->assertSessionHasErrors('social_auth');
         $this->assertGuest();
         $this->assertDatabaseCount('social_login_identities', 0);
@@ -98,7 +98,7 @@ final class GoogleSignInRecoveryTest extends TestCase
     public function test_google_email_on_non_authoritative_domain_requires_explicit_link(): void
     {
         $this->existingUser('member@example.test');
-        $this->callback(email: 'member@example.test')->assertRedirect(route('login'))
+        $this->runGoogleCallback(email: 'member@example.test')->assertRedirect(route('login'))
             ->assertSessionHasErrors('social_auth');
         $this->assertGuest();
         $this->assertDatabaseCount('social_login_identities', 0);
@@ -106,7 +106,7 @@ final class GoogleSignInRecoveryTest extends TestCase
 
     public function test_new_google_email_does_not_silently_create_account_without_terms_consent(): void
     {
-        $this->callback()->assertRedirect(route('login'))
+        $this->runGoogleCallback()->assertRedirect(route('login'))
             ->assertSessionHasErrors('social_auth');
         $this->assertGuest();
         $this->assertDatabaseCount('users', 0);
@@ -115,7 +115,7 @@ final class GoogleSignInRecoveryTest extends TestCase
     public function test_inactive_accounts_cannot_be_recovered(): void
     {
         $this->existingUser(status: 'suspended');
-        $this->callback()->assertRedirect(route('login'))
+        $this->runGoogleCallback()->assertRedirect(route('login'))
             ->assertSessionHasErrors('social_auth');
         $this->assertGuest();
         $this->assertDatabaseCount('social_login_identities', 0);
@@ -130,7 +130,7 @@ final class GoogleSignInRecoveryTest extends TestCase
             'subject_hash' => hash('sha256', 'different-google-subject'),
         ]);
 
-        $this->callback()->assertRedirect(route('login'))->assertSessionHasErrors('social_auth');
+        $this->runGoogleCallback()->assertRedirect(route('login'))->assertSessionHasErrors('social_auth');
         $this->assertGuest();
         $this->assertDatabaseCount('social_login_identities', 1);
         $this->assertDatabaseHas('social_login_identities', [
@@ -149,7 +149,7 @@ final class GoogleSignInRecoveryTest extends TestCase
         ]);
 
         // Existing linkage continues to work even if the Google email changes.
-        $this->callback(email: 'renamed@example.test', verified: false)->assertRedirect();
+        $this->runGoogleCallback(email: 'renamed@example.test', verified: false)->assertRedirect();
         $this->assertAuthenticatedAs($user);
         $this->assertDatabaseCount('social_login_identities', 1);
     }
