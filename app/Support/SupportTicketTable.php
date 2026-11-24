@@ -13,6 +13,9 @@ final class SupportTicketTable
 {
     public static function filters(Request $request, bool $management = false): array
     {
+        $requestedStatus = (string) $request->query('status', '');
+        abort_if($requestedStatus !== '' && ! array_key_exists($requestedStatus, SupportTicket::STATUSES), 404);
+
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', Rule::in(array_keys(SupportTicket::STATUSES))],
