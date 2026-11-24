@@ -171,3 +171,20 @@
 }
 
 .ticket-private-thumb{display:block;width:56px;height:48px;object-fit:cover;border-radius:7px;border:1px solid var(--line);background:var(--surface)}
+
+/* Attachment action icon stays beside its label on all account layouts. */
+.support-ticket-form .ticket-attachment-fields > label,
+.support-reply-panel .ticket-attachment-fields > label {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  margin: 0 0 .65rem;
+  line-height: 1.4;
+}
+.ticket-attachment-fields > label svg {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--text);
+}

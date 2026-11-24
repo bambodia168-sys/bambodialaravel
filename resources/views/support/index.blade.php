@@ -2,7 +2,7 @@
 @section('workspace', match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
 @section('title', 'My Support Tickets')
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=4">
 @endpush
 @section('content')
 @php
