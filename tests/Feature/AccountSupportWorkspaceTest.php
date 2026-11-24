@@ -55,6 +55,76 @@ class AccountSupportWorkspaceTest extends TestCase
         $this->assertDatabaseCount('support_tickets', 6);
     }
 
+    public function test_each_role_manages_personal_tickets_within_its_workspace(): void
+    {
+        $workspaces = [
+            'customer' => '/account/support-tickets',
+            'subscriber' => '/account/support-tickets',
+            'freelancer' => '/studio/support-tickets',
+            'staff' => '/dashboard/support-tickets',
+            'admin' => '/dashboard/support-tickets',
+            'super_admin' => '/dashboard/support-tickets',
+        ];
+
+        foreach ($workspaces as $role => $base) {
+            $user = $this->account($role);
+
+            $this->actingAs($user)->get($base)->assertOk()
+                ->assertSee('My support tickets');
+            $this->get($base.'/create')->assertOk()
+                ->assertSee('data-ticket-editor', false);
+
+            $this->post($base, [
+                'subject' => 'Role workspace request from '.$role,
+                'message' => '<p>Can you help with my private account issue?</p>',
+            ])->assertRedirect();
+
+            $ticket = SupportTicket::query()->where('user_id', $user->id)->firstOrFail();
+
+            $this->get($base.'/'.$ticket->public_id)->assertOk()
+                ->assertSee('Role workspace request from '.$role);
+            $this->post($base.'/'.$ticket->public_id.'/reply', [
+                'message' => '<p>This is my follow-up reply.</p>',
+            ])->assertRedirect();
+
+            $this->assertSame(2, $ticket->messages()->count());
+            $this->assertSame($base.'/'.$ticket->public_id,
+                parse_url(route($user->supportTicketRoutePrefix().'.show', $ticket->public_id), PHP_URL_PATH));
+        }
+    }
+
+    public function test_personal_workspace_routes_reject_other_roles_and_other_owners(): void
+    {
+        $customer = $this->account('customer');
+        $freelancer = $this->account('freelancer');
+        $staff = $this->account('staff');
+
+        $this->get('/dashboard/support-tickets')->assertRedirect('/login');
+        $this->get('/studio/support-tickets')->assertRedirect('/login');
+
+        $this->actingAs($customer)->get('/dashboard/support-tickets')->assertForbidden();
+        $this->get('/studio/support-tickets')->assertForbidden();
+
+        $this->actingAs($freelancer)->get('/dashboard/support-tickets')->assertForbidden();
+        $this->actingAs($staff)->get('/studio/support-tickets')->assertForbidden();
+
+        $this->actingAs($customer)->post('/account/support-tickets', [
+            'subject' => 'Customer private ticket for account help',
+            'message' => '<p>Private customer message for the support team.</p>',
+        ])->assertRedirect();
+        $ticket = SupportTicket::query()->where('user_id', $customer->id)->firstOrFail();
+
+        $this->actingAs($staff)->get('/dashboard/support-tickets/'.$ticket->public_id)
+            ->assertNotFound();
+        $this->post('/dashboard/support-tickets/'.$ticket->public_id.'/reply', [
+            'message' => '<p>Unauthorized personal workspace response.</p>',
+        ])->assertNotFound();
+
+        $this->actingAs($freelancer)->get('/studio/support-tickets/'.$ticket->public_id)
+            ->assertNotFound();
+        $this->assertSame(1, $ticket->messages()->count());
+    }
+
     public function test_strangers_cannot_read_or_reply_to_private_support(): void
     {
         $owner = $this->account('customer');
