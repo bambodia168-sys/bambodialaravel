@@ -127,9 +127,15 @@
         ['route'=>'dashboard.marketplace.index','label'=>'Services','icon'=>'wrench','params'=>['type'=>'service']],
       ]];
     }
-    $groups[] = ['heading'=>'Assistance','items'=>[
-      ['route'=>'dashboard.support','label'=>'Support Center','icon'=>'life-buoy'],
-    ]];
+    $adminSupport = [
+      ['route'=>'dashboard.support-tickets.index','label'=>'My Support Tickets','icon'=>'message'],
+      ['route'=>'dashboard.support-tickets.create','label'=>'Create Support Ticket','icon'=>'plus'],
+    ];
+    if (\App\Support\UserManagementAccess::allows($user, 'support_center')) {
+      $adminSupport[] = ['route'=>'dashboard.support','label'=>'Support Management','icon'=>'inbox'];
+    }
+    $adminSupport[] = ['route'=>'support','label'=>'Public Support Center','icon'=>'life-buoy'];
+    $groups[] = ['heading'=>'Support & Help','items'=>$adminSupport];
   } elseif ($workspace === 'creator') {
     $groups = [
       ['heading'=>'Creator Overview','items'=>[
@@ -154,6 +160,11 @@
         ['route'=>'account.saved-listings','label'=>'Saved Listings','icon'=>'star'],
         ['route'=>'account.saved-jobs','label'=>'Saved Jobs','icon'=>'star'],
       ]],
+      ['heading'=>'Support & Help','items'=>[
+        ['route'=>'studio.support-tickets.index','label'=>'My Support Tickets','icon'=>'message'],
+        ['route'=>'studio.support-tickets.create','label'=>'Create Support Ticket','icon'=>'plus'],
+        ['route'=>'support','label'=>'Public Support Center','icon'=>'life-buoy'],
+      ]],
     ];
   } elseif ($workspace === 'developer') {
     $groups = [
@@ -165,6 +176,11 @@
         ['route'=>'security.index','label'=>'Security Center','icon'=>'shield-check'],
         ['route'=>'dashboard.features','label'=>'Feature Manager','icon'=>'sliders-horizontal'],
         ['route'=>'dashboard','label'=>'Admin Overview','icon'=>'layout-dashboard'],
+      ]],
+      ['heading'=>'Support & Help','items'=>[
+        ['route'=>'dashboard.support-tickets.index','label'=>'My Support Tickets','icon'=>'message'],
+        ['route'=>'dashboard.support-tickets.create','label'=>'Create Support Ticket','icon'=>'plus'],
+        ['route'=>'support','label'=>'Public Support Center','icon'=>'life-buoy'],
       ]],
     ];
   } else {
@@ -189,8 +205,11 @@
       ['heading'=>'Privacy & Records','items'=>[
         ['route'=>'account.policy-receipts','label'=>'Policy Receipts','icon'=>'scroll-text'],
         ['route'=>'privacy.index','label'=>'Privacy Requests','icon'=>'shield-check'],
-        ['route'=>'support','label'=>'Public Support Center','icon'=>'life-buoy'],
+      ]],
+      ['heading'=>'Support & Help','items'=>[
         ['route'=>$user->supportTicketRoutePrefix().'.index','label'=>'My Support Tickets','icon'=>'message'],
+        ['route'=>$user->supportTicketRoutePrefix().'.create','label'=>'Create Support Ticket','icon'=>'plus'],
+        ['route'=>'support','label'=>'Public Support Center','icon'=>'life-buoy'],
       ]],
     ];
     if ($user->isCreator()) {
@@ -203,21 +222,6 @@
         ['route'=>'creator.apply','label'=>'Become a Creator','icon'=>'user-round-check'],
       ]];
     }
-  }
-
-  // Keep personal ticket management reachable inside every role-based workspace,
-  // including administration, developer, and creator dashboards.
-  if ($workspace !== 'account') {
-    $ticketWorkspace = match ($workspace) {
-      'admin', 'developer' => 'dashboard.support-tickets',
-      'creator' => 'studio.support-tickets',
-      default => 'account.support',
-    };
-    $groups[] = ['heading'=>'My Account Support','items'=>[
-      ['route'=>$ticketWorkspace.'.index','label'=>'My Support Tickets','icon'=>'message'],
-      ['route'=>$ticketWorkspace.'.create','label'=>'Create Support Ticket','icon'=>'plus'],
-      ['route'=>'support','label'=>'Public Support Center','icon'=>'life-buoy'],
-    ]];
   }
 
   $workspaceRoot = match ($workspace) {
