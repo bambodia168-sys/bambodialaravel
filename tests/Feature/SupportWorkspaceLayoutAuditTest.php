@@ -55,7 +55,7 @@ class SupportWorkspaceLayoutAuditTest extends TestCase
                     ->assertOk()
                     ->assertSee('data-workspace="'.$workspace.'"', false)
                     ->assertSee('aria-label="'.$name.' menu"', false)
-                    ->assertSee('Support &amp; Help', false)
+                    ->assertSee('Support & Help', false)
                     ->assertSee('My Support Tickets')
                     ->assertDontSee('My Account Support');
             }
@@ -89,18 +89,15 @@ class SupportWorkspaceLayoutAuditTest extends TestCase
             ->assertSee('data-workspace="creator"', false)
             ->assertSee(route('studio.support-tickets.update', $ticket->public_id));
 
-        $this->post($base, [
+        $response = $this->post($base, [
             'subject' => 'Creator Studio support inquiry',
             'message' => '<p>Keep my support response in Creator Studio.</p>',
-        ])->assertRedirect();
+        ]);
 
         $newTicket = SupportTicket::query()->where('user_id', $root->id)
             ->where('subject', 'Creator Studio support inquiry')->firstOrFail();
 
-        $this->assertSame(
-            route('studio.support-tickets.show', $newTicket->public_id),
-            route($root->supportTicketRoutePrefixForRequest().'.show', $newTicket->public_id)
-        );
+        $response->assertRedirect(route('studio.support-tickets.show', $newTicket->public_id));
     }
 
     public function test_localized_creator_workspace_keeps_creator_shell_for_super_admin(): void
@@ -127,7 +124,7 @@ class SupportWorkspaceLayoutAuditTest extends TestCase
 
         $this->actingAs($staff)->get('/dashboard')
             ->assertOk()
-            ->assertSee('Support &amp; Help', false)
+            ->assertSee('Support & Help', false)
             ->assertSee('My Support Tickets')
             ->assertDontSee('title="Support Management"', false);
 
