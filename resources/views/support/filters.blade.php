@@ -5,7 +5,7 @@
   </label>
   <label class="support-filter-field">
     <span>Status</span>
-    <select name="status">
+    <select name="status" aria-label="Support ticket status">
       <option value="">All statuses</option>
       @foreach(\App\Models\SupportTicket::STATUSES as $key => $label)
         <option value="{{ $key }}" @selected($filters['status'] === $key)>{{ $label }}</option>
