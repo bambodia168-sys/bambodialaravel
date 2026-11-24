@@ -50,7 +50,10 @@ class CommercePaymentController extends Controller
         if ($payment->remote_id) {
             $url = $this->reconcile($payment, false);
             if ($this->gateway->trustedCheckout($payment->provider, $live, $url)) {
-                return redirect()->away($url);
+                return $payment->provider === 'baray'
+                    ? redirect()->route('account.orders.show', $number)
+                        ->with('status', 'Your Baray payment window is ready. Open secure checkout from this order; Bambodia will show the bank-confirmed result.')
+                    : redirect()->away($url);
             }
 
             return redirect()->route('account.orders.show', $number)->with('status', 'Payment status updated.');
@@ -67,7 +70,31 @@ class CommercePaymentController extends Controller
             }
         }, 3);
 
-        return redirect()->away($url);
+        return $payment->provider === 'baray'
+            ? redirect()->route('account.orders.show', $number)
+                ->with('status', 'Baray checkout is ready. Open the secure payment page below. We will confirm your order after the bank does.')
+            : redirect()->away($url);
+    }
+
+    /**
+     * Buyer-only, read-only Baray status. A browser poll must never settle or
+     * fulfill an order; only the Baray bank-confirmed webhook can do that.
+     */
+    public function barayStatus(Request $request, string $number, string $payment): JsonResponse
+    {
+        $order = $this->buyerOrder($request, $number);
+        $attempt = $order->payments()->where('number', $payment)
+            ->where('provider', 'baray')->whereNotNull('remote_id')->firstOrFail();
+
+        return response()->json([
+            'payment_status' => $attempt->status,
+            'order_status' => $order->status,
+            'confirmed' => $order->status === 'completed'
+                && $attempt->status === 'paid'
+                && filled($attempt->settlement_reference),
+            'order_url' => route('account.orders.show', $order->number),
+        ])->header('Cache-Control', 'private, no-store')
+          ->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
     public function returned(Request $request, string $number, string $payment): RedirectResponse
@@ -85,6 +112,11 @@ class CommercePaymentController extends Controller
                 return redirect()->route('account.orders.show', $number)
                     ->with('status', 'Payment confirmation is pending. You can check its status from your order.');
             }
+        }
+
+        if ($attempt->provider === 'baray') {
+            return redirect()->route('account.orders.show', $number)
+                ->with('status', 'Baray checkout returned. Payment is pending until the bank confirms it.');
         }
 
         return redirect()->route('account.orders.show', $number);

@@ -477,3 +477,57 @@
         color: #333;
     }
 }
+
+/* Baray stays hosted at Baray while the buyer's order and live status remain on Bambodia. */
+.order-review-baray {
+    display: grid;
+    gap: 1rem;
+    max-inline-size: 46rem;
+}
+.order-review-baray-heading h4 {
+    margin: 0 0 .4rem;
+    font-size: 1.03rem;
+}
+.order-review-baray-heading p,
+.order-review-baray-note {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.6;
+}
+.order-review-baray-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .65rem;
+}
+.order-review-baray-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    max-inline-size: 100%;
+    text-align: center;
+}
+.order-review-baray-pending {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    padding: .95rem 1rem;
+    background: var(--surface, transparent);
+    border: 1px solid var(--line);
+    border-radius: .85rem;
+}
+.order-review-baray-pending > svg {
+    flex: 0 0 1.15rem;
+    margin-block-start: .15rem;
+}
+.order-review-baray-pending [role="status"] {
+    margin: 0 0 .4rem;
+    font-weight: 700;
+}
+.order-review-baray-pending .btn {
+    margin-block-start: .65rem;
+}
+@media (max-width: 480px) {
+    .order-review-baray-actions .btn { inline-size: 100%; }
+}

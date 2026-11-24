@@ -54,6 +54,41 @@
                 </div>
               </div>
               <script defer src="{{ asset('js/commerce-payment-poll.js') }}?v=2"></script>
+            @elseif($activePayment?->provider === 'baray' && $activePayment->remote_id)
+              <div class="order-review-baray" data-baray-payment
+                   data-baray-status-url="{{ route('account.orders.payment.baray-status', [$order->number, $activePayment->number]) }}"
+                   data-baray-order-url="{{ route('account.orders.show', $order->number) }}">
+                <div class="order-review-baray-heading">
+                  <h4>Secure Baray checkout</h4>
+                  <p>Keep this Bambodia order page open. Baray securely handles bank selection, KHQR and card payments in a separate tab.</p>
+                </div>
+                @if($collectingPayments && $activePayment->created_at->isAfter(now()->subMinutes(15)))
+                  <div class="order-review-baray-actions">
+                    <a class="btn primary" href="{{ app(\App\Support\BarayGateway::class)->checkoutUrl($activePayment->remote_id) }}"
+                       target="_blank" rel="noopener noreferrer">
+                      Open secure Baray checkout
+                      <x-icon name="external-link" size="16"/>
+                    </a>
+                    <a class="btn subtle" href="{{ app(\App\Support\BarayGateway::class)->checkoutUrl($activePayment->remote_id) }}"
+                       rel="noreferrer">Continue in this tab</a>
+                  </div>
+                @elseif(!$collectingPayments)
+                  <p>New payments are paused. An existing bank confirmation can still update your order.</p>
+                @else
+                  <p>Baray's checkout link may have expired. Please do not attempt a second payment until this order has been reviewed.</p>
+                @endif
+                <div class="order-review-baray-pending">
+                  <x-icon name="clock" size="18"/>
+                  <div>
+                    <p role="status" aria-live="polite" data-baray-status-text>
+                      Awaiting Baray's bank-confirmed payment notification.
+                    </p>
+                    <p class="order-review-baray-note">Bambodia checks payment status automatically while this page is open. Returning from checkout alone does not mark your order paid.</p>
+                    <button class="btn subtle compact" type="button" data-baray-check-now>Check status now</button>
+                  </div>
+                </div>
+              </div>
+              <script defer src="{{ asset('js/commerce-baray-status.js') }}?v=1"></script>
             @elseif($activePayment)
               @if($collectingPayments)
                 <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}">
@@ -63,7 +98,7 @@
                 </form>
               @endif
               @if($activePayment->provider === 'baray')
-                <p>Baray will confirm payment after the bank verifies it. Returning from checkout does not mark an order paid.</p>
+                <p>Baray confirms payment after the bank verifies it. Once checkout is ready, Bambodia will provide a secure checkout link and automatic status updates.</p>
               @endif
               @if($activePayment->remote_id && $activePayment->provider !== 'baray')
                 <form method="post" action="{{ route('account.orders.payment.verify', [$order->number, $activePayment->number]) }}">
@@ -75,10 +110,13 @@
               @if($selectedMethod->dynamicQr() && $payments->firstWhere('status', 'expired'))
                 <p>Your previous payment attempt has closed. Generate a new QR to pay with {{ $selectedMethod->name }}.</p>
               @endif
+              @if($selectedMethod->provider === 'baray')
+                <p>Baray opens its secure bank checkout in a new tab after payment setup. To scan a KHQR directly on Bambodia, choose Bakong instead.</p>
+              @endif
               <form method="post" action="{{ route('account.orders.payment.start', $order->number) }}">
                 @csrf
                 <input type="hidden" name="method" value="{{ $selectedMethod->id }}">
-                <button class="btn primary">{{ $selectedMethod->dynamicQr() ? 'Generate QR for' : 'Pay with' }} {{ $selectedMethod->name }}</button>
+                <button class="btn primary">{{ $selectedMethod->provider === 'baray' ? 'Prepare secure Baray checkout' : ($selectedMethod->dynamicQr() ? 'Generate QR for' : 'Pay with').' '.$selectedMethod->name }}</button>
               </form>
             @else
               @if($rejectedReceipt)

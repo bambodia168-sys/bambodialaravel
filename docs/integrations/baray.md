@@ -26,6 +26,17 @@ Baray is an API integration service for licensed Cambodian banks, not a custodia
 
 The ABA HMAC secret in the **Banks → Connect ABA** dialog is for the *Baray-to-ABA* connection. It is **not** the Baray `api_key`, `sk` or `iv` required by Bambodia. Never paste any secrets in a GitHub issue, chat transcript, repository, log, or screenshot.
 
+## Customer experience: Bambodia-hosted order status and bank-hosted payment
+
+- When a buyer chooses Baray, Bambodia creates the payment intent server-side and returns the buyer to their **Bambodia order page**.
+- The order page offers a link to open **pay.baray.io** in a separate tab. A same-tab fallback is available. The Baray bank selector, KHQR details, and card entry remain Baray-hosted; they are **not embedded** or reproduced by Bambodia.
+- The buyer's Bambodia page stays visible with **Waiting for bank confirmation**. The browser makes a rate-limited, **read-only** GET request to the buyer-owned order attempt status endpoint every ~9 seconds when visible; the tab stops polling when hidden and resumes when focused.
+- The status endpoint never calls Baray to poll, never marks an order paid, and never reveals bank credentials or API secrets. It reads only server-side settlement state. A confirmed response reloads the order page to show the receipt and purchase entitlements. If the connection fails, the page says to wait and avoid duplicate payment.
+- Returns from the Baray checkout always show a **pending** message until the webhook confirms the payment. Existing Bakong's native KHQR display and independent receipt verification remain unchanged.
+- The hosted Baray checkout link may expire (currently default fifteen minutes). Old links are not displayed; the customer should contact support or have the outstanding attempt reconciled rather than create a second payment.
+
+The Baray developer documentation currently describes **hosted checkout**, not a supported cross-domain iframe, merchant-side card UI or embeddable bank picker. Do not impersonate Baray or process card data inside Bambodia.
+
 ## Payment operational guarantees
 
 - Only one active payment per order; retry uses the same attempt `order_id`.
