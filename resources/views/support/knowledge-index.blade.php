@@ -18,7 +18,7 @@
       </form>
       <div class="support-hero-links">
         @auth
-          <a class="btn subtle" href="{{ route('account.support.index') }}"><x-icon name="life-buoy" size="17"/> My support tickets</a>
+          <a class="btn subtle" href="{{ route(auth()->user()->supportTicketRoutePrefix().'.index') }}"><x-icon name="life-buoy" size="17"/> My support tickets</a>
         @else
           <a class="btn subtle" href="{{ route('login') }}"><x-icon name="user" size="17"/> Sign in to create a ticket</a>
         @endauth
@@ -75,7 +75,7 @@
           <x-icon name="book-open" size="30"/>
           <h3>No published articles match your search.</h3>
           <p>Knowledge base articles appear here after review and publication. You can still contact the support team.</p>
-          @auth<a class="btn primary" href="{{ route('account.support.index') }}">Open my account tickets</a>@else<a class="btn subtle" href="{{ route('login') }}">Sign in for support</a>@endauth
+          @auth<a class="btn primary" href="{{ route(auth()->user()->supportTicketRoutePrefix().'.index') }}">Open my account tickets</a>@else<a class="btn subtle" href="{{ route('login') }}">Sign in for support</a>@endauth
         </div>
       @endforelse
     </div>
@@ -84,7 +84,7 @@
       <div><div class="eyebrow">Personal assistance</div><h2>Still need help?</h2>
         <p>Your support ticket stays private between your account and authorized support staff.</p>
       </div>
-      @auth<a class="btn primary" href="{{ route('account.support.index') }}"><x-icon name="life-buoy" size="17"/> View my tickets</a>
+      @auth<a class="btn primary" href="{{ route(auth()->user()->supportTicketRoutePrefix().'.index') }}"><x-icon name="life-buoy" size="17"/> View my tickets</a>
       @else<a class="btn primary" href="{{ route('login') }}">Sign in for private support</a>@endauth
     </section>
   </div>
