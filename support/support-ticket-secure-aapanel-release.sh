@@ -16,7 +16,7 @@ MODE="$1"
 
 REPO="bambodia168-sys/bambodialaravel"
 BASE="6335e19fcac52e015698f9b36903b0930cd76c65"
-TARGET="0183b3979bdd047e18a794bd935afed668a72651"
+TARGET="16e31e3f12a7c206575f97076da396bf7a821889"
 SITE="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
 MIGRATION="database/migrations/2026_11_24_210000_add_ticket_attachments_context_and_secure_credentials.php"
@@ -108,7 +108,7 @@ mkdir -p "$STAGE"/{base,target,candidates}
 cat > "$STAGE/manifest" <<'MANIFEST'
 app/Http/Controllers/Dashboard/SupportCenterController.php|a9cd97c0a53c8f69ea9806e396db719440766886|450a5e0c2ea0abd89082c8079bba7c84cdf41a5b
 app/Http/Controllers/SupportController.php|f40b60d4439fff479c6fb9c2b8c85342996e4e1f|79a2ad42f9790491bcf433bac14132b491540008
-app/Http/Controllers/SupportTicketResourceController.php|NEW|fb505cc8d6a6b7a04396b004a1bf1fc3e9c4e273
+app/Http/Controllers/SupportTicketResourceController.php|NEW|31082634438ea686efb13b5df76d11ecb060a9c8
 app/Models/AuditEvent.php|f123052b914bdf29ed6f54f2b2bf45fb7abad994|3a6cf98650a95cceb3a822dc3b4579c5dc2e4d69
 app/Models/SupportMessage.php|e4247a7991ef64b7b72f57859714de0f04b53f44|44422b337f80126b41422c98b9903698c36e0f36
 app/Models/SupportTicket.php|eebeee21ad80f8ce46559e33c2a331ed60b4f9af|e8b91d13886eb836c4d7359c686aec469166580a
@@ -120,7 +120,7 @@ app/Support/SupportTicketSecrets.php|NEW|895458021e56e1256c949a3657134d6ad16403b
 app/Support/SupportTicketTable.php|0fb147f95b419605389d7a836ae01e22c85fb42d|3b5fc74166fb9f23ce37dbd2de9cca4945bf815f
 bootstrap/app.php|d3811de4fc3e253f9699a15cd6e3869afa204ed5|14aedbbf00c32635335e173f1ea35685a9a422c4
 database/migrations/2026_11_24_210000_add_ticket_attachments_context_and_secure_credentials.php|NEW|47e1cd206f4d34d960703316801344019c570cca
-public/css/support-tickets.css|023e93da77441fddd5e894ca748f2b06160f6383|d08c56eccbe3dd80538254281ab757455d60e850
+public/css/support-tickets.css|023e93da77441fddd5e894ca748f2b06160f6383|d75981a047c8fe9cee5e7953dc08608488b94d36
 public/js/support-ticket-editor.js|01c913578138a5be3f703e97b3fa91ae9f477fd6|4a72b61be083b878bb52184579112df4f5e27d7c
 public/js/support-ticket-secrets.js|NEW|26b6a94eddc2801e09ded99f412e14c4ff3e604c
 resources/views/dashboard/support.blade.php|359c5fde2dacf64aa7ab1ebc996de88528fba4df|f076e1030cc249d0f7d4c04dd84979a5836ca34f
@@ -133,9 +133,9 @@ resources/views/support/filters.blade.php|691aa43373a7ac5e29b2815e657601e4429e03
 resources/views/support/index.blade.php|b7d637290f52fefa3fdf1f7717f24832df413a75|d63ed5d885abd03f3f08a8c17bacefca6f687f74
 resources/views/support/issue-fields.blade.php|NEW|c2625e639a4dae32c86f005b247c55b18dddd480
 resources/views/support/secret-vault.blade.php|NEW|4a5edc78934f852daa8ae78d6be9009ed5ebb947
-resources/views/support/show.blade.php|34aff3fd27b6bd93e1f2674533bfa7afaef0948a|23e1d81e13fe8f2e2efdcae2f76d459dc1273211
+resources/views/support/show.blade.php|34aff3fd27b6bd93e1f2674533bfa7afaef0948a|f59d1c3ab2b5fbfb62065baae571dd70413b173e
 routes/console.php|1f7b51696569bd27ffbf57a5604cb74343ce6d98|967c45ae9b3f3d46ca5c0a68e52a8bfc6ca22ffb
-routes/web.php|091edc229fa3629f2d4e6424c38e5e3d7a7d9a4d|1ac95ab8ef7c7047ff7d4e4b16cc3267a4142899
+routes/web.php|091edc229fa3629f2d4e6424c38e5e3d7a7d9a4d|198146f5b3e6bb38b64aadaa10a511421abdb911
 MANIFEST
 : > "$STAGE/old.list"
 : > "$STAGE/new.list"
@@ -299,7 +299,7 @@ done < "$STAGE/changed.list"
 python3 -c '
 import json, sys
 routes = {r.get("name") for r in json.load(sys.stdin)}
-needed = {"support.attachments.download", "support.credentials.store",
+needed = {"support.attachments.download", "support.attachments.preview", "support.credentials.store",
           "support.credentials.reveal", "support.credentials.revoke",
           "account.support.create", "studio.support-tickets.create",
           "dashboard.support-tickets.create"}
