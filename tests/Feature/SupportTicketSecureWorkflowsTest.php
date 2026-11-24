@@ -296,6 +296,54 @@ class SupportTicketSecureWorkflowsTest extends TestCase
         $this->postJson(route('support.credentials.reveal', $active->public_id))->assertStatus(410);
     }
 
+    public function test_staff_cannot_self_assign_a_ticket_after_private_secrets_are_shared(): void
+    {
+        $owner = $this->user();
+        $staff = $this->user('staff');
+        $admin = $this->user('admin');
+        $ticket = $this->ticket($owner);
+
+        $this->actingAs($owner)->post(route('support.credentials.store', $ticket->public_id), [
+            'credential_label' => 'Temporary support token',
+            'credential_key' => 'scoped-token-should-not-leak',
+        ])->assertRedirect();
+
+        $this->actingAs($staff)->patch(route('dashboard.support.assign', $ticket->public_id), [
+            'assigned_to' => $staff->id,
+        ])->assertForbidden();
+
+        $share = SupportTicketCredential::query()->firstOrFail();
+        $this->postJson(route('support.credentials.reveal', $share->public_id))->assertForbidden();
+
+        $this->actingAs($admin)->patch(route('dashboard.support.assign', $ticket->public_id), [
+            'assigned_to' => $staff->id,
+        ])->assertRedirect();
+        $this->actingAs($staff)->postJson(route('support.credentials.reveal', $share->public_id))
+            ->assertOk()->assertJsonPath('details.key', 'scoped-token-should-not-leak');
+    }
+
+    public function test_credential_inputs_are_not_flashed_into_old_session_input_on_validation_error(): void
+    {
+        $owner = $this->user();
+        $this->actingAs($owner)->post('/account/support-tickets', [
+            'subject' => 'bad',
+            'message' => '<p>Missing subject length but includes secure input.</p>',
+            'credential_label' => 'Private portal',
+            'credential_url' => 'https://example.com/admin',
+            'credential_username' => 'sensitive-username',
+            'credential_password' => 'sensitive-password',
+            'credential_key' => 'sensitive-api-key',
+        ])->assertSessionHasErrors('subject');
+
+        $old = session()->getOldInput();
+        foreach ([
+            'credential_label', 'credential_url', 'credential_username',
+            'credential_password', 'credential_key',
+        ] as $field) {
+            $this->assertArrayNotHasKey($field, $old);
+        }
+    }
+
     public function test_staff_may_add_reference_files_to_replies_without_disclosing_other_tickets(): void
     {
         Storage::fake('local');
