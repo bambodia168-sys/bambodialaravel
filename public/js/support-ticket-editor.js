@@ -204,6 +204,14 @@
         root.querySelector('[data-ticket-media-error]').hidden = true;
         dialog.showModal();
       });
+      root.querySelector('[data-ticket-credentials]')?.addEventListener('click', () => {
+        const section = document.querySelector('[data-ticket-secret-panel]');
+        if (!section) return;
+        section.hidden = false;
+        section.closest('.ticket-secure-share-section')?.scrollIntoView({behavior:'smooth',block:'center'});
+        section.scrollIntoView({behavior:'smooth',block:'center'});
+        section.querySelector('input[name="credential_label"]')?.focus({preventScroll:true});
+      });
       root.querySelector('[data-ticket-media-cancel]')?.addEventListener('click', () => dialog.close());
       root.querySelector('[data-ticket-media-insert]')?.addEventListener('click', event => {
         event.preventDefault();
@@ -239,7 +247,13 @@
         } else {
           source.value = surface.innerHTML.trim();
         }
-        const text = new DOMParser().parseFromString(source.value, 'text/html').body.textContent?.trim() || '';
+        let text = new DOMParser().parseFromString(source.value, 'text/html').body.textContent?.trim() || '';
+        const attachmentCount = Array.from(form.querySelectorAll('input[name="attachments[]"]'))
+          .reduce((sum, input) => sum + (input.files?.length || 0), 0);
+        if (text.length === 0 && Number(root.dataset.minimum || 2) <= 2 && attachmentCount > 0) {
+          source.value = '<p>Reference files attached.</p>';
+          text = 'Reference files attached.';
+        }
         if (text.length < Number(root.dataset.minimum || 2) || source.value.length > 40000) {
           e.preventDefault();
           window.alert('Enter enough readable message text and keep it under 40,000 characters.');
