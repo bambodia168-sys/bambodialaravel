@@ -9,7 +9,7 @@
 <div class="container inner-page support-workspace">
   <div class="support-workspace-heading">
     <div>
-      <a class="support-back-link" href="{{ $isStaff ? route('dashboard.support') : route('account.support.index') }}">
+      <a class="support-back-link" href="{{ $isStaff ? route('dashboard.support') : route(auth()->user()->supportTicketRoutePrefix().'.index') }}">
         <x-icon name="chevron-left" size="16"/> {{ $isStaff ? 'Support administration' : 'My support tickets' }}
       </a>
       <div class="eyebrow">Private support · Ticket {{ $ticket->public_id }}</div>
@@ -53,7 +53,7 @@
     <h2>Write a reply</h2>
     <p class="text-muted">Replies are added to this private ticket. You can format text, insert media and share code.</p>
     <form class="support-ticket-form" method="post" data-ticket-form
-      action="{{ $isStaff ? route('dashboard.support.reply', $ticket->public_id) : route('account.support.reply', $ticket->public_id) }}">
+      action="{{ $isStaff ? route('dashboard.support.reply', $ticket->public_id) : route(auth()->user()->supportTicketRoutePrefix().'.reply', $ticket->public_id) }}">
       @csrf
       <label for="ticket-reply-message">Your response</label>
       @include('support.editor', ['editorId' => 'ticket-reply-message', 'minimum' => 2])
@@ -67,7 +67,7 @@
         </select>
       @endif
       <div class="support-form-actions">
-        <a href="{{ $isStaff ? route('dashboard.support') : route('account.support.index') }}" class="btn subtle">Back to tickets</a>
+        <a href="{{ $isStaff ? route('dashboard.support') : route(auth()->user()->supportTicketRoutePrefix().'.index') }}" class="btn subtle">Back to tickets</a>
         <button type="submit" class="btn primary"><x-icon name="send" size="17"/> Send response</button>
       </div>
     </form>
