@@ -61,7 +61,7 @@ class SupportController extends Controller
             return $ticket;
         });
 
-        return redirect()->route('account.support.show', $ticket->public_id)
+        return redirect()->route($request->user()->supportTicketRoutePrefix().'.show', $ticket->public_id)
             ->with('status', 'Support ticket created.');
     }
 

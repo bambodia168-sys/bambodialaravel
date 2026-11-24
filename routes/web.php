@@ -257,6 +257,25 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/{ticket}/reply', [SupportController::class, 'reply'])
             ->whereNumber('ticket')->middleware('throttle:10,1')->name('reply');
     });
+    // Keep account ticket URLs for existing bookmarks and notifications.
+    // Primary ticket workspace URLs are scoped to each role; staff access to
+    // other people's tickets remains capability-gated under /dashboard/support-center.
+    foreach ([
+        ['prefix' => 'dashboard/support-tickets', 'name' => 'dashboard.support-tickets.', 'roles' => 'super_admin,admin,staff'],
+        ['prefix' => 'studio/support-tickets', 'name' => 'studio.support-tickets.', 'roles' => 'freelancer,super_admin'],
+    ] as $ticketWorkspace) {
+        Route::prefix($ticketWorkspace['prefix'])->name($ticketWorkspace['name'])
+            ->middleware('role:'.$ticketWorkspace['roles'])
+            ->group(function (): void {
+                Route::get('/', [SupportController::class, 'index'])->name('index');
+                Route::get('/create', [SupportController::class, 'create'])->name('create');
+                Route::post('/', [SupportController::class, 'store'])
+                    ->middleware('throttle:5,1,support-ticket-create:')->name('store');
+                Route::get('/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('show');
+                Route::post('/{ticket}/reply', [SupportController::class, 'reply'])
+                    ->whereNumber('ticket')->middleware('throttle:10,1')->name('reply');
+            });
+    }
     Route::get('/support-center/tickets', [SupportController::class, 'index'])->name('support.tickets');
     Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1,support-ticket-create:');
     Route::get('/support-center/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('support.show');

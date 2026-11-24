@@ -33,7 +33,7 @@
     <footer class="support-article-footer">
       <p>Was this guide useful? For unresolved issues, open a private support ticket.</p>
       <div class="support-article-action-row">
-        @auth<a href="{{ route('account.support.create') }}" class="btn primary support-ticket-action"><x-icon name="life-buoy" size="16"/> Create support ticket</a>
+        @auth<a href="{{ route(auth()->user()->supportTicketRoutePrefix().'.create') }}" class="btn primary support-ticket-action"><x-icon name="life-buoy" size="16"/> Create support ticket</a>
         @else<a href="{{ route('login') }}" class="btn primary support-ticket-action"><x-icon name="life-buoy" size="16"/> Sign in to contact support</a>@endauth
         <div class="policy-single-actions" aria-label="Article sharing actions">
           <button type="button" class="btn subtle" data-policy-copy-url="{{ $article->publicUrl() }}"><x-icon name="copy" size="16"/> Copy link</button>

@@ -3,6 +3,7 @@
 @section('content')
 <div class="page-intro"><div class="eyebrow">Customer Care</div><h1>Support Center</h1><p>Review and respond to private user support requests.</p><div class="toolbar-actions">
   <a class="btn subtle" href="{{ route('support') }}">Public Help Center</a>
+  <a class="btn subtle" href="{{ route('dashboard.support-tickets.index') }}">My Support Tickets</a>
   @if(in_array(auth()->user()->role,['super_admin','admin'],true))<a class="btn primary" href="{{ route('dashboard.knowledge.index') }}">Manage knowledge base</a>@endif
 </div></div>
 <section class="panel">
