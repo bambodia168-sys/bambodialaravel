@@ -42,6 +42,31 @@ jobs:
           bash -n support/support-ticket-secure-aapanel-release.sh
           bash -n support/support-ticket-upload-fix-aapanel-release.sh
           php -l support/operator/support-ticket-upload-scanner-probe.php
+          python3 - <<'PY_VERIFY_PNG'
+          from pathlib import Path
+          import base64, re, zlib
+
+          source = Path('support/operator/support-ticket-upload-scanner-probe.php').read_text()
+          match = re.search(r"base64_decode\(\s*'([^']+)'", source)
+          assert match, 'Scanner fixture not found'
+          data = base64.b64decode(match.group(1), validate=True)
+          assert data.startswith(bytes.fromhex('89504e470d0a1a0a')), 'Invalid PNG signature'
+          pos, has_idat, has_end = 8, False, False
+          while pos < len(data):
+              size = int.from_bytes(data[pos:pos+4], 'big')
+              kind = data[pos+4:pos+8]
+              chunk = data[pos+8:pos+8+size]
+              crc = int.from_bytes(data[pos+8+size:pos+12+size], 'big')
+              assert len(chunk) == size and zlib.crc32(kind + chunk) == crc, 'Broken PNG checksum'
+              if kind == b'IDAT':
+                  assert zlib.decompress(chunk), 'Corrupt PNG image payload'
+                  has_idat = True
+              if kind == b'IEND':
+                  has_end = True
+              pos += 12 + size
+          assert has_idat and has_end and pos == len(data)
+          print('PASS: ClamAV diagnostic uses a valid PNG with verified CRCs')
+          PY_VERIFY_PNG
           bash -n support/baray-on-site-status-live-route-compat-aapanel.sh
           bash -n support/baray-payment-aapanel-release.sh
           bash -n support/workspace-upgrade.sh
