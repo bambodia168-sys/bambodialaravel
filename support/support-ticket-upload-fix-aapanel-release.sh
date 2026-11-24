@@ -13,6 +13,8 @@ MODE="$1"
 REPO="bambodia168-sys/bambodialaravel"
 BASE="ac41cb54e631b5140e8bb47a0c1ffb89893cacbd"
 TARGET="79cc8f7b2b8f3c51fd86ab0c19cfea802aaca808"
+# The probe was corrected after the application-code target commit.
+PROBE_REF="68aaeda0f17180cb470fa8b24212d3f6c56d13c8"
 SITE="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
 PROBE="support/operator/support-ticket-upload-scanner-probe.php"
@@ -76,7 +78,7 @@ download() {
 
 echo "=== Verify ClamAV on the actual upload-storage path ==="
 PROBE_TMP="$(mktemp /tmp/bambodia-ticket-upload-probe.XXXXXXXX.php)"
-download "$TARGET" "$PROBE" "$PROBE_TMP"
+download "$PROBE_REF" "$PROBE" "$PROBE_TMP"
 [[ "$(git hash-object "$PROBE_TMP")" == "$PROBE_SHA" ]] ||
   { echo "STOP: scanner diagnostic SHA mismatch"; exit 2; }
 chmod 0644 "$PROBE_TMP"
