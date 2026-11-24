@@ -135,7 +135,7 @@
       $adminSupport[] = ['route'=>'dashboard.support','label'=>'Support Management','icon'=>'inbox'];
     }
     $adminSupport[] = ['route'=>'support','label'=>'Public Support Center','icon'=>'life-buoy'];
-    $groups[] = ['heading'=>'Support & Help','items'=>$adminSupport];
+    $groups[] = ['heading'=>'Assistance','items'=>$adminSupport];
   } elseif ($workspace === 'creator') {
     $groups = [
       ['heading'=>'Creator Overview','items'=>[
