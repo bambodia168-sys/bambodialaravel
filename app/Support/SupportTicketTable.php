@@ -19,6 +19,7 @@ final class SupportTicketTable
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', Rule::in(array_keys(SupportTicket::STATUSES))],
+            'issue_type' => ['nullable', Rule::in(array_keys(SupportTicketContext::ISSUES))],
             'per_page' => ['nullable', 'integer', Rule::in([10, 20, 30])],
             'updated_from' => ['nullable', 'date_format:Y-m-d'],
             'updated_to' => ['nullable', 'date_format:Y-m-d'],
@@ -37,6 +38,7 @@ final class SupportTicketTable
         return [
             'q' => trim((string) ($validated['q'] ?? '')),
             'status' => (string) ($validated['status'] ?? ''),
+            'issue_type' => (string) ($validated['issue_type'] ?? ''),
             'per_page' => (int) ($validated['per_page'] ?? 10),
             'updated_from' => (string) ($validated['updated_from'] ?? ''),
             'updated_to' => (string) ($validated['updated_to'] ?? ''),
@@ -55,6 +57,7 @@ final class SupportTicketTable
                     ->orWhere('public_id', 'like', '%'.$search.'%')
             ))
             ->when($filters['status'] !== '', fn (Builder $q) => $q->where('status', $filters['status']))
+            ->when($filters['issue_type'] !== '', fn (Builder $q) => $q->where('issue_type', $filters['issue_type']))
             ->when($filters['updated_from'] !== '', fn (Builder $q) => $q->whereDate('updated_at', '>=', $filters['updated_from']))
             ->when($filters['updated_to'] !== '', fn (Builder $q) => $q->whereDate('updated_at', '<=', $filters['updated_to']))
             ->when($management && $filters['assigned_to'] === 'unassigned',

@@ -1,7 +1,7 @@
 @extends('layouts.dashboard')
 @section('title', 'Support Management')
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=3">
 @endpush
 @section('content')
 @php
@@ -43,6 +43,7 @@
         <thead><tr>
           <th scope="col">Ticket ID</th>
           <th scope="col">Subject</th>
+          <th scope="col">Request type</th>
           <th scope="col">Customer</th>
           <th scope="col">Status</th>
           <th scope="col">Assigned To</th>
@@ -54,6 +55,7 @@
             <tr>
               <td class="mono"><strong>#{{ $ticket->public_id }}</strong></td>
               <td><a class="support-ticket-subject" href="{{ route('dashboard.support.show', $ticket->public_id) }}">{{ $ticket->subject }}</a></td>
+              <td>{{ \App\Support\SupportTicketContext::ISSUES[$ticket->issue_type ?? 'general'] ?? 'General question' }}</td>
               <td>{{ $ticket->owner?->name ?? 'Former account' }}</td>
               <td><span class="support-status-pill support-status--{{ $ticket->status }}">{{ \App\Models\SupportTicket::STATUSES[$ticket->status] ?? ucfirst($ticket->status) }}</span></td>
               <td class="support-assignee-cell">{{ $ticket->assignee?->name ?? 'Unassigned' }}</td>
@@ -65,7 +67,7 @@
               </td>
             </tr>
           @empty
-            <tr><td class="empty-cell" colspan="7"><div class="support-empty-private">
+            <tr><td class="empty-cell" colspan="8"><div class="support-empty-private">
               <x-icon name="inbox" size="30"/>
               <h3>No matching support tickets</h3>
               <p>Try changing the filters to view available tickets.</p>

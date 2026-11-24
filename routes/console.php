@@ -228,3 +228,22 @@ Artisan::command('mail:queue-reminders', function (): int {
 })->purpose('Queue enabled reminders and greetings for eligible subscribers');
 
 Schedule::command('mail:queue-reminders')->dailyAt('09:00')->timezone('Asia/Phnom_Penh')->withoutOverlapping();
+
+/**
+ * Delete expired private support credentials. Only metadata, never secret
+ * payloads, is retained for audit. Requires Laravel scheduler to run.
+ */
+Artisan::command('support:purge-credentials', function (): int {
+    if (! \Illuminate\Support\Facades\Schema::hasTable('support_ticket_credentials')) {
+        return 0;
+    }
+
+    $n = \App\Models\SupportTicketCredential::query()
+        ->whereNotNull('ciphertext')->where('expires_at', '<=', now())
+        ->update(['ciphertext' => null, 'revoked_at' => now(), 'updated_at' => now()]);
+    $this->info($n.' expired encrypted credential shares erased.');
+
+    return 0;
+})->purpose('Cryptographically erase expired temporary ticket credentials');
+
+Schedule::command('support:purge-credentials')->hourly()->withoutOverlapping();

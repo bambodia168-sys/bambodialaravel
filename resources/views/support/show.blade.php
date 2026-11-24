@@ -2,8 +2,9 @@
 @section('workspace', $isStaff ? 'admin' : match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
 @section('title', 'Support Ticket '.$ticket->public_id)
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=2">
-<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=1"></script>
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=3">
+<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=2"></script>
+<script defer src="{{ asset('js/support-ticket-secrets.js') }}?v=1"></script>
 @endpush
 @section('content')
 <div class="container inner-page support-workspace">
@@ -20,8 +21,10 @@
         · Last updated {{ $ticket->updated_at?->format('d M Y H:i') }}
         · Assigned to {{ $ticket->assignee?->name ?? 'Unassigned' }}
       </p>
-      @if($ticket->context_type === 'order' && ($order = $ticket->order))
-        <p>Related order <span class="mono">{{ $order->reference() }}</span></p>
+      <p><strong>Support category:</strong> {{ \App\Support\SupportTicketContext::ISSUES[$ticket->issue_type ?? 'general'] ?? 'General question' }}</p>
+      @if($ticket->context_type && $ticket->context_id)
+        <p><strong>{{ $ticket->context_type === 'order' ? 'Related order' : 'Related item' }}:</strong>
+          {{ \App\Support\SupportTicketContext::label($ticket->context_type, (int)$ticket->context_id) ?? 'Linked reference' }}</p>
       @endif
     </div>
     @unless($isStaff)
@@ -46,6 +49,22 @@
             <time datetime="{{ $message->created_at?->toIso8601String() }}">{{ $message->created_at?->format('d M Y · H:i') }}</time>
           </div>
           <div class="support-thread-content policy-formatted-content">{!! \App\Support\SupportMessageContent::display($message->body) !!}</div>
+          @if($message->attachments->isNotEmpty())
+            <div class="ticket-private-attachments" aria-label="Private message attachments">
+              @foreach($message->attachments as $attachment)
+                <a class="ticket-private-file" href="{{ route('support.attachments.download', $attachment->public_id) }}">
+                  @if(in_array($attachment->mime_type, ['image/jpeg','image/png','image/webp','image/gif'], true))
+                    <img class="ticket-private-thumb" src="{{ route('support.attachments.preview', $attachment->public_id) }}"
+                      alt="Attached reference image" loading="lazy">
+                  @else
+                    <x-icon name="paperclip" size="16"/>
+                  @endif
+                  <span>{{ $attachment->original_name }} <small>({{ number_format($attachment->bytes / 1024, 1) }} KB)</small></span>
+                  <x-icon name="download" size="15"/>
+                </a>
+              @endforeach
+            </div>
+          @endif
         </article>
       @endforeach
     </div>
@@ -65,11 +84,12 @@
   <section class="panel support-ticket-panel support-reply-panel">
     <h2>Write a reply</h2>
     <p class="text-muted">Replies are added to this private ticket. You can format text, insert media and share code.</p>
-    <form class="support-ticket-form" method="post" data-ticket-form
+    <form class="support-ticket-form" method="post" enctype="multipart/form-data" data-ticket-form
       action="{{ $isStaff ? route('dashboard.support.reply', $ticket->public_id) : route(auth()->user()->supportTicketRoutePrefixForRequest().'.reply', $ticket->public_id) }}">
       @csrf
       <label for="ticket-reply-message">Your response</label>
-      @include('support.editor', ['editorId' => 'ticket-reply-message', 'minimum' => 2])
+      @include('support.editor', ['editorId' => 'ticket-reply-message', 'minimum' => 2, 'allowCredentialButton' => ! $isStaff])
+      @include('support.attachment-fields', ['attachmentId'=>'ticket-reply-attachments'])
       @error('message')<p class="ticket-field-error" role="alert">{{ $message }}</p>@enderror
       @if($isStaff)
         <label for="ticket-status">Status after reply</label>
@@ -86,5 +106,6 @@
     </form>
   </section>
   @endif
+  @include('support.secret-vault')
 </div>
 @endsection

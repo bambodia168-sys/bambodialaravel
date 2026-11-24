@@ -12,6 +12,15 @@
       @endforeach
     </select>
   </label>
+  <label class="support-filter-field">
+    <span>Request type</span>
+    <select name="issue_type" aria-label="Support request type">
+      <option value="">All request types</option>
+      @foreach(\App\Support\SupportTicketContext::ISSUES as $key => $label)
+        <option value="{{ $key }}" @selected(($filters['issue_type'] ?? '') === $key)>{{ $label }}</option>
+      @endforeach
+    </select>
+  </label>
   @if($management)
     <label class="support-filter-field">
       <span>Assigned to</span>

@@ -2,8 +2,8 @@
 @section('workspace', match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
 @section('title', 'Create Support Ticket')
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=1">
-<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=1"></script>
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=3">
+<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=2"></script>
 @endpush
 @section('content')
 <div class="container inner-page support-workspace">
@@ -16,7 +16,7 @@
     </div>
     <a href="{{ route('support') }}" class="btn subtle"><x-icon name="book-open" size="17"/> Browse public help</a>
   </div>
-  <form method="post" action="{{ route(auth()->user()->supportTicketRoutePrefixForRequest().'.store') }}" class="support-ticket-form" data-ticket-form>
+  <form method="post" action="{{ route(auth()->user()->supportTicketRoutePrefixForRequest().'.store') }}" class="support-ticket-form" enctype="multipart/form-data" data-ticket-form>
     @csrf
     <section class="panel support-ticket-panel">
       <div class="support-form-top"><x-icon name="life-buoy" size="22"/><div><h2>Describe your request</h2><p>Provide a clear subject and enough detail for the support team to respond.</p></div></div>
@@ -25,9 +25,14 @@
         placeholder="For example: Help with a recent order or product license" autocomplete="off">
       @error('subject')<p class="ticket-field-error" role="alert">{{ $message }}</p>@enderror
 
+      @include('support.issue-fields')
+
       <label for="ticket-new-message">Message <span aria-hidden="true">*</span></label>
       @include('support.editor', ['editorId' => 'ticket-new-message', 'minimum' => 10])
       @error('message')<p class="ticket-field-error" role="alert">{{ $message }}</p>@enderror
+
+      @include('support.attachment-fields', ['attachmentId' => 'ticket-create-attachments'])
+      @include('support.credential-fields')
 
       <div class="support-form-actions">
         <a href="{{ route(auth()->user()->supportTicketRoutePrefixForRequest().'.index') }}" class="btn subtle">Cancel</a>
