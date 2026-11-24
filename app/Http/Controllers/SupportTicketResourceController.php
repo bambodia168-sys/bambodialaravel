@@ -37,14 +37,21 @@ class SupportTicketResourceController extends Controller
             && hash_equals($file->sha256, hash_file('sha256', $absolute)), 409);
 
         AuditEvent::record('support.attachment.downloaded', $request->user(), $request);
-        return response()->download($absolute, $file->original_name, [
+        $response = response()->download($absolute, $file->original_name, [
             'Content-Type' => 'application/octet-stream',
-            'Cache-Control' => 'private, no-store, max-age=0',
             'Pragma' => 'no-cache',
             'X-Content-Type-Options' => 'nosniff',
             'Content-Security-Policy' => "default-src 'none'; sandbox",
             'Referrer-Policy' => 'no-referrer',
         ]);
+        // Symfony BinaryFileResponse defaults to public caching for downloads
+        // unless explicitly marked private after the response is created.
+        $response->setPrivate();
+        $response->headers->addCacheControlDirective('no-store');
+        $response->headers->addCacheControlDirective('max-age', 0);
+        $response->headers->removeCacheControlDirective('public');
+
+        return $response;
     }
 
     public function credentialStore(Request $request, string $ticket): RedirectResponse
