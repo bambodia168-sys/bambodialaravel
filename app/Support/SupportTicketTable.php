@@ -18,11 +18,18 @@ final class SupportTicketTable
             'status' => ['nullable', Rule::in(array_keys(SupportTicket::STATUSES))],
             'per_page' => ['nullable', 'integer', Rule::in([10, 20, 30])],
             'updated_from' => ['nullable', 'date_format:Y-m-d'],
-            'updated_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:updated_from'],
+            'updated_to' => ['nullable', 'date_format:Y-m-d'],
             'assigned_to' => $management
                 ? ['nullable', 'regex:/^(?:unassigned|[1-9][0-9]{0,12})$/D']
                 : ['prohibited'],
         ]);
+
+        if (! empty($validated['updated_from']) && ! empty($validated['updated_to'])
+            && $validated['updated_to'] < $validated['updated_from']) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'updated_to' => 'Updated to must be on or after updated from.',
+            ]);
+        }
 
         return [
             'q' => trim((string) ($validated['q'] ?? '')),
