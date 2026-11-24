@@ -4,10 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\SupportTicket;
 use App\Models\MarketplaceOrder;
+use App\Models\AccountNotification;
 use App\Models\AuditEvent;
 use App\Support\OrderReference;
 use App\Support\SupportMessageContent;
 use App\Support\SupportTicketTable;
+use App\Support\SupportTicketContext;
+use App\Support\SupportTicketFiles;
+use App\Support\SupportTicketSecrets;
+use Illuminate\Validation\Rule;
 use App\Support\UserManagementAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,7 +37,9 @@ class SupportController extends Controller
 
     public function create(): View
     {
-        return view('support.create');
+        return view('support.create', [
+            'relatedChoices' => SupportTicketContext::choices(request()->user()),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -41,11 +48,16 @@ class SupportController extends Controller
             'subject' => ['required', 'string', 'min:5', 'max:180'],
             'message' => ['required', 'string', 'max:40000'],
             'order_number' => ['nullable', 'string', 'regex:/^(?:'.OrderReference::ROUTE.')$/D'],
+            'issue_type' => ['nullable', Rule::in(array_keys(SupportTicketContext::ISSUES))],
+            'related_item' => ['nullable', 'string', 'max:40'],
         ]);
 
         $message = SupportMessageContent::prepare($data['message'], 10);
+        $files = SupportTicketFiles::validate($request);
+        $credentials = SupportTicketSecrets::fields($request);
+        $context = SupportTicketContext::resolve($request->user(), $data['related_item'] ?? null);
 
-        $ticket = DB::transaction(function () use ($request, $data, $message): SupportTicket {
+        $ticket = DB::transaction(function () use ($request, $data, $message, $files, $credentials, $context): SupportTicket {
             $order = isset($data['order_number'])
                 ? MarketplaceOrder::query()->matchingReference($data['order_number'])
                     ->where(fn ($query) => $query->where('buyer_id', $request->user()->id)
@@ -56,13 +68,18 @@ class SupportController extends Controller
                 'user_id' => $request->user()->id,
                 'subject' => $data['subject'],
                 'status' => 'open',
-                'context_type' => $order ? 'order' : null,
-                'context_id' => $order?->id,
+                'issue_type' => $data['issue_type'] ?? 'general',
+                'context_type' => $context['context_type'] ?? ($order ? 'order' : null),
+                'context_id' => $context['context_id'] ?? $order?->id,
             ]);
-            $ticket->messages()->create([
+            $firstMessage = $ticket->messages()->create([
                 'user_id' => $request->user()->id,
                 'body' => $message,
             ]);
+            if ($credentials !== null) {
+                SupportTicketSecrets::store($ticket, $request->user(), $credentials, $request);
+            }
+            SupportTicketFiles::store($files, $firstMessage, $request->user(), $request);
             AuditEvent::record('support.ticket.created', $request->user(), $request);
 
             return $ticket;
@@ -80,7 +97,10 @@ class SupportController extends Controller
 
     public function show(Request $request, string $ticket): View
     {
-        $record = $this->owned($request, $ticket)->load(['messages.author:id,name,role', 'assignee:id,name']);
+        $record = $this->owned($request, $ticket)->load([
+            'messages.author:id,name,role', 'messages.attachments',
+            'assignee:id,name', 'credentials',
+        ]);
 
         return view('support.show', ['ticket' => $record, 'isStaff' => false]);
     }
@@ -94,6 +114,7 @@ class SupportController extends Controller
             'ticket' => $record,
             'isStaff' => false,
             'firstMessage' => $record->messages()->firstOrFail(),
+            'relatedChoices' => SupportTicketContext::choices($request->user()),
         ]);
     }
 
@@ -105,15 +126,26 @@ class SupportController extends Controller
         $data = $request->validate([
             'subject' => ['required', 'string', 'min:5', 'max:180'],
             'message' => ['required', 'string', 'max:40000'],
+            'issue_type' => ['nullable', Rule::in(array_keys(SupportTicketContext::ISSUES))],
+            'related_item' => ['nullable', 'string', 'max:40'],
         ]);
         $message = SupportMessageContent::prepare($data['message'], 10);
+        $files = SupportTicketFiles::validate($request);
+        $context = SupportTicketContext::resolve($request->user(), $data['related_item'] ?? null);
 
-        DB::transaction(function () use ($record, $request, $data, $message): void {
+        DB::transaction(function () use ($record, $request, $data, $message, $files, $context): void {
             $locked = SupportTicket::query()->where('user_id', $request->user()->id)
                 ->lockForUpdate()->findOrFail($record->id);
             abort_unless($locked->ownerCanRevise(), 403);
-            $locked->update(['subject' => $data['subject']]);
-            $locked->messages()->firstOrFail()->update(['body' => $message]);
+            $locked->update([
+                'subject' => $data['subject'],
+                'issue_type' => $data['issue_type'] ?? 'general',
+                'context_type' => $context['context_type'],
+                'context_id' => $context['context_id'],
+            ]);
+            $first = $locked->messages()->firstOrFail();
+            $first->update(['body' => $message]);
+            SupportTicketFiles::store($files, $first, $request->user(), $request);
             AuditEvent::record('support.ticket.updated', $request->user(), $request);
         });
 
@@ -129,6 +161,7 @@ class SupportController extends Controller
             $locked = SupportTicket::query()->where('user_id', $request->user()->id)
                 ->lockForUpdate()->findOrFail($record->id);
             abort_unless($locked->ownerCanRevise(), 403);
+            $locked->eraseSharedCredentials();
             $locked->delete(); // Keep messages for audit/retention; never cascade-delete.
             AuditEvent::record('support.ticket.deleted', $request->user(), $request);
         });
@@ -142,15 +175,32 @@ class SupportController extends Controller
         $record = $this->owned($request, $ticket);
         abort_if($record->status === 'closed', 403);
 
-        $data = $request->validate(['message' => ['required', 'string', 'max:40000']]);
-        $message = SupportMessageContent::prepare($data['message'], 2);
+        $data = $request->validate(['message' => ['nullable', 'string', 'max:40000']]);
+        $files = SupportTicketFiles::validate($request);
+        $text = (string) ($data['message'] ?? '');
+        if (trim($text) === '' && $files === []) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'message' => 'Write a response or attach a reference file.',
+            ]);
+        }
+        $message = SupportMessageContent::prepare(
+            trim($text) === '' ? '<p>Reference files attached.</p>' : $text, 2
+        );
 
-        DB::transaction(function () use ($record, $request, $message): void {
+        DB::transaction(function () use ($record, $request, $message, $files): void {
             $locked = SupportTicket::query()->where('user_id', $request->user()->id)
                 ->lockForUpdate()->findOrFail($record->id);
             abort_if($locked->status === 'closed', 403);
-            $locked->messages()->create(['user_id' => $request->user()->id, 'body' => $message]);
+            $posted = $locked->messages()->create(['user_id' => $request->user()->id, 'body' => $message]);
+            SupportTicketFiles::store($files, $posted, $request->user(), $request);
             $locked->update(['status' => 'open']);
+            if ($locked->assigned_to) {
+                AccountNotification::deliver(
+                    (int) $locked->assigned_to, 'support.replied', 'Customer replied to ticket',
+                    'A support request assigned to you has a new response.',
+                    route('dashboard.support.show', $locked->public_id, false)
+                );
+            }
             AuditEvent::record('support.customer.replied', $request->user(), $request);
         });
 
