@@ -208,8 +208,9 @@
         const section = document.querySelector('[data-ticket-secret-panel]');
         if (!section) return;
         section.hidden = false;
-        section.closest('.ticket-secure-share-section')?.scrollIntoView({behavior:'smooth',block:'center'});
-        section.scrollIntoView({behavior:'smooth',block:'center'});
+        const wrapper = section.closest('.ticket-secure-share-section') || section;
+        wrapper.querySelector('[data-secure-submit]')?.removeAttribute('hidden');
+        wrapper.scrollIntoView({behavior:'smooth',block:'start'});
         section.querySelector('input[name="credential_label"]')?.focus({preventScroll:true});
       });
       root.querySelector('[data-ticket-media-cancel]')?.addEventListener('click', () => dialog.close());

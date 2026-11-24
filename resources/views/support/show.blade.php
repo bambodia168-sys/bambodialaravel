@@ -2,9 +2,9 @@
 @section('workspace', $isStaff ? 'admin' : match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
 @section('title', 'Support Ticket '.$ticket->public_id)
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=4">
-<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=2"></script>
-<script defer src="{{ asset('js/support-ticket-secrets.js') }}?v=1"></script>
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=5">
+<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=3"></script>
+<script defer src="{{ asset('js/support-ticket-secrets.js') }}?v=2"></script>
 @endpush
 @section('content')
 <div class="container inner-page support-workspace">

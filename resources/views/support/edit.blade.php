@@ -2,8 +2,8 @@
 @section('workspace', $isStaff ? 'admin' : match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
 @section('title', 'Edit Support Ticket '.$ticket->public_id)
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=4">
-@if(! $isStaff)<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=2"></script>@endif
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=5">
+@if(! $isStaff)<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=3"></script>@endif
 @endpush
 @section('content')
 @php
