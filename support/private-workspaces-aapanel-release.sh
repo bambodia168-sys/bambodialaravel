@@ -36,6 +36,27 @@ origin_code() {
 [[ "$(origin_code /)" == "200" && "$(origin_code /support-center)" == "200" ]] ||
   { echo "STOP: Bambodia origin public health check failed"; exit 2; }
 
+# Retry independent TLS/connection failures to raw.githubusercontent.com.
+# curl --retry alone does not retry all SSL handshake errors (e.g. curl:35).
+# Never disable certificate verification; all downloaded bytes still require
+# the pinned Git object SHA before any file can be staged or installed.
+download_pinned() {
+  local commit="$1" relative="$2" destination="$3" attempt
+  for attempt in 1 2 3 4 5; do
+    if curl -fLsS --connect-timeout 12 --max-time 100 \
+      "https://raw.githubusercontent.com/$REPO/$commit/$relative" -o "$destination"; then
+      return 0
+    fi
+    rm -f -- "$destination"
+    if [[ "$attempt" -lt 5 ]]; then
+      echo "RETRY: GitHub TLS/source download $relative (attempt $attempt/5 failed)" >&2
+      sleep "$((attempt * 2))"
+    fi
+  done
+  echo "STOP: source fetch failed after 5 attempts: $relative" >&2
+  return 1
+}
+
 STAGE="$(mktemp -d /root/bambodia-private-shells-stage.XXXXXXXX)"
 BACKUP=""
 DEPLOYING=0
@@ -84,12 +105,8 @@ while IFS='|' read -r file base_sha target_sha; do
   for dir in base target candidate; do
     mkdir -p "$STAGE/$dir/$(dirname "$file")"
   done
-  curl -fLsS --retry 2 --connect-timeout 10 --max-time 90 \
-    "https://raw.githubusercontent.com/$REPO/$BASE/$file" \
-    -o "$STAGE/base/$file"
-  curl -fLsS --retry 2 --connect-timeout 10 --max-time 90 \
-    "https://raw.githubusercontent.com/$REPO/$TARGET/$file" \
-    -o "$STAGE/target/$file"
+  download_pinned "$BASE" "$file" "$STAGE/base/$file"
+  download_pinned "$TARGET" "$file" "$STAGE/target/$file"
   [[ "$(git hash-object "$STAGE/base/$file")" == "$base_sha" &&
       "$(git hash-object "$STAGE/target/$file")" == "$target_sha" ]] ||
     { echo "STOP: pinned source mismatch for $file"; exit 2; }
