@@ -16,7 +16,7 @@ TARGET="79cc8f7b2b8f3c51fd86ab0c19cfea802aaca808"
 SITE="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
 PROBE="support/operator/support-ticket-upload-scanner-probe.php"
-PROBE_SHA="cd29499edc764b6f7eeedd486e6b6c0df635e412"
+PROBE_SHA="129709a6cf204e3b0734b5b7b36153dab70bfe12"
 
 for command in curl git patch python3 tar runuser mktemp install; do
   command -v "$command" >/dev/null || { echo "STOP: missing $command"; exit 2; }
