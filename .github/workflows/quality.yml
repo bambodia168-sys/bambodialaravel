@@ -40,6 +40,8 @@ jobs:
           bash -n support/support-ticket-table-aapanel-release.sh
           bash -n support/private-workspaces-aapanel-release.sh
           bash -n support/support-ticket-secure-aapanel-release.sh
+          bash -n support/support-ticket-upload-fix-aapanel-release.sh
+          php -l support/operator/support-ticket-upload-scanner-probe.php
           bash -n support/baray-on-site-status-live-route-compat-aapanel.sh
           bash -n support/baray-payment-aapanel-release.sh
           bash -n support/workspace-upgrade.sh
