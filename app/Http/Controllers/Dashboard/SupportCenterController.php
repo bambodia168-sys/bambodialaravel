@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\SupportTicket;
+use App\Support\SupportMessageContent;
 use App\Models\AccountNotification;
 use App\Models\AuditEvent;
 use Illuminate\Http\RedirectResponse;
@@ -45,13 +46,14 @@ class SupportCenterController extends Controller
     {
         $record = SupportTicket::query()->where('public_id', $ticket)->firstOrFail();
         $data = $request->validate([
-            'message' => ['required', 'string', 'min:2', 'max:10000'],
+            'message' => ['required', 'string', 'max:40000'],
             'status' => ['required', Rule::in(['open', 'in_progress', 'resolved'])],
         ]);
 
-        DB::transaction(function () use ($record, $data, $request): void {
+        $message = SupportMessageContent::prepare($data['message'], 2);
+        DB::transaction(function () use ($record, $data, $request, $message): void {
             $locked = SupportTicket::query()->lockForUpdate()->findOrFail($record->id);
-            $locked->messages()->create(['user_id' => $request->user()->id, 'body' => $data['message']]);
+            $locked->messages()->create(['user_id' => $request->user()->id, 'body' => $message]);
             $locked->update(['status' => $data['status']]);
             AccountNotification::deliver(
                 (int) $locked->user_id, 'support.replied', 'Support team replied',
