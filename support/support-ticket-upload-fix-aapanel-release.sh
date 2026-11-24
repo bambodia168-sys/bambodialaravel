@@ -82,7 +82,10 @@ download "$PROBE_REF" "$PROBE" "$PROBE_TMP"
 [[ "$(git hash-object "$PROBE_TMP")" == "$PROBE_SHA" ]] ||
   { echo "STOP: scanner diagnostic SHA mismatch"; exit 2; }
 chmod 0644 "$PROBE_TMP"
-runuser -u www -- "$PHP" "$PROBE_TMP" ||
+# runuser inherits the caller's cwd. A private operator home directory can
+# prevent Symfony proc_open/posix_spawn even when ClamAV itself is executable.
+# Start the probe from the verified Laravel directory instead.
+(cd "$SITE" && runuser -u www -- "$PHP" "$PROBE_TMP") ||
   { echo "STOP: PHP temporary upload security scan failed"; exit 2; }
 
 mkdir -p "$STAGE"/{base,target,candidate}
