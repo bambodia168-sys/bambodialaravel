@@ -107,7 +107,7 @@ class PrivateAccountWorkspaceShellsTest extends TestCase
                 '/dashboard/media-library' => 'admin',
             ],
             'super_admin' => [
-                '/contracts' => 'admin',
+                '/contracts' => 'account',
                 '/my-jobs' => 'account',
                 '/studio/inquiries' => 'creator',
                 '/studio/media-library' => 'creator',
