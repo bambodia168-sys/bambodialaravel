@@ -190,7 +190,7 @@
         ['route'=>'account.policy-receipts','label'=>'Policy Receipts','icon'=>'scroll-text'],
         ['route'=>'privacy.index','label'=>'Privacy Requests','icon'=>'shield-check'],
         ['route'=>'support','label'=>'Public Support Center','icon'=>'life-buoy'],
-        ['route'=>'account.support.index','label'=>'My Support Tickets','icon'=>'message'],
+        ['route'=>$user->supportTicketRoutePrefix().'.index','label'=>'My Support Tickets','icon'=>'message'],
       ]],
     ];
     if ($user->isCreator()) {
@@ -208,9 +208,14 @@
   // Keep personal ticket management reachable inside every role-based workspace,
   // including administration, developer, and creator dashboards.
   if ($workspace !== 'account') {
+    $ticketWorkspace = match ($workspace) {
+      'admin', 'developer' => 'dashboard.support-tickets',
+      'creator' => 'studio.support-tickets',
+      default => 'account.support',
+    };
     $groups[] = ['heading'=>'My Account Support','items'=>[
-      ['route'=>'account.support.index','label'=>'My Support Tickets','icon'=>'message'],
-      ['route'=>'account.support.create','label'=>'Create Support Ticket','icon'=>'plus'],
+      ['route'=>$ticketWorkspace.'.index','label'=>'My Support Tickets','icon'=>'message'],
+      ['route'=>$ticketWorkspace.'.create','label'=>'Create Support Ticket','icon'=>'plus'],
       ['route'=>'support','label'=>'Public Support Center','icon'=>'life-buoy'],
     ]];
   }
