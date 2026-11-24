@@ -1,4 +1,5 @@
-@extends('layouts.main')
+@extends('layouts.workspace')
+@section('workspace', (int)auth()->id() === (int)$contract->freelancer_id ? 'creator' : (auth()->user()->isAdministrator() ? 'admin' : 'account'))
 @section('title','Freelance Contract')
 @section('content')
 @php
