@@ -181,6 +181,12 @@ class SupportTicketSecureWorkflowsTest extends TestCase
         $url = route('support.attachments.download', $file->public_id);
 
         $this->actingAs($other)->get($url)->assertNotFound();
+        $preview = route('support.attachments.preview', $file->public_id);
+        $this->actingAs($other)->get($preview)->assertNotFound();
+        $visible = $this->actingAs($owner)->get($preview)->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->assertStringContainsString('private', (string) $visible->headers->get('Cache-Control'));
+        $this->assertStringContainsString('no-store', (string) $visible->headers->get('Cache-Control'));
         $download = $this->actingAs($owner)->get($url)->assertOk()
             ->assertHeader('X-Content-Type-Options', 'nosniff');
         $this->assertStringContainsString('private', (string) $download->headers->get('Cache-Control'));
