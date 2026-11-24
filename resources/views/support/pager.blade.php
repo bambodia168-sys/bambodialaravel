@@ -30,9 +30,9 @@
       <a class="support-page-link" href="{{ $tickets->url($last) }}">{{ $last }}</a>
     @endif
     @if($tickets->hasMorePages())
-      <a class="support-page-link" href="{{ $tickets->nextPageUrl() }}">Next <x-icon name="chevron-right" size="15"/></a>
+      <a class="support-page-link" href="{{ $tickets->nextPageUrl() }}">Next</a>
     @else
-      <span class="support-page-link is-disabled" aria-disabled="true">Next <x-icon name="chevron-right" size="15"/></span>
+      <span class="support-page-link is-disabled" aria-disabled="true">Next</span>
     @endif
   </div>
   <form method="get" class="support-goto-form">
