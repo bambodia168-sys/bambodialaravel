@@ -523,4 +523,50 @@ class SupportTicketSecureWorkflowsTest extends TestCase
         $this->get($download)->assertNotFound();
         $this->get($preview)->assertNotFound();
     }
+
+    public function test_customer_receives_responsive_private_temporary_access_form(): void
+    {
+        $owner = $this->user();
+        $ticket = $this->ticket($owner);
+
+        $this->actingAs($owner)->get(route('account.support.show', $ticket->public_id))
+            ->assertOk()
+            ->assertSee('Temporary access for support')
+            ->assertSee('id="ticket-secret-share-section"', false)
+            ->assertSee('data-ticket-secret-panel', false)
+            ->assertSee('data-secure-submit', false)
+            ->assertSee('data-open-secure-fields', false)
+            ->assertSee('class="ticket-secure-grid"', false)
+            ->assertSee('name="credential_days"', false)
+            ->assertSee('type="password" name="credential_password"', false)
+            ->assertSee('Only assigned support agents and authorized administrators');
+    }
+
+    public function test_assigned_agent_receives_formatted_masked_reveal_without_leaking_secrets_in_html(): void
+    {
+        $owner = $this->user();
+        $staff = $this->user('staff');
+        $ticket = $this->ticket($owner);
+        $ticket->update(['assigned_to' => $staff->id]);
+
+        $this->actingAs($owner)->post(route('support.credentials.store', $ticket->public_id), [
+            'credential_label' => 'Synthetic staging dashboard',
+            'credential_username' => 'fixture-support-user',
+            'credential_password' => 'fixture-example-password-123',
+            'credential_key' => 'fixture-example-token-456',
+            'credential_days' => 3,
+        ])->assertRedirect();
+
+        $this->actingAs($staff)->get(route('dashboard.support.show', $ticket->public_id))
+            ->assertOk()
+            ->assertSee('Synthetic staging dashboard')
+            ->assertSee('data-credential-reveal=', false)
+            ->assertSee('data-revealed-vault', false)
+            ->assertSee('data-reveal-countdown', false)
+            ->assertSee('data-secret-visibility="password"', false)
+            ->assertSee('data-secret-visibility="key"', false)
+            ->assertSee('data-secret-copy="password"', false)
+            ->assertDontSee('fixture-example-password-123', false)
+            ->assertDontSee('fixture-example-token-456', false);
+    }
 }
