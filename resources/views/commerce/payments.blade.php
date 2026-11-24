@@ -78,7 +78,7 @@
                   <p>Baray's checkout link may have expired. Please do not attempt a second payment until this order has been reviewed.</p>
                 @endif
                 <div class="order-review-baray-pending">
-                  <x-icon name="clock-3" size="18"/>
+                  <x-icon name="clock" size="18"/>
                   <div>
                     <p role="status" aria-live="polite" data-baray-status-text>
                       Awaiting Baray's bank-confirmed payment notification.
