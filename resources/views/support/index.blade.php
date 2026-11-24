@@ -1,12 +1,12 @@
 @extends('layouts.workspace')
-@section('workspace', auth()->user()->isAdministrator() ? 'admin' : (auth()->user()->isCreator() ? 'creator' : 'account'))
+@section('workspace', match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
 @section('title', 'My Support Tickets')
 @push('head')
 <link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=2">
 @endpush
 @section('content')
 @php
-  $workspace = auth()->user()->supportTicketRoutePrefix();
+  $workspace = auth()->user()->supportTicketRoutePrefixForRequest();
   $management = false;
   $action = route($workspace.'.index');
 @endphp
