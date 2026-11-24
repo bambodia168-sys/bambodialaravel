@@ -1,4 +1,5 @@
-@extends('layouts.main')
+@extends('layouts.workspace')
+@section('workspace', $creator ? 'creator' : 'account')
 @section('title',$creator?'Creator Inquiries':'My Service Requests')
 @section('content')
 <div class="container inner-page">
