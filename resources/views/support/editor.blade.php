@@ -50,7 +50,7 @@
   </div>
   <p class="text-muted ticket-editor-help">Use HTTPS media links. Never include passwords, API keys or payment-card information. HTML and media are sanitized before saving.</p>
   <dialog class="ticket-media-dialog" data-ticket-media-dialog aria-label="Insert media">
-    <form method="dialog" data-ticket-media-form>
+    <div data-ticket-media-form>
       <h3>Insert into your message</h3>
       <label for="{{ $editorId }}-type">Content type</label>
       <select id="{{ $editorId }}-type" data-ticket-media-type>
@@ -67,8 +67,8 @@
       <p class="ticket-media-error" data-ticket-media-error role="alert" hidden></p>
       <div class="dialog-actions">
         <button class="btn subtle" type="button" data-ticket-media-cancel>Cancel</button>
-        <button class="btn primary" type="submit" data-ticket-media-insert>Insert</button>
+        <button class="btn primary" type="button" data-ticket-media-insert>Insert</button>
       </div>
-    </form>
+    </div>
   </dialog>
 </div>
