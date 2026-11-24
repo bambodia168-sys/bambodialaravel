@@ -52,7 +52,12 @@
             <div class="ticket-private-attachments" aria-label="Private message attachments">
               @foreach($message->attachments as $attachment)
                 <a class="ticket-private-file" href="{{ route('support.attachments.download', $attachment->public_id) }}">
-                  <x-icon name="paperclip" size="16"/>
+                  @if(in_array($attachment->mime_type, ['image/jpeg','image/png','image/webp','image/gif'], true))
+                    <img class="ticket-private-thumb" src="{{ route('support.attachments.preview', $attachment->public_id) }}"
+                      alt="Attached reference image" loading="lazy">
+                  @else
+                    <x-icon name="paperclip" size="16"/>
+                  @endif
                   <span>{{ $attachment->original_name }} <small>({{ number_format($attachment->bytes / 1024, 1) }} KB)</small></span>
                   <x-icon name="download" size="15"/>
                 </a>
