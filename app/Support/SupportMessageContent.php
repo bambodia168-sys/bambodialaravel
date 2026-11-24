@@ -169,7 +169,7 @@ final class SupportMessageContent
     private static function safeUrl(string $value, bool $httpsOnly = true): ?string
     {
         $value = trim(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        if ($value === '' || strlen($value) > 2048 || preg_match('/[\x00-\x20\x7f<>\"\\]/', $value)) {
+        if ($value === '' || strlen($value) > 2048 || preg_match('/[\x00-\x20\x7f<>"]/', $value) || str_contains($value, '\\')) {
             return null;
         }
         $parts = parse_url($value);
