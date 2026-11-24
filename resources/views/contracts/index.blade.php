@@ -1,4 +1,5 @@
-@extends('layouts.main')
+@extends('layouts.workspace')
+@section('workspace', request()->query('workspace') === 'creator' && auth()->user()->isCreator() ? 'creator' : match(auth()->user()->role) { 'freelancer' => 'creator', 'admin', 'staff' => 'admin', default => 'account' })
 @section('title','My Contracts')
 @section('content')
 <div class="container inner-page">
@@ -10,6 +11,7 @@
     <div class="panel-head"><h2>Agreement records <span class="count">{{ $contracts->total() }}</span></h2>
       <div class="toolbar-actions">
         <form method="get" class="table-search" aria-label="Filter private agreements">
+          @if(request()->query('workspace') === 'creator' && auth()->user()->isCreator())<input type="hidden" name="workspace" value="creator">@endif
           <select name="status" class="table-select" aria-label="Agreement status">
             @foreach(['all'=>'All agreements','draft'=>'Draft','offered'=>'Offered','active'=>'Active','disputed'=>'Disputed','completed'=>'Completed','declined'=>'Declined','cancelled'=>'Cancelled'] as $value=>$label)
               <option value="{{ $value }}" @selected($status===$value)>{{ $label }}</option>
@@ -17,7 +19,7 @@
           </select>
           <button type="submit" class="btn subtle compact">Filter</button>
         </form>
-        @if($status!=='all')<a class="btn subtle compact" href="{{ route('contracts.index') }}">Clear</a>@endif
+        @if($status!=='all')<a class="btn subtle compact" href="{{ route('contracts.index', request()->query('workspace') === 'creator' && auth()->user()->isCreator() ? ['workspace'=>'creator'] : []) }}">Clear</a>@endif
         @if(in_array(auth()->user()->role,['customer','subscriber','super_admin'],true))
           <a class="btn subtle compact" href="{{ route('jobs.mine') }}">My posted jobs</a>
         @endif

@@ -152,7 +152,7 @@
         ...(config('commerce.enabled') ? [['route'=>'studio.orders.index','label'=>'Sales Orders','icon'=>'package']] : []),
         ...(config('commerce.enabled') ? [['route'=>'studio.commerce-operations','label'=>'Sales Settlements','icon'=>'file-check']] : []),
         ['route'=>'studio.inquiries','label'=>'Client Inquiries','icon'=>'message'],
-        ['route'=>'contracts.index','label'=>'Contracts','icon'=>'file-check'],
+        ['route'=>'contracts.index','label'=>'Contracts','icon'=>'file-check','params'=>['workspace'=>'creator']],
         ['route'=>'resume.edit','label'=>'Resume Builder','icon'=>'file-text'],
       ]],
       ['heading'=>'Saved & Shared','items'=>[

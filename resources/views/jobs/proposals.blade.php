@@ -1,4 +1,5 @@
-@extends('layouts.main')
+@extends('layouts.workspace')
+@section('workspace', 'account')
 @section('title','Job Proposals')
 @section('content')
 <div class="container inner-page"><div class="page-intro"><div class="eyebrow">Client Account</div><h1>Applications for {{ $job->title }}</h1><p>Review each proposal privately. Shortlisting does not create a contract or financial obligation.</p></div>

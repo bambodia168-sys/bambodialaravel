@@ -1,4 +1,5 @@
-@extends('layouts.main')
+@extends('layouts.workspace')
+@section('workspace', (int)auth()->id() === (int)$inquiry->creator_id ? 'creator' : 'account')
 @section('title', $inquiry->marketplace_order_id ? 'Service Workspace' : 'Private Service Inquiry')
 @section('content')
 <div class="container inner-page creator-onboarding">

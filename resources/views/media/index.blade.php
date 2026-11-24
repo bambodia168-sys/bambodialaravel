@@ -1,6 +1,6 @@
-@extends($accountMedia ? 'layouts.workspace' : ($studio ? 'layouts.main' : 'layouts.dashboard'))
-@if($accountMedia)
-@section('workspace','account')
+@extends($studio ? 'layouts.workspace' : 'layouts.dashboard')
+@if($studio)
+@section('workspace', $accountMedia ? 'account' : 'creator')
 @endif
 @section('title','Media Library')
 @section('content')
