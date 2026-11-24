@@ -1,4 +1,5 @@
-@extends('layouts.main')
+@extends('layouts.workspace')
+@section('workspace', match(auth()->user()->role) { 'freelancer' => 'creator', 'super_admin', 'admin', 'staff' => 'admin', default => 'account' })
 @section('title','My Contracts')
 @section('content')
 <div class="container inner-page">
