@@ -75,10 +75,15 @@ finish() {
 trap finish EXIT
 
 # ClamAV is a strict requirement for any attachment acceptance.
+# The inline PHP probe must load Composer's autoloader before Laravel's
+# bootstrap/app.php, exactly as the Artisan entrypoint does.
+[[ -r "$SITE/vendor/autoload.php" ]] ||
+  { echo "STOP: Composer autoloader not readable: $SITE/vendor/autoload.php"; exit 2; }
 SCAN_PROBE="$(mktemp /tmp/bambodia-support-scan.XXXXXXXX.txt)"
 printf '%s\n' 'Bambodia harmless scanner readiness check' > "$SCAN_PROBE"
 chmod 0644 "$SCAN_PROBE"
 (cd "$SITE" && runuser -u www -- "$PHP" -r '
+  require "vendor/autoload.php";
   $app = require "bootstrap/app.php";
   $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
   $result = app(\App\Support\VaultMalwareScanner::class)->scanFile($argv[1]);
