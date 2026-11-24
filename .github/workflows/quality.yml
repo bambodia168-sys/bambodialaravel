@@ -42,6 +42,29 @@ jobs:
           bash -n support/support-ticket-secure-aapanel-release.sh
           bash -n support/support-ticket-upload-fix-aapanel-release.sh
           php -l support/operator/support-ticket-upload-scanner-probe.php
+          python3 - <<'PY_VERIFY_SUPPORT_PROBE_PIN'
+          from pathlib import Path
+          import re
+          import subprocess
+
+          release = Path('support/support-ticket-upload-fix-aapanel-release.sh').read_text()
+          def variable(name):
+              match = re.search(r'^' + re.escape(name) + r'="([^"]+)"$', release, re.M)
+              assert match, f'Missing release pin: {name}'
+              return match.group(1)
+
+          probe = variable('PROBE')
+          probe_ref = variable('PROBE_REF')
+          source_ref = variable('TARGET')
+          expected = variable('PROBE_SHA')
+          assert re.fullmatch(r'[0-9a-f]{40}', probe_ref), 'Probe ref must be immutable'
+          assert probe_ref != source_ref, 'Corrected probe must not use older code target'
+          assert 'download "$PROBE_REF" "$PROBE" "$PROBE_TMP"' in release, 'Probe download must use probe-specific ref'
+          assert '(cd "$SITE" && runuser -u www -- "$PHP" "$PROBE_TMP")' in release, 'Probe must start from accessible Laravel cwd'
+          actual = subprocess.check_output(['git', 'hash-object', probe], text=True).strip()
+          assert actual == expected, f'Probe SHA mismatch: expected {expected}, checkout has {actual}'
+          print('PASS: Support Ticket scanner fixture hash and dedicated download ref are pinned')
+          PY_VERIFY_SUPPORT_PROBE_PIN
           python3 - <<'PY_VERIFY_PNG'
           from pathlib import Path
           import base64, re, zlib
