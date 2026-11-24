@@ -21,6 +21,45 @@ class SupportTicketResourceController extends Controller
 {
     public function download(Request $request, string $attachment): BinaryFileResponse
     {
+        [$file, $absolute] = $this->privateFile($request, $attachment);
+        AuditEvent::record('support.attachment.downloaded', $request->user(), $request);
+        $response = response()->download($absolute, $file->original_name, [
+            'Content-Type' => 'application/octet-stream',
+            'Pragma' => 'no-cache',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'; sandbox",
+            'Referrer-Policy' => 'no-referrer',
+        ]);
+        return $this->noStore($response);
+    }
+
+    public function preview(Request $request, string $attachment): BinaryFileResponse
+    {
+        [$file, $absolute] = $this->privateFile($request, $attachment);
+        abort_unless(in_array($file->mime_type, [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+        ], true), 404);
+
+        $response = response()->file($absolute, [
+            'Content-Type' => $file->mime_type,
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'; sandbox",
+            'Referrer-Policy' => 'no-referrer',
+        ]);
+        return $this->noStore($response);
+    }
+
+    private function noStore(BinaryFileResponse $response): BinaryFileResponse
+    {
+        $response->setPrivate();
+        $response->headers->addCacheControlDirective('no-store');
+        $response->headers->addCacheControlDirective('max-age', 0);
+        $response->headers->removeCacheControlDirective('public');
+        return $response;
+    }
+
+    private function privateFile(Request $request, string $attachment): array
+    {
         $file = SupportTicketAttachment::query()->where('public_id', $attachment)
             ->with('ticket')->firstOrFail();
         $ticket = $file->ticket;
@@ -37,22 +76,7 @@ class SupportTicketResourceController extends Controller
         abort_unless(is_file($absolute)
             && hash_equals($file->sha256, hash_file('sha256', $absolute)), 409);
 
-        AuditEvent::record('support.attachment.downloaded', $request->user(), $request);
-        $response = response()->download($absolute, $file->original_name, [
-            'Content-Type' => 'application/octet-stream',
-            'Pragma' => 'no-cache',
-            'X-Content-Type-Options' => 'nosniff',
-            'Content-Security-Policy' => "default-src 'none'; sandbox",
-            'Referrer-Policy' => 'no-referrer',
-        ]);
-        // Symfony BinaryFileResponse defaults to public caching for downloads
-        // unless explicitly marked private after the response is created.
-        $response->setPrivate();
-        $response->headers->addCacheControlDirective('no-store');
-        $response->headers->addCacheControlDirective('max-age', 0);
-        $response->headers->removeCacheControlDirective('public');
-
-        return $response;
+        return [$file, $absolute];
     }
 
     public function credentialStore(Request $request, string $ticket): RedirectResponse
