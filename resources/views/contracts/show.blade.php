@@ -15,7 +15,7 @@
     <div class="toolbar-actions">
       <span class="role-pill">{{ ucfirst($contract->status) }}</span>
       <span class="role-pill">USD {{ number_format((float)$contract->agreed_budget,2) }} proposed value</span>
-      <a class="btn subtle compact" href="{{ route('contracts.index') }}">All contracts</a>
+      <a class="btn subtle compact" href="{{ route('contracts.index', (int)auth()->id() === (int)$contract->freelancer_id && auth()->user()->isCreator() ? ['workspace'=>'creator'] : []) }}">All contracts</a>
     </div>
   </div>
 
