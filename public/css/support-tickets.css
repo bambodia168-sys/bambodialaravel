@@ -169,3 +169,5 @@
   .ticket-secret-view-row{grid-template-columns:1fr auto}
   .ticket-secret-view-row label{grid-column:1/-1}
 }
+
+.ticket-private-thumb{display:block;width:56px;height:48px;object-fit:cover;border-radius:7px;border:1px solid var(--line);background:var(--surface)}
