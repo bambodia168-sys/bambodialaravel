@@ -42,6 +42,7 @@
       if (!panel) return;
       panel.hidden = false;
       const section = panel.closest('.ticket-secure-share-section') || panel;
+      section.querySelector('[data-secure-submit]')?.removeAttribute('hidden');
       section.scrollIntoView({behavior:'smooth',block:'start'});
       panel.querySelector('input[name="credential_label"]')?.focus({preventScroll:true});
     };
