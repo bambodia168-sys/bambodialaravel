@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SupportMessage extends Model
 {
@@ -14,6 +15,11 @@ class SupportMessage extends Model
     protected function casts(): array
     {
         return ['created_at' => 'datetime'];
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(SupportTicketAttachment::class, 'support_message_id');
     }
 
     public function author(): BelongsTo
