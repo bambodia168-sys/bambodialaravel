@@ -414,4 +414,113 @@ class SupportTicketSecureWorkflowsTest extends TestCase
         $this->actingAs($this->user())->get(route('support.attachments.download', $attachment->public_id))
             ->assertNotFound();
     }
+
+    /**
+     * Use synthetic fixture bytes and a fake private disk; never fetch any real
+     * customer attachments or production support-ticket data in these tests.
+     */
+    private function isolationFixture(User $owner): array
+    {
+        Storage::fake('local');
+
+        $ticket = $this->ticket($owner);
+        $bytes = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGMUabrEwMDAxMDAwMDAAAAQTAFs/wbMlQAAAABJRU5ErkJggg==',
+            true
+        );
+        $this->assertIsString($bytes);
+        $path = 'support-ticket-attachments/'.$ticket->id.'/'.Str::uuid().'.png';
+        $this->assertTrue(Storage::disk('local')->put($path, $bytes));
+
+        $attachment = SupportTicketAttachment::query()->create([
+            'support_ticket_id' => $ticket->id,
+            'support_message_id' => $ticket->messages()->firstOrFail()->id,
+            'uploaded_by' => $owner->id,
+            'storage_disk' => 'local',
+            'storage_path' => $path,
+            'original_name' => 'synthetic-fixture.png',
+            'mime_type' => 'image/png',
+            'bytes' => strlen($bytes),
+            'sha256' => hash('sha256', $bytes),
+            'scan_status' => 'clean',
+        ]);
+
+        return [$ticket, $attachment];
+    }
+
+    public function test_guests_and_other_accounts_cannot_view_or_download_private_ticket_attachments(): void
+    {
+        $owner = $this->user();
+        [$ticket, $attachment] = $this->isolationFixture($owner);
+        $download = route('support.attachments.download', $attachment->public_id);
+        $preview = route('support.attachments.preview', $attachment->public_id);
+
+        $this->get($download)->assertRedirect(route('login'));
+        $this->get($preview)->assertRedirect(route('login'));
+        $this->get(route('account.support.show', $ticket->public_id))->assertRedirect(route('login'));
+
+        foreach (['customer', 'freelancer'] as $role) {
+            $other = $this->user($role);
+
+            $this->actingAs($other)->get($download)->assertNotFound();
+            $this->get($preview)->assertNotFound();
+            $this->get(route('account.support.show', $ticket->public_id))->assertNotFound();
+            $this->post(route('account.support.reply', $ticket->public_id), [
+                'message' => '<p>Attempt to reply to someone else ticket.</p>',
+            ])->assertNotFound();
+            $this->get(route('account.support.index'))
+                ->assertOk()->assertDontSee((string) $ticket->public_id);
+        }
+
+        $this->actingAs($owner)->get($download)->assertOk();
+        $this->get($preview)->assertOk();
+    }
+
+    public function test_staff_with_revoked_support_permission_cannot_view_or_download_private_ticket(): void
+    {
+        $owner = $this->user();
+        [$ticket, $attachment] = $this->isolationFixture($owner);
+        $staff = $this->user('staff');
+        $admin = $this->user('admin');
+        $download = route('support.attachments.download', $attachment->public_id);
+        $preview = route('support.attachments.preview', $attachment->public_id);
+
+        $this->actingAs($staff)->get($download)->assertOk();
+        $this->get($preview)->assertOk();
+
+        \Illuminate\Support\Facades\DB::table('user_permission_overrides')->insert([
+            'user_id' => $staff->id,
+            'permission' => 'support_center',
+            'allowed' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->get($download)->assertNotFound();
+        $this->get($preview)->assertNotFound();
+        $this->get(route('dashboard.support.show', $ticket->public_id))->assertForbidden();
+
+        $this->actingAs($admin)->get($download)->assertOk();
+        $this->get($preview)->assertOk();
+    }
+
+    public function test_unsafe_or_archived_support_attachments_are_not_served_even_to_owner(): void
+    {
+        $owner = $this->user();
+        [$ticket, $attachment] = $this->isolationFixture($owner);
+        $download = route('support.attachments.download', $attachment->public_id);
+        $preview = route('support.attachments.preview', $attachment->public_id);
+
+        $this->actingAs($owner)->get($download)->assertOk();
+
+        $attachment->update(['scan_status' => 'error']);
+        $this->get($download)->assertNotFound();
+        $this->get($preview)->assertNotFound();
+
+        $attachment->update(['scan_status' => 'clean']);
+        $ticket->delete();
+
+        $this->get($download)->assertNotFound();
+        $this->get($preview)->assertNotFound();
+    }
 }
