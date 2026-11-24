@@ -1,7 +1,7 @@
 @extends('layouts.dashboard')
 @section('title', 'Support Management')
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=4">
 @endpush
 @section('content')
 @php
