@@ -127,6 +127,7 @@
           <a href="{{ route('account.saved-listings') }}"><x-icon name="star" size="16"/> Saved Listings</a>
           <a href="{{ route('account.saved-jobs') }}"><x-icon name="star" size="16"/> Saved Jobs</a>
           <a href="{{ route('account.notifications') }}"><x-icon name="mail" size="16"/> Notifications</a>
+          <a href="{{ route('account.support.index') }}"><x-icon name="life-buoy" size="16"/> My Support Tickets</a>
           <a href="{{ route('account.policy-receipts') }}"><x-icon name="book" size="16"/> My Policy Receipts</a>
           <a href="{{ route('privacy.index') }}"><x-icon name="shield" size="16"/> Privacy Requests</a>
           <a href="{{ route('contracts.index') }}"><x-icon name="briefcase" size="16"/> My Contracts</a>
