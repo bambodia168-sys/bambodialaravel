@@ -34,6 +34,7 @@ jobs:
           mkdir -p database
       - name: Validate installed-site upgrade shell syntax
         run: |
+          bash -n support/baray-on-site-status-aapanel-release.sh
           bash -n support/baray-payment-aapanel-release.sh
           bash -n support/workspace-upgrade.sh
           bash -n support/frontend-navigation-upgrade.sh
