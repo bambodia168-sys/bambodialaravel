@@ -2,7 +2,7 @@
 @section('workspace', $isStaff || auth()->user()->isAdministrator() ? 'admin' : (auth()->user()->isCreator() ? 'creator' : 'account'))
 @section('title', 'Support Ticket '.$ticket->public_id)
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=2">
 <script defer src="{{ asset('js/support-ticket-editor.js') }}?v=1"></script>
 @endpush
 @section('content')
@@ -15,9 +15,10 @@
       <div class="eyebrow">Private support · Ticket {{ $ticket->public_id }}</div>
       <h1>{{ $ticket->subject }}</h1>
       <p>
-        <span class="role-pill">{{ ucwords(str_replace('_', ' ', $ticket->status)) }}</span>
+        <span class="support-status-pill support-status--{{ $ticket->status }}">{{ \App\Models\SupportTicket::STATUSES[$ticket->status] ?? ucfirst($ticket->status) }}</span>
         @if($isStaff) · Opened by {{ $ticket->owner?->name }} ({{ $ticket->owner?->email }}) @endif
         · Last updated {{ $ticket->updated_at?->format('d M Y H:i') }}
+        · Assigned to {{ $ticket->assignee?->name ?? 'Unassigned' }}
       </p>
       @if($ticket->context_type === 'order' && ($order = $ticket->order))
         <p>Related order <span class="mono">{{ $order->reference() }}</span></p>
@@ -49,6 +50,18 @@
       @endforeach
     </div>
   </section>
+  @if($ticket->status === 'closed')
+    <section class="panel support-reply-panel"><h2>Ticket closed</h2>
+      <p class="text-muted">This conversation is closed. Contact support if you need to reopen the request.</p>
+      @if($isStaff)
+        <form method="post" action="{{ route('dashboard.support.status', $ticket->public_id) }}">
+          @csrf @method('PATCH')
+          <input type="hidden" name="status" value="open">
+          <button class="btn subtle" type="submit">Reopen ticket</button>
+        </form>
+      @endif
+    </section>
+  @else
   <section class="panel support-ticket-panel support-reply-panel">
     <h2>Write a reply</h2>
     <p class="text-muted">Replies are added to this private ticket. You can format text, insert media and share code.</p>
@@ -61,7 +74,7 @@
       @if($isStaff)
         <label for="ticket-status">Status after reply</label>
         <select name="status" id="ticket-status">
-          @foreach(['open' => 'Open', 'in_progress' => 'In progress', 'resolved' => 'Resolved'] as $value => $label)
+          @foreach(\App\Models\SupportTicket::STATUSES as $value => $label)
             <option value="{{ $value }}" @selected(old('status', $ticket->status) === $value)>{{ $label }}</option>
           @endforeach
         </select>
@@ -72,5 +85,6 @@
       </div>
     </form>
   </section>
+  @endif
 </div>
 @endsection
