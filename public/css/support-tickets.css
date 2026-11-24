@@ -1,0 +1,65 @@
+/* Account-private support tickets — shared light/dark tokens, responsive editor. */
+.support-workspace{max-width:1240px;width:100%;min-width:0;padding-bottom:3rem}
+.support-workspace-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1.25rem;flex-wrap:wrap;margin:0 0 1.4rem}
+.support-workspace-heading>div{min-width:0;flex:1 1 350px}
+.support-workspace-heading h1{font-size:clamp(1.7rem,3vw,2.35rem);line-height:1.2;overflow-wrap:anywhere;margin:.45rem 0 .65rem}
+.support-workspace-heading p{color:var(--muted);line-height:1.7;max-width:780px}
+.support-back-link{display:inline-flex;align-items:center;gap:.35rem;color:var(--muted);text-decoration:none;font-weight:700;margin-bottom:1rem}
+.support-back-link:hover{color:var(--accent)}
+.support-heading-actions{display:flex;align-items:center;flex-wrap:wrap;gap:.6rem}
+.support-ticket-panel,.support-thread-panel{min-width:0;max-width:100%}
+.support-ticket-panel .panel-head{gap:1rem;flex-wrap:wrap}
+.support-empty-private{display:grid;justify-items:center;gap:.65rem;max-width:460px;margin:1.5rem auto;text-align:center}
+.support-empty-private h3{margin:0}.support-empty-private p{margin:0 0 .5rem;color:var(--muted)}
+.support-ticket-form{min-width:0}
+.support-ticket-form>section{padding:clamp(1rem,2.8vw,2rem)}
+.support-form-top{display:flex;align-items:flex-start;gap:.8rem;border-bottom:1px solid var(--line);padding-bottom:1.2rem;margin-bottom:1.4rem}
+.support-form-top h2,.support-reply-panel h2{margin:0 0 .4rem}
+.support-form-top p,.support-reply-panel>p{color:var(--muted);margin:.2rem 0}
+.support-ticket-form label{display:block;font-weight:750;font-size:.92rem;margin:.95rem 0 .45rem}
+.support-ticket-form input[name=subject]{display:block;width:100%;max-width:100%;min-height:48px;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--text);padding:.8rem 1rem}
+.support-form-actions{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:.6rem;border-top:1px solid var(--line);padding-top:1rem;margin-top:1.3rem}
+.ticket-field-error{color:#be123c;font-weight:650;margin:.4rem 0}
+.ticket-editor{min-width:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+.ticket-editor-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:3px;padding:.6rem;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.ticket-editor-toolbar select{border:1px solid var(--line);background:var(--surface);color:var(--text);min-height:34px;border-radius:8px;padding:.3rem .4rem;font-size:.8rem;max-width:170px}
+.ticket-editor-tool,.ticket-editor-source-toggle{border:1px solid transparent;background:transparent;color:var(--text);border-radius:8px;min-height:34px;min-width:34px;padding:.3rem .45rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.35rem}
+.ticket-editor-source-toggle{font-weight:700;font-size:.8rem}
+.ticket-editor-tool:hover,.ticket-editor-tool:focus-visible,.ticket-editor-source-toggle:hover,.ticket-editor-source-toggle[aria-pressed=true]{border-color:var(--line);background:var(--surface);color:var(--accent)}
+.ticket-editor-surface,.ticket-editor-source,.ticket-editor>textarea[data-ticket-message]{width:100%;box-sizing:border-box;min-height:clamp(240px,34vw,390px);padding:1rem 1.1rem;border:0;outline:0;color:var(--text);background:var(--surface);font:inherit;line-height:1.7;white-space:normal;overflow-wrap:anywhere}
+.ticket-editor-surface:focus-visible,.ticket-editor-source:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+.ticket-editor-surface:empty::before{content:"Write your detailed message here…";color:var(--muted)}
+.ticket-editor-source{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86rem;white-space:pre;resize:vertical}
+.ticket-editor-surface[hidden],.ticket-editor-source[hidden],.ticket-editor>textarea[hidden]{display:none!important}
+.ticket-editor-surface img,.support-thread-content img{display:block;max-width:100%;max-height:520px;height:auto;border-radius:8px;margin:.7rem 0}
+.ticket-editor-surface iframe,.support-thread-content iframe,.ticket-editor-surface video,.support-thread-content video{display:block;width:min(100%,680px);max-width:100%;aspect-ratio:16/9;border:0;border-radius:9px;margin:.8rem 0;background:#0f172a}
+.ticket-editor-surface audio,.support-thread-content audio{max-width:100%;margin:.7rem 0}
+.ticket-editor-surface pre,.support-thread-content pre{overflow-x:auto;max-width:100%;white-space:pre-wrap;word-break:break-word;padding:1rem;border-radius:10px;background:var(--surface-2);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.88rem}
+.ticket-editor-surface table,.support-thread-content table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}
+.ticket-editor-surface td,.ticket-editor-surface th,.support-thread-content td,.support-thread-content th{border:1px solid var(--line);padding:.45rem .65rem}
+.ticket-editor-surface blockquote,.support-thread-content blockquote{border-left:3px solid var(--accent);padding:.35rem 1rem;background:var(--surface-2)}
+.ticket-editor-footer{display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap;padding:.55rem 1rem;border-top:1px solid var(--line);font-size:.74rem;color:var(--muted)}
+.ticket-editor-help{padding:.5rem 1rem;font-size:.78rem;line-height:1.6;margin:0!important}
+.ticket-media-dialog{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:1.5rem;width:min(94vw,490px);max-height:92vh;overflow:auto}
+.ticket-media-dialog::backdrop{background:rgba(15,23,42,.64)}
+.ticket-media-dialog h3{margin:0 0 1rem}
+.ticket-media-dialog label{display:block;margin:.8rem 0 .3rem}
+.ticket-media-dialog input,.ticket-media-dialog select{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--text);padding:.7rem}
+.ticket-media-error{color:#be123c;font-weight:700}
+.ticket-media-dialog .dialog-actions{display:flex;justify-content:flex-end;gap:.5rem;margin-top:1.3rem}
+.support-thread-panel{padding:0!important;margin-bottom:1rem}
+.support-thread-panel>.panel-head{padding:1.2rem 1.4rem;border-bottom:1px solid var(--line)}
+.support-thread-panel>.panel-head p{margin:.3rem 0 0}
+.support-thread-messages{display:grid;gap:1rem;padding:clamp(.85rem,2vw,1.4rem)}
+.support-thread-message{border:1px solid var(--line);border-radius:12px;padding:clamp(.85rem,2vw,1.2rem);min-width:0}
+.support-thread-message.is-mine{background:var(--surface-2)}
+.support-thread-message-head{display:flex;justify-content:space-between;align-items:flex-start;gap:.7rem;flex-wrap:wrap;padding-bottom:.9rem;border-bottom:1px solid var(--line)}
+.support-thread-author{display:flex;gap:.65rem;align-items:center}
+.support-thread-author small{display:block;color:var(--muted);font-size:.75rem;margin-top:.15rem}
+.support-thread-avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--accent);border:1px solid var(--line);font-weight:800}
+.support-thread-message time{font-size:.78rem;color:var(--muted)}
+.support-thread-content{padding-top:.8rem;line-height:1.8;overflow-wrap:anywhere}
+.support-thread-content p{margin:.25rem 0 .7rem}
+.support-reply-panel{padding:clamp(1rem,2.5vw,1.7rem)!important}
+.support-reply-panel .ticket-editor{margin-top:.6rem}
+@media(max-width:650px){.support-workspace-heading{display:block}.support-heading-actions{margin-top:1rem}.support-heading-actions .btn{flex:1}.support-ticket-form>section{padding:1rem}.ticket-editor-toolbar{padding:.35rem}.ticket-editor-surface,.ticket-editor-source{padding:.8rem}.support-form-actions .btn{flex:1}.support-thread-panel>.panel-head{padding:.9rem}.support-thread-messages{padding:.75rem}}

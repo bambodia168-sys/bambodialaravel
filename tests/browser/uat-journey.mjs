@@ -143,24 +143,24 @@ try{
 
   await visit(client,'/support-center');
   await textOn(client,'How can we help?');
-  await visit(client,'/support-center/tickets');
-  await client.locator('button[data-modal-open="ticket-new"]').click();
-  await client.locator('#ticket-new [name="subject"]').fill('UAT Private Support Response');
-  await client.locator('#ticket-new [name="message"]').fill('QA-only authenticated support request and notification verification.');
-  await client.locator('#ticket-new button[type="submit"]').click();
+  await visit(client,'/account/support-tickets');
+  await visit(client,'/account/support-tickets/create');
+  await client.locator('#support-subject').fill('UAT Private Support Response');
+  await client.locator('[data-ticket-surface]').fill('QA-only authenticated support request and notification verification.');
+  await client.locator('form[data-ticket-form] button[type="submit"]').click();
   await client.waitForLoadState('networkidle');
-  const ticket=new URL(client.url()).pathname.match(/\/support-center\/(\d+)$/)?.[1];
+  const ticket=new URL(client.url()).pathname.match(/\/account\/support-tickets\/(\d+)$/)?.[1];
   assert(Boolean(ticket),'New support ticket did not open');
   const notOwner=await outsider.request.get(origin+'/support-center/'+ticket,{maxRedirects:0});
   assert(notOwner.status()===404,'Other customer can read private support ticket');
   await visit(staff,'/dashboard/support-center/'+ticket);
-  await staff.locator('textarea[name="message"]').fill('QA staff verified your case and recorded the status in the audit.');
+  await staff.locator('[data-ticket-surface]').fill('QA staff verified your case and recorded the status in the audit.');
   await staff.locator('select[name="status"]').selectOption('in_progress');
-  await staff.locator('.ticket-reply button[type="submit"]').click();
+  await staff.locator('form[data-ticket-form] button[type="submit"]').click();
   await staff.waitForLoadState('networkidle');
   await visit(client,'/account/notifications');
   await textOn(client,'Support team replied');
-  await visit(client,'/support-center/'+ticket);
+  await visit(client,'/account/support-tickets/'+ticket);
   await textOn(client,'QA staff verified your case');
   pass('Client support ticket, staff reply, private visibility and recipient notification');
 

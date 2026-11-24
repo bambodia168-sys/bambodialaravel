@@ -247,6 +247,16 @@ Route::middleware('auth')->group(function (): void {
         Route::patch('/security-dashboard/alerts/{alert}/acknowledge', [SecurityAlertController::class, 'acknowledge'])
             ->name('security.alerts.acknowledge')->middleware('throttle:30,1');
     });
+    // Private support tickets live inside every signed-in role's account workspace.
+    // Keep the historical routes below for existing notification links/bookmarks.
+    Route::prefix('account/support-tickets')->name('account.support.')->group(function (): void {
+        Route::get('/', [SupportController::class, 'index'])->name('index');
+        Route::get('/create', [SupportController::class, 'create'])->name('create');
+        Route::post('/', [SupportController::class, 'store'])->middleware('throttle:5,1,support-ticket-create:')->name('store');
+        Route::get('/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('show');
+        Route::post('/{ticket}/reply', [SupportController::class, 'reply'])
+            ->whereNumber('ticket')->middleware('throttle:10,1')->name('reply');
+    });
     Route::get('/support-center/tickets', [SupportController::class, 'index'])->name('support.tickets');
     Route::post('/support-center', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:5,1,support-ticket-create:');
     Route::get('/support-center/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('support.show');
