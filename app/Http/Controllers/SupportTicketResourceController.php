@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditEvent;
+use App\Models\AccountNotification;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketAttachment;
 use App\Models\SupportTicketCredential;
@@ -78,6 +79,15 @@ class SupportTicketResourceController extends Controller
                 ]);
             }
             SupportTicketSecrets::store($locked, $request->user(), $details, $request);
+            if ($locked->assigned_to) {
+                AccountNotification::deliver(
+                    (int) $locked->assigned_to,
+                    'support.replied',
+                    'Temporary support access shared',
+                    'The customer shared time-limited encrypted access on an assigned ticket.',
+                    route('dashboard.support.show', $locked->public_id, false)
+                );
+            }
         });
 
         return back()->with('status', 'Temporary encrypted access details shared securely.');
