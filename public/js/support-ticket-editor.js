@@ -205,7 +205,7 @@
         dialog.showModal();
       });
       root.querySelector('[data-ticket-media-cancel]')?.addEventListener('click', () => dialog.close());
-      root.querySelector('[data-ticket-media-form]')?.addEventListener('submit', event => {
+      root.querySelector('[data-ticket-media-insert]')?.addEventListener('click', event => {
         event.preventDefault();
         const type = root.querySelector('[data-ticket-media-type]').value;
         const rawUrl = root.querySelector('[data-ticket-media-url]').value.trim();
