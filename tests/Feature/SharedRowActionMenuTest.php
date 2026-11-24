@@ -81,7 +81,14 @@ class SharedRowActionMenuTest extends TestCase
         foreach ($required as $path) {
             $source = file_get_contents(resource_path('views/'.$path.'.blade.php'));
             $this->assertIsString($source, $path);
-            $this->assertStringContainsString('<x-row-action-menu', $source, $path);
+            $this->assertTrue(
+                str_contains($source, '<x-row-action-menu') || str_contains($source, "@include('support.row-actions'"),
+                $path.' must use the shared row-action menu component or its delegated support partial.'
+            );
+            if (str_contains($source, "@include('support.row-actions'")) {
+                $delegated = file_get_contents(resource_path('views/support/row-actions.blade.php'));
+                $this->assertStringContainsString('<x-row-action-menu', $delegated);
+            }
         }
 
         $source = file_get_contents(resource_path('views/dashboard/privacy-requests.blade.php'));
