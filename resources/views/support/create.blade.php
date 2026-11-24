@@ -1,5 +1,5 @@
 @extends('layouts.workspace')
-@section('workspace', auth()->user()->isAdministrator() ? 'admin' : (auth()->user()->isCreator() ? 'creator' : 'account'))
+@section('workspace', match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
 @section('title', 'Create Support Ticket')
 @push('head')
 <link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=1">
@@ -9,14 +9,14 @@
 <div class="container inner-page support-workspace">
   <div class="support-workspace-heading">
     <div>
-      <a href="{{ route(auth()->user()->supportTicketRoutePrefix().'.index') }}" class="support-back-link"><x-icon name="chevron-left" size="16"/> My support tickets</a>
+      <a href="{{ route(auth()->user()->supportTicketRoutePrefixForRequest().'.index') }}" class="support-back-link"><x-icon name="chevron-left" size="16"/> My support tickets</a>
       <div class="eyebrow">Private assistance · Your account</div>
       <h1>Create support ticket</h1>
       <p>Explain what you need help with. Only you and authorized support staff can read the conversation.</p>
     </div>
     <a href="{{ route('support') }}" class="btn subtle"><x-icon name="book-open" size="17"/> Browse public help</a>
   </div>
-  <form method="post" action="{{ route(auth()->user()->supportTicketRoutePrefix().'.store') }}" class="support-ticket-form" data-ticket-form>
+  <form method="post" action="{{ route(auth()->user()->supportTicketRoutePrefixForRequest().'.store') }}" class="support-ticket-form" data-ticket-form>
     @csrf
     <section class="panel support-ticket-panel">
       <div class="support-form-top"><x-icon name="life-buoy" size="22"/><div><h2>Describe your request</h2><p>Provide a clear subject and enough detail for the support team to respond.</p></div></div>
@@ -30,7 +30,7 @@
       @error('message')<p class="ticket-field-error" role="alert">{{ $message }}</p>@enderror
 
       <div class="support-form-actions">
-        <a href="{{ route(auth()->user()->supportTicketRoutePrefix().'.index') }}" class="btn subtle">Cancel</a>
+        <a href="{{ route(auth()->user()->supportTicketRoutePrefixForRequest().'.index') }}" class="btn subtle">Cancel</a>
         <button type="submit" class="btn primary"><x-icon name="send" size="17"/> Submit ticket</button>
       </div>
     </section>
