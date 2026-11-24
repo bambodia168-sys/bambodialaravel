@@ -41,6 +41,25 @@ jobs:
           bash -n support/private-workspaces-aapanel-release.sh
           bash -n support/support-ticket-secure-aapanel-release.sh
           bash -n support/support-ticket-upload-fix-aapanel-release.sh
+          bash -n support/support-ticket-temporary-access-aapanel-release.sh
+          node --check public/js/support-ticket-editor.js
+          node --check public/js/support-ticket-secrets.js
+          python3 - <<'PY_VERIFY_ACCESS_UI_MANIFEST'
+          from pathlib import Path
+          import re
+          import subprocess
+
+          release = Path('support/support-ticket-temporary-access-aapanel-release.sh').read_text()
+          match = re.search(r"cat > \"\$STAGE/manifest\" <<'MANIFEST'\n(.*?)\nMANIFEST", release, re.S)
+          assert match, 'Access UI release manifest missing'
+          rows = [line.split('|') for line in match.group(1).splitlines()]
+          assert len(rows) == 8, 'Expected eight code-only UI files'
+          for path, base_sha, target_sha in rows:
+              assert re.fullmatch(r'[0-9a-f]{40}', base_sha) and re.fullmatch(r'[0-9a-f]{40}', target_sha)
+              actual = subprocess.check_output(['git', 'hash-object', path], text=True).strip()
+              assert actual == target_sha, f'Unexpected access UI release blob: {path}'
+          print('PASS: Eight access UI assets are pinned to their exact target blobs')
+          PY_VERIFY_ACCESS_UI_MANIFEST
           php -l support/operator/support-ticket-upload-scanner-probe.php
           python3 - <<'PY_VERIFY_SUPPORT_PROBE_PIN'
           from pathlib import Path
