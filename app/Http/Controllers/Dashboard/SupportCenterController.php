@@ -8,6 +8,7 @@ use App\Models\AccountNotification;
 use App\Models\AuditEvent;
 use App\Support\SupportMessageContent;
 use App\Support\SupportTicketTable;
+use App\Support\SupportTicketFiles;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +37,10 @@ class SupportCenterController extends Controller
     public function show(string $ticket): View
     {
         $record = SupportTicket::query()->where('public_id', $ticket)
-            ->with(['owner:id,name,email,role', 'assignee:id,name', 'messages.author:id,name,role'])
+            ->with([
+                'owner:id,name,email,role', 'assignee:id,name',
+                'messages.author:id,name,role', 'messages.attachments', 'credentials',
+            ])
             ->firstOrFail();
 
         return view('support.show', ['ticket' => $record, 'isStaff' => true]);
@@ -74,6 +78,7 @@ class SupportCenterController extends Controller
 
         DB::transaction(function () use ($record, $request): void {
             $locked = SupportTicket::query()->lockForUpdate()->findOrFail($record->id);
+            $locked->eraseSharedCredentials();
             $locked->delete();
             AuditEvent::record('support.ticket.deleted', $request->user(), $request);
         });
@@ -107,15 +112,28 @@ class SupportCenterController extends Controller
     {
         $record = SupportTicket::query()->where('public_id', $ticket)->firstOrFail();
         $data = $request->validate([
-            'message' => ['required', 'string', 'max:40000'],
+            'message' => ['nullable', 'string', 'max:40000'],
             'status' => ['required', Rule::in(array_keys(SupportTicket::STATUSES))],
         ]);
 
-        $message = SupportMessageContent::prepare($data['message'], 2);
-        DB::transaction(function () use ($record, $data, $request, $message): void {
+        $files = SupportTicketFiles::validate($request);
+        $body = trim((string) ($data['message'] ?? ''));
+        if ($body === '' && $files === []) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'message' => 'Write a response or attach a reference file.',
+            ]);
+        }
+        $message = SupportMessageContent::prepare(
+            $body === '' ? '<p>Reference files attached.</p>' : $body, 2
+        );
+        DB::transaction(function () use ($record, $data, $request, $message, $files): void {
             $locked = SupportTicket::query()->lockForUpdate()->findOrFail($record->id);
-            $locked->messages()->create(['user_id' => $request->user()->id, 'body' => $message]);
+            $posted = $locked->messages()->create(['user_id' => $request->user()->id, 'body' => $message]);
+            SupportTicketFiles::store($files, $posted, $request->user(), $request);
             $locked->update(['status' => $data['status']]);
+            if ($data['status'] === 'closed') {
+                $locked->eraseSharedCredentials();
+            }
             AccountNotification::deliver(
                 (int) $locked->user_id, 'support.replied', 'Support team replied',
                 'Your support request has a new response. Open the ticket to read it.',
@@ -138,6 +156,9 @@ class SupportCenterController extends Controller
                 return;
             }
             $locked->update(['status' => $data['status']]);
+            if ($data['status'] === 'closed') {
+                $locked->eraseSharedCredentials();
+            }
             AccountNotification::deliver(
                 (int) $locked->user_id, 'support.status_changed', 'Support ticket updated',
                 'The status of your support request is now '.str_replace('_', ' ', $data['status']).'.',
