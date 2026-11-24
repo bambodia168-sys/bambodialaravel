@@ -55,7 +55,7 @@ class SupportWorkspaceLayoutAuditTest extends TestCase
                     ->assertOk()
                     ->assertSee('data-workspace="'.$workspace.'"', false)
                     ->assertSee('aria-label="'.$name.' menu"', false)
-                    ->assertSee('Support &amp; Help', false)
+                    ->assertSee($workspace === 'admin' ? 'Assistance' : 'Support &amp; Help', false)
                     ->assertSee('My Support Tickets')
                     ->assertDontSee('My Account Support');
             }
@@ -124,7 +124,7 @@ class SupportWorkspaceLayoutAuditTest extends TestCase
 
         $this->actingAs($staff)->get('/dashboard')
             ->assertOk()
-            ->assertSee('Support &amp; Help', false)
+            ->assertSee('Assistance', false)
             ->assertSee('My Support Tickets')
             ->assertDontSee('title="Support Management"', false);
 
