@@ -60,6 +60,7 @@ jobs:
           assert re.fullmatch(r'[0-9a-f]{40}', probe_ref), 'Probe ref must be immutable'
           assert probe_ref != source_ref, 'Corrected probe must not use older code target'
           assert 'download "$PROBE_REF" "$PROBE" "$PROBE_TMP"' in release, 'Probe download must use probe-specific ref'
+          assert '(cd "$SITE" && runuser -u www -- "$PHP" "$PROBE_TMP")' in release, 'Probe must start from accessible Laravel cwd'
           actual = subprocess.check_output(['git', 'hash-object', probe], text=True).strip()
           assert actual == expected, f'Probe SHA mismatch: expected {expected}, checkout has {actual}'
           print('PASS: Support Ticket scanner fixture hash and dedicated download ref are pinned')
