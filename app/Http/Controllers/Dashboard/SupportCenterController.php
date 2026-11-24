@@ -96,6 +96,13 @@ class SupportCenterController extends Controller
         $record = SupportTicket::query()->where('public_id', $ticket)->firstOrFail();
         DB::transaction(function () use ($record, $request, $assigneeId): void {
             $locked = SupportTicket::query()->lockForUpdate()->findOrFail($record->id);
+            // Staff cannot self-assign/reassign a ticket after credentials
+            // have been shared. An administrator must choose the recipient.
+            if ($request->user()->role === 'staff'
+                && $locked->credentials()->whereNull('revoked_at')
+                    ->whereNotNull('ciphertext')->where('expires_at', '>', now())->exists()) {
+                abort(403, 'An administrator must assign tickets containing temporary credentials.');
+            }
             $locked->update(['assigned_to' => $assigneeId]);
             AccountNotification::deliver(
                 (int) $locked->user_id, 'support.status_changed', 'Support ticket assigned',
