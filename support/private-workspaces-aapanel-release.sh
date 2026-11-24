@@ -22,6 +22,11 @@ done
 [[ -f "$SITE/artisan" && -f "$SITE/.env" && -d "$SITE/vendor" && -x "$PHP" ]] ||
   { echo "STOP: unexpected production site or PHP"; exit 2; }
 [[ ! -L "$SITE" ]] || { echo "STOP: site directory is a symlink"; exit 2; }
+grep -Eq "^APP_ENV=['\"]?production(['\"]?)$" "$SITE/.env" ||
+  { echo "STOP: expected production Laravel environment"; exit 2; }
+grep -Eq 'root[[:space:]]+/www/wwwroot/bambodia-staging-qa/public;' \
+  /www/server/panel/vhost/nginx/bambodia.com.conf ||
+  { echo "STOP: production virtual-host document root changed"; exit 2; }
 
 origin_code() {
   curl -4 -sS --connect-timeout 8 --max-time 15 \
