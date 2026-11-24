@@ -280,6 +280,8 @@ Route::middleware('auth')->group(function (): void {
             ->middleware('throttle:10,1,commerce-receipt-submit:')->name('payment.submit');
         Route::get('/{number}/payments/{payment}/return', [CommercePaymentController::class, 'returned'])
             ->whereUuid(['number', 'payment'])->name('payment.return');
+        Route::get('/{number}/payments/{payment}/baray-status', [CommercePaymentController::class, 'barayStatus'])
+            ->whereUuid(['number', 'payment'])->middleware('throttle:30,1')->name('payment.baray-status');
         Route::post('/{number}/payments/{payment}/verify', [CommercePaymentController::class, 'verify'])
             ->whereUuid(['number', 'payment'])->middleware('throttle:20,1')->name('payment.verify');
         Route::get('/{number}/payments/{payment}/qr', [CommercePaymentController::class, 'orderQr'])
