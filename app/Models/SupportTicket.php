@@ -3,12 +3,23 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SupportTicket extends Model
 {
-    protected $fillable = ['user_id', 'subject', 'status', 'context_type', 'context_id'];
+    use SoftDeletes;
+
+    public const STATUSES = [
+        'open' => 'Open',
+        'pending' => 'Pending',
+        'in_progress' => 'In Progress',
+        'resolved' => 'Resolved',
+        'closed' => 'Closed',
+    ];
+
+    protected $fillable = ['user_id', 'subject', 'status', 'context_type', 'context_id', 'assigned_to'];
 
     protected static function booted(): void
     {
@@ -27,6 +38,19 @@ class SupportTicket extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /** Owners may revise/withdraw only an unhandled request. */
+    public function ownerCanRevise(): bool
+    {
+        return in_array($this->status, ['open', 'pending'], true)
+            && ! $this->trashed()
+            && $this->messages()->count() === 1;
     }
 
     public function order(): BelongsTo
