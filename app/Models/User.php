@@ -132,6 +132,22 @@ class User extends Authenticatable implements HasPasskeys
         };
     }
 
+    /**
+     * Keep ticket navigation in the current Creator Studio when a super
+     * administrator opens their creator workspace. Other roles retain their
+     * primary account/dashboard ticket location.
+     */
+    public function supportTicketRoutePrefixForRequest(): string
+    {
+        if ($this->isCreator() && request()->routeIs(
+            'studio.support-tickets.*', 'localized.*.studio.support-tickets.*'
+        )) {
+            return 'studio.support-tickets';
+        }
+
+        return $this->supportTicketRoutePrefix();
+    }
+
     public function defaultWorkspaceUrl(): string
     {
         return match (true) {

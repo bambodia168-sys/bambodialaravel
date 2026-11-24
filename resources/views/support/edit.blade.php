@@ -1,5 +1,5 @@
 @extends($isStaff ? 'layouts.dashboard' : 'layouts.workspace')
-@section('workspace', $isStaff || auth()->user()->isAdministrator() ? 'admin' : (auth()->user()->isCreator() ? 'creator' : 'account'))
+@section('workspace', $isStaff ? 'admin' : match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
 @section('title', 'Edit Support Ticket '.$ticket->public_id)
 @push('head')
 <link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=2">
@@ -9,10 +9,10 @@
 @php
   $backUrl = $isStaff
     ? route('dashboard.support.show', $ticket->public_id)
-    : route(auth()->user()->supportTicketRoutePrefix().'.show', $ticket->public_id);
+    : route(auth()->user()->supportTicketRoutePrefixForRequest().'.show', $ticket->public_id);
   $updateUrl = $isStaff
     ? route('dashboard.support.update', $ticket->public_id)
-    : route(auth()->user()->supportTicketRoutePrefix().'.update', $ticket->public_id);
+    : route(auth()->user()->supportTicketRoutePrefixForRequest().'.update', $ticket->public_id);
 @endphp
 <div class="container inner-page support-workspace">
   <div class="support-workspace-heading">

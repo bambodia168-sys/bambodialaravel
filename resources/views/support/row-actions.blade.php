@@ -1,14 +1,14 @@
 @php
   $isAdmin = in_array(auth()->user()->role, ['admin','super_admin'], true);
   $ownerRevision = ! $management && $ticket->ownerCanRevise();
-  $canAdminEdit = $canManage && $isAdmin;
+  $canAdminEdit = $canManage && $isAdmin && ($management || ! $ticket->ownerCanRevise());
   $canEdit = $ownerRevision || $canAdminEdit;
   $editUrl = $canAdminEdit
     ? route('dashboard.support.edit', $ticket->public_id)
-    : route(auth()->user()->supportTicketRoutePrefix().'.edit', $ticket->public_id);
+    : route(auth()->user()->supportTicketRoutePrefixForRequest().'.edit', $ticket->public_id);
   $deleteUrl = $canAdminEdit
     ? route('dashboard.support.destroy', $ticket->public_id)
-    : route(auth()->user()->supportTicketRoutePrefix().'.destroy', $ticket->public_id);
+    : route(auth()->user()->supportTicketRoutePrefixForRequest().'.destroy', $ticket->public_id);
   $menuId = ($management ? 'queue-' : 'own-').$ticket->id;
 @endphp
 <x-row-action-menu :id="$menuId" :label="$ticket->subject">

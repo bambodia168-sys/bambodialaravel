@@ -68,7 +68,7 @@ class SupportController extends Controller
             return $ticket;
         });
 
-        return redirect()->route($request->user()->supportTicketRoutePrefix().'.show', $ticket->public_id)
+        return redirect()->route($request->user()->supportTicketRoutePrefixForRequest().'.show', $ticket->public_id)
             ->with('status', 'Support ticket created.');
     }
 
@@ -117,7 +117,7 @@ class SupportController extends Controller
             AuditEvent::record('support.ticket.updated', $request->user(), $request);
         });
 
-        return redirect()->route($request->user()->supportTicketRoutePrefix().'.show', $record->public_id)
+        return redirect()->route($request->user()->supportTicketRoutePrefixForRequest().'.show', $record->public_id)
             ->with('status', 'Ticket updated.');
     }
 
@@ -133,7 +133,7 @@ class SupportController extends Controller
             AuditEvent::record('support.ticket.deleted', $request->user(), $request);
         });
 
-        return redirect()->route($request->user()->supportTicketRoutePrefix().'.index')
+        return redirect()->route($request->user()->supportTicketRoutePrefixForRequest().'.index')
             ->with('status', 'Ticket removed from your workspace.');
     }
 
