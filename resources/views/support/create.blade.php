@@ -2,8 +2,8 @@
 @section('workspace', match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
 @section('title', 'Create Support Ticket')
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=1">
-<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=1"></script>
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=3">
+<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=2"></script>
 @endpush
 @section('content')
 <div class="container inner-page support-workspace">
