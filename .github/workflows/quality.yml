@@ -37,6 +37,7 @@ jobs:
           bash -n support/baray-on-site-status-aapanel-release.sh
           bash -n support/account-support-rich-workspace-aapanel-release.sh
           bash -n support/role-ticket-workspaces-aapanel-release.sh
+          bash -n support/support-ticket-table-aapanel-release.sh
           bash -n support/baray-on-site-status-live-route-compat-aapanel.sh
           bash -n support/baray-payment-aapanel-release.sh
           bash -n support/workspace-upgrade.sh
