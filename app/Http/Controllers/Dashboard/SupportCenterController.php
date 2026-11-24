@@ -58,7 +58,7 @@ class SupportCenterController extends Controller
             AccountNotification::deliver(
                 (int) $locked->user_id, 'support.replied', 'Support team replied',
                 'Your support request has a new response. Open the ticket to read it.',
-                '/support-center/'.$locked->public_id
+                '/account/support-tickets/'.$locked->public_id
             );
             AuditEvent::record('support.staff.replied', $request->user(), $request);
         });
@@ -79,7 +79,7 @@ class SupportCenterController extends Controller
             AccountNotification::deliver(
                 (int) $locked->user_id, 'support.status_changed', 'Support ticket updated',
                 'The status of your support request is now '.str_replace('_', ' ', $data['status']).'.',
-                '/support-center/'.$locked->public_id
+                '/account/support-tickets/'.$locked->public_id
             );
             AuditEvent::record('support.status.changed', $request->user(), $request);
         });
