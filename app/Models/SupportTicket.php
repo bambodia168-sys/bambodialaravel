@@ -19,7 +19,7 @@ class SupportTicket extends Model
         'closed' => 'Closed',
     ];
 
-    protected $fillable = ['user_id', 'subject', 'status', 'context_type', 'context_id', 'assigned_to'];
+    protected $fillable = ['user_id', 'subject', 'status', 'context_type', 'context_id', 'assigned_to', 'issue_type'];
 
     protected static function booted(): void
     {
@@ -56,6 +56,22 @@ class SupportTicket extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(MarketplaceOrder::class, 'context_id');
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(SupportTicketAttachment::class);
+    }
+
+    public function credentials(): HasMany
+    {
+        return $this->hasMany(SupportTicketCredential::class)->latest();
+    }
+
+    public function eraseSharedCredentials(): void
+    {
+        $this->credentials()->whereNotNull('ciphertext')
+            ->update(['ciphertext' => null, 'revoked_at' => now(), 'updated_at' => now()]);
     }
 
     public function messages(): HasMany
