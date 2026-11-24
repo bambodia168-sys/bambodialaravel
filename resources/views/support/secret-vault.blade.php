@@ -116,11 +116,15 @@
           <p>Create a least-privilege support account or scoped temporary token for troubleshooting.</p>
         </div>
       </div>
+      <button type="button" class="btn subtle compact ticket-vault-open" data-open-secure-fields>
+        <x-icon name="plus" size="16"/> Enter access details
+      </button>
     </div>
     <form method="post" action="{{ route('support.credentials.store', $ticket->public_id) }}" autocomplete="off">
       @csrf
       @include('support.credential-fields')
-      <div class="support-form-actions ticket-vault-form-actions">
+      <div class="support-form-actions ticket-vault-form-actions" data-secure-submit
+        @unless($errors->hasAny(['credential_label','credential_username','credential_password','credential_key','credential_url','credential_days'])) hidden @endunless>
         <button type="submit" class="btn primary"><x-icon name="shield-check" size="16"/> Encrypt &amp; share access</button>
       </div>
     </form>
