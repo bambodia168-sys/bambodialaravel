@@ -108,7 +108,7 @@ class PrivateAccountWorkspaceShellsTest extends TestCase
             ],
             'super_admin' => [
                 '/contracts' => 'admin',
-                '/my-jobs' => 'admin',
+                '/my-jobs' => 'account',
                 '/studio/inquiries' => 'creator',
                 '/studio/media-library' => 'creator',
                 '/dashboard/media-library' => 'admin',
@@ -182,7 +182,34 @@ class PrivateAccountWorkspaceShellsTest extends TestCase
 
         $superJob = $this->job($superAdmin);
         $this->actingAs($superAdmin)->get('/my-jobs/'.$superJob->id.'/proposals')
-            ->assertOk()->assertSee('data-workspace="admin"', false);
+            ->assertOk()->assertSee('data-workspace="account"', false);
+    }
+
+    public function test_super_admin_creator_studio_contract_links_preserve_creator_shell_without_expanding_permissions(): void
+    {
+        $admin = $this->account('super_admin');
+        $client = $this->account('customer');
+        $contract = $this->contract($client, $admin);
+
+        $this->actingAs($admin)->get('/creator')->assertOk()
+            ->assertSee(route('contracts.index', ['workspace' => 'creator']), false);
+        $this->get('/contracts?workspace=creator')->assertOk()
+            ->assertSee('data-workspace="creator"', false)
+            ->assertSee((string) $contract->public_id)
+            ->assertSee('name="workspace" value="creator"', false);
+        $this->get('/contracts?workspace=creator&status=active')->assertOk()
+            ->assertSee('data-workspace="creator"', false);
+        $this->get('/contracts/'.$contract->public_id)->assertOk()
+            ->assertSee('data-workspace="creator"', false)
+            ->assertSee(route('contracts.index', ['workspace' => 'creator']), false);
+
+        $this->get('/contracts')->assertOk()->assertSee('data-workspace="account"', false);
+        $this->get('/en/contracts?workspace=creator')->assertOk()
+            ->assertSee('data-workspace="creator"', false);
+
+        $customer = $this->account('subscriber');
+        $this->actingAs($customer)->get('/contracts?workspace=creator')->assertOk()
+            ->assertSee('data-workspace="account"', false);
     }
 
     public function test_public_pages_remain_public_and_private_pages_require_authentication(): void
