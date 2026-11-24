@@ -94,6 +94,7 @@ use App\Http\Controllers\ContentController;
 use App\Http\Controllers\PostCommentController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\SupportController;
+use App\Http\Controllers\SupportTicketResourceController;
 use App\Http\Controllers\KnowledgeBaseController;
 use App\Http\Controllers\Dashboard\SupportCenterController;
 use App\Http\Controllers\Dashboard\KnowledgeBaseController as KnowledgeBaseManagerController;
@@ -247,6 +248,16 @@ Route::middleware('auth')->group(function (): void {
         Route::patch('/security-dashboard/alerts/{alert}/acknowledge', [SecurityAlertController::class, 'acknowledge'])
             ->name('security.alerts.acknowledge')->middleware('throttle:30,1');
     });
+    // Private private-ticket resources are authorized per ticket owner or
+    // support capability. Secrets require separate explicit permission to reveal.
+    Route::get('/support-ticket-attachments/{attachment}', [SupportTicketResourceController::class, 'download'])
+        ->whereUuid('attachment')->middleware('throttle:30,1')->name('support.attachments.download');
+    Route::post('/support-ticket-credentials/{ticket}', [SupportTicketResourceController::class, 'credentialStore'])
+        ->whereNumber('ticket')->middleware('throttle:5,1')->name('support.credentials.store');
+    Route::post('/support-ticket-credentials/{credential}/reveal', [SupportTicketResourceController::class, 'credentialReveal'])
+        ->whereUuid('credential')->middleware('throttle:10,1')->name('support.credentials.reveal');
+    Route::delete('/support-ticket-credentials/{credential}', [SupportTicketResourceController::class, 'credentialRevoke'])
+        ->whereUuid('credential')->middleware('throttle:10,1')->name('support.credentials.revoke');
     // Private support tickets live inside every signed-in role's account workspace.
     // Keep the historical routes below for existing notification links/bookmarks.
     Route::prefix('account/support-tickets')->name('account.support.')->group(function (): void {
