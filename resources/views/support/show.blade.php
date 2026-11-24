@@ -23,7 +23,8 @@
       </p>
       <p><strong>Support category:</strong> {{ \App\Support\SupportTicketContext::ISSUES[$ticket->issue_type ?? 'general'] ?? 'General question' }}</p>
       @if($ticket->context_type && $ticket->context_id)
-        <p><strong>Related item:</strong> {{ \App\Support\SupportTicketContext::label($ticket->context_type, (int)$ticket->context_id) ?? 'Linked reference' }}</p>
+        <p><strong>{{ $ticket->context_type === 'order' ? 'Related order' : 'Related item' }}:</strong>
+          {{ \App\Support\SupportTicketContext::label($ticket->context_type, (int)$ticket->context_id) ?? 'Linked reference' }}</p>
       @endif
     </div>
     @unless($isStaff)
