@@ -132,6 +132,19 @@ jobs:
           bash -n support/marketplace-readiness-audit-aapanel-upgrade.sh
           bash -n support/preview-content-review-aapanel-upgrade.sh
           bash -n support/header-flag-scroll-top-aapanel-upgrade.sh
+      - name: Verify support preflight Laravel autoload initialization
+        run: |
+          grep -Fq 'require "vendor/autoload.php";' support/support-ticket-secure-aapanel-release.sh
+          php -r '
+            require "vendor/autoload.php";
+            $app = require "bootstrap/app.php";
+            $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            if (!app(\App\Support\VaultMalwareScanner::class) instanceof \App\Support\VaultMalwareScanner) {
+                fwrite(STDERR, "STOP: support ClamAV scanner service failed to resolve.\n");
+                exit(1);
+            }
+            echo "PASS: Laravel and support scanner service initialize with Composer autoload.\n";
+          '
       - name: Check guarded homepage installer syntax
         run: |
           python3 -m py_compile support/home-discovery-aapanel-upgrade.py
