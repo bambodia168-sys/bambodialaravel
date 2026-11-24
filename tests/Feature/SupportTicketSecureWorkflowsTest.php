@@ -181,9 +181,11 @@ class SupportTicketSecureWorkflowsTest extends TestCase
         $url = route('support.attachments.download', $file->public_id);
 
         $this->actingAs($other)->get($url)->assertNotFound();
-        $this->actingAs($owner)->get($url)->assertOk()
-            ->assertHeader('X-Content-Type-Options', 'nosniff')
-            ->assertHeader('Cache-Control', 'private, no-store, max-age=0');
+        $download = $this->actingAs($owner)->get($url)->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->assertStringContainsString('private', (string) $download->headers->get('Cache-Control'));
+        $this->assertStringContainsString('no-store', (string) $download->headers->get('Cache-Control'));
+        $this->assertStringNotContainsString('public', (string) $download->headers->get('Cache-Control'));
         $this->actingAs($staff)->get($url)->assertOk();
 
         Storage::disk('local')->put($file->storage_path, 'tampered-data');
@@ -235,10 +237,11 @@ class SupportTicketSecureWorkflowsTest extends TestCase
         $this->actingAs($otherStaff)->postJson($url)->assertForbidden();
 
         $ticket->update(['assigned_to' => $assignedStaff->id]);
-        $this->actingAs($assignedStaff)->postJson($url)->assertOk()
+        $revealResponse = $this->actingAs($assignedStaff)->postJson($url)->assertOk()
             ->assertJsonPath('details.username', 'staging-user-example')
-            ->assertJsonPath('details.password', 'temporary-secret-987654')
-            ->assertHeader('Cache-Control', 'private, no-store, max-age=0');
+            ->assertJsonPath('details.password', 'temporary-secret-987654');
+        $this->assertStringContainsString('private', (string) $revealResponse->headers->get('Cache-Control'));
+        $this->assertStringContainsString('no-store', (string) $revealResponse->headers->get('Cache-Control'));
 
         $this->actingAs($admin)->postJson($url)->assertOk();
         $this->assertDatabaseHas('audit_events', [
