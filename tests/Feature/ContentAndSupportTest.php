@@ -99,7 +99,7 @@ class ContentAndSupportTest extends TestCase
         ]);
         $this->assertDatabaseHas('account_notifications', [
             'user_id'=>$owner->id, 'event'=>'support.replied',
-            'target_path'=>'/support-center/'.$ticket->public_id,
+            'target_path'=>'/account/support-tickets/'.$ticket->public_id,
         ]);
         $this->actingAs($stranger)->get('/account/notifications')
             ->assertOk()->assertDontSee('Support team replied');
