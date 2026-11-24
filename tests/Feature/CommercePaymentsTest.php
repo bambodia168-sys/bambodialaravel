@@ -1083,13 +1083,33 @@ Private installation report.
 
         $this->actingAs($buyer)
             ->post(route('account.orders.payment.start', $order->number), ['method' => $method->id])
-            ->assertRedirect('https://pay.baray.io/itn-fixture-123');
+            ->assertRedirect(route('account.orders.show', $order->number));
+        $this->get(route('account.orders.show', $order->number))->assertOk()
+            ->assertSee('Open secure Baray checkout')
+            ->assertSee('https://pay.baray.io/itn-fixture-123')
+            ->assertSee('target="_blank"', false)
+            ->assertSee('data-baray-status-url=', false);
+
         $attempt = $order->payments()->sole();
         $this->assertSame('checkout_open', $attempt->status);
 
         $this->post(route('account.orders.payment.start', $order->number), ['method' => $method->id])
-            ->assertRedirect('https://pay.baray.io/itn-fixture-123');
+            ->assertRedirect(route('account.orders.show', $order->number));
         Http::assertSentCount(1);
+        $statusUrl = route('account.orders.payment.baray-status', [$order->number, $attempt->number]);
+        $this->getJson($statusUrl)->assertOk()
+            ->assertHeader('Cache-Control', 'private, no-store')
+            ->assertJson([
+                'payment_status' => 'checkout_open',
+                'order_status' => 'awaiting_payment',
+                'confirmed' => false,
+                'order_url' => route('account.orders.show', $order->number),
+            ]);
+
+        // An unrelated account must never inspect a buyer's payment.
+        $this->actingAs($this->user('customer'))->getJson($statusUrl)->assertNotFound();
+        $this->actingAs($buyer)->getJson($statusUrl)->assertOk()->assertJsonPath('confirmed', false);
+
         $this->get(route('account.orders.payment.return', [$order->number, $attempt->number]))->assertRedirect();
         $this->post(route('account.orders.payment.verify', [$order->number, $attempt->number]))->assertRedirect();
         $this->assertSame('awaiting_payment', $order->refresh()->status);
@@ -1104,6 +1124,10 @@ Private installation report.
         $this->postJson($hook, ['encrypted_order_id' => $encrypted, 'bank' => 'aba'])->assertNoContent();
         $this->assertSame('completed', $order->refresh()->status);
         $this->assertSame('baray:itn-fixture-123', $attempt->refresh()->settlement_reference);
+        $this->getJson($statusUrl)->assertOk()
+            ->assertJsonPath('payment_status', 'paid')
+            ->assertJsonPath('order_status', 'completed')
+            ->assertJsonPath('confirmed', true);
         $receipt = $order->receipt_number;
         $this->assertNotNull($receipt);
 
