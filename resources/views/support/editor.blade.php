@@ -37,6 +37,11 @@
       @endforeach
     </select>
     <button class="ticket-editor-tool" type="button" data-ticket-media title="Insert image, audio, video or YouTube" aria-label="Insert media"><x-icon name="image" size="17"/></button>
+    @if($allowCredentialButton ?? true)
+      <button class="ticket-editor-tool" type="button" data-ticket-credentials
+        title="Share temporary encrypted access (not part of the message)"
+        aria-label="Open encrypted credential sharing"><x-icon name="lock-keyhole" size="17"/></button>
+    @endif
     <button class="ticket-editor-source-toggle" type="button" data-ticket-toggle-source aria-pressed="false"><x-icon name="code" size="17"/> HTML</button>
   </div>
   <div id="{{ $editorId }}" data-ticket-surface class="ticket-editor-surface policy-formatted-content"
@@ -49,7 +54,7 @@
     <span>Text · Headings · Lists · Links · Tables · Emoji · Images · Audio · Video · YouTube · Code · HTML</span>
     <span data-ticket-count aria-live="polite">0 characters</span>
   </div>
-  <p class="text-muted ticket-editor-help">Use HTTPS media links. Never include passwords, API keys or payment-card information. HTML and media are sanitized before saving.</p>
+  <p class="text-muted ticket-editor-help">Use HTTPS media links. For temporary usernames, passwords or access tokens, select the lock icon to open the separate encrypted credential form. Never type secrets into the message or share payment-card information.</p>
   <dialog class="ticket-media-dialog" data-ticket-media-dialog aria-label="Insert media">
     <div data-ticket-media-form>
       <h3>Insert into your message</h3>
