@@ -135,3 +135,37 @@
   .support-page-controls{order:2;width:100%}
   .support-goto-form{order:3}
 }
+
+
+/* Support attachments, associated marketplace resources and encrypted access. */
+.support-issue-grid,.ticket-secure-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 1rem}
+.support-issue-grid>div,.ticket-secure-grid>div{min-width:0}
+.support-issue-grid select,.ticket-secure-grid input,.ticket-secure-grid select,.ticket-secure-grid textarea{display:block;width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:10px;padding:.75rem;min-height:44px}
+.support-issue-grid select{min-height:48px}
+.ticket-secure-wide{grid-column:1/-1}
+.ticket-attachment-fields,.ticket-secure-panel{border:1px solid var(--line);border-radius:12px;background:var(--surface-2);padding:1rem;margin-top:1rem}
+.ticket-attachment-fields input[type=file]{display:block;max-width:100%;width:100%;padding:.65rem;border:1px dashed var(--line);border-radius:10px;color:var(--text);background:var(--surface)}
+.ticket-attachment-fields p,.ticket-secure-panel p,.ticket-private-vault-panel p{font-size:.85rem;line-height:1.55}
+.ticket-secure-panel-heading{display:flex;align-items:flex-start;gap:.65rem}
+.ticket-secure-panel-heading h3,.ticket-secure-panel-heading p{margin:0 0 .4rem}
+.ticket-secure-panel-heading>div{min-width:0;flex:1}
+.ticket-private-attachments{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 0}
+.ticket-private-file{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .75rem;border:1px solid var(--line);border-radius:9px;color:var(--text);text-decoration:none;background:var(--surface-2);font-size:.88rem;max-width:100%;overflow-wrap:anywhere}
+.ticket-private-file:hover{border-color:var(--accent);color:var(--accent)}
+.ticket-private-vault-panel{margin:1rem 0;padding:clamp(1rem,2vw,1.5rem)}
+.ticket-private-vault-panel .panel-head{border-bottom:1px solid var(--line);margin-bottom:.5rem;padding-bottom:.9rem}
+.ticket-secret-record{display:flex;align-items:center;justify-content:space-between;gap:.85rem;flex-wrap:wrap;padding:.8rem 0;border-bottom:1px solid var(--line)}
+.ticket-secret-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.ticket-secret-actions form{margin:0}
+.ticket-secret-revealed{padding:1rem;margin:1rem 0;border:1px solid var(--accent);border-radius:12px;background:var(--surface-2)}
+.ticket-secret-view-row{display:grid;grid-template-columns:minmax(100px,160px) minmax(0,1fr) auto;align-items:center;gap:.55rem;margin-top:.8rem}
+.ticket-secret-view-row input{min-height:40px;min-width:0;width:100%;box-sizing:border-box;padding:.55rem;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text)}
+.ticket-secret-share-section{margin-top:1rem}
+.ticket-secret-share-section>form{margin-top:.6rem}
+.ticket-secret-share-section .ticket-secure-panel{background:transparent}
+@media(max-width:650px){
+  .support-issue-grid,.ticket-secure-grid{grid-template-columns:1fr}
+  .ticket-secure-wide{grid-column:auto}
+  .ticket-secret-view-row{grid-template-columns:1fr auto}
+  .ticket-secret-view-row label{grid-column:1/-1}
+}
