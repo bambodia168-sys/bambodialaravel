@@ -1,5 +1,5 @@
 @extends($isStaff ? 'layouts.dashboard' : 'layouts.workspace')
-@section('workspace', $isStaff || match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
+@section('workspace', $isStaff ? 'admin' : match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
 @section('title', 'Edit Support Ticket '.$ticket->public_id)
 @push('head')
 <link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=2">
