@@ -252,6 +252,8 @@ Route::middleware('auth')->group(function (): void {
     // support capability. Secrets require separate explicit permission to reveal.
     Route::get('/support-ticket-attachments/{attachment}', [SupportTicketResourceController::class, 'download'])
         ->whereUuid('attachment')->middleware('throttle:30,1')->name('support.attachments.download');
+    Route::get('/support-ticket-attachments/{attachment}/preview', [SupportTicketResourceController::class, 'preview'])
+        ->whereUuid('attachment')->middleware('throttle:60,1')->name('support.attachments.preview');
     Route::post('/support-ticket-credentials/{ticket}', [SupportTicketResourceController::class, 'credentialStore'])
         ->whereNumber('ticket')->middleware('throttle:5,1')->name('support.credentials.store');
     Route::post('/support-ticket-credentials/{credential}/reveal', [SupportTicketResourceController::class, 'credentialReveal'])
