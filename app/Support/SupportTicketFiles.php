@@ -48,6 +48,33 @@ final class SupportTicketFiles
                 if (! $file instanceof UploadedFile || ! $file->isValid()) {
                     throw ValidationException::withMessages(['attachments' => 'Invalid upload.']);
                 }
+                // Scan the actual uploaded bytes in PHP's private temporary
+                // file first. Some ClamAV installations can read /tmp uploads
+                // but fail on nested private storage directory permissions.
+                // The same SHA-256 must match the private copy before it is
+                // accepted, so moving the scan does not bypass verification.
+                $source = $file->getRealPath();
+                $sourceHash = $source && is_file($source) && is_readable($source)
+                    ? hash_file('sha256', $source) : false;
+                if (! is_string($sourceHash) || strlen($sourceHash) !== 64) {
+                    throw ValidationException::withMessages([
+                        'attachments' => 'Uploaded file could not be verified. Please try again.',
+                    ]);
+                }
+                $scan = app(VaultMalwareScanner::class)->scanFile($source);
+                if (($scan['status'] ?? 'error') !== 'clean') {
+                    // Never log file bytes, paths, names or credential fields.
+                    \Illuminate\Support\Facades\Log::warning('support.attachment.scanner_rejected', [
+                        'status' => $scan['status'] ?? 'error',
+                        'note' => $scan['note'] ?? 'No scanner details',
+                        'bytes' => $file->getSize(),
+                        'mime_type' => $file->getMimeType(),
+                    ]);
+                    $reason = ($scan['status'] ?? '') === 'infected'
+                        ? 'This attachment was blocked by malware screening. Choose a different file.'
+                        : 'Attachment scanning could not complete. Please retry or contact support.';
+                    throw ValidationException::withMessages(['attachments' => $reason]);
+                }
                 $name = (string) Str::uuid();
                 $path = 'support-ticket-attachments/'.$message->support_ticket_id.'/'.$name;
                 $stored = Storage::disk('local')->putFileAs(
@@ -60,10 +87,11 @@ final class SupportTicketFiles
                 }
                 $created[] = $path;
                 $absolute = Storage::disk('local')->path($path);
-                $scan = app(VaultMalwareScanner::class)->scanFile($absolute);
-                if (($scan['status'] ?? 'error') !== 'clean') {
+                $storedHash = is_file($absolute) && is_readable($absolute)
+                    ? hash_file('sha256', $absolute) : false;
+                if (! is_string($storedHash) || ! hash_equals($sourceHash, $storedHash)) {
                     throw ValidationException::withMessages([
-                        'attachments' => 'Attachment security screening failed. Remove the file or contact support.',
+                        'attachments' => 'Attachment integrity check failed. Please retry.',
                     ]);
                 }
                 $rawName = basename(str_replace('\\', '/', $file->getClientOriginalName()));
@@ -77,7 +105,7 @@ final class SupportTicketFiles
                     'original_name' => mb_substr($safeName ?: 'reference-file', 0, 180),
                     'mime_type' => (string) $file->getMimeType(),
                     'bytes' => $file->getSize(),
-                    'sha256' => hash_file('sha256', $absolute),
+                    'sha256' => $storedHash,
                     'scan_status' => 'clean',
                 ]);
                 AuditEvent::record('support.attachment.uploaded', $actor, $request);
