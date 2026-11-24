@@ -39,7 +39,7 @@
     <button class="ticket-editor-source-toggle" type="button" data-ticket-toggle-source aria-pressed="false"><x-icon name="code" size="17"/> HTML</button>
   </div>
   <div id="{{ $editorId }}" data-ticket-surface class="ticket-editor-surface policy-formatted-content"
-    contenteditable="true" role="textbox" aria-label="Formatted support message" aria-multiline="true" spellcheck="true" hidden></div>
+    contenteditable="true" role="textbox" aria-label="Formatted support message" aria-multiline="true" spellcheck="true" hidden>{!! \App\Support\SupportMessageContent::display((string) old('message', '')) !!}</div>
   <textarea name="message" data-ticket-message id="{{ $editorId }}-fallback"
     rows="10" maxlength="40000" minlength="{{ $minimum }}" required
     aria-label="Support message">{{ old('message') }}</textarea>
