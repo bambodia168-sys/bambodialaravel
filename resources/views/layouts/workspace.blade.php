@@ -189,8 +189,8 @@
       ['heading'=>'Privacy & Records','items'=>[
         ['route'=>'account.policy-receipts','label'=>'Policy Receipts','icon'=>'scroll-text'],
         ['route'=>'privacy.index','label'=>'Privacy Requests','icon'=>'shield-check'],
-        ['route'=>'support','label'=>'Support Center','icon'=>'life-buoy'],
-        ['route'=>'support.tickets','label'=>'My Tickets','icon'=>'message'],
+        ['route'=>'support','label'=>'Public Support Center','icon'=>'life-buoy'],
+        ['route'=>'account.support.index','label'=>'My Support Tickets','icon'=>'message'],
       ]],
     ];
     if ($user->isCreator()) {
@@ -203,6 +203,16 @@
         ['route'=>'creator.apply','label'=>'Become a Creator','icon'=>'user-round-check'],
       ]];
     }
+  }
+
+  // Keep personal ticket management reachable inside every role-based workspace,
+  // including administration, developer, and creator dashboards.
+  if ($workspace !== 'account') {
+    $groups[] = ['heading'=>'My Account Support','items'=>[
+      ['route'=>'account.support.index','label'=>'My Support Tickets','icon'=>'message'],
+      ['route'=>'account.support.create','label'=>'Create Support Ticket','icon'=>'plus'],
+      ['route'=>'support','label'=>'Public Support Center','icon'=>'life-buoy'],
+    ]];
   }
 
   $workspaceRoot = match ($workspace) {
