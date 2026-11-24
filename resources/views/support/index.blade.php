@@ -2,7 +2,7 @@
 @section('workspace', match(auth()->user()->supportTicketRoutePrefixForRequest()) { 'dashboard.support-tickets' => 'admin', 'studio.support-tickets' => 'creator', default => 'account' })
 @section('title', 'My Support Tickets')
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=3">
 @endpush
 @section('content')
 @php
@@ -38,6 +38,7 @@
         <thead><tr>
           <th scope="col">Ticket ID</th>
           <th scope="col">Subject</th>
+          <th scope="col">Request type</th>
           <th scope="col">Status</th>
           <th scope="col">Assigned To</th>
           <th scope="col">Updated</th>
@@ -48,6 +49,7 @@
             <tr>
               <td class="mono"><strong>#{{ $ticket->public_id }}</strong></td>
               <td><a class="support-ticket-subject" href="{{ route($workspace.'.show', $ticket->public_id) }}">{{ $ticket->subject }}</a></td>
+              <td>{{ \App\Support\SupportTicketContext::ISSUES[$ticket->issue_type ?? 'general'] ?? 'General question' }}</td>
               <td><span class="support-status-pill support-status--{{ $ticket->status }}">{{ \App\Models\SupportTicket::STATUSES[$ticket->status] ?? ucfirst($ticket->status) }}</span></td>
               <td class="support-assignee-cell">{{ $ticket->assignee?->name ?? 'Unassigned' }}</td>
               <td>{{ $ticket->updated_at->format('d M Y') }}</td>
@@ -59,7 +61,7 @@
               </td>
             </tr>
           @empty
-            <tr><td class="empty-cell" colspan="6">
+            <tr><td class="empty-cell" colspan="7">
               <div class="support-empty-private">
                 <x-icon name="life-buoy" size="30"/>
                 <h3>No tickets found</h3>
