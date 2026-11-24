@@ -1,7 +1,7 @@
 <form method="get" action="{{ $action }}" class="support-table-filters" role="search" aria-label="Filter support tickets">
   <label class="support-filter-field support-search-field">
     <span>Search tickets</span>
-    <input type="search" name="q" maxlength="120" value="{{ $filters['q'] }}" placeholder="Ticket ID or subject">
+    <input type="search" name="q" aria-label="Search support tickets" maxlength="120" value="{{ $filters['q'] }}" placeholder="Ticket ID or subject">
   </label>
   <label class="support-filter-field">
     <span>Status</span>
