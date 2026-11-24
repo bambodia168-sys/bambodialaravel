@@ -42,6 +42,219 @@ jobs:
           bash -n support/support-ticket-secure-aapanel-release.sh
           bash -n support/support-ticket-upload-fix-aapanel-release.sh
           php -l support/operator/support-ticket-upload-scanner-probe.php
+          python3 - <<'PY_VERIFY_SUPPORT_PROBE_PIN'
+          from pathlib import Path
+          import re
+          import subprocess
+
+          release = Path('support/support-ticket-upload-fix-aapanel-release.sh').read_text()
+          def variable(name):
+              match = re.search(r'^' + re.escape(name) + r'="([^"]+)"          python3 - <<'PY_VERIFY_PNG'
+          from pathlib import Path
+          import base64, re, zlib
+
+          source = Path('support/operator/support-ticket-upload-scanner-probe.php').read_text()
+          match = re.search(r"base64_decode\(\s*'([^']+)'", source)
+          assert match, 'Scanner fixture not found'
+          data = base64.b64decode(match.group(1), validate=True)
+          assert data.startswith(bytes.fromhex('89504e470d0a1a0a')), 'Invalid PNG signature'
+          pos, has_idat, has_end = 8, False, False
+          while pos < len(data):
+              size = int.from_bytes(data[pos:pos+4], 'big')
+              kind = data[pos+4:pos+8]
+              chunk = data[pos+8:pos+8+size]
+              crc = int.from_bytes(data[pos+8+size:pos+12+size], 'big')
+              assert len(chunk) == size and zlib.crc32(kind + chunk) == crc, 'Broken PNG checksum'
+              if kind == b'IDAT':
+                  assert zlib.decompress(chunk), 'Corrupt PNG image payload'
+                  has_idat = True
+              if kind == b'IEND':
+                  has_end = True
+              pos += 12 + size
+          assert has_idat and has_end and pos == len(data)
+          print('PASS: ClamAV diagnostic uses a valid PNG with verified CRCs')
+          PY_VERIFY_PNG
+          bash -n support/baray-on-site-status-live-route-compat-aapanel.sh
+          bash -n support/baray-payment-aapanel-release.sh
+          bash -n support/workspace-upgrade.sh
+          bash -n support/frontend-navigation-upgrade.sh
+          bash -n support/typography-upgrade.sh
+          bash -n support/header-upgrade.sh
+          bash -n support/dashboard-upgrade.sh
+          bash -n support/workflow-upgrade.sh
+          bash -n support/operations-upgrade.sh
+          bash -n support/frontend-layout-upgrade.sh
+          bash -n support/builder-upgrade.sh
+          bash -n support/builder-studio-upgrade.sh
+          bash -n support/builder-studio-landing-upgrade.sh
+          bash -n support/builder-studio-types-upgrade.sh
+          bash -n support/builder-studio-workflow-upgrade.sh
+          bash -n support/builder-ui-hardening-upgrade.sh
+          bash -n support/product-license-upgrade.sh
+          bash -n support/license-support-upgrade.sh
+          bash -n support/license-actions-upgrade.sh
+          bash -n support/license-issued-table-upgrade.sh
+          bash -n support/license-definitions-upgrade.sh
+          bash -n support/license-tables-upgrade.sh
+          bash -n support/legal-policy-center-upgrade.sh
+          bash -n support/policy-builder-upgrade.sh
+          bash -n support/global-feedback-upgrade.sh
+          bash -n support/policy-hero-upgrade.sh
+          bash -n support/policy-reading-upgrade.sh
+          bash -n support/policy-metadata-upgrade.sh
+          bash -n support/knowledge-base-upgrade.sh
+          bash -n support/knowledge-builder-layout-upgrade.sh
+          bash -n support/support-knowledge-public-layout-upgrade.sh
+          bash -n support/support-knowledge-article-enhancements-upgrade.sh
+          bash -n support/support-knowledge-visual-polish-upgrade.sh
+          bash -n support/support-center-content-hero-upgrade.sh
+          bash -n support/support-agent-photo-upgrade.sh
+          bash -n support/support-agent-clarity-upgrade.sh
+          bash -n support/support-agent-blending-upgrade.sh
+          bash -n support/support-agent-dark-hair-upgrade.sh
+          bash -n support/support-agent-golden-halo-upgrade.sh
+          bash -n support/support-agent-replacement-upgrade.sh
+          bash -n support/support-knowledge-pagination-upgrade.sh
+          bash -n support/policy-marketplace-coverage-upgrade.sh
+          bash -n support/unified-row-actions-upgrade.sh
+          bash -n support/post-builder-upgrade.sh
+          bash -n support/frontend-layout-samples-upgrade.sh
+          bash -n support/marketplace-card-grid-upgrade.sh
+          bash -n support/category-slider-upgrade.sh
+          bash -n support/freelancer-showcase-upgrade.sh
+          bash -n support/job-list-upgrade.sh
+          bash -n support/homepage-advantage-upgrade.sh
+          bash -n support/homepage-section-order-upgrade.sh
+          bash -n support/homepage-blog-slider-upgrade.sh
+          bash -n support/homepage-ambient-hero-upgrade.sh
+          bash -n support/detail-discussions-upgrade.sh
+          bash -n support/detail-tabs-resources-upgrade.sh
+          bash -n support/detail-offer-card-upgrade.sh
+          bash -n support/detail-media-related-upgrade.sh
+          bash -n support/compact-marketplace-cards-upgrade.sh
+          bash -n support/creator-badge-manager-v2-upgrade.sh
+          bash -n support/restore-badge-catalog-upgrade.sh
+          bash -n support/creator-badge-gallery-upgrade.sh
+          bash -n support/public-badge-display-upgrade.sh
+          bash -n support/creator-sidebar-badges-upgrade.sh
+          bash -n support/premium-creator-profile-aapanel-upgrade.sh
+          bash -n support/premium-creator-profile-v4-aapanel-upgrade.sh
+          bash -n support/premium-creator-profile-icons-upgrade.sh
+          bash -n support/creator-badge-tooltip-viewport-upgrade.sh
+          bash -n support/creator-profile-button-labels-upgrade.sh
+          node --check public/js/commerce-baray-status.js
+          node --check public/js/support-ticket-editor.js
+          node --check public/js/support-ticket-secrets.js
+          node --check public/js/creator-profile-v3.js
+          node --check public/js/creator-badge-tooltip-viewport.js
+          node --check public/js/ai-draft-studio.js
+          node --check tests/browser/ai-draft-dialog-format.mjs
+          node --check tests/browser/builder-terms-readable.mjs
+          if grep -Eq '^[[:space:]]*inset:[[:space:]]*auto[[:space:]]*!important' public/css/creator-badge-tooltip-viewport.css; then echo 'Unsafe viewport tooltip inset override'; exit 1; fi
+          node --check tests/browser/badge-tooltip-viewport.mjs
+          php -l examples/license-validation.php
+          php -l support/frontend-layout-samples.php
+          bash -n support/builder-studio-db-backup.sh
+          bash -n support/admin-controls-aapanel-upgrade.sh
+          bash -n support/media-video-r2-aapanel-upgrade.sh
+          bash -n support/media-video-controls-aapanel-upgrade.sh
+          bash -n support/security-alerts-aapanel-upgrade.sh
+          bash -n support/ai-draft-studio-aapanel-upgrade.sh
+          bash -n support/ai-draft-activation-recovery-aapanel-upgrade.sh
+          bash -n support/ai-draft-format-aapanel-upgrade.sh
+          bash -n support/builder-terms-readable-aapanel-upgrade.sh
+          bash -n support/marketplace-readiness-audit-aapanel-upgrade.sh
+          bash -n support/preview-content-review-aapanel-upgrade.sh
+          bash -n support/header-flag-scroll-top-aapanel-upgrade.sh
+      - name: Verify support preflight Laravel autoload initialization
+        run: |
+          grep -Fq 'require "vendor/autoload.php";' support/support-ticket-secure-aapanel-release.sh
+          php -r '
+            require "vendor/autoload.php";
+            $app = require "bootstrap/app.php";
+            $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            if (!app(\App\Support\VaultMalwareScanner::class) instanceof \App\Support\VaultMalwareScanner) {
+                fwrite(STDERR, "STOP: support ClamAV scanner service failed to resolve.\n");
+                exit(1);
+            }
+            echo "PASS: Laravel and support scanner service initialize with Composer autoload.\n";
+          '
+      - name: Check guarded homepage installer syntax
+        run: |
+          python3 -m py_compile support/home-discovery-aapanel-upgrade.py
+          python3 -m py_compile support/home-freelancer-avatar-aapanel-upgrade.py
+          python3 -m py_compile support/remove-trailing-action-arrows-aapanel.py
+          python3 -m py_compile support/blog-featured-video-aapanel.py
+          python3 -m py_compile support/blog-premium-video-player-aapanel.py
+          python3 -m py_compile support/reconcile-live-ui-aapanel-readonly.py
+          python3 -m py_compile support/blog-fullscreen-controls-aapanel.py
+          python3 -m py_compile support/blog-vertical-volume-ghost-controls-aapanel.py
+          python3 -m py_compile support/footer-two-tone-aapanel.py
+          python3 -m py_compile support/footer-aurora-aapanel.py
+          python3 -m py_compile support/home-hero-aurora-aapanel.py
+          python3 -m py_compile support/freelance-terminology-aapanel.py
+          python3 -m py_compile support/footer-marketplace-short-labels-aapanel.py
+          python3 -m py_compile support/footer-legal-and-users-aapanel.py
+          python3 -m py_compile support/footer-terms-link-aapanel.py
+      - name: Check PHP syntax
+        run: |
+          find app bootstrap config database routes tests installer public support -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Install frontend dependencies
+        run: npm install --ignore-scripts
+      - name: Compile production frontend
+        run: npm run build
+      - name: Retain isolated homepage Vite build for guarded aaPanel acceptance
+        if: github.event_name == 'pull_request' && (github.event.pull_request.head.ref == 'feat/home-discovery-responsive-grids-20261112' || github.event.pull_request.head.ref == 'fix/home-freelancer-avatar-link-20261112' || github.event.pull_request.head.ref == 'fix/blog-video-youtube-featured-20261113' || github.event.pull_request.head.ref == 'feat/blog-premium-native-video-player-20261113' || github.event.pull_request.head.ref == 'feat/premium-player-fullscreen-controls-20261113' || github.event.pull_request.head.ref == 'feat/blog-player-ghost-controls-vertical-volume-20261113')
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bambodia-Home-Discovery-Vite
+          path: public/build/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Lint compiled Blade templates
+        run: |
+          php artisan view:cache
+          find storage/framework/views -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l > /tmp/bambodia-blade-lint.txt
+          echo "Compiled Blade PHP syntax: PASS"
+          php artisan view:clear
+      - name: Preinstall HTTP smoke test
+        run: |
+          php -S 127.0.0.1:8090 -t public public/index.php > /tmp/bambodia-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          sleep 2
+          curl -fsS -o /tmp/bambodia-setup.html http://127.0.0.1:8090/installer
+          grep -q 'Requirements' /tmp/bambodia-setup.html
+          test -f storage/app/installer-access.txt
+          test ! -f storage/app/installed.lock
+      - name: Validate release preflight report format without claiming hosting approval
+        run: |
+          php support/hosting-preflight.php --webroot=public --json > /tmp/bambodia-preflight.json
+          php -r '$r=json_decode(file_get_contents("/tmp/bambodia-preflight.json"),true,512,JSON_THROW_ON_ERROR); if (!isset($r["status"],$r["blockers"],$r["results"]) || !is_array($r["results"])) exit(1);'
+      - name: Test routes and workflows
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+        run: php artisan test
+, release, re.M)
+              assert match, f'Missing release pin: {name}'
+              return match.group(1)
+
+          probe = variable('PROBE')
+          probe_ref = variable('PROBE_REF')
+          source_ref = variable('TARGET')
+          expected = variable('PROBE_SHA')
+          assert re.fullmatch(r'[0-9a-f]{40}', probe_ref), 'Probe ref must be immutable'
+          assert probe_ref != source_ref, 'Corrected probe must not use older code target'
+          assert 'download "$PROBE_REF" "$PROBE" "$PROBE_TMP"' in release, 'Probe download must use probe-specific ref'
+          actual = subprocess.check_output(['git', 'hash-object', probe], text=True).strip()
+          assert actual == expected, f'Probe SHA mismatch: expected {expected}, checkout has {actual}'
+          print('PASS: Support Ticket scanner fixture hash and dedicated download ref are pinned')
+          PY_VERIFY_SUPPORT_PROBE_PIN
           python3 - <<'PY_VERIFY_PNG'
           from pathlib import Path
           import base64, re, zlib
