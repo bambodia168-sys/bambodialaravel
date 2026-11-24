@@ -1098,7 +1098,7 @@ Private installation report.
         Http::assertSentCount(1);
         $statusUrl = route('account.orders.payment.baray-status', [$order->number, $attempt->number]);
         $this->getJson($statusUrl)->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store')
+            ->assertHeader('Cache-Control', 'no-store, private')
             ->assertJson([
                 'payment_status' => 'checkout_open',
                 'order_status' => 'awaiting_payment',
