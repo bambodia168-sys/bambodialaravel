@@ -23,7 +23,7 @@
       <p>{{ $isStaff ? 'Adjust the ticket subject without changing the customer conversation.' : 'Revise your request before the support team responds.' }}</p>
     </div>
   </div>
-  <form method="post" action="{{ $updateUrl }}" class="support-ticket-form" @unless($isStaff) data-ticket-form @endunless>
+  <form method="post" action="{{ $updateUrl }}" enctype="multipart/form-data" class="support-ticket-form" @unless($isStaff) data-ticket-form @endunless>
     @csrf @method('PATCH')
     <section class="panel support-ticket-panel">
       <div class="support-form-top"><x-icon name="pencil" size="22"/><div><h2>Ticket details</h2><p>Changes are recorded in the support audit log.</p></div></div>
@@ -32,9 +32,11 @@
         value="{{ old('subject', $ticket->subject) }}">
       @error('subject')<p class="ticket-field-error" role="alert">{{ $message }}</p>@enderror
       @unless($isStaff)
+        @include('support.issue-fields')
         <label for="ticket-edit-message">Original message</label>
-        @include('support.editor', ['editorId'=>'ticket-edit-message', 'minimum'=>10, 'editorValue'=>$firstMessage->body])
+        @include('support.editor', ['editorId'=>'ticket-edit-message', 'minimum'=>10, 'editorValue'=>$firstMessage->body, 'allowCredentialButton'=>false])
         @error('message')<p class="ticket-field-error" role="alert">{{ $message }}</p>@enderror
+        @include('support.attachment-fields', ['attachmentId'=>'ticket-edit-attachments'])
       @else
         <p class="text-muted">Original messages cannot be rewritten by support staff or administrators.</p>
       @endunless
