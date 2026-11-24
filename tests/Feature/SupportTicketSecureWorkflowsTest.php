@@ -198,6 +198,49 @@ class SupportTicketSecureWorkflowsTest extends TestCase
         $this->actingAs($owner)->get($url)->assertStatus(409);
     }
 
+    public function test_attachment_scan_checks_original_upload_bytes_and_private_copy_hash_matches(): void
+    {
+        Storage::fake('local');
+        $scanner = new class extends VaultMalwareScanner {
+            public ?string $scannedPath = null;
+
+            public function scanFile(string $absoluteFile): array
+            {
+                $this->scannedPath = $absoluteFile;
+                return ['status' => 'clean', 'engine' => 'Test scanner', 'note' => 'CI only'];
+            }
+        };
+        $this->app->instance(VaultMalwareScanner::class, $scanner);
+
+        $owner = $this->user();
+        $upload = $this->png();
+        $source = $upload->getRealPath();
+        $hashBefore = hash_file('sha256', $source);
+
+        $this->actingAs($owner)->post('/account/support-tickets', [
+            'subject' => 'Upload screenshot of license activation error',
+            'message' => '<p>Here is my screenshot for the installation team.</p>',
+            'attachments' => [$upload],
+        ])->assertRedirect();
+
+        $attachment = SupportTicketAttachment::query()->firstOrFail();
+        $this->assertSame($source, $scanner->scannedPath);
+        $this->assertSame($hashBefore, $attachment->sha256);
+        $this->assertSame($hashBefore, hash_file(
+            'sha256', Storage::disk('local')->path($attachment->storage_path)
+        ));
+    }
+
+    public function test_attachment_and_credential_icons_render_real_svg_paths_not_circle_fallback(): void
+    {
+        $owner = $this->user();
+        $response = $this->actingAs($owner)->get('/account/support-tickets/create')
+            ->assertOk();
+        $response->assertSee('Reference attachments (optional)')
+            ->assertSee('d="m21.44 11.05-9.19 9.19', false)
+            ->assertSee('d="M8 10V7a4 4 0 0 1 8 0v3', false);
+    }
+
     public function test_infected_or_unscanned_upload_fails_closed_without_creating_a_ticket(): void
     {
         Storage::fake('local');
