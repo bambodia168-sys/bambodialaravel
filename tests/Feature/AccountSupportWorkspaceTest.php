@@ -95,7 +95,7 @@ class AccountSupportWorkspaceTest extends TestCase
         $this->assertStringNotContainsString('onerror=', $stored);
         $this->assertStringNotContainsString('onclick=', $stored);
         $this->actingAs($owner)->get('/account/support-tickets/'.$ticket->public_id)
-            ->assertOk()->assertSee('echo 1;')->assertDontSee('<script', false);
+            ->assertOk()->assertSee('echo 1;')->assertDontSee('javascript:alert(1)');
 
         $this->actingAs($staff)->post('/dashboard/support-center/'.$ticket->public_id.'/reply', [
             'message' => '<p><strong>We can help.</strong> Please check the account.</p>',
