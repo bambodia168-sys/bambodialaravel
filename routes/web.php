@@ -256,6 +256,11 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('show');
         Route::post('/{ticket}/reply', [SupportController::class, 'reply'])
             ->whereNumber('ticket')->middleware('throttle:10,1')->name('reply');
+        Route::get('/{ticket}/edit', [SupportController::class, 'edit'])->whereNumber('ticket')->name('edit');
+        Route::patch('/{ticket}', [SupportController::class, 'update'])
+            ->whereNumber('ticket')->middleware('throttle:10,1')->name('update');
+        Route::delete('/{ticket}', [SupportController::class, 'destroy'])
+            ->whereNumber('ticket')->middleware('throttle:5,1')->name('destroy');
     });
     // Keep account ticket URLs for existing bookmarks and notifications.
     // Primary ticket workspace URLs are scoped to each role; staff access to
@@ -274,6 +279,11 @@ Route::middleware('auth')->group(function (): void {
                 Route::get('/{ticket}', [SupportController::class, 'show'])->whereNumber('ticket')->name('show');
                 Route::post('/{ticket}/reply', [SupportController::class, 'reply'])
                     ->whereNumber('ticket')->middleware('throttle:10,1')->name('reply');
+                Route::get('/{ticket}/edit', [SupportController::class, 'edit'])->whereNumber('ticket')->name('edit');
+                Route::patch('/{ticket}', [SupportController::class, 'update'])
+                    ->whereNumber('ticket')->middleware('throttle:10,1')->name('update');
+                Route::delete('/{ticket}', [SupportController::class, 'destroy'])
+                    ->whereNumber('ticket')->middleware('throttle:5,1')->name('destroy');
             });
     }
     Route::get('/support-center/tickets', [SupportController::class, 'index'])->name('support.tickets');
@@ -539,6 +549,14 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/support-center/{ticket}', [SupportCenterController::class, 'show'])->whereNumber('ticket')->name('dashboard.support.show')->middleware('capability:support_center');
         Route::post('/support-center/{ticket}/reply', [SupportCenterController::class, 'reply'])->whereNumber('ticket')->name('dashboard.support.reply')->middleware('capability:support_center');
         Route::patch('/support-center/{ticket}/status', [SupportCenterController::class, 'status'])->whereNumber('ticket')->name('dashboard.support.status')->middleware('capability:support_center');
+        Route::patch('/support-center/{ticket}/assign', [SupportCenterController::class, 'assign'])
+            ->whereNumber('ticket')->middleware(['capability:support_center', 'throttle:12,1'])->name('dashboard.support.assign');
+        Route::get('/support-center/{ticket}/edit', [SupportCenterController::class, 'edit'])
+            ->whereNumber('ticket')->middleware(['role:super_admin,admin','capability:support_center'])->name('dashboard.support.edit');
+        Route::patch('/support-center/{ticket}', [SupportCenterController::class, 'update'])
+            ->whereNumber('ticket')->middleware(['role:super_admin,admin','capability:support_center','throttle:10,1'])->name('dashboard.support.update');
+        Route::delete('/support-center/{ticket}', [SupportCenterController::class, 'destroy'])
+            ->whereNumber('ticket')->middleware(['role:super_admin,admin','capability:support_center','throttle:5,1'])->name('dashboard.support.destroy');
         Route::middleware('role:super_admin,admin')->group(function (): void {
             Route::get('/account-verifications', [AccountVerificationController::class,'index'])->name('dashboard.account-verifications.index');
             Route::get('/account-verifications/{user}', [AccountVerificationController::class,'show'])->name('dashboard.account-verifications.show');

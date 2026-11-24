@@ -1,6 +1,7 @@
 @php
   $editorId = $editorId ?? 'ticket-message';
   $minimum = (int) ($minimum ?? 2);
+  $editorValue = (string) old('message', $editorValue ?? '');
 @endphp
 <div class="ticket-editor" data-ticket-editor data-minimum="{{ $minimum }}">
   <div class="ticket-editor-toolbar" role="toolbar" aria-label="Message formatting tools">
@@ -39,10 +40,10 @@
     <button class="ticket-editor-source-toggle" type="button" data-ticket-toggle-source aria-pressed="false"><x-icon name="code" size="17"/> HTML</button>
   </div>
   <div id="{{ $editorId }}" data-ticket-surface class="ticket-editor-surface policy-formatted-content"
-    contenteditable="true" role="textbox" aria-label="Formatted support message" aria-multiline="true" spellcheck="true" hidden>{!! \App\Support\SupportMessageContent::display((string) old('message', '')) !!}</div>
+    contenteditable="true" role="textbox" aria-label="Formatted support message" aria-multiline="true" spellcheck="true" hidden>{!! \App\Support\SupportMessageContent::display((string) $editorValue) !!}</div>
   <textarea name="message" data-ticket-message id="{{ $editorId }}-fallback"
     rows="10" maxlength="40000" minlength="{{ $minimum }}" required
-    aria-label="Support message">{{ old('message') }}</textarea>
+    aria-label="Support message">{{ $editorValue }}</textarea>
   <textarea data-ticket-source-panel class="ticket-editor-source" aria-label="Message HTML source" spellcheck="false" hidden></textarea>
   <div class="ticket-editor-footer">
     <span>Text · Headings · Lists · Links · Tables · Emoji · Images · Audio · Video · YouTube · Code · HTML</span>

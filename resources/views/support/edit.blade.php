@@ -1,0 +1,48 @@
+@extends($isStaff ? 'layouts.dashboard' : 'layouts.workspace')
+@section('workspace', $isStaff || auth()->user()->isAdministrator() ? 'admin' : (auth()->user()->isCreator() ? 'creator' : 'account'))
+@section('title', 'Edit Support Ticket '.$ticket->public_id)
+@push('head')
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=2">
+@if(! $isStaff)<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=1"></script>@endif
+@endpush
+@section('content')
+@php
+  $backUrl = $isStaff
+    ? route('dashboard.support.show', $ticket->public_id)
+    : route(auth()->user()->supportTicketRoutePrefix().'.show', $ticket->public_id);
+  $updateUrl = $isStaff
+    ? route('dashboard.support.update', $ticket->public_id)
+    : route(auth()->user()->supportTicketRoutePrefix().'.update', $ticket->public_id);
+@endphp
+<div class="container inner-page support-workspace">
+  <div class="support-workspace-heading">
+    <div>
+      <a class="support-back-link" href="{{ $backUrl }}"><x-icon name="chevron-left" size="16"/> Back to conversation</a>
+      <div class="eyebrow">Private assistance · Ticket #{{ $ticket->public_id }}</div>
+      <h1>Edit support ticket</h1>
+      <p>{{ $isStaff ? 'Adjust the ticket subject without changing the customer conversation.' : 'Revise your request before the support team responds.' }}</p>
+    </div>
+  </div>
+  <form method="post" action="{{ $updateUrl }}" class="support-ticket-form" @unless($isStaff) data-ticket-form @endunless>
+    @csrf @method('PATCH')
+    <section class="panel support-ticket-panel">
+      <div class="support-form-top"><x-icon name="pencil" size="22"/><div><h2>Ticket details</h2><p>Changes are recorded in the support audit log.</p></div></div>
+      <label for="support-subject">Subject</label>
+      <input id="support-subject" type="text" name="subject" required minlength="5" maxlength="180"
+        value="{{ old('subject', $ticket->subject) }}">
+      @error('subject')<p class="ticket-field-error" role="alert">{{ $message }}</p>@enderror
+      @unless($isStaff)
+        <label for="ticket-edit-message">Original message</label>
+        @include('support.editor', ['editorId'=>'ticket-edit-message', 'minimum'=>10, 'editorValue'=>$firstMessage->body])
+        @error('message')<p class="ticket-field-error" role="alert">{{ $message }}</p>@enderror
+      @else
+        <p class="text-muted">Original messages cannot be rewritten by support staff or administrators.</p>
+      @endunless
+      <div class="support-form-actions">
+        <a class="btn subtle" href="{{ $backUrl }}">Cancel</a>
+        <button class="btn primary" type="submit"><x-icon name="save" size="16"/> Save changes</button>
+      </div>
+    </section>
+  </form>
+</div>
+@endsection

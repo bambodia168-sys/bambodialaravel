@@ -4,9 +4,10 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\SupportTicket;
-use App\Support\SupportMessageContent;
 use App\Models\AccountNotification;
 use App\Models\AuditEvent;
+use App\Support\SupportMessageContent;
+use App\Support\SupportTicketTable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,29 +18,89 @@ class SupportCenterController extends Controller
 {
     public function index(Request $request): View
     {
-        $status = (string) $request->query('status', '');
-        abort_if($status !== '' && ! in_array($status, ['open', 'in_progress', 'resolved'], true), 404);
-        $search = trim((string) $request->query('q',''));
-        abort_unless(mb_strlen($search) <= 120, 404);
-        $tickets = SupportTicket::query()->with('owner:id,name,email')
-            ->when($status !== '', fn ($q) => $q->where('status', $status))
-            ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
-                $inner->where('subject','like','%'.$search.'%')
-                    ->orWhere('public_id','like','%'.$search.'%');
-            }))
-            ->latest()->paginate(10)->withQueryString();
+        $filters = SupportTicketTable::filters($request, true);
+        $tickets = SupportTicketTable::apply(
+            SupportTicket::query()->with(['owner:id,name,email', 'assignee:id,name']),
+            $filters, true
+        )->latest('updated_at')->paginate($filters['per_page'])->withQueryString();
+
         $counts = SupportTicket::query()->selectRaw('status, COUNT(*) as total')
-            ->groupBy('status')->pluck('total','status');
-        return view('dashboard.support', compact('tickets','status','search','counts'));
+            ->groupBy('status')->pluck('total', 'status');
+        $assignees = SupportTicketTable::assignees();
+        $status = $filters['status'];
+        $search = $filters['q'];
+
+        return view('dashboard.support', compact('tickets', 'filters', 'counts', 'assignees', 'status', 'search'));
     }
 
     public function show(string $ticket): View
     {
         $record = SupportTicket::query()->where('public_id', $ticket)
-            ->with(['owner:id,name,email', 'messages.author:id,name,role'])
+            ->with(['owner:id,name,email,role', 'assignee:id,name', 'messages.author:id,name,role'])
             ->firstOrFail();
 
         return view('support.show', ['ticket' => $record, 'isStaff' => true]);
+    }
+
+    /** Administrative edits do not rewrite a customer's message history. */
+    public function edit(Request $request, string $ticket): View
+    {
+        $this->requireAdmin($request);
+        $record = SupportTicket::query()->where('public_id', $ticket)->firstOrFail();
+
+        return view('support.edit', ['ticket' => $record, 'isStaff' => true]);
+    }
+
+    public function update(Request $request, string $ticket): RedirectResponse
+    {
+        $this->requireAdmin($request);
+        $data = $request->validate(['subject' => ['required', 'string', 'min:5', 'max:180']]);
+        $record = SupportTicket::query()->where('public_id', $ticket)->firstOrFail();
+
+        DB::transaction(function () use ($record, $data, $request): void {
+            $locked = SupportTicket::query()->lockForUpdate()->findOrFail($record->id);
+            $locked->update(['subject' => $data['subject']]);
+            AuditEvent::record('support.ticket.updated', $request->user(), $request);
+        });
+
+        return redirect()->route('dashboard.support.show', $record->public_id)
+            ->with('status', 'Ticket subject updated.');
+    }
+
+    public function destroy(Request $request, string $ticket): RedirectResponse
+    {
+        $this->requireAdmin($request);
+        $record = SupportTicket::query()->where('public_id', $ticket)->firstOrFail();
+
+        DB::transaction(function () use ($record, $request): void {
+            $locked = SupportTicket::query()->lockForUpdate()->findOrFail($record->id);
+            $locked->delete();
+            AuditEvent::record('support.ticket.deleted', $request->user(), $request);
+        });
+
+        return redirect()->route('dashboard.support')->with('status', 'Ticket archived.');
+    }
+
+    public function assign(Request $request, string $ticket): RedirectResponse
+    {
+        $data = $request->validate(['assigned_to' => ['nullable', 'integer', 'min:1']]);
+        $assigneeId = isset($data['assigned_to']) ? (int) $data['assigned_to'] : null;
+        abort_if($assigneeId !== null
+            && ! SupportTicketTable::assignees()->contains('id', $assigneeId), 422);
+
+        $record = SupportTicket::query()->where('public_id', $ticket)->firstOrFail();
+        DB::transaction(function () use ($record, $request, $assigneeId): void {
+            $locked = SupportTicket::query()->lockForUpdate()->findOrFail($record->id);
+            $locked->update(['assigned_to' => $assigneeId]);
+            AccountNotification::deliver(
+                (int) $locked->user_id, 'support.status_changed', 'Support ticket assigned',
+                'Your support request assignment was updated.',
+                route(($locked->owner?->supportTicketRoutePrefix() ?? 'account.support').'.show', $locked->public_id, false)
+            );
+            AuditEvent::record('support.ticket.assigned', $request->user(), $request);
+        });
+
+        return back()->with('status', 'Ticket assignment updated.');
     }
 
     public function reply(Request $request, string $ticket): RedirectResponse
@@ -47,7 +108,7 @@ class SupportCenterController extends Controller
         $record = SupportTicket::query()->where('public_id', $ticket)->firstOrFail();
         $data = $request->validate([
             'message' => ['required', 'string', 'max:40000'],
-            'status' => ['required', Rule::in(['open', 'in_progress', 'resolved'])],
+            'status' => ['required', Rule::in(array_keys(SupportTicket::STATUSES))],
         ]);
 
         $message = SupportMessageContent::prepare($data['message'], 2);
@@ -69,7 +130,8 @@ class SupportCenterController extends Controller
     public function status(Request $request, string $ticket): RedirectResponse
     {
         $record = SupportTicket::query()->where('public_id', $ticket)->firstOrFail();
-        $data = $request->validate(['status' => ['required', Rule::in(['open', 'in_progress', 'resolved'])]]);
+        $data = $request->validate(['status' => ['required', Rule::in(array_keys(SupportTicket::STATUSES))]]);
+
         DB::transaction(function () use ($record, $data, $request): void {
             $locked = SupportTicket::query()->lockForUpdate()->findOrFail($record->id);
             if ($locked->status === $data['status']) {
@@ -85,5 +147,10 @@ class SupportCenterController extends Controller
         });
 
         return back()->with('status', 'Ticket status updated.');
+    }
+
+    private function requireAdmin(Request $request): void
+    {
+        abort_unless(in_array($request->user()->role, ['admin', 'super_admin'], true), 403);
     }
 }
