@@ -1,5 +1,5 @@
 @extends('layouts.workspace')
-@section('workspace', auth()->user()->isAdministrator() ? 'admin' : 'account')
+@section('workspace', 'account')
 @section('title','My Job Posts')
 @section('content')
 <div class="container inner-page">
