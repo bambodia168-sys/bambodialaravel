@@ -48,7 +48,7 @@ class AccountSupportWorkspaceTest extends TestCase
                 'message' => '<p>Please help with my private account settings.</p>',
             ]);
             $ticket = SupportTicket::query()->where('user_id', $user->id)->firstOrFail();
-            $response->assertRedirect(route('account.support.show', $ticket->public_id));
+            $response->assertRedirect(route($user->supportTicketRoutePrefix().'.show', $ticket->public_id));
             $this->get('/account/support-tickets/'.$ticket->public_id)->assertOk()
                 ->assertSee('Support request from '.$role);
         }
