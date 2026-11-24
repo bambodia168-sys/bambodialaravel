@@ -122,6 +122,16 @@ class User extends Authenticatable implements HasPasskeys
         return $this->hasOne(FreelancerResume::class);
     }
 
+    /** Primary private support-ticket workspace for this account's role. */
+    public function supportTicketRoutePrefix(): string
+    {
+        return match ($this->role) {
+            'super_admin', 'admin', 'staff' => 'dashboard.support-tickets',
+            'freelancer' => 'studio.support-tickets',
+            default => 'account.support',
+        };
+    }
+
     public function defaultWorkspaceUrl(): string
     {
         return match (true) {
