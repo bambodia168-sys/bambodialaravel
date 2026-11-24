@@ -58,7 +58,7 @@ class SupportController extends Controller
         $context = SupportTicketContext::resolve($request->user(), $data['related_item'] ?? null);
 
         $ticket = DB::transaction(function () use ($request, $data, $message, $files, $credentials, $context): SupportTicket {
-            $order = isset($data['order_number'])
+            $order = isset($data['order_number']) && $context['context_type'] === null
                 ? MarketplaceOrder::query()->matchingReference($data['order_number'])
                     ->where(fn ($query) => $query->where('buyer_id', $request->user()->id)
                         ->orWhere('seller_id', $request->user()->id))
