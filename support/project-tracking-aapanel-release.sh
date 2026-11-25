@@ -32,19 +32,6 @@ health() {
   curl -4 -fLsS --connect-timeout 10 --max-time 25 \
     --resolve bambodia.com:443:127.0.0.1 -o /dev/null "https://bambodia.com$1"
 }
-(cd "$SITE" && runuser -u www -- "$PHP" -r '
-require "vendor/autoload.php";
-$app = require "bootstrap/app.php";
-$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-foreach (["tracking.index", "tracking.show"] as $view) {
-    if (!view()->exists($view)) {
-        fwrite(STDERR, "STOP: Laravel view finder cannot resolve ".$view.PHP_EOL);
-        exit(1);
-    }
-}
-echo "PASS: Laravel can resolve both tracking Blade templates".PHP_EOL;
-') ||
-  { echo 'STOP: Laravel could not find tracking views' >&2; exit 1; }
 health / && health /support-center || { echo 'STOP: Public website health check failed' >&2; exit 2; }
 
 STAGE="$(mktemp -d /root/bambodia-tracking-stage.XXXXXXXX)"
@@ -247,6 +234,19 @@ echo '=== Confirm production routes ==='
 (cd "$SITE" && runuser -u www -- "$PHP" artisan route:list --name=tracking --no-ansi) |
   grep -q 'tracking.orders.show' ||
   { echo 'STOP: Tracking routes are missing after installation' >&2; exit 1; }
+(cd "$SITE" && runuser -u www -- "$PHP" -r '
+require "vendor/autoload.php";
+$app = require "bootstrap/app.php";
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+foreach (["tracking.index", "tracking.show"] as $view) {
+    if (!view()->exists($view)) {
+        fwrite(STDERR, "STOP: Laravel view finder cannot resolve ".$view.PHP_EOL);
+        exit(1);
+    }
+}
+echo "PASS: Laravel can resolve both tracking Blade templates".PHP_EOL;
+') ||
+  { echo 'STOP: Laravel could not find tracking views' >&2; exit 1; }
 health / && health /support-center ||
   { echo 'STOP: Public site health failed; restoring original code' >&2; exit 1; }
 DEPLOYING=0
