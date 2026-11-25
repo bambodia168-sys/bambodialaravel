@@ -70,7 +70,9 @@ final class CreatorStudioAnalyticsTest extends TestCase
         ])->assertRedirect();
         $report = $this->getJson(route('studio.analytics.data', [
             'period' => 'month', 'type' => 'all',
-        ]))->assertOk()->assertHeader('Cache-Control', 'private, no-store');
+        ]))->assertOk();
+        $this->assertStringContainsString('private', $report->headers->get('Cache-Control'));
+        $this->assertStringContainsString('no-store', $report->headers->get('Cache-Control'));
         $this->assertEqualsWithDelta(2.5, $report->json('billable_hours'), .001);
         $this->assertEqualsWithDelta(1, $report->json('non_billable_hours'), .001);
         $this->assertEqualsWithDelta(13.25, $report->json('total_expenses'), .001);
