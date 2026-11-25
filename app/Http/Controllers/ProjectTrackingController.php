@@ -54,7 +54,13 @@ final class ProjectTrackingController extends Controller
                 ->whereIn('type', self::TYPES)
                 ->when($type !== 'all', fn (Builder $query) => $query->where('type', $type)))
             ->whereHas('serviceInquiry', fn (Builder $query) => $query
-                ->when($status !== 'all', fn (Builder $filter) => $filter->where('delivery_status', $status)))
+                ->whereColumn('client_id', 'marketplace_orders.buyer_id')
+                ->whereColumn('creator_id', 'marketplace_orders.seller_id')
+                ->whereColumn('marketplace_listing_id', 'marketplace_orders.marketplace_listing_id')
+                ->when($status !== 'all', fn (Builder $filter) => $status === 'awaiting_requirements'
+                    ? $filter->where(fn (Builder $q) => $q->whereNull('delivery_status')
+                        ->orWhere('delivery_status', $status))
+                    : $filter->where('delivery_status', $status)))
             ->with(['serviceInquiry', 'paidAttempt'])
             ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $match) => $match
                 ->matchingReference($search)->orWhere('listing_title', 'like', '%'.$search.'%')))
@@ -162,7 +168,8 @@ final class ProjectTrackingController extends Controller
         ]);
         DB::transaction(function () use ($request, $order, $data) {
             $order = $this->lockOrder($request, $order->id, sellerOnly: true);
-            abort_if($order->serviceInquiry->deliveryStatus() === 'accepted', 409, 'This delivery is completed.');
+            abort_if(in_array($order->serviceInquiry->deliveryStatus(), ['accepted','delivered'], true), 409,
+                'Tasks cannot be added during customer review or after acceptance.');
             $last = (int) DB::table('order_tracking_tasks')->where('marketplace_order_id', $order->id)->max('position');
             abort_if($last >= 20, 409, 'A maximum of twenty tracking tasks is supported.');
             DB::table('order_tracking_tasks')->insert([
