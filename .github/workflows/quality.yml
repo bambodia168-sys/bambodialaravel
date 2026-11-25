@@ -54,7 +54,18 @@ jobs:
           assert match, 'Creator Studio release manifest missing'
           rows = [line.split('|') for line in match.group(1).splitlines()]
           assert len(rows) == 11, 'Expected eleven application and migration files'
-          pinned = re.search(r'^TARGET="([0-9a-f]{40})"
+          target_match = re.search('TARGET="([0-9a-f]{40})"', release)
+          assert target_match, 'Historical release target missing'
+          target = target_match.group(1)
+          subprocess.run(['git','fetch','--quiet','--no-tags','--depth=1','origin',target],check=True)
+          for path, old_sha, new_sha in rows:
+              assert re.fullmatch('[0-9a-f]{40}', new_sha)
+              assert old_sha == 'NEW' or re.fullmatch('[0-9a-f]{40}', old_sha)
+              historical_blob = subprocess.check_output(['git','show',target + ':' + path])
+              actual = subprocess.run(['git','hash-object','--stdin'],input=historical_blob,
+                  check=True,capture_output=True).stdout.decode().strip()
+              assert actual == new_sha, 'Historical Creator Studio release changed: ' + path
+          assert 'artisan migrate' in release and 'PREFLIGHT ONLY' in release
           print('PASS: Pinned Creator Studio release, migration, and eleven-file manifest')
           PY_CREATOR_STUDIO_MANIFEST
           node --check public/js/support-ticket-editor.js
