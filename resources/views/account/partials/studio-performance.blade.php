@@ -83,7 +83,5 @@
       <a class="studio-small-link" href="{{ route('studio.inquiries') }}">Review inquiries <x-icon name="arrow-up-right" size="15"/></a>
     </article>
   </div>
-  @include('account.partials.studio-projects')
-  @include('account.partials.studio-tracking')
   <script type="application/json" id="studio-analytics-payload">@json($analytics)</script>
 </section>
