@@ -34,7 +34,7 @@ return new class extends Migration {
             $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $table->foreignId('recipient_id')->constrained('users')->restrictOnDelete();
             $table->string('label', 100);
-            $table->text('ciphertext');
+            $table->text('ciphertext')->nullable();
             $table->timestamp('expires_at');
             $table->timestamp('opened_at')->nullable();
             $table->timestamp('revoked_at')->nullable();
