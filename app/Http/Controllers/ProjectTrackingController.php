@@ -84,8 +84,15 @@ final class ProjectTrackingController extends Controller
         $order = $this->verifiedOrder($request, $reference);
         $inquiry = $order->serviceInquiry;
         $inquiry->load(['client:id,name', 'creator:id,name']);
-        $messages = $inquiry->messages()->with('sender:id,name')
-            ->oldest('id')->paginate(15, ['*'], 'messages');
+        $messageTotal = $inquiry->messages()->count();
+        $messages = $inquiry->messages()->with(['sender:id,name', 'trackingAttachments'])
+            ->latest('id')->limit(30)->get()->reverse()->values();
+        $hasEarlierMessages = $messageTotal > $messages->count();
+        $oneTimeNotes = \App\Models\TrackingOneTimeNote::query()
+            ->where('marketplace_order_id', $order->id)
+            ->where(fn (Builder $q) => $q->where('created_by', $request->user()->id)
+                ->orWhere('recipient_id', $request->user()->id))
+            ->latest('id')->limit(8)->get();
         $deliveries = $inquiry->deliveries()->latest('id')
             ->paginate(8, ['*'], 'deliveries');
         $currentDelivery = $inquiry->deliveries()->latest('id')->first();
@@ -153,7 +160,7 @@ final class ProjectTrackingController extends Controller
         $creatorView = (int) $request->user()->id === (int) $order->seller_id;
         $listingType = MarketplaceListing::query()->whereKey($order->marketplace_listing_id)->value('type');
         return response()->view('tracking.show', compact(
-            'order', 'inquiry', 'messages', 'deliveries', 'currentDelivery',
+            'order', 'inquiry', 'messages', 'messageTotal', 'hasEarlierMessages', 'oneTimeNotes', 'deliveries', 'currentDelivery',
             'tasks', 'extensions', 'pendingExtension', 'targetDate', 'completed',
             'deliveryStatus', 'progress', 'timeline', 'creatorView', 'listingType'
         ))->header('Cache-Control', 'private, no-store');
@@ -255,23 +262,7 @@ final class ProjectTrackingController extends Controller
 
     private function verifiedOrder(Request $request, string $reference, bool $sellerOnly = false): MarketplaceOrder
     {
-        abort_unless(config('commerce.enabled'), 404);
-        $userId = (int) $request->user()->id;
-        $order = MarketplaceOrder::query()
-            ->where(fn (Builder $query) => $query->where('seller_id', $userId)
-                ->orWhere('buyer_id', $userId))
-            ->matchingReference($reference)
-            ->where('status', 'completed')->whereHas('paidAttempt')
-            ->whereIn('marketplace_listing_id', MarketplaceListing::query()
-                ->select('id')->whereIn('type', self::TYPES))
-            ->with('serviceInquiry')->firstOrFail();
-        abort_unless($order->serviceInquiry
-            && (int) $order->serviceInquiry->client_id === (int) $order->buyer_id
-            && (int) $order->serviceInquiry->creator_id === (int) $order->seller_id
-            && (int) $order->serviceInquiry->marketplace_listing_id === (int) $order->marketplace_listing_id
-            && $order->serviceInquiry->hasVerifiedOrder(), 404);
-        abort_if($sellerOnly && (int) $order->seller_id !== $userId, 403);
-        return $order;
+        return \App\Support\VerifiedTrackingOrder::resolve($request, $reference, $sellerOnly);
     }
 
     private function lockOrder(Request $request, int $id, bool $sellerOnly = false): MarketplaceOrder
