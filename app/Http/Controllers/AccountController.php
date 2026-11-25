@@ -14,6 +14,7 @@ use App\Support\CreatorStudioAnalytics;
 use App\Support\ManualAccountReview;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -84,7 +85,7 @@ class AccountController extends Controller
             ->with('status', 'Your profile was updated.');
     }
 
-    public function studio(Request $request): View|RedirectResponse
+    public function studio(Request $request): Response|RedirectResponse
     {
         abort_unless($request->user()->isCreator(), 403);
         $id = $request->user()->public_id;
@@ -118,6 +119,7 @@ class AccountController extends Controller
 
         $analytics = app(CreatorStudioAnalytics::class)->report((int) $user->id);
 
-        return view('account.studio',compact('user','stats','recentListings','openInquiries','analytics'));
+        return response()->view('account.studio',compact('user','stats','recentListings','openInquiries','analytics'))
+            ->header('Cache-Control', 'private, no-store');
     }
 }
