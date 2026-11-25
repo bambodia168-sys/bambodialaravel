@@ -126,8 +126,9 @@ final class SupportMessageContent
                 }
                 $attrs = [
                     'src' => $src, 'title' => 'YouTube video',
-                    'loading' => 'lazy', 'referrerpolicy' => 'no-referrer',
+                    'loading' => 'lazy', 'referrerpolicy' => 'strict-origin-when-cross-origin',
                     'sandbox' => 'allow-scripts allow-same-origin allow-presentation',
+                    'allow' => 'encrypted-media; picture-in-picture; fullscreen',
                     'allowfullscreen' => 'allowfullscreen',
                 ];
                 while ($node->firstChild) {

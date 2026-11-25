@@ -3,10 +3,10 @@
 @section('title', 'Project Tracking')
 @push('head')
 <link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=5">
-<link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=4">
-<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=3"></script>
+<link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=5">
+<script defer src="{{ asset('js/tracking-rich-editor.js') }}?v=1"></script>
 <script defer src="{{ asset('js/project-tracking.js') }}?v=3"></script>
-<script defer src="{{ asset('js/tracking-conversation.js') }}?v=2"></script>
+<script defer src="{{ asset('js/tracking-conversation.js') }}?v=3"></script>
 @endpush
 @section('content')
 @php
@@ -110,7 +110,7 @@
             @csrf
             <div class="tracking-chat-compose-title">
               <div><x-icon name="pencil" size="17"/><strong>Write a message</strong></div>
-              <span>Rich text · private attachments</span>
+              <span>Paste YouTube links · Rich text · Private attachments</span>
             </div>
             @include('support.editor', ['editorId' => 'tracking-chat-editor', 'minimum' => 2,
               'editorValue' => '', 'allowCredentialButton' => false])

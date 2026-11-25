@@ -276,6 +276,46 @@
 .tracking-chat-content table{display:block;max-width:100%;overflow:auto;border-collapse:collapse}
 .tracking-chat-content th,.tracking-chat-content td{border:1px solid var(--line);padding:5px 8px}
 .tracking-chat-content img,.tracking-chat-content audio,.tracking-chat-content video,.tracking-chat-content iframe{max-width:100%}
+/* Verified YouTube previews: content-sized, responsive and playable in either chat bubble. */
+.project-tracking-detail .tracking-chat-content .tracking-youtube-card{
+  display:grid;gap:9px;width:min(100%,440px);max-width:100%;min-width:0;margin-top:12px;
+  padding:9px;background:var(--surface);border:1px solid var(--line);border-radius:12px;
+}
+.project-tracking-detail .tracking-chat-content .tracking-youtube-frame{
+  width:100%;min-height:200px;aspect-ratio:16/9;border-radius:9px;overflow:hidden;background:#080c14;
+}
+.project-tracking-detail .tracking-chat-content .tracking-youtube-frame iframe{
+  display:block;width:100%;height:100%;min-height:200px;aspect-ratio:16/9;
+  border:0;border-radius:9px;
+}
+.project-tracking-detail .tracking-chat-content>p iframe,
+.project-tracking-detail .tracking-chat-content iframe:not(.tracking-youtube-frame iframe){
+  display:block;width:100%;max-width:440px;min-height:200px;aspect-ratio:16/9;
+  border:0;border-radius:9px;background:#080c14;
+}
+.project-tracking-detail .tracking-youtube-card a,
+.project-tracking-detail .tracking-youtube-fallback a{
+  display:inline-flex;align-items:center;gap:7px;max-width:100%;
+  color:var(--tracking-blue);font-size:11px;font-weight:750;text-decoration:none;
+  overflow-wrap:anywhere;
+}
+.project-tracking-detail .tracking-youtube-card a:hover,
+.project-tracking-detail .tracking-youtube-fallback a:hover{text-decoration:underline}
+.project-tracking-detail .tracking-youtube-fallback{margin-top:7px}
+.project-tracking-detail .tracking-chat-compose .ticket-editor-surface iframe{
+  display:block;width:min(100%,440px);max-width:100%;min-height:200px;
+  aspect-ratio:16/9;border:0;border-radius:9px;background:#080c14;
+}
+.project-tracking-detail .tracking-chat-compose .ticket-editor-surface:has(iframe){
+  max-height:300px;overflow-y:auto;
+}
+@media(max-width:650px){
+  .project-tracking-detail .tracking-chat-content .tracking-youtube-card{padding:6px}
+  .project-tracking-detail .tracking-chat-content .tracking-youtube-frame,
+  .project-tracking-detail .tracking-chat-content .tracking-youtube-frame iframe,
+  .project-tracking-detail .tracking-chat-compose .ticket-editor-surface iframe{min-height:200px}
+}
+
 .tracking-chat-attachments{display:grid;gap:6px;margin-top:12px}
 .tracking-chat-file{display:flex;align-items:center;gap:7px;padding:8px 10px;
  border:1px solid var(--line);background:var(--surface);border-radius:9px;font-size:11px}

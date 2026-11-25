@@ -22,11 +22,7 @@
       </span>
     </div>
     <div class="tracking-chat-content policy-formatted-content">
-      @if(($message->content_format ?? 'plain') === 'html')
-        {!! \App\Support\SupportMessageContent::display($message->body) !!}
-      @else
-        {!! nl2br(e($message->body)) !!}
-      @endif
+      {!! \App\Support\TrackingYouTubeContent::display($message->body, ($message->content_format ?? 'plain') === 'html') !!}
     </div>
     @if($message->trackingAttachments->isNotEmpty())
       <div class="tracking-chat-attachments" aria-label="Private message attachments">

@@ -137,10 +137,20 @@
         const sourcePanel=chatForm.querySelector('[data-ticket-source-panel]');
         const sourceToggle=chatForm.querySelector('[data-ticket-toggle-source]');
         // The shared support editor syncs its HTML source before this listener.
-        const text=new DOMParser().parseFromString(body.value,'text/html').body.textContent?.trim()||'';
+        const parsed=new DOMParser().parseFromString(body.value,'text/html');
+        const text=parsed.body.textContent?.trim()||'';
+        const hasMedia=Array.from(parsed.body.querySelectorAll('iframe,img,audio,video')).some(el=>{
+          try {
+            const src=new URL(el.getAttribute('src')||'');
+            if(src.protocol!=='https:'||src.username||src.password)return false;
+            if(el.localName!=='iframe')return true;
+            return ['www.youtube-nocookie.com','youtube-nocookie.com','www.youtube.com','youtube.com']
+              .includes(src.hostname) && /^\/embed\/[a-zA-Z0-9_-]{11}$/.test(src.pathname);
+          } catch { return false; }
+        });
         const count=picker?.files?.length||0;
-        if(text.length<2&&count===0){
-          errorFor(chatError,'Write a message or choose a reference attachment.');
+        if(text.length<2&&!hasMedia&&count===0){
+          errorFor(chatError,'Write a message, paste a YouTube link, or insert supported media.');
           return;
         }
         if(count>4||Array.from(picker.files||[]).reduce((s,f)=>s+f.size,0)>20*1024*1024){
