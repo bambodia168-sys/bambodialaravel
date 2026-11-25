@@ -3,7 +3,12 @@
 @section('title', $heading)
 @section('content')
 <div class="container inner-page">
-  <div class="page-intro"><h1>{{ $heading }}</h1></div>
+  <div class="page-intro"><h1>{{ $heading }}</h1>
+    @if(in_array($section, ['studio.orders','account.orders'], true) && config('commerce.enabled'))
+      <p><a class="btn primary" href="{{ route($section === 'studio.orders' ? 'studio.tracking.index' : 'account.tracking.index') }}">Project Tracking</a>
+      <span class="hint">Follow requirements, task progress, deliveries and client reviews.</span></p>
+    @endif
+  </div>
   <section class="panel">
     <div class="panel-head">
       <form method="get" class="table-search">
