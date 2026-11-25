@@ -69,7 +69,7 @@ final class CreatorStudioAnalytics
         $monthlyGoal = $preferences?->monthly_goal_usd === null ? null : (float) $preferences->monthly_goal_usd;
         // A global goal cannot fairly be compared with one filtered listing type.
         $goal = $type === 'all' && $monthlyGoal !== null ? $monthlyGoal * $months : null;
-        $capacity = $preferences?->weekly_capacity_hours === null ? null : (float) $preferences->weekly_capacity_hours;
+        $capacity = $type !== 'all' || $preferences?->weekly_capacity_hours === null ? null : (float) $preferences->weekly_capacity_hours;
         $weekHours = (float) DB::table('creator_studio_time_entries')
             ->where('user_id', $creatorId)
             ->whereBetween('logged_on', [$now->startOfWeek()->toDateString(), $now->toDateString()])
