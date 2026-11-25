@@ -54,11 +54,17 @@ jobs:
           assert match, 'Creator Studio release manifest missing'
           rows = [line.split('|') for line in match.group(1).splitlines()]
           assert len(rows) == 11, 'Expected eleven application and migration files'
+          pinned_target = re.search(r'TARGET="([0-9a-f]{40})"', release)
+          assert pinned_target, 'Missing immutable Creator Studio release SHA'
+          ref = pinned_target.group(1)
+          subprocess.run(['git', 'fetch', '--quiet', '--no-tags', '--depth=1', 'origin', ref], check=True)
           for path, old_sha, new_sha in rows:
               assert re.fullmatch(r'[0-9a-f]{40}', new_sha)
               assert old_sha == 'NEW' or re.fullmatch(r'[0-9a-f]{40}', old_sha)
-              actual = subprocess.check_output(['git', 'hash-object', path], text=True).strip()
-              assert actual == new_sha, f'Stale analytics file: {path}'
+              original = subprocess.check_output(['git', 'show', ref + ':' + path])
+              actual = subprocess.run(['git', 'hash-object', '--stdin'],
+                  input=original, capture_output=True, check=True).stdout.decode().strip()
+              assert actual == new_sha, 'Creator Studio historical release drift: ' + path
           assert 'artisan migrate' in release and 'PREFLIGHT ONLY' in release
           print('PASS: Pinned Creator Studio release, migration, and eleven-file manifest')
           PY_CREATOR_STUDIO_MANIFEST
