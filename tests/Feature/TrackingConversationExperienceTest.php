@@ -207,4 +207,95 @@ final class TrackingConversationExperienceTest extends TestCase
             'message'=>'Cannot message an unpaid order',
         ])->assertNotFound();
     }
+    public function test_youtube_only_embed_sends_without_text_and_uses_playable_referrer_policy(): void
+    {
+        config(['commerce.enabled' => true]);
+        [$buyer, $creator, $order] = $this->workspace();
+        $videoId = 'p2UE5ZVUcQc';
+        $response = $this->actingAs($creator)->postJson(
+            route('tracking.conversation.send', $order->reference()), [
+                'message' => '<p><iframe src="https://www.youtube-nocookie.com/embed/'.$videoId.'"></iframe></p>',
+            ]
+        )->assertCreated()->assertJsonPath('total', 1);
+
+        $markup = $response->json('message');
+        $this->assertStringContainsString('/embed/'.$videoId, $markup);
+        $this->assertStringContainsString('referrerpolicy="strict-origin-when-cross-origin"', $markup);
+        $this->assertStringContainsString('Watch on YouTube', $markup);
+        $this->assertStringNotContainsString('referrerpolicy="no-referrer"', $markup);
+        $this->assertDatabaseHas('service_inquiry_messages', ['content_format' => 'html']);
+
+        $customer = $this->actingAs($buyer)->get(
+            route('tracking.orders.show', $order->reference())
+        )->assertOk()->getContent();
+        $this->assertStringContainsString('tracking-chat-item is-other', $customer);
+        $this->assertStringContainsString('/embed/'.$videoId, $customer);
+        $this->assertStringContainsString('Watch on YouTube', $customer);
+    }
+
+    public function test_pasted_youtube_watch_link_and_old_plain_links_show_video_previews(): void
+    {
+        config(['commerce.enabled' => true]);
+        [$buyer, $creator, $order, $inquiry] = $this->workspace();
+
+        $response = $this->actingAs($creator)->postJson(
+            route('tracking.conversation.send', $order->reference()), [
+                'message' => '<p>https://www.youtube.com/watch?v=p2UE5ZVUcQc</p>',
+            ]
+        )->assertCreated();
+        $this->assertStringContainsString(
+            'tracking-youtube-card', $response->json('message')
+        );
+        $this->assertStringContainsString(
+            'https://www.youtube-nocookie.com/embed/p2UE5ZVUcQc',
+            $response->json('message')
+        );
+
+        // Preserve previously stored plain inquiry messages: no rewrite needed.
+        $inquiry->messages()->create([
+            'sender_id' => $buyer->id,
+            'body' => 'Please review https://youtu.be/M7lc1UVf-VE',
+        ]);
+        $html = $this->actingAs($creator)->get(
+            route('tracking.orders.show', $order->reference())
+        )->assertOk()->getContent();
+        $this->assertStringContainsString(
+            'https://www.youtube-nocookie.com/embed/M7lc1UVf-VE', $html
+        );
+        $this->assertStringContainsString('Watch on YouTube', $html);
+    }
+
+    public function test_youtube_only_rejects_untrusted_iframe_origins_and_invalid_ids(): void
+    {
+        config(['commerce.enabled' => true]);
+        [$buyer, $creator, $order] = $this->workspace();
+        $route = route('tracking.conversation.send', $order->reference());
+
+        $this->actingAs($creator)->postJson($route, [
+            'message' => '<iframe src="https://youtube.com.evil.example/embed/p2UE5ZVUcQc"></iframe>',
+        ])->assertUnprocessable();
+
+        $this->postJson($route, [
+            'message' => '<iframe src="javascript:alert(1)"></iframe>',
+        ])->assertUnprocessable();
+        $this->assertDatabaseCount('service_inquiry_messages', 0);
+
+        $this->assertNull(\App\Support\TrackingYouTubeContent::videoId(
+            'https://www.youtube.com.evil.example/watch?v=p2UE5ZVUcQc'
+        ));
+        $this->assertNull(\App\Support\TrackingYouTubeContent::videoId(
+            'https://youtu.be/not-a-valid-video-id'
+        ));
+        foreach ([
+            'https://www.youtube.com/watch?v=p2UE5ZVUcQc',
+            'https://youtu.be/p2UE5ZVUcQc',
+            'https://www.youtube.com/shorts/p2UE5ZVUcQc',
+            'https://www.youtube.com/live/p2UE5ZVUcQc',
+            'https://www.youtube-nocookie.com/embed/p2UE5ZVUcQc',
+        ] as $url) {
+            $this->assertSame('p2UE5ZVUcQc',
+                \App\Support\TrackingYouTubeContent::videoId($url));
+        }
+    }
+
 }
