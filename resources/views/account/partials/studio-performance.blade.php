@@ -40,7 +40,7 @@
     <article class="studio-chart-card studio-chart-wide">
       <div class="studio-card-title"><div><h3>Verified sales vs. goal</h3>
         <p>USD · Paid orders · <span data-window-start>{{ $analytics['start'] }}</span> onward</p></div>
-        @if(config('commerce.enabled'))<a href="{{ route('studio.commerce-operations') }}" class="studio-small-link">Sales details <x-icon name="arrow-up-right" size="15"/></a>@endif</div>
+        @if(config('commerce.enabled'))<a href="{{ route('studio.commerce-operations') }}" class="studio-small-link">Sales details </a>@endif</div>
       <div class="studio-chart-total" data-total-revenue>&#36;{{ number_format($analytics['total_revenue'], 2) }}</div>
       <div class="studio-chart-canvas" data-chart="revenue" role="img" aria-label="Verified sales compared with a configured goal"></div>
       <p class="studio-chart-note">Only verified completed USD orders. Set a goal below to compare.</p>
@@ -56,7 +56,7 @@
       <div class="studio-card-title"><div><h3>Order payment status</h3><p>Actual orders, not invoices</p></div>
         <x-icon name="receipt-text" size="18"/></div>
       <div data-chart="orders" class="studio-donut-layout" role="img" aria-label="Completed, awaiting-payment and refunded orders"></div>
-      @if(config('commerce.enabled'))<a class="studio-small-link" href="{{ route('studio.orders.index') }}">View sales orders <x-icon name="arrow-up-right" size="15"/></a>@endif
+      @if(config('commerce.enabled'))<a class="studio-small-link" href="{{ route('studio.orders.index') }}">View sales orders </a>@endif
     </article>
     <article class="studio-chart-card">
       <div class="studio-card-title"><div><h3>Weekly capacity</h3><p>Logged time vs. target</p></div>
@@ -87,7 +87,7 @@
       <div class="studio-card-title"><div><h3>Pipeline activity</h3><p>Not a cohort conversion rate</p></div>
         <x-icon name="list-filter" size="18"/></div>
       <div data-chart="pipeline" class="studio-pipeline" aria-label="Inquiries, proposals and accepted contracts"></div>
-      <a class="studio-small-link" href="{{ route('studio.inquiries') }}">Review inquiries <x-icon name="arrow-up-right" size="15"/></a>
+      <a class="studio-small-link" href="{{ route('studio.inquiries') }}">Review inquiries </a>
     </article>
   </div>
   <script type="application/json" id="studio-analytics-payload">@json($analytics)</script>
