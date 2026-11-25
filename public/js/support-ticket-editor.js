@@ -28,10 +28,12 @@
     const u = new URL(url);
     const host = u.hostname.toLowerCase();
     let id = '';
-    if (['youtube.com', 'www.youtube.com', 'm.youtube.com'].includes(host)) {
-      id = u.pathname === '/watch' ? (u.searchParams.get('v') || '') : (u.pathname.match(/^\/(?:shorts|embed)\/([A-Za-z0-9_-]{11})$/)?.[1] || '');
+    if (['youtube.com', 'www.youtube.com', 'm.youtube.com',
+         'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(host)) {
+      id = u.pathname === '/watch' ? (u.searchParams.get('v') || '') :
+        (u.pathname.match(/^\/(?:shorts|embed|live)\/([A-Za-z0-9_-]{11})\/?$/)?.[1] || '');
     } else if (host === 'youtu.be' || host === 'www.youtu.be') {
-      id = u.pathname.slice(1);
+      id = u.pathname.replace(/^\//, '').replace(/\/$/, '');
     }
     return /^[A-Za-z0-9_-]{11}$/.test(id) ? 'https://www.youtube-nocookie.com/embed/' + id : null;
   };
@@ -71,8 +73,9 @@
           node.setAttribute('src',safe);
           node.setAttribute('title','YouTube video');
           node.setAttribute('loading','lazy');
-          node.setAttribute('referrerpolicy','no-referrer');
+          node.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
           node.setAttribute('sandbox','allow-scripts allow-same-origin allow-presentation');
+          node.setAttribute('allow','encrypted-media; picture-in-picture; fullscreen');
           node.setAttribute('allowfullscreen','');
           node.replaceChildren();
         }
@@ -94,6 +97,7 @@
       const sourceToggle = root.querySelector('[data-ticket-toggle-source]');
       const count = root.querySelector('[data-ticket-count]');
       const dialog = root.querySelector('[data-ticket-media-dialog]');
+      const isTrackingChat = form?.hasAttribute('data-tracking-chat-form') || false;
       let sourceMode = false;
       let savedRange = null;
       if (!form || !source || !surface) return;
@@ -119,7 +123,11 @@
         if (!sourceMode) source.value = surface.innerHTML.trim();
         else source.value = sourcePanel.value.trim();
         const readable = sourceMode ? new DOMParser().parseFromString(source.value, 'text/html').body.textContent : surface.textContent;
-        count.textContent = (readable || '').trim().length + ' characters';
+        const characters = (readable || '').trim().length;
+        const hasEmbed = isTrackingChat && /<iframe\b/i.test(source.value);
+        count.textContent = hasEmbed && characters === 0
+          ? 'YouTube video ready to send'
+          : characters + ' characters';
       };
       const insertHtml = markup => {
         if (sourceMode) {
@@ -219,14 +227,19 @@
         const type = root.querySelector('[data-ticket-media-type]').value;
         const rawUrl = root.querySelector('[data-ticket-media-url]').value.trim();
         const label = root.querySelector('[data-ticket-media-label]').value.trim() || 'Shared media';
-        const url = type === 'youtube' ? toEmbed(rawUrl) : validUrl(rawUrl, type !== 'link');
+        // A YouTube watch URL is not an image URL: route it to the safe video
+        // iframe even when the user opened the Image/Video insertion tool.
+        const recognizedYouTube = toEmbed(rawUrl);
+        const insertType = isTrackingChat && recognizedYouTube
+          && ['image','video','youtube'].includes(type) ? 'youtube' : type;
+        const url = insertType === 'youtube' ? recognizedYouTube : validUrl(rawUrl, insertType !== 'link');
         const error = root.querySelector('[data-ticket-media-error]');
-        if (!url) { error.textContent = type === 'youtube' ? 'Enter a valid YouTube URL.' : 'Enter a valid HTTPS URL (links may use HTTP).'; error.hidden = false; return; }
+        if (!url) { error.textContent = insertType === 'youtube' ? 'Enter a valid YouTube URL.' : 'Enter a valid HTTPS URL (links may use HTTP).'; error.hidden = false; return; }
         let markup = '';
-        if (type === 'image') markup = '<p><img src="' + htmlEscape(url) + '" alt="' + htmlEscape(label) + '"></p>';
-        else if (type === 'audio') markup = '<p><audio src="' + htmlEscape(url) + '" controls preload="none"></audio></p>';
-        else if (type === 'video') markup = '<p><video src="' + htmlEscape(url) + '" controls preload="none"></video></p>';
-        else if (type === 'youtube') markup = '<p><iframe src="' + htmlEscape(url) + '" title="YouTube video"></iframe></p>';
+        if (insertType === 'image') markup = '<p><img src="' + htmlEscape(url) + '" alt="' + htmlEscape(label) + '"></p>';
+        else if (insertType === 'audio') markup = '<p><audio src="' + htmlEscape(url) + '" controls preload="none"></audio></p>';
+        else if (insertType === 'video') markup = '<p><video src="' + htmlEscape(url) + '" controls preload="none"></video></p>';
+        else if (insertType === 'youtube') markup = '<p><iframe src="' + htmlEscape(url) + '" title="YouTube video" referrerpolicy="strict-origin-when-cross-origin"></iframe></p>';
         else markup = '<a href="' + htmlEscape(url) + '" rel="noopener noreferrer nofollow" target="_blank">' + htmlEscape(label) + '</a>';
         dialog.close();
         insertHtml(markup);
@@ -236,9 +249,15 @@
       surface.addEventListener('input', sync);
       surface.addEventListener('paste', e => {
         if (!e.clipboardData) return;
+        const pasted = e.clipboardData.getData('text/plain').trim();
+        const preview = isTrackingChat && /^https:\/\/\S+$/.test(pasted) ? toEmbed(pasted) : null;
         e.preventDefault();
-        document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
-        sync();
+        if (preview) {
+          insertHtml('<p><iframe src="' + htmlEscape(preview) + '" title="YouTube video" referrerpolicy="strict-origin-when-cross-origin"></iframe></p><p></p>');
+        } else {
+          document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+          sync();
+        }
       });
       sourcePanel.addEventListener('input', sync);
       form.addEventListener('submit', e => {
@@ -255,9 +274,22 @@
           source.value = '<p>Reference files attached.</p>';
           text = 'Reference files attached.';
         }
-        if (text.length < Number(root.dataset.minimum || 2) || source.value.length > 40000) {
+        const media = isTrackingChat && Array.from(
+          new DOMParser().parseFromString(source.value, 'text/html').body.querySelectorAll('iframe,img,audio,video')
+        ).some(node => node.localName === 'iframe'
+          ? Boolean(youtubeEmbed(node.getAttribute('src') || ''))
+          : Boolean(validUrl(node.getAttribute('src') || '')));
+        if ((text.length < Number(root.dataset.minimum || 2) && !media) || source.value.length > 40000) {
           e.preventDefault();
-          window.alert('Enter enough readable message text and keep it under 40,000 characters.');
+          if (isTrackingChat) {
+            const error = form.querySelector('[data-chat-error]');
+            if (error) {
+              error.textContent = 'Write a message, paste a YouTube link, or insert supported media.';
+              error.hidden = false;
+            }
+          } else {
+            window.alert('Enter enough readable message text and keep it under 40,000 characters.');
+          }
           (sourceMode ? sourcePanel : surface).focus();
         }
       });
