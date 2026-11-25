@@ -1,13 +1,13 @@
 /* Creator Studio analytics only. Global header and vertical navigation are untouched. */
 .studio-dashboard{
-  --studio-blue:#2563eb;--studio-light-blue:#93c5fd;--studio-orange:#ea580c;
+  --studio-blue:#2563eb;--studio-light-blue:#93c5fd;--studio-orange:#ea580c;--studio-fourth:#0d9488;
   --studio-muted-arc:color-mix(in srgb,var(--muted) 16%,var(--surface));
   --studio-ring:color-mix(in srgb,var(--studio-blue) 13%,var(--surface));
   --studio-soft:color-mix(in srgb,var(--studio-blue) 5%,var(--surface));
   max-width:1500px;
 }
 :root[data-theme="dark"] .studio-dashboard{
-  --studio-blue:#60a5fa;--studio-light-blue:#1d4ed8;--studio-orange:#fb923c;
+  --studio-blue:#60a5fa;--studio-light-blue:#1d4ed8;--studio-orange:#fb923c;--studio-fourth:#2dd4bf;
   --studio-soft:color-mix(in srgb,var(--studio-blue) 9%,var(--surface));
 }
 .studio-dashboard .workspace-overview-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:20px}
