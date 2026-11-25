@@ -5,6 +5,9 @@
 <div class="container inner-page creator-onboarding">
 <div class="page-intro"><div class="eyebrow">{{ $inquiry->marketplace_order_id ? 'Service workspace' : 'Private inquiry' }} · {{ $inquiry->public_id }}</div><h1>{{ $inquiry->subject }}</h1>
 <p>{{ $inquiry->listing?->title }} · Client {{ $inquiry->client?->name }} · Creator {{ $inquiry->creator?->name }}</p>
+@if($inquiry->marketplace_order_id && $inquiry->hasVerifiedOrder())
+  <p><a class="btn primary" href="{{ route('tracking.orders.show',$inquiry->order->reference()) }}">Open Project Tracking</a></p>
+@endif
 @if($inquiry->proposed_budget!==null)<p><strong>Proposed budget:</strong> USD {{ number_format((float)$inquiry->proposed_budget,2) }} (informational)</p>@endif
 </div>
 @if($deliveries !== null)
