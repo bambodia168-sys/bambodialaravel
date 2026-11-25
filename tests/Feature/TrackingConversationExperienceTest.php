@@ -91,13 +91,24 @@ final class TrackingConversationExperienceTest extends TestCase
         $response=$this->actingAs($creator)->postJson($url,[
             'message'=>'<p><strong>Project is underway.</strong> Please review the plan.</p>',
         ])->assertCreated()->assertJsonStructure(['message','id','total']);
-        $this->assertStringContainsString('tracking-chat-item',$response->json('message'));
+        $this->assertStringContainsString('tracking-chat-item is-own',$response->json('message'));
+        $this->assertStringContainsString('aria-label="Your message"',$response->json('message'));
+        $this->assertStringContainsString('tracking-chat-footer',$response->json('message'));
         $this->assertStringContainsString('<strong>Project is underway.</strong>',$response->json('message'));
         $this->assertSame(1,DB::table('service_inquiry_messages')->where('content_format','html')->count());
         $this->assertEmpty(session('status'));
         $poll=$this->actingAs($buyer)->getJson(route('tracking.conversation.messages',$order->reference()).'?after=0')
             ->assertOk()->assertJsonPath('total',1);
         $this->assertStringContainsString('Project is underway',$poll->json('html'));
+        $this->assertStringContainsString('tracking-chat-item is-other',$poll->json('html'));
+        $this->assertStringContainsString('Creator message from',$poll->json('html'));
+        $this->assertStringContainsString('tracking-chat-footer',$poll->json('html'));
+
+        $creatorHtml = $this->actingAs($creator)->get(route('tracking.orders.show',$order->reference()))
+            ->assertOk()->getContent();
+        $this->assertStringContainsString('data-chat-count>1</span>', $creatorHtml);
+        $this->assertStringContainsString('data-chat-count-label>message</span>', $creatorHtml);
+        $this->assertStringNotContainsString('data-chat-count-label>messages</span>', $creatorHtml);
         $this->actingAs($buyer)->get(route('inquiries.show',$inquiry))->assertOk()
             ->assertSee('Project is underway');
         $this->actingAs($creator)->postJson($url,[

@@ -212,7 +212,7 @@
 
 /* Premium private order conversation. Styles stay inside the tracking workspace. */
 .project-tracking-detail .tracking-conversation-panel{padding:0;overflow:hidden}
-.tracking-conversation-panel>.tracking-panel-heading{padding:20px 22px 16px;margin:0;border-bottom:1px solid var(--line)}
+.tracking-conversation-panel>.tracking-panel-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;padding:18px 22px 15px;margin:0;border-bottom:1px solid var(--line)}
 .tracking-conversation-panel>.tracking-panel-heading h2{font-size:20px}
 .tracking-chat-count{display:inline-flex;gap:7px;align-items:center;white-space:nowrap;padding:7px 10px;
  background:var(--surface-2);border:1px solid var(--line);border-radius:100px;
@@ -227,30 +227,42 @@
  border:2px solid var(--surface)}
 .tracking-presence-avatars span+span{margin-left:-9px;background:color-mix(in srgb,var(--tracking-violet) 12%,var(--surface));
  color:var(--tracking-violet)}
-.tracking-chat-history{padding:15px 18px 5px}
+.tracking-chat-history{padding:12px 18px 4px}
 .tracking-chat-history>[data-chat-older]{display:flex;margin:0 auto 12px}
 .tracking-chat-history>[data-chat-older][hidden]{display:none}
-.project-tracking .tracking-chat-thread{display:flex;flex-direction:column;gap:16px;
- min-height:220px;max-height:min(55vh,550px);overflow:auto;overscroll-behavior:contain;
- margin:0;padding:12px 5px 22px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
-.project-tracking .tracking-chat-item{display:flex;align-items:flex-end;gap:10px;max-width:92%;
+.project-tracking .tracking-chat-thread{display:flex;flex-direction:column;gap:14px;
+ min-height:112px;max-height:min(55vh,520px);overflow:auto;overscroll-behavior:contain;
+ margin:0;padding:12px 8px 16px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.project-tracking .tracking-chat-item{display:flex;align-items:flex-end;gap:9px;max-width:min(88%,690px);
  padding:0;margin:0;min-width:0}
 .project-tracking .tracking-chat-item.is-own{align-self:flex-end;flex-direction:row-reverse}
 .project-tracking .tracking-chat-item.is-other{align-self:flex-start}
-.project-tracking .tracking-chat-item .tracking-avatar{width:35px;height:35px;flex:0 0 auto;
- color:var(--tracking-blue);background:var(--tracking-soft);font-weight:800;font-size:12px}
+.project-tracking .tracking-chat-item .tracking-avatar{width:34px;height:34px;flex:0 0 auto;
+ color:var(--tracking-blue);background:var(--tracking-soft);font-weight:800;font-size:12px;
+ box-shadow:0 0 0 2px var(--surface)}
 .project-tracking .tracking-chat-item .tracking-avatar img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .project-tracking .tracking-chat-item.is-own .tracking-avatar{color:var(--tracking-violet);
  background:color-mix(in srgb,var(--tracking-violet) 12%,var(--surface))}
-.project-tracking .tracking-chat-item .tracking-chat-body{min-width:0;max-width:100%;
- padding:12px 15px;background:var(--surface-2);border:1px solid var(--line);
- border-radius:16px 16px 16px 4px;box-shadow:none}
-.project-tracking .tracking-chat-item.is-own .tracking-chat-body{background:var(--tracking-soft);
- border-color:color-mix(in srgb,var(--tracking-blue) 25%,var(--line));border-radius:16px 16px 4px 16px}
+.project-tracking .tracking-chat-item .tracking-chat-body{min-width:0;width:fit-content;max-width:min(100%,550px);
+ padding:12px 15px 9px;background:var(--surface-2);border:1px solid var(--line);
+ border-radius:16px 16px 16px 5px;box-shadow:0 3px 12px color-mix(in srgb,black 6%,transparent)}
+.project-tracking .tracking-chat-item.is-own .tracking-chat-body{background:linear-gradient(145deg,
+ color-mix(in srgb,var(--tracking-blue) 13%,var(--surface)),
+ color-mix(in srgb,var(--tracking-blue) 7%,var(--surface)));
+ border-color:color-mix(in srgb,var(--tracking-blue) 38%,var(--line));border-radius:16px 16px 5px 16px}
 .tracking-chat-sender{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px}
 .tracking-chat-sender strong{font-size:11px;line-height:1.4}
 .tracking-chat-sender small{font-size:10px;color:var(--muted)}
-.project-tracking .tracking-chat-meta time{font-size:10px}
+.project-tracking .tracking-chat-meta{justify-content:flex-start;gap:6px}
+.project-tracking .tracking-chat-sender{gap:7px}
+.project-tracking .tracking-chat-role{display:inline-flex;align-items:center;padding:2px 7px;
+ font-size:9px;font-weight:700;border:1px solid color-mix(in srgb,var(--tracking-blue) 23%,var(--line));
+ background:color-mix(in srgb,var(--tracking-blue) 7%,var(--surface));border-radius:999px}
+.tracking-chat-footer{display:flex;align-items:center;justify-content:flex-end;
+ margin-top:9px;padding-top:7px;border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent)}
+.tracking-chat-footer time{display:inline-flex;gap:5px;align-items:center;line-height:1.4;
+ color:var(--muted);font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tracking-chat-footer svg{opacity:.7}
 .project-tracking .tracking-chat-content{margin-top:9px;font-size:12px;line-height:1.7;
  overflow-wrap:anywhere;word-break:break-word}
 .tracking-chat-content>:first-child{margin-top:0}
@@ -279,8 +291,9 @@
  font-size:12px;margin-bottom:10px}
 .tracking-chat-compose-title>div{display:flex;align-items:center;gap:7px}
 .tracking-chat-compose-title>span{color:var(--muted);font-size:11px}
-.tracking-chat-compose .ticket-editor{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
-.tracking-chat-compose .ticket-editor-toolbar{padding:7px;background:var(--surface-2)}
+.tracking-chat-compose .ticket-editor{border:1px solid var(--line);border-radius:12px;background:var(--surface);transition:border-color .15s ease}
+.tracking-chat-compose .ticket-editor:focus-within{border-color:var(--tracking-blue)}
+.tracking-chat-compose .ticket-editor-toolbar{padding:7px;background:var(--surface-2);gap:4px}
 .tracking-chat-compose .ticket-editor-tool{min-width:31px;min-height:31px}
 .tracking-chat-compose .ticket-editor-surface,.tracking-chat-compose .ticket-editor-source,
 .tracking-chat-compose .ticket-editor>textarea[data-ticket-message]{min-height:105px;max-height:260px;
@@ -323,7 +336,11 @@
 .tracking-once-accessibility{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
 @media(max-width:650px){
  .project-tracking .tracking-chat-item{max-width:100%}
- .project-tracking .tracking-chat-item .tracking-chat-body{padding:10px}
+ .project-tracking .tracking-chat-item .tracking-chat-body{max-width:100%;padding:11px 12px 9px}
+ .project-tracking .tracking-chat-thread{min-height:100px;padding:9px 3px 12px}
+ .tracking-conversation-panel>.tracking-panel-heading{grid-template-columns:minmax(0,1fr);gap:9px}
+ .tracking-chat-count{justify-self:start}
+ .tracking-chat-footer time{font-size:9px}
  .tracking-chat-presence{padding:10px 12px}
  .tracking-chat-history{padding:9px 10px}
  .project-tracking-detail .tracking-chat-compose{padding:12px}
@@ -332,6 +349,16 @@
  .tracking-compose-buttons{width:100%;justify-content:stretch}
  .tracking-compose-buttons button{flex:1;justify-content:center}
 }
+
+
+/* Keep empty rooms inviting, but don't waste vertical space beneath a short chat. */
+.project-tracking .tracking-chat-thread:has(.tracking-chat-empty){min-height:172px}
+.project-tracking .tracking-chat-item.is-other .tracking-chat-body{border-color:color-mix(in srgb,var(--tracking-blue) 12%,var(--line))}
+.project-tracking .tracking-chat-item .tracking-chat-body,
+.project-tracking .tracking-chat-file{overflow-wrap:anywhere}
+.tracking-chat-compose .ticket-editor-toolbar [type="button"]:focus-visible,
+.tracking-chat-compose .ticket-editor-toolbar select:focus-visible,
+.tracking-compose-buttons button:focus-visible{outline:2px solid var(--tracking-blue);outline-offset:2px}
 
 @media(max-width:1180px){
  .tracking-workspace-grid{grid-template-columns:minmax(0,1.5fr) minmax(270px,.9fr)}
