@@ -91,7 +91,7 @@ if [[ "$MODE" == "--preflight" ]]; then
   exit 0
 fi
 # Apply requires explicit external backup, created and verified by operator.
-DB_BACKUP="$BAMBODIA_TRACKING_DB_BACKUP"
+DB_BACKUP="$(printenv BAMBODIA_TRACKING_DB_BACKUP || true)"
 [[ -n "$DB_BACKUP" && -f "$DB_BACKUP" && -s "$DB_BACKUP" && ! -L "$DB_BACKUP" ]] ||
   { echo 'STOP: Valid BAMBODIA_TRACKING_DB_BACKUP required' >&2; exit 2; }
 echo 'PASS: Database backup file exists and is nonempty'
