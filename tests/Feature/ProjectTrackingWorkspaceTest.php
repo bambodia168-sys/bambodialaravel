@@ -203,4 +203,75 @@ final class ProjectTrackingWorkspaceTest extends TestCase
         $order->update(['marketplace_listing_id' => $productListing->id]);
         $this->get(route('tracking.orders.show', $order->reference()))->assertNotFound();
     }
+    public function test_milestone_presets_are_type_specific_editable_and_not_offered_to_customers(): void
+    {
+        config(['commerce.enabled' => true]);
+
+        $examples = [
+            'project' => 'Create wireframes or initial design concepts',
+            'service' => 'Complete initial assessment and recommendations',
+            'freelance' => 'Prepare the first draft or working prototype',
+        ];
+
+        foreach ($examples as $type => $presetTitle) {
+            [$buyer, $creator, $order] = $this->verifiedOrder($type);
+            $url = route('tracking.orders.show', $order->reference());
+
+            $this->actingAs($creator)->get($url)->assertOk()
+                ->assertSee('MILESTONE LIBRARY')
+                ->assertSee('Browse milestone presets')
+                ->assertSee('Custom task')
+                ->assertSee('data-task-preset-select', false)
+                ->assertSee('data-task-title', false)
+                ->assertSee($presetTitle);
+
+            $this->post(route('tracking.tasks.store', $order->reference()), [
+                'title' => $presetTitle,
+                'due_on' => now()->addDays(7)->toDateString(),
+            ])->assertRedirect($url);
+
+            $customTitle = 'Custom '.$type.' milestone for client approval';
+            $this->post(route('tracking.tasks.store', $order->reference()), [
+                'title' => $customTitle,
+            ])->assertRedirect($url);
+
+            $this->assertDatabaseHas('order_tracking_tasks', [
+                'marketplace_order_id' => $order->id, 'title' => $presetTitle,
+            ]);
+            $this->assertDatabaseHas('order_tracking_tasks', [
+                'marketplace_order_id' => $order->id, 'title' => $customTitle,
+            ]);
+
+            $this->actingAs($buyer)->get($url)->assertOk()
+                ->assertSee($presetTitle)->assertSee($customTitle)
+                ->assertDontSee('data-task-preset-select', false)
+                ->assertDontSee('data-task-custom', false);
+
+            $this->post(route('tracking.tasks.store', $order->reference()), [
+                'title' => 'Customer cannot assign a preset milestone',
+            ])->assertForbidden();
+        }
+    }
+
+    public function test_preset_catalog_contains_professional_titles_with_existing_limits(): void
+    {
+        $catalog = \App\Support\TrackingTaskPresets::groupsFor('service');
+        $titles = collect($catalog)->flatten()->all();
+
+        $this->assertContains('Review service requirements and current setup', $titles);
+        $this->assertContains('Submit final deliverables for approval', $titles);
+        $this->assertNotContains('Create wireframes or initial design concepts', $titles);
+        $this->assertSame(3, count(\App\Support\TrackingTaskPresets::recommendedFor('service')));
+
+        foreach (['project', 'service', 'freelance'] as $type) {
+            $groups = \App\Support\TrackingTaskPresets::groupsFor($type);
+            $titles = collect($groups)->flatten()->all();
+            $this->assertCount(count(array_unique($titles)), $titles);
+            foreach ($titles as $title) {
+                $this->assertGreaterThanOrEqual(5, mb_strlen($title));
+                $this->assertLessThanOrEqual(180, mb_strlen($title));
+            }
+        }
+    }
+
 }

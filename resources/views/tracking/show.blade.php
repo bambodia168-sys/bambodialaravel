@@ -2,8 +2,8 @@
 @section('workspace', $creatorView ? 'creator' : 'account')
 @section('title', 'Project Tracking')
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=1">
-<script defer src="{{ asset('js/project-tracking.js') }}?v=1"></script>
+<link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=2">
+<script defer src="{{ asset('js/project-tracking.js') }}?v=2"></script>
 @endpush
 @section('content')
 @php
@@ -102,15 +102,59 @@
             <p>No tasks have been added yet. The creator can list milestones or project checklist items here.</p></div>
         @endif
         @if($canWriteTasks && $tasks->count() < 20)
-          <details class="tracking-details">
-            <summary><x-icon name="plus" size="17"/> Add a work task</summary>
-            <form method="post" action="{{ route('tracking.tasks.store', $order->reference()) }}" class="tracking-form">
+          @php
+            $taskPresetGroups = \App\Support\TrackingTaskPresets::groupsFor($listingType);
+            $recommendedTaskPresets = \App\Support\TrackingTaskPresets::recommendedFor($listingType);
+          @endphp
+          <details class="tracking-details tracking-task-presets" @if($errors->has('title') || $errors->has('due_on')) open @endif>
+            <summary><x-icon name="plus" size="17"/> Add a task or milestone</summary>
+            <form method="post" action="{{ route('tracking.tasks.store', $order->reference()) }}" class="tracking-form tracking-preset-form" data-task-preset-form>
               @csrf
-              <label for="tracking-task-title">Task or milestone title</label>
-              <input id="tracking-task-title" name="title" maxlength="180" minlength="5" required placeholder="e.g. Design and confirm responsive screens" value="{{ old('title') }}">
+              <div class="tracking-presets-intro">
+                <span class="tracking-preset-kicker"><x-icon name="clipboard-list" size="17"/> MILESTONE LIBRARY</span>
+                <strong>Start with a professional task preset</strong>
+                <p>Choose a suggested milestone, browse the library, or write a custom task. Edit any title before saving.</p>
+              </div>
+
+              <div class="tracking-preset-suggestions" role="group" aria-label="Recommended milestones">
+                @foreach($recommendedTaskPresets as $preset)
+                  <button type="button" class="tracking-preset-chip" data-task-preset="{{ $preset }}" aria-pressed="false">
+                    <x-icon name="plus" size="14"/><span>{{ $preset }}</span>
+                  </button>
+                @endforeach
+              </div>
+
+              <div class="tracking-preset-select-row">
+                <div class="tracking-preset-select-field">
+                  <label for="tracking-task-preset-select">Browse milestone presets</label>
+                  <select id="tracking-task-preset-select" data-task-preset-select aria-describedby="tracking-task-preset-hint">
+                    <option value="">Select a milestone (optional)</option>
+                    @foreach($taskPresetGroups as $category => $presetTitles)
+                      <optgroup label="{{ $category }}">
+                        @foreach($presetTitles as $presetTitle)
+                          <option value="{{ $presetTitle }}">{{ $presetTitle }}</option>
+                        @endforeach
+                      </optgroup>
+                    @endforeach
+                  </select>
+                </div>
+                <button type="button" class="btn subtle tracking-custom-task" data-task-custom>
+                  <x-icon name="pencil" size="15"/> Custom task
+                </button>
+              </div>
+              <p class="tracking-preset-hint" id="tracking-task-preset-hint" data-task-preset-hint aria-live="polite">
+                Presets are suggestions and do not change the delivery status.
+              </p>
+
+              <label for="tracking-task-title">Task or milestone title <span class="tracking-required">*</span></label>
+              <input id="tracking-task-title" name="title" data-task-title maxlength="180" minlength="5" required
+                autocomplete="off" placeholder="Select a preset above or enter your own milestone" value="{{ old('title') }}">
               <label for="tracking-task-date">Target date (optional)</label>
               <input id="tracking-task-date" type="date" name="due_on" min="{{ now()->toDateString() }}" max="{{ now()->addYear()->toDateString() }}" value="{{ old('due_on') }}">
-              <button class="btn primary" type="submit">Add task</button>
+              <div class="tracking-preset-footer">
+                <small><x-icon name="shield-check" size="14"/> Saved to this order only. Maximum 20 checklist tasks; customer acceptance remains separate.</small>
+                <button class="btn primary" type="submit"><x-icon name="plus" size="16"/> Add task</button>
+              </div>
             </form>
           </details>
         @endif

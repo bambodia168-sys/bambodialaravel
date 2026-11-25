@@ -167,6 +167,49 @@
 .project-tracking #tracking-delivery .panel-actions{display:flex;gap:9px;flex-wrap:wrap}
 .project-tracking .btn:focus-visible,.project-tracking a:focus-visible,.project-tracking summary:focus-visible{outline:2px solid var(--tracking-blue);outline-offset:3px}
 .project-tracking .pagination{max-width:100%;overflow-x:auto}
+/* Milestone presets are scoped to the existing Project Tracking body only. */
+.tracking-task-presets[open]{margin-top:17px}
+.tracking-preset-form{gap:12px}
+.tracking-presets-intro{padding:15px 16px;border:1px solid var(--line);border-radius:13px;background:var(--surface-2)}
+.tracking-preset-kicker{display:flex;align-items:center;gap:7px;color:var(--tracking-blue);font-size:10px;font-weight:850;letter-spacing:.1em;margin-bottom:9px}
+.tracking-presets-intro strong{display:block;font-size:14px;font-weight:800;line-height:1.45}
+.tracking-presets-intro p{color:var(--muted);font-size:11px;line-height:1.65;margin:5px 0 0}
+.tracking-preset-suggestions{display:none;flex-wrap:wrap;gap:8px}
+.tracking-task-presets.is-enhanced .tracking-preset-suggestions{display:flex}
+.tracking-preset-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;border:1px solid var(--line);
+ background:var(--surface);color:var(--text);border-radius:10px;padding:9px 12px;
+ cursor:pointer;text-align:left;font:inherit;font-size:11px;font-weight:700;line-height:1.45;
+ transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.tracking-preset-chip svg{flex:0 0 auto;color:var(--tracking-blue)}
+.tracking-preset-chip:hover{border-color:var(--tracking-blue);background:var(--tracking-soft);transform:translateY(-1px)}
+.tracking-preset-chip[aria-pressed="true"]{border-color:var(--tracking-blue);background:var(--tracking-soft);color:var(--tracking-blue)}
+.tracking-preset-chip[aria-pressed="true"] svg{color:var(--tracking-green)}
+.tracking-preset-select-row{display:none;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px}
+.tracking-task-presets.is-enhanced .tracking-preset-select-row{display:grid}
+.tracking-preset-select-field{min-width:0;display:grid;gap:6px}
+.tracking-preset-select-field label{font-size:12px;font-weight:750}
+.tracking-preset-select-field select{width:100%;min-width:0;max-width:100%;min-height:43px;
+ background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text);
+ padding:11px;font:inherit;font-size:12px;cursor:pointer}
+.tracking-preset-select-field select:focus-visible,.tracking-preset-chip:focus-visible,
+.tracking-custom-task:focus-visible{outline:2px solid var(--tracking-blue);outline-offset:2px}
+.project-tracking .tracking-custom-task{min-height:43px;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.tracking-preset-hint{display:none;color:var(--tracking-blue);font-size:11px;line-height:1.5;margin:0}
+.tracking-task-presets.is-enhanced .tracking-preset-hint{display:block}
+.tracking-required{color:var(--tracking-orange)}
+.tracking-preset-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+ padding-top:12px;border-top:1px solid var(--line)}
+.tracking-preset-footer small{display:flex;align-items:center;gap:7px;max-width:430px;
+ color:var(--muted);line-height:1.5;font-size:11px}
+.tracking-preset-footer small svg{flex:0 0 auto;color:var(--tracking-green)}
+.tracking-preset-footer button{white-space:nowrap}
+@media(max-width:650px){
+ .tracking-preset-select-row,.tracking-task-presets.is-enhanced .tracking-preset-select-row{grid-template-columns:minmax(0,1fr)}
+ .project-tracking .tracking-custom-task{justify-content:center}
+ .tracking-preset-chip{width:100%;justify-content:flex-start}
+ .tracking-preset-footer button{width:100%;justify-content:center}
+}
+
 @media(max-width:1180px){
  .tracking-workspace-grid{grid-template-columns:minmax(0,1.5fr) minmax(270px,.9fr)}
  .tracking-filters{grid-template-columns:repeat(3,minmax(0,1fr))}
