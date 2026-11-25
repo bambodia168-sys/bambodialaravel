@@ -17,7 +17,13 @@
 <div class="conversation-thread">
 @forelse($messages as $message)<article class="conversation-message {{ (int)$message->sender_id===(int)auth()->id()?'own':'' }}">
 <div class="conversation-byline"><strong>{{ $message->sender?->name }}</strong><span>{{ $message->created_at->format('d M Y H:i') }}</span></div>
-<p class="review-text">{{ $message->body }}</p></article>
+<div class="review-text policy-formatted-content">
+@if(($message->content_format ?? 'plain') === 'html')
+{!! \App\Support\SupportMessageContent::display($message->body) !!}
+@else
+{!! nl2br(e($message->body)) !!}
+@endif
+</div></article>
 @empty<p>No messages have been sent.</p>@endforelse
 </div><x-pagination :paginator="$messages"/>
 @if($inquiry->status==='open')

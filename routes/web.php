@@ -56,6 +56,7 @@ use App\Http\Controllers\Dashboard\NotificationAnalyticsController;
 use App\Http\Controllers\ServiceInquiryController;
 use App\Http\Controllers\ServiceDeliveryController;
 use App\Http\Controllers\ProjectTrackingController;
+use App\Http\Controllers\TrackingConversationController;
 use App\Http\Controllers\Dashboard\ServiceManagerController;
 use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\JobBoardController;
@@ -365,6 +366,21 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/account/tracking', [ProjectTrackingController::class, 'customerIndex'])->name('account.tracking.index');
     Route::get('/tracking/orders/{reference}', [ProjectTrackingController::class, 'show'])
         ->where('reference', OrderReference::ROUTE)->name('tracking.orders.show');
+    Route::get('/tracking/orders/{reference}/conversation', [TrackingConversationController::class, 'messages'])
+        ->where('reference', OrderReference::ROUTE)->middleware('throttle:90,1')->name('tracking.conversation.messages');
+    Route::post('/tracking/orders/{reference}/conversation', [TrackingConversationController::class, 'send'])
+        ->where('reference', OrderReference::ROUTE)->middleware('throttle:20,1')->name('tracking.conversation.send');
+    Route::get('/tracking/orders/{reference}/attachments/{attachment}', [TrackingConversationController::class, 'download'])
+        ->where('reference', OrderReference::ROUTE)->whereUuid('attachment')
+        ->middleware('throttle:30,1')->name('tracking.conversation.attachment');
+    Route::post('/tracking/orders/{reference}/one-time', [TrackingConversationController::class, 'shareOnce'])
+        ->where('reference', OrderReference::ROUTE)->middleware('throttle:5,1')->name('tracking.one-time.share');
+    Route::post('/tracking/orders/{reference}/one-time/{note}/open', [TrackingConversationController::class, 'openOnce'])
+        ->where('reference', OrderReference::ROUTE)->whereUuid('note')
+        ->middleware('throttle:6,1')->name('tracking.one-time.open');
+    Route::post('/tracking/orders/{reference}/one-time/{note}/revoke', [TrackingConversationController::class, 'revokeOnce'])
+        ->where('reference', OrderReference::ROUTE)->whereUuid('note')
+        ->middleware('throttle:6,1')->name('tracking.one-time.revoke');
     Route::post('/tracking/orders/{reference}/tasks', [ProjectTrackingController::class, 'addTask'])
         ->where('reference', OrderReference::ROUTE)->middleware('throttle:12,1')->name('tracking.tasks.store');
     Route::patch('/tracking/orders/{reference}/tasks/{task}', [ProjectTrackingController::class, 'updateTask'])

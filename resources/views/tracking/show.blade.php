@@ -2,8 +2,11 @@
 @section('workspace', $creatorView ? 'creator' : 'account')
 @section('title', 'Project Tracking')
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=2">
-<script defer src="{{ asset('js/project-tracking.js') }}?v=2"></script>
+<link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=5">
+<link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=3">
+<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=3"></script>
+<script defer src="{{ asset('js/project-tracking.js') }}?v=3"></script>
+<script defer src="{{ asset('js/tracking-conversation.js') }}?v=1"></script>
 @endpush
 @section('content')
 @php
@@ -60,6 +63,77 @@
 
   <div class="tracking-workspace-grid">
     <main class="tracking-primary" id="tracking-work">
+      <section class="tracking-panel tracking-conversation-panel" id="tracking-conversation" aria-labelledby="tracking-chat-title"
+        data-conversation-url="{{ route('tracking.conversation.messages', $order->reference()) }}">
+        <div class="tracking-panel-heading">
+          <div>
+            <span class="tracking-overline">PRIVATE CONVERSATION</span>
+            <h2 id="tracking-chat-title">Customer &amp; creator messages</h2>
+            <p>Secure, private discussion for this order. New messages appear here without reloading the page.</p>
+          </div>
+          <span class="tracking-chat-count"><x-icon name="message" size="15"/><span data-chat-count>{{ $messageTotal }}</span> messages</span>
+        </div>
+        <div class="tracking-chat-presence">
+          <span class="tracking-presence-avatars" aria-hidden="true">
+            <span>{{ mb_strtoupper(mb_substr($order->buyer_name ?: 'C',0,1)) }}</span>
+            <span>{{ mb_strtoupper(mb_substr($order->seller_name ?: 'F',0,1)) }}</span>
+          </span>
+          <span><strong>{{ $order->buyer_name }}</strong> and <strong>{{ $order->seller_name }}</strong>
+            <small>Only verified order participants can access this conversation.</small></span>
+        </div>
+        <div class="tracking-chat-history">
+          <button type="button" class="btn subtle compact" data-chat-older @if(!$hasEarlierMessages) hidden @endif>
+            <x-icon name="history" size="15"/> Load earlier messages
+          </button>
+          <div class="tracking-chat-thread" data-chat-thread role="log" aria-label="Project conversation"
+            aria-relevant="additions" aria-live="polite"
+            data-first-id="{{ $messages->first()?->id ?? 0 }}"
+            data-last-id="{{ $messages->last()?->id ?? 0 }}">
+            @forelse($messages as $message)
+              @include('tracking.partials.message', ['message' => $message, 'order' => $order])
+            @empty
+              <div class="tracking-chat-empty" data-chat-empty>
+                <x-icon name="message" size="24"/>
+                <strong>Start the conversation</strong>
+                <p>Ask a question, confirm a requirement, or share your first update.</p>
+              </div>
+            @endforelse
+          </div>
+        </div>
+        @if($inquiry->status === 'open')
+          <form method="post" action="{{ route('tracking.conversation.send', $order->reference()) }}"
+            enctype="multipart/form-data" class="tracking-chat-compose" data-tracking-chat-form data-ticket-form>
+            @csrf
+            <div class="tracking-chat-compose-title">
+              <div><x-icon name="pencil" size="17"/><strong>Write a message</strong></div>
+              <span>Rich text · private attachments</span>
+            </div>
+            @include('support.editor', ['editorId' => 'tracking-chat-editor', 'minimum' => 2,
+              'editorValue' => '', 'allowCredentialButton' => false])
+            <div class="tracking-chat-attach-preview" data-chat-attachment-names hidden></div>
+            <div class="tracking-compose-footer">
+              <small>Maximum 4 attachments: JPG, PNG, WebP, GIF, PDF or TXT. 10 MB each / 20 MB total.
+                Files are privately stored and malware scanned. Never share passwords or payment-card details in chat.</small>
+              <div class="tracking-compose-buttons">
+                <input id="tracking-chat-attachments" type="file" name="attachments[]" multiple
+                  accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,image/jpeg,image/png,image/webp,image/gif,application/pdf,text/plain"
+                  data-chat-attachments class="tracking-file-input">
+                <button type="button" class="btn subtle" data-chat-attach-button>
+                  <x-icon name="paperclip" size="17"/> Attachment
+                </button>
+                <button class="btn primary" type="submit" data-chat-submit>
+                  <x-icon name="send" size="16"/> Send message
+                </button>
+              </div>
+            </div>
+            <p class="tracking-chat-error" data-chat-error role="alert" hidden></p>
+            <p class="tracking-chat-success" data-chat-success role="status" hidden></p>
+          </form>
+        @else
+          <p class="tracking-muted">This conversation is closed.</p>
+        @endif
+      </section>
+
       <section class="tracking-panel" aria-labelledby="tracking-tasks-title">
         <div class="tracking-panel-heading">
           <div><span class="tracking-overline">ACTIVE WORK</span>
@@ -164,42 +238,6 @@
         @include('inquiries.delivery')
       </div>
 
-      <section class="tracking-panel" id="tracking-conversation" aria-labelledby="tracking-chat-title">
-        <div class="tracking-panel-heading"><div><span class="tracking-overline">PRIVATE CONVERSATION</span>
-          <h2 id="tracking-chat-title">Customer &amp; creator messages</h2>
-          <p>Messages are visible only to both participants. They do not alter order payments or formal agreements.</p></div>
-          <span class="tracking-count">{{ $messages->total() }} messages</span>
-        </div>
-        <div class="tracking-chat-thread">
-          @forelse($messages as $message)
-            <article class="tracking-chat-item {{ (int)$message->sender_id === (int)auth()->id() ? 'is-own' : '' }}">
-              <div class="tracking-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($message->sender?->name ?? 'U',0,1)) }}</div>
-              <div class="tracking-chat-body">
-                <div class="tracking-chat-meta">
-                  <strong>{{ $message->sender?->name ?? 'Participant' }}</strong>
-                  <time datetime="{{ $message->created_at->toAtomString() }}">{{ $message->created_at->format('d M Y · H:i') }}</time>
-                </div>
-                <p>{{ $message->body }}</p>
-              </div>
-            </article>
-          @empty
-            <p class="tracking-empty-inline">No messages yet. Start by sharing project requirements.</p>
-          @endforelse
-        </div>
-        <x-pagination :paginator="$messages"/>
-        @if($inquiry->status === 'open')
-          <form method="post" action="{{ route('inquiries.reply', $inquiry) }}" class="tracking-form tracking-chat-compose">
-            @csrf
-            <label for="tracking-chat-reply">Write a message</label>
-            <textarea id="tracking-chat-reply" name="body" minlength="2" maxlength="5000" rows="4" required
-              placeholder="Share an update, clarify a requirement or provide feedback.">{{ old('body') }}</textarea>
-            <div class="tracking-compose-footer"><small>Do not include passwords, private keys or payment-card details.</small>
-              <button class="btn primary" type="submit"><x-icon name="send" size="16"/> Send message</button></div>
-          </form>
-        @else
-          <p class="tracking-muted">This conversation is closed.</p>
-        @endif
-      </section>
     </main>
 
     <aside class="tracking-aside">
@@ -258,6 +296,40 @@
             @endforeach
           </div>
         @endif
+      </section>
+
+      <section class="tracking-panel tracking-aside-panel tracking-one-time-panel" id="tracking-one-time">
+        <div class="tracking-panel-heading">
+          <div><span class="tracking-overline">PRIVATE · SINGLE USE</span>
+            <h2><x-icon name="lock-keyhole" size="19"/> One-time handover</h2>
+            <p>Share a short private note that the other participant can reveal just once. It expires automatically.</p></div>
+        </div>
+        <details class="tracking-details tracking-one-time-details">
+          <summary><x-icon name="plus" size="16"/> Share a one-time note</summary>
+          <form method="post" class="tracking-form tracking-one-time-form"
+            data-once-form action="{{ route('tracking.one-time.share', $order->reference()) }}">
+            @csrf
+            <label for="tracking-once-label">Note label</label>
+            <input id="tracking-once-label" name="label" maxlength="100" minlength="3" required
+              placeholder="e.g. Temporary access instructions">
+            <label for="tracking-once-content">Private content</label>
+            <textarea id="tracking-once-content" name="content" rows="4" minlength="3" maxlength="2000" required
+              autocomplete="off" spellcheck="false" placeholder="Information intended for a single viewing"></textarea>
+            <small>Encrypted at rest · 3-day expiry · One opening only · Sender can revoke before opening.
+              Use least-privilege temporary access; never share recovery codes or payment details.</small>
+            <button class="btn primary" type="submit"><x-icon name="lock-keyhole" size="15"/> Share once</button>
+          </form>
+        </details>
+        <div class="tracking-one-time-list" data-once-list>
+          @foreach($oneTimeNotes as $note)
+            @include('tracking.partials.one-time-note', ['note' => $note, 'order' => $order])
+          @endforeach
+          @if($oneTimeNotes->isEmpty())
+            <p class="tracking-muted" data-once-empty>No one-time notes shared for this order.</p>
+          @endif
+        </div>
+        <p class="tracking-chat-error" data-once-error role="alert" hidden></p>
+        <div class="tracking-once-accessibility" aria-live="polite" data-once-status></div>
       </section>
 
       <section class="tracking-panel tracking-aside-panel">
