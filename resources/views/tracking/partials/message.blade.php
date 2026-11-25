@@ -2,10 +2,14 @@
   $mine = (int) $message->sender_id === (int) auth()->id();
   $displayName = $message->sender?->name ?? 'Participant';
   $roleLabel = $mine ? 'You' : ((int) $message->sender_id === (int) $order->seller_id ? 'Creator' : 'Customer');
+  $avatarUrl = $message->sender?->profileAvatarUrl();
 @endphp
 <article id="tracking-message-{{ $message->id }}" data-message-id="{{ $message->id }}"
   class="tracking-chat-item {{ $mine ? 'is-own' : 'is-other' }}">
-  <span class="tracking-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($displayName, 0, 1)) }}</span>
+  <span class="tracking-avatar" aria-hidden="true">
+    @if($avatarUrl)<img src="{{ $avatarUrl }}" alt="" loading="lazy" referrerpolicy="no-referrer">
+    @else{{ mb_strtoupper(mb_substr($displayName, 0, 1)) }}@endif
+  </span>
   <div class="tracking-chat-body">
     <div class="tracking-chat-meta">
       <span class="tracking-chat-sender"><strong>{{ $displayName }}</strong><small>{{ $roleLabel }}</small></span>
