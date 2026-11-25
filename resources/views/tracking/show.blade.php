@@ -2,8 +2,8 @@
 @section('workspace', $creatorView ? 'creator' : 'account')
 @section('title', 'Project Tracking')
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=1">
-<script defer src="{{ asset('js/project-tracking.js') }}?v=1"></script>
+<link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=2">
+<script defer src="{{ asset('js/project-tracking.js') }}?v=2"></script>
 @endpush
 @section('content')
 @php
