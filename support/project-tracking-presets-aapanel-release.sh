@@ -14,7 +14,7 @@ MODE="$1"
 
 REPO="bambodia168-sys/bambodialaravel"
 BASE="34a99448cba619c69801726939faccf1cccc0976"
-TARGET="053bc4f81c4926919252fe1b3f932098a71cdf4a"
+TARGET="23c213c63ac8988d69bc8d10322d5a25649fc5f0"
 SITE="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
 
@@ -65,7 +65,7 @@ mkdir -p "$WORK"/{target,base,original}
 
 cat > "$WORK/manifest" <<'MANIFEST'
 app/Support/TrackingTaskPresets.php|NEW|c0c456b3401c1d1b3690ae970e3230b227de648f
-resources/views/tracking/show.blade.php|b1d11148468dd8008c294c693ca8f1b38832a3b2|9b976f9bf97d1dd912cf70a1df8ebef82dab4ca2
+resources/views/tracking/show.blade.php|b1d11148468dd8008c294c693ca8f1b38832a3b2|c9ecf0ffe05909665ccfae570b5103039e4c0839
 public/js/project-tracking.js|a3368f45ab66af6301f67f479eb745593ef41fa8|c4526b86c46926741e02dfa07fc752e7e82c1dd4
 public/css/project-tracking.css|63f0118d509c0a697b2a041bd2874c41e1721dfe|b531c1aa45c02c491df20cd1276355b54bece18e
 MANIFEST
