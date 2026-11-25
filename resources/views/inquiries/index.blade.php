@@ -5,7 +5,11 @@
 <div class="container inner-page">
 <div class="page-intro"><div class="eyebrow">{{ $creator?'Creator Studio':'Customer Account' }} · Private Messages</div>
 <h1>{{ $creator?'Client Inquiries':'My Service Requests' }}</h1>
-<p>Track real project discussions. Only the two participants can read messages or close the inquiry.</p></div>
+<p>Track real project discussions. Only the two participants can read messages or close the inquiry.</p>
+@if(config('commerce.enabled'))
+<p><a class="btn primary" href="{{ route($creator ? 'studio.tracking.index' : 'account.tracking.index') }}">Project Tracking</a></p>
+@endif
+</div>
 <section class="panel"><div class="panel-head"><h2>Conversations <span class="count">{{ $inquiries->total() }}</span></h2><a class="btn subtle" href="{{ route('marketplace.search') }}">Explore listings</a></div>
 <div class="workspace-queue-toolbar">
   <nav class="workspace-queue-tabs" aria-label="Private conversation status">
