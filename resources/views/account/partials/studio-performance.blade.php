@@ -39,7 +39,7 @@
   <div class="studio-chart-grid">
     <article class="studio-chart-card studio-chart-wide">
       <div class="studio-card-title"><div><h3>Verified sales vs. goal</h3>
-        <p>USD · Paid orders · {{ $analytics['start'] }} onward</p></div>
+        <p>USD · Paid orders · <span data-window-start>{{ $analytics['start'] }}</span> onward</p></div>
         @if(config('commerce.enabled'))<a href="{{ route('studio.commerce-operations') }}" class="studio-small-link">Sales details <x-icon name="arrow-up-right" size="15"/></a>@endif</div>
       <div class="studio-chart-total" data-total-revenue>&#36;{{ number_format($analytics['total_revenue'], 2) }}</div>
       <div class="studio-chart-canvas" data-chart="revenue" role="img" aria-label="Verified sales compared with a configured goal"></div>
