@@ -5,7 +5,8 @@
   $avatarUrl = $message->sender?->profileAvatarUrl();
 @endphp
 <article id="tracking-message-{{ $message->id }}" data-message-id="{{ $message->id }}"
-  class="tracking-chat-item {{ $mine ? 'is-own' : 'is-other' }}">
+  class="tracking-chat-item {{ $mine ? 'is-own' : 'is-other' }}"
+  aria-label="{{ $mine ? 'Your message' : $roleLabel . ' message from ' . $displayName }}">
   <span class="tracking-avatar" aria-hidden="true">
     @if($avatarUrl)
       <img src="{{ $avatarUrl }}" alt="" loading="lazy" referrerpolicy="no-referrer">
@@ -15,8 +16,10 @@
   </span>
   <div class="tracking-chat-body">
     <div class="tracking-chat-meta">
-      <span class="tracking-chat-sender"><strong>{{ $displayName }}</strong><small>{{ $roleLabel }}</small></span>
-      <time datetime="{{ $message->created_at->toAtomString() }}">{{ $message->created_at->format('d M Y · H:i') }}</time>
+      <span class="tracking-chat-sender">
+        <strong>{{ $displayName }}</strong>
+        <small class="tracking-chat-role">{{ $roleLabel }}</small>
+      </span>
     </div>
     <div class="tracking-chat-content policy-formatted-content">
       @if(($message->content_format ?? 'plain') === 'html')
@@ -38,5 +41,12 @@
         @endforeach
       </div>
     @endif
+    <div class="tracking-chat-footer">
+      <time datetime="{{ $message->created_at->toAtomString() }}"
+        title="{{ $message->created_at->format('d M Y · H:i T') }}">
+        <x-icon name="clock" size="12"/>
+        {{ $message->created_at->format('d M Y · H:i') }}
+      </time>
+    </div>
   </div>
 </article>
