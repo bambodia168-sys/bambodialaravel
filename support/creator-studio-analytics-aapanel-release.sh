@@ -11,7 +11,7 @@ MODE="$1"
 
 REPO="bambodia168-sys/bambodialaravel"
 BASE="4fc61f102131c27a5c7d1fd85fc76ae6b2c03e7a"
-TARGET="d5e18a5609ea63eb50df018eacc049c848394ae8"
+TARGET="817c022fff9953178a6c2b1a4c954ebe87678549"
 SITE="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
 MIGRATION="database/migrations/2026_11_25_010000_create_creator_studio_analytics_tables.php"
@@ -72,7 +72,7 @@ download() {
 
 mkdir -p "$STAGE"/{base,target,candidate}
 cat > "$STAGE/manifest" <<'MANIFEST'
-app/Http/Controllers/AccountController.php|665d9dc589ba329f3bcfc43c52c348f782bf43d2|cf7d32d71b33584f8c2be04911fba8072d8c2f94
+app/Http/Controllers/AccountController.php|665d9dc589ba329f3bcfc43c52c348f782bf43d2|bad7dc069bf0002f7c91129a7efde06948d130f5
 app/Http/Controllers/Creator/StudioAnalyticsController.php|NEW|147a68421a6295a829384541b8944fd2c3d83cfa
 app/Support/CreatorStudioAnalytics.php|NEW|961d7220daa0e58aca802fdcd142ae8a26017755
 database/migrations/2026_11_25_010000_create_creator_studio_analytics_tables.php|NEW|727494cc0e4e01cae9e92ae15c9fab164f3c8b88
