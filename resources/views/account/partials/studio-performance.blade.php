@@ -28,10 +28,10 @@
       <small>Completed orders with verified payment, excluding refunds</small></div>
     <div class="studio-mini-kpi"><span><x-icon name="clock-3" size="17"/> Billable hours logged</span>
       <strong data-kpi="billable_hours">{{ number_format($analytics['billable_hours'], 2) }} h</strong>
-      <small>Only hours explicitly recorded by you</small></div>
+      <small data-effective-rate>Gross sales divided by logged billable hours; not a contracted hourly rate.</small></div>
     <div class="studio-mini-kpi"><span><x-icon name="coins" size="17"/> Sales minus logged expenses</span>
       <strong data-kpi="sales_minus_expenses">&#36;{{ number_format($analytics['sales_minus_expenses'], 2) }}</strong>
-      <small>Not net profit: excludes fees, taxes and unrecorded costs</small></div>
+      <small data-observed-margin>Not net profit: excludes fees, taxes and unrecorded costs</small></div>
     <div class="studio-mini-kpi"><span><x-icon name="briefcase-business" size="17"/> Contracts displayed</span>
       <strong data-kpi="projects">{{ count($analytics['projects']) }}</strong>
       <small>Creator-owned freelance agreements</small></div>
@@ -75,6 +75,13 @@
         <x-icon name="users-round" size="18"/></div>
       <div data-chart="retention" class="studio-donut-layout" role="img" aria-label="Revenue from repeat and single purchases"></div>
       <p class="studio-chart-note">Repeat buyers are not necessarily retainer clients.</p>
+    </article>
+    <article class="studio-chart-card">
+      <div class="studio-card-title"><div><h3>Income by workstream</h3><p>Verified sales mix across listing types</p></div>
+        <x-icon name="chart-pie" size="18"/></div>
+      <div data-chart="workstreams" class="studio-donut-layout" role="img"
+        aria-label="Verified USD sales breakdown by listing type"></div>
+      <p class="studio-chart-note">Each portion comes from a real paid marketplace order.</p>
     </article>
     <article class="studio-chart-card">
       <div class="studio-card-title"><div><h3>Pipeline activity</h3><p>Not a cohort conversion rate</p></div>
