@@ -84,7 +84,7 @@
           @if($order->status === 'completed' && $order->paidAttempt()->exists())
             <a class="btn primary" href="{{ route('tracking.orders.show', $order->reference()) }}">Track project &amp; delivery</a>
           @endif
-          <a class="btn subtle" href="{{ route('inquiries.show', $order->serviceInquiry) }}">Original service workspace</a>
+          <a class="btn subtle" href="{{ route('inquiries.show', $order->serviceInquiry) }}">Open service workspace</a>
         </div>
       </div>
     </section>
