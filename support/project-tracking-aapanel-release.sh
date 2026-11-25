@@ -12,7 +12,7 @@ MODE="$1"
 
 REPO="bambodia168-sys/bambodialaravel"
 BASE="7099f919d92db0716a590081160847f812eb718c"
-TARGET="f25a9d69745d83d264150fa480dd26845335fff8"
+TARGET="b1a727bc72d910e4f52460def9d8ecf09915f408"
 SITE="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
 MIGRATION="database/migrations/2026_11_25_170000_create_verified_order_tracking_tables.php"
@@ -74,13 +74,14 @@ mkdir -p "$STAGE"/{base,target,candidate}
 cat > "$STAGE/manifest" <<'MANIFEST'
 app/Http/Controllers/ProjectTrackingController.php|NEW|1db6f4d3e07aaa5c65ed647186bab16ee82cacd2
 app/Http/Controllers/ServiceDeliveryController.php|256c567e995deb4d040876b3dd2fd48f0638fb16|12045fef4e58c50595b9378ec1ac4a528627e89c
+app/Models/AccountNotification.php|4d9822debd7bcc26cb28fb2ab40e3001af119e74|5b9b8c7f01d1e3894445a1869f134496e918fc61
 database/migrations/2026_11_25_170000_create_verified_order_tracking_tables.php|NEW|1afbf918bf3556e401f46dad20309cdeb75ef26a
 public/css/project-tracking.css|NEW|63f0118d509c0a697b2a041bd2874c41e1721dfe
 public/js/project-tracking.js|NEW|a3368f45ab66af6301f67f479eb745593ef41fa8
 resources/views/tracking/index.blade.php|NEW|53f99f1d7f75461ce19a734bc86bca1d0510d6ee
 resources/views/tracking/show.blade.php|NEW|b1d11148468dd8008c294c693ca8f1b38832a3b2
 resources/views/inquiries/delivery.blade.php|104b9241890a63b97468179e7c96f4b2988bd5df|9453ccee49838eb6146955e0df8ed92f80d048e9
-resources/views/commerce/show.blade.php|44daab1352e99fb066ad3d4f623b7ededba242fe|82b47409f44cfe0b8deb96cd78b847933b320546
+resources/views/commerce/show.blade.php|44daab1352e99fb066ad3d4f623b7ededba242fe|c40c43f368c442af0f2914cb4e9a8be3d79a3784
 resources/views/inquiries/show.blade.php|99de261d98e7e29a99320a78ea2f9cf9582acf5d|d0e9812a4a5b4813227df74602b18c597d90f9e2
 routes/web.php|a69726f90753eb50a118eca66873d9ce1bd2e7ab|58ee4b4b2c663b445b0a4dfa11e326ceda84c2a9
 resources/views/commerce/orders.blade.php|1921d25ffa77eaaa300f7d1a98edebec2ad5c75c|131456d60804cfa4edf75191f748a1821128e187
