@@ -12,7 +12,7 @@ MODE="$1"
 
 REPO="bambodia168-sys/bambodialaravel"
 BASE="7099f919d92db0716a590081160847f812eb718c"
-TARGET="cdd52ff9ff5840983291e4e4e5e6b030e3b409c2"
+TARGET="f25a9d69745d83d264150fa480dd26845335fff8"
 SITE="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
 MIGRATION="database/migrations/2026_11_25_170000_create_verified_order_tracking_tables.php"
@@ -72,7 +72,7 @@ download_verified_source() {
 
 mkdir -p "$STAGE"/{base,target,candidate}
 cat > "$STAGE/manifest" <<'MANIFEST'
-app/Http/Controllers/ProjectTrackingController.php|NEW|c07e8956aad6b69de947ce1d8b47c9a8f3715be5
+app/Http/Controllers/ProjectTrackingController.php|NEW|1db6f4d3e07aaa5c65ed647186bab16ee82cacd2
 app/Http/Controllers/ServiceDeliveryController.php|256c567e995deb4d040876b3dd2fd48f0638fb16|12045fef4e58c50595b9378ec1ac4a528627e89c
 database/migrations/2026_11_25_170000_create_verified_order_tracking_tables.php|NEW|1afbf918bf3556e401f46dad20309cdeb75ef26a
 public/css/project-tracking.css|NEW|63f0118d509c0a697b2a041bd2874c41e1721dfe
