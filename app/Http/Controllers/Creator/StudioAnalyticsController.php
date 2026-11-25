@@ -33,12 +33,12 @@ final class StudioAnalyticsController extends Controller
             'weekly_capacity_hours' => ['nullable', 'numeric', 'min:1', 'max:168'],
         ]);
         $now = now();
-        DB::table('creator_studio_preferences')->updateOrInsert(
-            ['user_id' => $request->user()->id],
-            ['monthly_goal_usd' => $values['monthly_goal_usd'] ?? null,
+        DB::table('creator_studio_preferences')->upsert([
+            ['user_id' => $request->user()->id,
+             'monthly_goal_usd' => $values['monthly_goal_usd'] ?? null,
              'weekly_capacity_hours' => $values['weekly_capacity_hours'] ?? null,
-             'updated_at' => $now, 'created_at' => $now]
-        );
+             'created_at' => $now, 'updated_at' => $now]
+        ], ['user_id'], ['monthly_goal_usd', 'weekly_capacity_hours', 'updated_at']);
         return $this->back($request, 'Your dashboard goals have been saved.');
     }
 
