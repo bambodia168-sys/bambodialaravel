@@ -148,6 +148,14 @@
       if (hoursTotal) hoursTotal.textContent=decimal(n(d.billable_hours)+n(d.non_billable_hours))+' h';
       const windowStart=root.querySelector('[data-window-start]');
       if(windowStart) windowStart.textContent=d.start;
+      const observedMargin=root.querySelector('[data-observed-margin]');
+      if(observedMargin) observedMargin.textContent=d.observed_margin_percent === null
+        ? 'Margin unavailable until sales exist; excludes fees and unrecorded costs.'
+        : decimal(d.observed_margin_percent)+'% sales minus logged-expenses margin (not accounting profit).';
+      const effectiveRate=root.querySelector('[data-effective-rate]');
+      if(effectiveRate) effectiveRate.textContent=d.sales_per_logged_billable_hour === null
+        ? 'Log billable work to calculate gross sales per recorded hour.'
+        : money(d.sales_per_logged_billable_hour)+'/logged billable hour (not a contracted rate).';
       const kpis={total_revenue:money(d.total_revenue),billable_hours:decimal(d.billable_hours)+' h',
         sales_minus_expenses:money(d.sales_minus_expenses),projects:String((d.projects||[]).length)};
       Object.entries(kpis).forEach(([key,value])=>{
@@ -173,6 +181,12 @@
       ],d.total_revenue>0?Math.round(n(d.repeat_sales)/n(d.total_revenue)*100)+'%':'0%',
       'Repeat share',true);
 
+      el('workstreams').innerHTML=donut([
+        {label:'Products',value:d.revenue_by_type.product,color:'var(--studio-blue)'},
+        {label:'Projects',value:d.revenue_by_type.project,color:'var(--studio-orange)'},
+        {label:'Freelance',value:d.revenue_by_type.freelance,color:'var(--studio-light-blue)'},
+        {label:'Services',value:d.revenue_by_type.service,color:'var(--studio-fourth)'}
+      ],money(d.total_revenue),'Verified USD',true);
       const capacity=d.weekly_capacity_hours===null?null:n(d.weekly_capacity_hours);
       const ratio=capacity>0?n(d.week_hours)/capacity*100:0;
       const percent=Math.min(100,Math.max(0,ratio));
