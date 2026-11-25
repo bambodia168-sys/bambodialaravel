@@ -6,6 +6,7 @@ use App\Models\AccountNotification;
 use App\Models\AuditEvent;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
+use App\Models\FreelanceContract;
 use App\Models\ServiceInquiry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -58,11 +59,18 @@ final class ProjectTrackingController extends Controller
             ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $match) => $match
                 ->matchingReference($search)->orWhere('listing_title', 'like', '%'.$search.'%')))
             ->latest('id')->paginate(12)->withQueryString();
+        $contracts = FreelanceContract::query()
+            ->where(fn (Builder $q) => $q->where('client_id', $request->user()->id)
+                ->orWhere(fn (Builder $sub) => $sub->where('freelancer_id', $request->user()->id)
+                    ->where('status', '!=', 'draft')))
+            ->withCount(['milestones', 'milestones as accepted_milestones_count' =>
+                fn (Builder $q) => $q->where('status', 'accepted')])
+            ->latest('updated_at')->limit(5)->get();
         $listingTypes = MarketplaceListing::query()
             ->whereIn('id', $orders->getCollection()->pluck('marketplace_listing_id')->all())
             ->pluck('type', 'id');
 
-        return view('tracking.index', compact('orders', 'workspace', 'status', 'type', 'search', 'listingTypes'));
+        return view('tracking.index', compact('orders', 'workspace', 'status', 'type', 'search', 'listingTypes', 'contracts'));
     }
 
     public function show(Request $request, string $reference): Response
