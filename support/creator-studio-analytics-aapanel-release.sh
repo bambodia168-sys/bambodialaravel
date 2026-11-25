@@ -200,11 +200,9 @@ while IFS= read -r file; do
     echo "$file" >> "$STAGE/installed-new.list"
   fi
   temp="$(mktemp "$(dirname "$destination")/.creator-studio.XXXXXXXX")"
-  install -o www -g www -m 0644 "$STAGE/candidate/$file" "$temp"
-  # Candidate files for newly introduced paths are target downloads.
-  if [[ ! -f "$STAGE/candidate/$file" ]]; then
-    install -o www -g www -m 0644 "$STAGE/target/$file" "$temp"
-  fi
+  source="$STAGE/candidate/$file"
+  if [[ ! -f "$source" ]]; then source="$STAGE/target/$file"; fi
+  install -o www -g www -m 0644 "$source" "$temp"
   mv -f -- "$temp" "$destination"
 done < "$STAGE/changed.list"
 
