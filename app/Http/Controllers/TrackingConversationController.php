@@ -143,8 +143,10 @@ final class TrackingConversationController extends Controller
         ]);
     }
 
-    public function shareOnce(Request $request, string $reference): JsonResponse|RedirectResponse
+    public function shareOnce(Request $request, string $reference): JsonResponse
     {
+        // Require AJAX to keep private contents out of flashed session input.
+        abort_unless($request->expectsJson(), 406);
         $order = VerifiedTrackingOrder::resolve($request, $reference);
         $data = $request->validate([
             'label' => ['required', 'string', 'min:3', 'max:100'],
@@ -174,13 +176,10 @@ final class TrackingConversationController extends Controller
             return $record;
         }, 3);
 
-        if ($request->expectsJson()) {
-            return $this->privateJson([
-                'note' => $this->renderNote($note, $order),
-                'id' => $note->public_id,
-            ], 201);
-        }
-        return redirect()->to(route('tracking.orders.show', $order->reference()).'#tracking-one-time');
+        return $this->privateJson([
+            'note' => $this->renderNote($note, $order),
+            'id' => $note->public_id,
+        ], 201);
     }
 
     public function openOnce(Request $request, string $reference, string $note): JsonResponse
