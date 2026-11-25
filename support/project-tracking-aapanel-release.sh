@@ -32,6 +32,19 @@ health() {
   curl -4 -fLsS --connect-timeout 10 --max-time 25 \
     --resolve bambodia.com:443:127.0.0.1 -o /dev/null "https://bambodia.com$1"
 }
+(cd "$SITE" && runuser -u www -- "$PHP" -r '
+require "vendor/autoload.php";
+$app = require "bootstrap/app.php";
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+foreach (["tracking.index", "tracking.show"] as $view) {
+    if (!view()->exists($view)) {
+        fwrite(STDERR, "STOP: Laravel view finder cannot resolve ".$view.PHP_EOL);
+        exit(1);
+    }
+}
+echo "PASS: Laravel can resolve both tracking Blade templates".PHP_EOL;
+') ||
+  { echo 'STOP: Laravel could not find tracking views' >&2; exit 1; }
 health / && health /support-center || { echo 'STOP: Public website health check failed' >&2; exit 2; }
 
 STAGE="$(mktemp -d /root/bambodia-tracking-stage.XXXXXXXX)"
@@ -199,7 +212,14 @@ DEPLOYING=1
 while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   destination="$SITE/$file"
-  mkdir -p -- "$(dirname "$destination")"
+  directory="$(dirname "$destination")"
+  # The installer uses umask 077. Plain mkdir -p can create root:root 0700
+  # view directories that PHP-FPM's www user cannot traverse.
+  if [[ ! -e "$directory" ]]; then
+    install -d -o www -g www -m 0755 -- "$directory"
+  fi
+  [[ -d "$directory" && ! -L "$directory" ]] ||
+    { echo "STOP: Unsafe destination directory $directory" >&2; exit 2; }
   if [[ ! -e "$destination" ]]; then
     echo "$file" >> "$STAGE/installed-new.list"
   fi
@@ -213,6 +233,13 @@ done < "$STAGE/changed.list"
 echo '=== Apply additive tracking migration ==='
 (cd "$SITE" && runuser -u www -- "$PHP" artisan migrate \
   --path="$MIGRATION" --force --no-interaction --no-ansi)
+echo '=== Verify tracking templates are accessible to PHP-FPM ==='
+for view in tracking/index.blade.php tracking/show.blade.php; do
+  file="$SITE/resources/views/$view"
+  runuser -u www -- test -r "$file" ||
+    { echo "STOP: Tracking template unreadable by www: $view" >&2; exit 1; }
+done
+echo 'PASS: Both tracking views readable by www'
 echo '=== Clear compiled views and route cache ==='
 (cd "$SITE" && runuser -u www -- "$PHP" artisan view:clear --no-ansi)
 (cd "$SITE" && runuser -u www -- "$PHP" artisan route:clear --no-ansi)
