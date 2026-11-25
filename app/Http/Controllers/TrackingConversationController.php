@@ -39,7 +39,7 @@ final class TrackingConversationController extends Controller
         ]);
         abort_if(isset($filters['after'], $filters['before']), 422, 'Use only one message cursor.');
         $query = $order->serviceInquiry->messages()
-            ->with(['sender:id,name', 'trackingAttachments'])
+            ->with(['sender:id,name', 'sender.userProfile', 'trackingAttachments'])
             ->when(isset($filters['after']), fn ($q) => $q->where('id', '>', $filters['after']))
             ->when(isset($filters['before']), fn ($q) => $q->where('id', '<', $filters['before']));
         // New messages advance forward; older messages page backward.
@@ -109,7 +109,7 @@ final class TrackingConversationController extends Controller
         }
 
         if ($request->expectsJson()) {
-            $message->load(['sender:id,name', 'trackingAttachments']);
+            $message->load(['sender:id,name', 'sender.userProfile', 'trackingAttachments']);
             return $this->privateJson([
                 'message' => $this->renderMessage($message, $order),
                 'id' => $message->id,
