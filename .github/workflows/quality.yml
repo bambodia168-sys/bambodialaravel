@@ -46,6 +46,7 @@ jobs:
           node --check public/js/creator-studio-analytics.js
           bash -n support/project-tracking-aapanel-release.sh
           bash -n support/project-tracking-presets-aapanel-release.sh
+          bash -n support/project-tracking-chat-aapanel-release.sh
           node --check public/js/tracking-conversation.js
           node --check public/js/project-tracking.js
           python3 - <<'PY_CREATOR_STUDIO_MANIFEST'
