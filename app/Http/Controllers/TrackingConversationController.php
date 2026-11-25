@@ -99,7 +99,7 @@ final class TrackingConversationController extends Controller
                     route('tracking.orders.show', $order->reference(), false));
                 AuditEvent::record('inquiry.replied', $request->user(), $request);
                 return $message;
-            }, 3);
+            });
         } catch (Throwable $e) {
             // Database rollback never automatically deletes bytes in private local storage.
             if ($savedPaths !== []) {
