@@ -185,6 +185,7 @@ final class CreatorStudioAnalytics
             ->where('status', 'completed')->where('currency', 'USD')
             ->whereBetween('completed_at', [$start, $end])
             ->whereHas('paidAttempt')
+            ->whereDoesntHave('operations', fn (Builder $q) => $q->where('refund_status', 'refunded'))
             ->when($type !== 'all', fn (Builder $query) => $query->whereIn('marketplace_listing_id',
                 MarketplaceListing::query()->select('id')->where('type', $type)));
     }
