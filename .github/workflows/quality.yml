@@ -47,6 +47,8 @@ jobs:
           bash -n support/project-tracking-aapanel-release.sh
           bash -n support/project-tracking-presets-aapanel-release.sh
           bash -n support/project-tracking-chat-aapanel-release.sh
+          bash -n support/project-tracking-chat-reconciled-aapanel-release.sh
+          python3 support/project-tracking-chat-reconcile.py --self-test
           node --check public/js/tracking-conversation.js
           node --check public/js/project-tracking.js
           python3 - <<'PY_CREATOR_STUDIO_MANIFEST'
