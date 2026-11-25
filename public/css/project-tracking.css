@@ -239,6 +239,7 @@
 .project-tracking .tracking-chat-item.is-other{align-self:flex-start}
 .project-tracking .tracking-chat-item .tracking-avatar{width:35px;height:35px;flex:0 0 auto;
  color:var(--tracking-blue);background:var(--tracking-soft);font-weight:800;font-size:12px}
+.project-tracking .tracking-chat-item .tracking-avatar img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .project-tracking .tracking-chat-item.is-own .tracking-avatar{color:var(--tracking-violet);
  background:color-mix(in srgb,var(--tracking-violet) 12%,var(--surface))}
 .project-tracking .tracking-chat-item .tracking-chat-body{min-width:0;max-width:100%;
