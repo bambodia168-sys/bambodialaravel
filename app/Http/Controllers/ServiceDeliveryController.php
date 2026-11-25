@@ -36,7 +36,7 @@ class ServiceDeliveryController extends Controller
                 'The buyer submitted the requirements for this order.');
         }, 3);
 
-        return redirect()->route('inquiries.show', $inquiry)->with('status', 'Requirements sent.');
+        return $this->afterAction($request, $inquiry, 'Requirements sent.');
     }
 
     public function submit(Request $request, ServiceInquiry $inquiry): RedirectResponse
@@ -68,7 +68,7 @@ class ServiceDeliveryController extends Controller
             throw $exception;
         }
 
-        return redirect()->route('inquiries.show', $inquiry)->with('status', 'Delivery submitted for buyer review.');
+        return $this->afterAction($request, $inquiry, 'Delivery submitted for buyer review.');
     }
 
     public function decide(Request $request, ServiceInquiry $inquiry): RedirectResponse
@@ -101,8 +101,8 @@ class ServiceDeliveryController extends Controller
                 $accepted ? 'The buyer accepted your delivery.' : 'Read the buyer’s feedback before resubmitting.');
         }, 3);
 
-        return redirect()->route('inquiries.show', $inquiry)
-            ->with('status', $data['decision'] === 'accept' ? 'Delivery accepted.' : 'Revision requested.');
+        return $this->afterAction($request, $inquiry,
+            $data['decision'] === 'accept' ? 'Delivery accepted.' : 'Revision requested.');
     }
 
     public function download(Request $request, ServiceInquiry $inquiry, string $delivery): BinaryFileResponse
@@ -121,6 +121,16 @@ class ServiceDeliveryController extends Controller
             'Cross-Origin-Resource-Policy' => 'same-origin',
             'Content-Security-Policy' => 'sandbox',
         ]);
+    }
+
+    private function afterAction(Request $request, ServiceInquiry $inquiry, string $message): RedirectResponse
+    {
+        if ($request->boolean('tracking') && $inquiry->hasVerifiedOrder()) {
+            return redirect()->route('tracking.orders.show', $inquiry->order->reference())
+                ->with('status', $message);
+        }
+
+        return redirect()->route('inquiries.show', $inquiry)->with('status', $message);
     }
 
     private function authorizeWorkspace(Request $request, ServiceInquiry $inquiry, ?string $role = null): void
