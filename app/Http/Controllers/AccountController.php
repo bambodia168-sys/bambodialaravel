@@ -10,6 +10,7 @@ use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
 use App\Models\SavedJob;
 use App\Models\ServiceInquiry;
+use App\Support\CreatorStudioAnalytics;
 use App\Support\ManualAccountReview;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
@@ -115,6 +116,8 @@ class AccountController extends Controller
             ->where('status','open')->latest('updated_at')->limit(4)
             ->get(['id','subject','updated_at']);
 
-        return view('account.studio',compact('user','stats','recentListings','openInquiries'));
+        $analytics = app(CreatorStudioAnalytics::class)->report((int) $user->id);
+
+        return view('account.studio',compact('user','stats','recentListings','openInquiries','analytics'));
     }
 }
