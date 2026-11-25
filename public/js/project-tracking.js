@@ -27,6 +27,7 @@
     // introduce a new write endpoint or alter the creator-only task policy.
     const presetForm=dashboard.querySelector('[data-task-preset-form]');
     if(presetForm){
+      presetForm.closest('.tracking-task-presets')?.classList.add('is-enhanced');
       const picker=presetForm.querySelector('[data-task-preset-select]');
       const title=presetForm.querySelector('[data-task-title]');
       const hint=presetForm.querySelector('[data-task-preset-hint]');
