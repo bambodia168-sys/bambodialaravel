@@ -85,7 +85,7 @@ final class ProjectTrackingController extends Controller
         $inquiry = $order->serviceInquiry;
         $inquiry->load(['client:id,name', 'creator:id,name']);
         $messageTotal = $inquiry->messages()->count();
-        $messages = $inquiry->messages()->with(['sender:id,name', 'trackingAttachments'])
+        $messages = $inquiry->messages()->with(['sender:id,name', 'sender.userProfile', 'trackingAttachments'])
             ->latest('id')->limit(30)->get()->reverse()->values();
         $hasEarlierMessages = $messageTotal > $messages->count();
         $oneTimeNotes = \App\Models\TrackingOneTimeNote::query()
