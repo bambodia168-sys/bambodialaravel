@@ -22,6 +22,7 @@ use App\Http\Controllers\Dashboard\AiDraftSettingsController;
 use App\Http\Controllers\SavedJobController;
 use App\Http\Controllers\SavedListingController;
 use App\Http\Controllers\Creator\CreatorProfileController;
+use App\Http\Controllers\Creator\StudioAnalyticsController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PrivacyRequestController;
 use App\Http\Controllers\Dashboard\PrivacyRequestManagerController;
@@ -470,6 +471,12 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/creator/apply', [CreatorApplicationController::class, 'show'])->name('creator.apply');
     Route::post('/creator/apply', [CreatorApplicationController::class, 'submit'])->name('creator.apply.store')->middleware('throttle:3,1');
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
+        Route::get('/analytics/data', [StudioAnalyticsController::class, 'data'])->name('studio.analytics.data');
+        Route::post('/analytics/preferences', [StudioAnalyticsController::class, 'preferences'])->name('studio.analytics.preferences')->middleware('throttle:10,1');
+        Route::post('/analytics/time', [StudioAnalyticsController::class, 'logTime'])->name('studio.analytics.time.store')->middleware('throttle:20,1');
+        Route::delete('/analytics/time/{entry}', [StudioAnalyticsController::class, 'deleteTime'])->whereNumber('entry')->name('studio.analytics.time.destroy')->middleware('throttle:20,1');
+        Route::post('/analytics/expense', [StudioAnalyticsController::class, 'logExpense'])->name('studio.analytics.expense.store')->middleware('throttle:20,1');
+        Route::delete('/analytics/expense/{entry}', [StudioAnalyticsController::class, 'deleteExpense'])->whereNumber('entry')->name('studio.analytics.expense.destroy')->middleware('throttle:20,1');
         Route::get('/orders', [CommerceOrderController::class, 'index'])->name('studio.orders.index');
         Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->where('number', OrderReference::ROUTE)->name('studio.orders.show');
         Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->where('number', OrderReference::ROUTE)->name('studio.orders.receipt');
