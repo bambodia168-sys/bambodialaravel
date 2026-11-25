@@ -9,7 +9,7 @@ use App\Models\ServiceInquiryMessage;
 use App\Models\TrackingMessageAttachment;
 use App\Models\TrackingOneTimeNote;
 use App\Support\ContractArtifact;
-use App\Support\SupportMessageContent;
+use App\Support\TrackingYouTubeContent;
 use App\Support\SupportTicketFiles;
 use App\Support\VaultMalwareScanner;
 use App\Support\VerifiedTrackingOrder;
@@ -72,7 +72,7 @@ final class TrackingConversationController extends Controller
         if ($body === '' && $files !== []) {
             $body = '<p>Reference files attached.</p>';
         }
-        $safeBody = SupportMessageContent::prepare($body, 2);
+        $safeBody = TrackingYouTubeContent::prepare($body);
         $savedPaths = [];
 
         try {
