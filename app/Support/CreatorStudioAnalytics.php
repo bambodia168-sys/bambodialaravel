@@ -30,7 +30,7 @@ final class CreatorStudioAnalytics
         };
         $end = $now->endOfDay();
         [$labels, $bucketCount] = $this->labels($start, $period);
-        $paid = $this->sales($creatorId, $start, $end, $type)->get(['id', 'buyer_id', 'completed_at', 'total']);
+        $paid = $this->sales($creatorId, $start, $end, $type)->get(['id', 'buyer_id', 'marketplace_listing_id', 'completed_at', 'total']);
         $time = DB::table('creator_studio_time_entries')->where('user_id', $creatorId)
             ->whereBetween('logged_on', [$start->toDateString(), $end->toDateString()])
             ->when($type !== 'all', fn ($q) => $q->where('work_type', $type))
@@ -80,6 +80,15 @@ final class CreatorStudioAnalytics
             ->when($type !== 'all', fn (Builder $q) => $q->whereIn('marketplace_listing_id',
                 MarketplaceListing::query()->select('id')->where('type', $type)))
             ->select('status')->get()->countBy('status');
+        $salesTypes = MarketplaceListing::query()->whereIn('id', $paid->pluck('marketplace_listing_id')->unique()->all())
+            ->pluck('type', 'id');
+        $revenueByType = ['product' => 0.0, 'project' => 0.0, 'freelance' => 0.0, 'service' => 0.0];
+        foreach ($paid as $sale) {
+            $kind = $salesTypes[$sale->marketplace_listing_id] ?? null;
+            if ($kind !== null && array_key_exists($kind, $revenueByType)) {
+                $revenueByType[$kind] += (float) $sale->total;
+            }
+        }
         $groupedByBuyer = $paid->groupBy('buyer_id');
         $repeatRevenue = $groupedByBuyer->filter(fn (Collection $orders) => $orders->count() > 1)
             ->flatten(1)->sum(fn ($order) => (float) $order->total);
@@ -150,6 +159,11 @@ final class CreatorStudioAnalytics
             'total_revenue' => $revenueTotal,
             'total_expenses' => $expenseTotal,
             'sales_minus_expenses' => round($revenueTotal - $expenseTotal, 2),
+            'observed_margin_percent' => $revenueTotal > 0
+                ? round(($revenueTotal - $expenseTotal) / $revenueTotal * 100, 1) : null,
+            'sales_per_logged_billable_hour' => $billableTotal > 0
+                ? round($revenueTotal / $billableTotal, 2) : null,
+            'revenue_by_type' => array_map(static fn ($sum) => round($sum, 2), $revenueByType),
             'billable_hours' => $billableTotal,
             'non_billable_hours' => $nonBillableTotal,
             'monthly_goal' => $monthlyGoal,
