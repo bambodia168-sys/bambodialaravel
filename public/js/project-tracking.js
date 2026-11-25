@@ -51,6 +51,7 @@
       const applyPreset=value=>{
         if(!value)return;
         title.value=value;
+        if(picker)picker.value=value;
         synchronize();
         title.focus();
         title.setSelectionRange(title.value.length,title.value.length);
