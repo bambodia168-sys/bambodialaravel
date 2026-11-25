@@ -11,7 +11,7 @@ umask 077
 [[ "$(id -u)" -eq 0 ]] || { echo 'STOP: Root privileges required' >&2; exit 2; }
 MODE="$1"
 REPO="bambodia168-sys/bambodialaravel"
-TARGET="7ae0d1c80fa3f8f2d2f0a64928f7c25cf2f88000"
+TARGET="acf3dacec312530654514ece2ba244b7ffcf6782"
 SITE="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
 for cmd in git curl tar install mktemp runuser; do
@@ -56,10 +56,10 @@ app/Support/TrackingYouTubeContent.php|NEW|bb95c0848f1a0acf34f0613e24dd5cfa21df5
 app/Support/SupportMessageContent.php|d5ac4cbfb06d4f8b8155ce2ab26f9fe196078fcf|f16254fb2b651ac2c874c877f0462fde822c0ad4
 app/Http/Controllers/TrackingConversationController.php|fc98ef4d0fde892ff37250d4a5618fbbaa4b5d33|e602a6c4a3a00b7e34d9214cad79cd177d7d095d
 resources/views/tracking/partials/message.blade.php|62e23ed6811e38ce9e9b21ec3eccaafef793e666|d70fc3c46e1f07c7f5ac777048b13e5af3aadefc
-public/js/support-ticket-editor.js|86736a07456d7f4c37d2ae53ca1b877216a06d73|f68c7a152472e62d27c628977c4b10511b5710c0
+public/js/tracking-rich-editor.js|NEW|4b731e07be50e57e7ab266286617cdd87919dad4
 public/js/tracking-conversation.js|f6eb8852f08a8ec48c5b61a8f010d20eabbfe098|1775fced617b56be690794e6428caa4df25c9c38
 public/css/project-tracking.css|c0eac514e73b3cb9a69ef1658b9307e5bc3ec65a|43abd264a384c1f6dac3d3f433b3835dffce5e4c
-resources/views/tracking/show.blade.php|ec526dd1bdd2939f0d0591ae6510227e5656d585|fb7e0a3fb23ca64a77b41c01c13a4b0feaa6a208
+resources/views/tracking/show.blade.php|ec526dd1bdd2939f0d0591ae6510227e5656d585|39aa020eb5a270455272e929037fae8bd949fb9e
 MANIFEST
 
 echo '=== Verify source blobs and compatibility ==='
@@ -102,7 +102,7 @@ for file in \
   "$PHP" -l "$WORK/target/$file"
 done
 if command -v node >/dev/null; then
-  node --check "$WORK/target/public/js/support-ticket-editor.js"
+  node --check "$WORK/target/public/js/tracking-rich-editor.js"
   node --check "$WORK/target/public/js/tracking-conversation.js"
 fi
 echo 'PASS: PHP, JS and all 8 pinned file hashes'
