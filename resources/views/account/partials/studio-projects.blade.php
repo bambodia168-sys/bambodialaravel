@@ -2,7 +2,7 @@
   <article class="studio-chart-card studio-projects">
     <div class="studio-card-title"><div><h3>Contract health &amp; milestones</h3>
       <p>Real freelance agreements, accepted milestones, and due dates</p></div>
-      <a class="studio-small-link" href="{{ route('contracts.index', ['workspace'=>'creator']) }}">View contracts <x-icon name="arrow-up-right" size="15"/></a></div>
+      <a class="studio-small-link" href="{{ route('contracts.index', ['workspace'=>'creator']) }}">View contracts </a></div>
     <div class="studio-table-wrap">
       <table class="studio-project-table">
         <thead><tr><th scope="col">Contract &amp; client</th><th scope="col">Status</th>
