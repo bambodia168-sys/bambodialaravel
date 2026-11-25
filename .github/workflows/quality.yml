@@ -49,6 +49,7 @@ jobs:
           bash -n support/project-tracking-chat-aapanel-release.sh
           bash -n support/project-tracking-chat-reconciled-aapanel-release.sh
           bash -n support/project-tracking-chat-ui-aapanel-release.sh
+          bash -n support/project-tracking-youtube-aapanel-release.sh
           python3 support/project-tracking-chat-reconcile.py --self-test
           node --check public/js/tracking-conversation.js
           node --check public/js/project-tracking.js
