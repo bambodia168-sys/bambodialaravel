@@ -98,8 +98,8 @@
     }
 
     function renderProjects(d) {
-      const tbody=root.querySelector('[data-studio-project-rows]');
-      const timeline=root.querySelector('[data-studio-timeline]');
+      const tbody=document.querySelector('.studio-dashboard [data-studio-project-rows]');
+      const timeline=document.querySelector('.studio-dashboard [data-studio-timeline]');
       if (!tbody || !timeline) return;
       tbody.replaceChildren();
       const projects=Array.isArray(d.projects)?d.projects:[];
@@ -146,6 +146,8 @@
       const hoursTotal=root.querySelector('[data-hours-total]');
       if (totalRevenue) totalRevenue.textContent=money(d.total_revenue);
       if (hoursTotal) hoursTotal.textContent=decimal(n(d.billable_hours)+n(d.non_billable_hours))+' h';
+      const windowStart=root.querySelector('[data-window-start]');
+      if(windowStart) windowStart.textContent=d.start;
       const kpis={total_revenue:money(d.total_revenue),billable_hours:decimal(d.billable_hours)+' h',
         sales_minus_expenses:money(d.sales_minus_expenses),projects:String((d.projects||[]).length)};
       Object.entries(kpis).forEach(([key,value])=>{
