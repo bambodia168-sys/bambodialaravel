@@ -1,5 +1,5 @@
-/* Private support ticket editor. Visual editor, HTML source, media and programming code.
-   Server-side SupportMessageContent sanitizes again before every database write. */
+/* Private Project Tracking rich editor: isolated from the support-ticket editor.
+   The TrackingYouTubeContent + SupportMessageContent server pipeline validates all writes. */
 (() => {
   'use strict';
   const allowedTags = new Set('p div br h2 h3 h4 strong b em i u s del mark ul ol li blockquote pre code a hr table thead tbody tr th td span sup sub img audio video iframe'.split(' '));
