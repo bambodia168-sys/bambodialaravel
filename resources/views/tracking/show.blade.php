@@ -4,7 +4,7 @@
 @push('head')
 <link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=5">
 <link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=5">
-<script defer src="{{ asset('js/support-ticket-editor.js') }}?v=4"></script>
+<script defer src="{{ asset('js/tracking-rich-editor.js') }}?v=1"></script>
 <script defer src="{{ asset('js/project-tracking.js') }}?v=3"></script>
 <script defer src="{{ asset('js/tracking-conversation.js') }}?v=3"></script>
 @endpush
