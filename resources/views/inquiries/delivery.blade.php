@@ -18,6 +18,7 @@
     <div class="onboarding-content">
       <form method="post" action="{{ route('inquiries.delivery.requirements', $inquiry) }}" class="creator-application-form">
         @csrf
+        @if(!empty($trackingMode))<input type="hidden" name="tracking" value="1">@endif
         <label for="service-requirements">Order requirements</label>
         <textarea id="service-requirements" name="requirements" rows="5" minlength="10" maxlength="4900" required>{{ old('requirements') }}</textarea>
         @error('requirements')<p class="hint" role="alert">{{ $message }}</p>@enderror
@@ -28,6 +29,7 @@
     <div class="onboarding-content">
       <form method="post" action="{{ route('inquiries.delivery.submit', $inquiry) }}" class="creator-application-form" enctype="multipart/form-data">
         @csrf
+        @if(!empty($trackingMode))<input type="hidden" name="tracking" value="1">@endif
         <label for="delivery-notes">Delivery notes</label>
         <textarea id="delivery-notes" name="notes" rows="5" minlength="10" maxlength="5000" required>{{ old('notes') }}</textarea>
         @error('notes')<p class="hint" role="alert">{{ $message }}</p>@enderror
@@ -41,7 +43,8 @@
   @elseif($buyer && $deliveryStatus === 'delivered' && $currentDelivery)
     <div class="onboarding-content">
       <form method="post" action="{{ route('inquiries.delivery.decide', $inquiry) }}" class="creator-application-form">
-        @csrf @method('PATCH')
+        @csrf
+        @if(!empty($trackingMode))<input type="hidden" name="tracking" value="1">@endif @method('PATCH')
         <input type="hidden" name="delivery" value="{{ $currentDelivery->id }}">
         <label for="delivery-feedback">Feedback (required for revisions)</label>
         <textarea id="delivery-feedback" name="feedback" rows="4" maxlength="5000">{{ old('feedback') }}</textarea>
