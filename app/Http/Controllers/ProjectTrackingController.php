@@ -20,6 +20,16 @@ final class ProjectTrackingController extends Controller
     private const TYPES = ['service', 'project', 'freelance'];
     private const TASK_STATUSES = ['planned', 'in_progress', 'completed'];
 
+    public function creatorIndex(Request $request): View
+    {
+        return $this->index($request, 'creator');
+    }
+
+    public function customerIndex(Request $request): View
+    {
+        return $this->index($request, 'account');
+    }
+
     public function index(Request $request, string $workspace): View
     {
         abort_unless(config('commerce.enabled'), 404);
