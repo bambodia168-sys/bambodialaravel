@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=3">
 <script defer src="{{ asset('js/support-ticket-editor.js') }}?v=3"></script>
 <script defer src="{{ asset('js/project-tracking.js') }}?v=3"></script>
+<script defer src="{{ asset('js/tracking-conversation.js') }}?v=1"></script>
 @endpush
 @section('content')
 @php
