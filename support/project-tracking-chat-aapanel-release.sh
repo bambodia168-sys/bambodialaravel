@@ -7,7 +7,7 @@ umask 077
 [[ "$(id -u)" == "0" ]] || { echo 'STOP: Root required' >&2; exit 2; }
 MODE="$1"
 REPO="bambodia168-sys/bambodialaravel"
-TARGET="c01269b1857a50a81bfe1c60f2ce6d20396579dc"
+TARGET="2c7a7759a3f83be97ff98896ded31881cfddd330"
 SITE="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
 MIGRATION="database/migrations/2026_11_25_220000_add_tracking_chat_attachments_and_one_time_notes.php"
@@ -40,19 +40,19 @@ mkdir -p "$STAGE/target"
 : > "$STAGE/install-list"
 : > "$STAGE/live-hashes"
 cat > "$STAGE/manifest" <<'MANIFEST'
-app/Http/Controllers/ProjectTrackingController.php|1db6f4d3e07aaa5c65ed647186bab16ee82cacd2|4517980f07c20f4580985d60f5177f3a07025e6f
-app/Http/Controllers/TrackingConversationController.php|NEW|2076af63c811134810fb1cb032c18e996fb68504
+app/Http/Controllers/ProjectTrackingController.php|1db6f4d3e07aaa5c65ed647186bab16ee82cacd2|c16576e5ee99cd78e99a42ce0a8b9c3710638211
+app/Http/Controllers/TrackingConversationController.php|NEW|fc98ef4d0fde892ff37250d4a5618fbbaa4b5d33
 app/Models/ServiceInquiryMessage.php|e8e80b909b5446199d351268ce703a894c776be7|db039d9fd0f09be74459bcb16babe832700c4d85
 app/Models/TrackingMessageAttachment.php|NEW|592d9123c751606c6472ad46a52733428333a29c
 app/Models/TrackingOneTimeNote.php|NEW|c6f5e68ad163fc2aa016d53951d9772659bcab1f
 app/Models/AuditEvent.php|3b0c02c7f331178fe4abdb1acd2bc895bb2f2b89|478ab1fd7d6ed75028aca3e64ced4a572f286a27
 app/Support/VerifiedTrackingOrder.php|NEW|9cefcbeda4a79a114c7613183ebfa2e00baac7ee
 database/migrations/2026_11_25_220000_add_tracking_chat_attachments_and_one_time_notes.php|NEW|214a1027aec88bcf1405a202f0d5750df81e6b76
-public/css/project-tracking.css|b531c1aa45c02c491df20cd1276355b54bece18e|eaa6a35c765ab9d16528e7dbde1a24962fccf705
+public/css/project-tracking.css|b531c1aa45c02c491df20cd1276355b54bece18e|694aca53315bb0e9093fcc8a8f68e706d3eed3b5
 public/js/tracking-conversation.js|NEW|6c77fcfb65824c25ae2c94c9db41a7662fb1b4b6
 resources/views/inquiries/show.blade.php|d0e9812a4a5b4813227df74602b18c597d90f9e2|8cc471b1a23f341e47e3eb65511a7abf91edacad
 resources/views/tracking/show.blade.php|c9ecf0ffe05909665ccfae570b5103039e4c0839|ce1f2b9edd865755bb1beef129a090d5643141f4
-resources/views/tracking/partials/message.blade.php|NEW|26b70e33bb33ade268cbd105630132b64ee789e8
+resources/views/tracking/partials/message.blade.php|NEW|bfd0815d02d57f3d19e0d9563b6443d90c73390a
 resources/views/tracking/partials/one-time-note.blade.php|NEW|6cd886889e0bd1c52822e9ccfd84039017ce3b96
 routes/web.php|58ee4b4b2c663b445b0a4dfa11e326ceda84c2a9|06500fdb62a395cd15795a52e3ab6335cbd92953
 MANIFEST
