@@ -55,6 +55,7 @@ use App\Http\Controllers\AccountNotificationController;
 use App\Http\Controllers\Dashboard\NotificationAnalyticsController;
 use App\Http\Controllers\ServiceInquiryController;
 use App\Http\Controllers\ServiceDeliveryController;
+use App\Http\Controllers\ProjectTrackingController;
 use App\Http\Controllers\Dashboard\ServiceManagerController;
 use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\JobBoardController;
@@ -361,6 +362,19 @@ Route::middleware('auth')->group(function (): void {
         ->name('account.notifications.tray')->middleware('throttle:30,1');
     Route::patch('/account/notifications/read-all', [AccountNotificationController::class, 'readAll'])->name('account.notifications.read-all');
     Route::patch('/account/notifications/{notification}', [AccountNotificationController::class, 'read'])->name('account.notifications.read');
+    Route::get('/account/tracking', [ProjectTrackingController::class, 'customerIndex'])->name('account.tracking.index');
+    Route::get('/tracking/orders/{reference}', [ProjectTrackingController::class, 'show'])
+        ->where('reference', OrderReference::ROUTE)->name('tracking.orders.show');
+    Route::post('/tracking/orders/{reference}/tasks', [ProjectTrackingController::class, 'addTask'])
+        ->where('reference', OrderReference::ROUTE)->middleware('throttle:12,1')->name('tracking.tasks.store');
+    Route::patch('/tracking/orders/{reference}/tasks/{task}', [ProjectTrackingController::class, 'updateTask'])
+        ->where('reference', OrderReference::ROUTE)->whereNumber('task')
+        ->middleware('throttle:20,1')->name('tracking.tasks.update');
+    Route::post('/tracking/orders/{reference}/extensions', [ProjectTrackingController::class, 'requestExtension'])
+        ->where('reference', OrderReference::ROUTE)->middleware('throttle:6,1')->name('tracking.extensions.store');
+    Route::patch('/tracking/orders/{reference}/extensions/{extension}', [ProjectTrackingController::class, 'decideExtension'])
+        ->where('reference', OrderReference::ROUTE)->whereNumber('extension')
+        ->middleware('throttle:8,1')->name('tracking.extensions.decide');
     Route::get('/account/inquiries', [ServiceInquiryController::class, 'index'])->name('account.inquiries');
     Route::get('/inquiries/{inquiry}', [ServiceInquiryController::class, 'show'])->name('inquiries.show');
     Route::post('/inquiries/for/{listing}', [ServiceInquiryController::class, 'store'])
@@ -477,6 +491,7 @@ Route::middleware('auth')->group(function (): void {
         Route::delete('/analytics/time/{entry}', [StudioAnalyticsController::class, 'deleteTime'])->whereNumber('entry')->name('studio.analytics.time.destroy')->middleware('throttle:20,1');
         Route::post('/analytics/expense', [StudioAnalyticsController::class, 'logExpense'])->name('studio.analytics.expense.store')->middleware('throttle:20,1');
         Route::delete('/analytics/expense/{entry}', [StudioAnalyticsController::class, 'deleteExpense'])->whereNumber('entry')->name('studio.analytics.expense.destroy')->middleware('throttle:20,1');
+        Route::get('/tracking', [ProjectTrackingController::class, 'creatorIndex'])->name('studio.tracking.index');
         Route::get('/orders', [CommerceOrderController::class, 'index'])->name('studio.orders.index');
         Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->where('number', OrderReference::ROUTE)->name('studio.orders.show');
         Route::get('/orders/{number}/receipt', [CommerceOrderController::class, 'receipt'])->where('number', OrderReference::ROUTE)->name('studio.orders.receipt');
