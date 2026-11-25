@@ -7,8 +7,11 @@
 <article id="tracking-message-{{ $message->id }}" data-message-id="{{ $message->id }}"
   class="tracking-chat-item {{ $mine ? 'is-own' : 'is-other' }}">
   <span class="tracking-avatar" aria-hidden="true">
-    @if($avatarUrl)<img src="{{ $avatarUrl }}" alt="" loading="lazy" referrerpolicy="no-referrer">
-    @else{{ mb_strtoupper(mb_substr($displayName, 0, 1)) }}@endif
+    @if($avatarUrl)
+      <img src="{{ $avatarUrl }}" alt="" loading="lazy" referrerpolicy="no-referrer">
+    @else
+      {{ mb_strtoupper(mb_substr($displayName, 0, 1)) }}
+    @endif
   </span>
   <div class="tracking-chat-body">
     <div class="tracking-chat-meta">
