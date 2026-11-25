@@ -12,7 +12,7 @@ MODE="$1"
 
 REPO="bambodia168-sys/bambodialaravel"
 BASE="7099f919d92db0716a590081160847f812eb718c"
-TARGET="b1a727bc72d910e4f52460def9d8ecf09915f408"
+TARGET="55047c023c17996af39ca972e9dab187462f20a3"
 SITE="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
 MIGRATION="database/migrations/2026_11_25_170000_create_verified_order_tracking_tables.php"
@@ -75,6 +75,7 @@ cat > "$STAGE/manifest" <<'MANIFEST'
 app/Http/Controllers/ProjectTrackingController.php|NEW|1db6f4d3e07aaa5c65ed647186bab16ee82cacd2
 app/Http/Controllers/ServiceDeliveryController.php|256c567e995deb4d040876b3dd2fd48f0638fb16|12045fef4e58c50595b9378ec1ac4a528627e89c
 app/Models/AccountNotification.php|4d9822debd7bcc26cb28fb2ab40e3001af119e74|5b9b8c7f01d1e3894445a1869f134496e918fc61
+app/Models/AuditEvent.php|3a6cf98650a95cceb3a822dc3b4579c5dc2e4d69|3b0c02c7f331178fe4abdb1acd2bc895bb2f2b89
 database/migrations/2026_11_25_170000_create_verified_order_tracking_tables.php|NEW|1afbf918bf3556e401f46dad20309cdeb75ef26a
 public/css/project-tracking.css|NEW|63f0118d509c0a697b2a041bd2874c41e1721dfe
 public/js/project-tracking.js|NEW|a3368f45ab66af6301f67f479eb745593ef41fa8
