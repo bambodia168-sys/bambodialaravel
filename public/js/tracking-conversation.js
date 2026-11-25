@@ -30,6 +30,8 @@
     const older = chat?.querySelector('[data-chat-older]');
     const chatError = chat?.querySelector('[data-chat-error]');
     const chatCount = chat?.querySelector('[data-chat-count]');
+    const chatCountLabel = chat?.querySelector('[data-chat-count-label]');
+    const chatCounter = chat?.querySelector('[data-chat-counter]');
     let checking = false;
     let sending = false;
 
@@ -44,7 +46,12 @@
       }
     };
     const refreshCount = value => {
-      if (chatCount && Number.isSafeInteger(Number(value))) chatCount.textContent=String(value);
+      const number = Number(value);
+      if (!Number.isSafeInteger(number) || number < 0) return;
+      const word = number === 1 ? 'message' : 'messages';
+      if (chatCount) chatCount.textContent = String(number);
+      if (chatCountLabel) chatCountLabel.textContent = word;
+      if (chatCounter) chatCounter.setAttribute('aria-label', number + ' ' + word);
     };
     const nearBottom = () => thread && (thread.scrollHeight-thread.scrollTop-thread.clientHeight) < 100;
     const scrollDown = force => {
