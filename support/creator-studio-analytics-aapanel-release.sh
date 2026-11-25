@@ -11,7 +11,7 @@ MODE="$1"
 
 REPO="bambodia168-sys/bambodialaravel"
 BASE="4fc61f102131c27a5c7d1fd85fc76ae6b2c03e7a"
-TARGET="5ccea23b80a91b0865b5e523390dcf1838c5bd5d"
+TARGET="d5e18a5609ea63eb50df018eacc049c848394ae8"
 SITE="/www/wwwroot/bambodia-staging-qa"
 PHP="/www/server/php/85/bin/php"
 MIGRATION="database/migrations/2026_11_25_010000_create_creator_studio_analytics_tables.php"
@@ -79,8 +79,8 @@ database/migrations/2026_11_25_010000_create_creator_studio_analytics_tables.php
 public/css/creator-studio-analytics.css|NEW|eb398dae460bcf4b071e46e887c4803fde076774
 public/js/creator-studio-analytics.js|NEW|ac2c82e555319ee89fd0e12845944fdf9558a6c9
 resources/views/account/studio.blade.php|ff7abb27853a22a1dd4ef374a36b5cefd8b4df1b|47cf0056e7eea43b0cdafecdbcbd76995ccddc81
-resources/views/account/partials/studio-performance.blade.php|NEW|32fcf4094cfe03174a679ca5030deac659797d01
-resources/views/account/partials/studio-projects.blade.php|NEW|9af961039d7205d62414d89f30fe446ed80d19fa
+resources/views/account/partials/studio-performance.blade.php|NEW|47ee1e29119b3a8a200e1d8b6ac1588e4b7e7ad7
+resources/views/account/partials/studio-projects.blade.php|NEW|efa7639c3302ab0d1b213d28c170966056991c4a
 resources/views/account/partials/studio-tracking.blade.php|NEW|43a4bc730a50fbed0ba480043abfad3f733b42fb
 routes/web.php|198146f5b3e6bb38b64aadaa10a511421abdb911|a69726f90753eb50a118eca66873d9ce1bd2e7ab
 MANIFEST
