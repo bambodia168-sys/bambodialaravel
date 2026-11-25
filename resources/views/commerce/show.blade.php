@@ -80,7 +80,12 @@
           <h2>Service workspace</h2>
           <p>{{ \App\Models\ServiceInquiry::DELIVERY_STATUSES[$order->serviceInquiry->deliveryStatus()] }}</p>
         </div>
-        <a class="btn primary" href="{{ route('inquiries.show', $order->serviceInquiry) }}">Open service workspace</a>
+        <div class="panel-actions">
+          @if($order->status === 'completed' && $order->paidAttempt()->exists())
+            <a class="btn primary" href="{{ route('tracking.orders.show', $order->reference()) }}">Track project &amp; delivery</a>
+          @endif
+          <a class="btn subtle" href="{{ route('inquiries.show', $order->serviceInquiry) }}">Original service workspace</a>
+        </div>
       </div>
     </section>
   @elseif($section === 'account.orders' && $order->relationLoaded('entitlement') && $order->entitlement?->isActive()
