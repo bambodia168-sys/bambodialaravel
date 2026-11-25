@@ -3,10 +3,10 @@
 @section('title', 'Project Tracking')
 @push('head')
 <link rel="stylesheet" href="{{ asset('css/support-tickets.css') }}?v=5">
-<link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('css/project-tracking.css') }}?v=4">
 <script defer src="{{ asset('js/support-ticket-editor.js') }}?v=3"></script>
 <script defer src="{{ asset('js/project-tracking.js') }}?v=3"></script>
-<script defer src="{{ asset('js/tracking-conversation.js') }}?v=1"></script>
+<script defer src="{{ asset('js/tracking-conversation.js') }}?v=2"></script>
 @endpush
 @section('content')
 @php
@@ -71,7 +71,11 @@
             <h2 id="tracking-chat-title">Customer &amp; creator messages</h2>
             <p>Secure, private discussion for this order. New messages appear here without reloading the page.</p>
           </div>
-          <span class="tracking-chat-count"><x-icon name="message" size="15"/><span data-chat-count>{{ $messageTotal }}</span> messages</span>
+          <span class="tracking-chat-count" data-chat-counter aria-label="{{ $messageTotal }} {{ $messageTotal === 1 ? 'message' : 'messages' }}">
+            <x-icon name="message" size="15"/>
+            <span data-chat-count>{{ $messageTotal }}</span>
+            <span data-chat-count-label>{{ $messageTotal === 1 ? 'message' : 'messages' }}</span>
+          </span>
         </div>
         <div class="tracking-chat-presence">
           <span class="tracking-presence-avatars" aria-hidden="true">
