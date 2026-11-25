@@ -10,9 +10,11 @@ use App\Models\MarketplaceListing;
 use App\Models\SavedListing;
 use App\Models\SavedJob;
 use App\Models\ServiceInquiry;
+use App\Support\CreatorStudioAnalytics;
 use App\Support\ManualAccountReview;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -83,7 +85,7 @@ class AccountController extends Controller
             ->with('status', 'Your profile was updated.');
     }
 
-    public function studio(Request $request): View|RedirectResponse
+    public function studio(Request $request): Response|RedirectResponse
     {
         abort_unless($request->user()->isCreator(), 403);
         $id = $request->user()->public_id;
@@ -115,6 +117,9 @@ class AccountController extends Controller
             ->where('status','open')->latest('updated_at')->limit(4)
             ->get(['id','subject','updated_at']);
 
-        return view('account.studio',compact('user','stats','recentListings','openInquiries'));
+        $analytics = app(CreatorStudioAnalytics::class)->report((int) $user->id);
+
+        return response()->view('account.studio',compact('user','stats','recentListings','openInquiries','analytics'))
+            ->header('Cache-Control', 'private, no-store');
     }
 }
