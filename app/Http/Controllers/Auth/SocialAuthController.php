@@ -68,6 +68,10 @@ final class SocialAuthController extends Controller
             return SignIn::external($request, $identity->user, $provider);
         }
 
+        if ($provider === 'linkedin') {
+            return SocialLinkedInController::begin($request, $profile, $subject);
+        }
+
         // Google is authoritative for verified @gmail.com / @googlemail.com
         // addresses. Recover existing accounts from before explicit social
         // identities were introduced, but never trust an unverified email or
@@ -181,7 +185,7 @@ final class SocialAuthController extends Controller
     private function redirectToProvider(Request $request, string $provider, ?int $userId = null): RedirectResponse
     {
         $driver = $this->driver($provider);
-        $request->session()->forget('social_google.registration');
+        $request->session()->forget(['social_google.registration', SocialLinkedInController::SESSION_KEY]);
         $request->session()->put('social_login.attempt', ['provider' => $provider, 'user' => $userId, 'at' => now()->timestamp]);
 
         return $driver->redirect();
