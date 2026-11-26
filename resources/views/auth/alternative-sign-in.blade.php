@@ -1,10 +1,11 @@
 @php
-  $passkeysEnabled = \App\Support\SystemSecurity::enabled('passkeys');
+  $passkeysEnabled = !($registrationOnly ?? false) && \App\Support\SystemSecurity::enabled('passkeys');
   $enabledProviders = \App\Models\SocialLoginProvider::enabledProviders();
+  if ($registrationOnly ?? false) $enabledProviders = array_intersect($enabledProviders, ['google','linkedin']);
 @endphp
 @if($passkeysEnabled || $enabledProviders)
   @push('head')
-    <link rel="stylesheet" href="{{ asset('css/system-configuration.css') }}?v=5">
+    <link rel="stylesheet" href="{{ asset('css/system-configuration.css') }}?v=6">
     @if($passkeysEnabled)<script defer src="{{ asset('js/passkeys.js') }}"></script>@endif
   @endpush
   <section class="sign-in-options" aria-labelledby="sign-in-options-title">
