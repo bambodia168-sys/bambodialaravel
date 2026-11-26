@@ -116,7 +116,7 @@ try {
     await viewer.setViewportSize(viewport);
     const boxes = [];
     for (const [label, key] of providers) {
-      const buttonLabel = ['google', 'linkedin'].includes(key) ? 'Sign in with '+label : label;
+      const buttonLabel = label;
       const link = group.getByRole('link', {name: buttonLabel, exact: true});
       assert.equal(await link.getAttribute('href'), url+'/auth/'+key+'/start');
       assert.equal(await link.locator('svg[aria-hidden=true] + span').textContent(), buttonLabel);
@@ -127,6 +127,7 @@ try {
     }
     assert.equal(boxes[0].y, boxes[1].y);
     assert.equal(boxes[2].y, boxes[3].y);
+    assert(Math.abs(boxes[0].height-boxes[1].height)<1 && Math.abs(boxes[2].height-boxes[3].height)<1);
     assert(boxes[0].x < boxes[1].x && boxes[2].y > boxes[0].y);
     const passkey = await passkeyButton.boundingBox();
     assert(passkey && passkey.y + passkey.height <= boxes[0].y);
