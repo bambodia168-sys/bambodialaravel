@@ -2,11 +2,17 @@
 @section('title', 'Complete Google registration')
 @section('heading', 'Complete your Google registration')
 @section('intro', 'Your Google account is verified. Review the details and accept Bambodia\'s terms to create your marketplace account.')
+@push('head')
+  <link rel="stylesheet" href="{{ asset('css/system-configuration.css') }}?v=7">
+@endpush
 @section('content')
 <div class="auth-form">
-  <div class="field">
-    <x-social-provider-icon provider="google" />
-    <p><strong>{{ $pending['name'] }}</strong><br><span>{{ $pending['email'] }}</span></p>
+  <div class="social-auth-identity">
+    <div class="social-auth-identity-icon"><x-social-provider-icon provider="google" /></div>
+    <div class="social-auth-identity-details">
+      <strong>{{ $pending['name'] }}</strong>
+      <span>{{ $pending['email'] }}</span>
+    </div>
   </div>
   <p>Only continue if this is the Google account you want to use for Bambodia. If you already have an account with a different email, sign in to it and connect Google from Account Security instead.</p>
 </div>
