@@ -1,7 +1,7 @@
 @extends('layouts.auth')
 @section('title', 'Continue with LinkedIn')
 @section('heading', $pending['user_id'] === null ? 'Complete your LinkedIn registration' : 'Confirm your LinkedIn sign-in')
-@section('intro', $pending['user_id'] === null ? 'Review your details and accept Bambodia’s terms.' : 'Confirm your Bambodia email once to securely connect LinkedIn.')
+@section('intro', $pending['user_id'] === null ? 'Review your details and accept Bambodia’s terms.' : 'Confirm your existing Bambodia account once to securely connect LinkedIn.')
 @section('content')
 <div class="auth-form">
   <div class="field">
@@ -10,7 +10,8 @@
   </div>
 </div>
 @if($pending['user_id'] !== null)
-  <p class="form-foot">To protect your existing account, we need to confirm access to its email address. You will not need your Bambodia password for this confirmation. Your existing two-factor authentication still applies.</p>
+  <p class="form-foot">To protect your existing account, confirm your ownership once. Future LinkedIn sign-ins will not need this step. Your existing two-factor authentication still applies.</p>
+  @if($pending['email_confirmable'] ?? false)
   <form method="post" action="{{ route('social.linkedin.code') }}" class="auth-form">
     @csrf
     <button class="btn {{ isset($pending['code_hash']) ? 'subtle' : 'primary' }}" type="submit">{{ isset($pending['code_hash']) ? 'Send a new code' : 'Send confirmation code' }}</button>
@@ -26,6 +27,12 @@
       <button class="btn primary" type="submit">Confirm and sign in</button>
     </form>
   @endif
+  @endif
+  <form method="post" action="{{ route('social.linkedin.store') }}" class="auth-form">
+    @csrf
+    <div class="field"><x-icon name="lock" size="19"/><input id="current_password" name="current_password" type="password" autocomplete="current-password" required placeholder=" "><label for="current_password">Bambodia password</label></div>
+    <button class="btn subtle" type="submit">Confirm with password</button>
+  </form>
 @else
   <p class="form-foot">Only continue if you want to create a new Bambodia customer account with this LinkedIn identity. If you already have a Bambodia account with another email, sign in to that account and connect LinkedIn in Account Security instead.</p>
   <form action="{{ route('social.linkedin.store') }}" method="post" class="auth-form">
