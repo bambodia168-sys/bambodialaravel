@@ -89,7 +89,11 @@ final class SocialLinkedInLoginTest extends TestCase
         $this->assertGuest();
         $this->assertDatabaseCount('users',1);
         $this->get(route('social.linkedin.continue'))->assertOk()
-            ->assertSee('Create account with LinkedIn')->assertSee('member@example.test');
+            ->assertSee('Create account with LinkedIn')->assertSee('member@example.test')
+            ->assertSee('class="social-auth-identity"', false)
+            ->assertSee('class="social-auth-identity-icon"', false)
+            ->assertSee('class="social-auth-identity-details"', false)
+            ->assertSee('system-configuration.css?v=7');
         $this->post(route('social.linkedin.store'),['terms_publication_id'=>$terms->id])
             ->assertSessionHasErrors('terms_accepted');
         $this->post(route('social.linkedin.store'),['terms_publication_id'=>$terms->id,'terms_accepted'=>'1'])
@@ -192,7 +196,7 @@ final class SocialLinkedInLoginTest extends TestCase
     public function test_linkedin_label_is_consistent_on_login_and_registration(): void
     {
         $this->enableLinkedIn();
-        $this->get('/login')->assertOk()->assertSee('Sign in with LinkedIn');
-        $this->get('/register')->assertOk()->assertSee('Sign in with LinkedIn');
+        $this->get('/login')->assertOk()->assertSee('<span>LinkedIn</span>', false)->assertSee('linkedin-sign-in-icon')->assertDontSee('<span>Sign in with LinkedIn</span>', false);
+        $this->get('/register')->assertOk()->assertSee('<span>LinkedIn</span>', false)->assertSee('linkedin-sign-in-icon')->assertDontSee('<span>Sign in with LinkedIn</span>', false);
     }
 }
