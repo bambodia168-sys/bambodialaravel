@@ -1498,7 +1498,10 @@ try {
          !(await accountOverview.getByRole('heading',{name:'Recent notifications',exact:true}).isVisible()) ||
          !(await accountOverview.getByRole('heading',{name:'Profile details',exact:true}).isVisible()) ||
          !(await accountOverview.getByRole('heading',{name:'Edit profile',exact:true}).isVisible()) ||
-         !(await accountOverview.locator('.account-profile-columns').isVisible()))
+         !(await accountOverview.getByRole('heading',{name:'Action center',exact:true}).isVisible()) ||
+         !(await accountOverview.locator('.account-action-center').isVisible()) ||
+         !(await accountOverview.locator('.account-profile-columns').isVisible()) ||
+         await accountOverview.locator('.workspace-quick-actions').count())
         throw new Error('Account overview activity or profile panels missing');
       if(await page.locator('.studio-dashboard, .studio-analytics, link[href*="creator-studio-analytics.css"], script[src*="creator-studio-analytics.js"]').count())
         throw new Error('Account workspace unexpectedly renders creator private operations');
