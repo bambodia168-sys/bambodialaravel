@@ -67,6 +67,8 @@ class SiteSetting extends Model
         'seo.default_robots' => ['group'=>'seo','label'=>'Default search indexing',
             'description'=>'Indexing directive for public pages without individual override.',
             'type'=>'select','default'=>'index,follow','options'=>['index,follow','noindex,nofollow']],
+        'seo.facebook_app_id' => ['group'=>'seo','label'=>'Facebook App ID',
+            'description'=>'Public Meta application ID for Facebook link sharing. Leave blank to omit the tag; no App Secret is needed.','type'=>'optional_text','default'=>'1535118671777032','max'=>32],
         'seo.default_og_image' => ['group'=>'seo','label'=>'Default social preview image',
             'description'=>'Optional public HTTPS image URL for Open Graph sharing.',
             'type'=>'url','default'=>'','max'=>400],
