@@ -1491,11 +1491,18 @@ try {
       await page.goto(origin+'/en/account',{waitUntil:'networkidle'});
       if(!(await page.getByRole('heading',{name:'Agreements needing attention'}).isVisible()))
         throw new Error('Account operational agreements section missing');
-      if(!(await page.locator('a.account-metric').first().isVisible()))
+      const accountOverview=page.locator('.customer-account-overview');
+      if(!(await accountOverview.locator('a.workspace-overview-metric').first().isVisible()))
         throw new Error('Account personal activity cards missing');
-      if(await page.locator('.workspace-overview-columns').count())
+      if(!(await accountOverview.getByRole('heading',{name:'Marketplace activity',exact:true}).isVisible()) ||
+         !(await accountOverview.getByRole('heading',{name:'Recent notifications',exact:true}).isVisible()) ||
+         !(await accountOverview.getByRole('heading',{name:'Profile details',exact:true}).isVisible()) ||
+         !(await accountOverview.getByRole('heading',{name:'Edit profile',exact:true}).isVisible()) ||
+         !(await accountOverview.locator('.account-profile-columns').isVisible()))
+        throw new Error('Account overview activity or profile panels missing');
+      if(await page.locator('.studio-dashboard, .studio-analytics, link[href*="creator-studio-analytics.css"], script[src*="creator-studio-analytics.js"]').count())
         throw new Error('Account workspace unexpectedly renders creator private operations');
-      checks+=3;
+      checks+=4;
       if(await page.locator('body').getAttribute('data-workspace')!=='account')
         throw new Error('Account workspace did not use shared premium shell');
       if(!(await page.locator('.workspace-menu-search input').isVisible()))
