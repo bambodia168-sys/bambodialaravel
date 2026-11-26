@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -54,6 +55,7 @@ final class SocialLinkedInController extends Controller
             'email'=>$email,'name'=>$name !== '' ? mb_substr($name,0,120) : 'Bambodia Member',
             'subject'=>$subject,'user_id'=>$existing?->id,'at'=>now()->timestamp,
             'credential'=>$existing ? self::credential($existing) : null,
+            'email_confirmable'=>$existing?->hasVerifiedEmail() ?? false,
         ]);
         return redirect()->route('social.linkedin.continue');
     }
@@ -75,14 +77,14 @@ final class SocialLinkedInController extends Controller
         $pending = $this->pending($request);
         if (!$pending || $pending['user_id'] === null) return self::expired();
         $user = User::query()->find($pending['user_id']);
-        if (!self::matches($user,$pending)) return self::unavailable();
+        if (!self::matches($user,$pending) || !$user->hasVerifiedEmail() || !($pending['email_confirmable'] ?? false)) return self::unavailable();
         if (!EmailOutbox::deliveryReady()) {
-            return back()->withErrors(['social_auth'=>'Email confirmation is temporarily unavailable. Use your existing sign-in method.']);
+            return redirect()->route('social.linkedin.continue')->withErrors(['social_auth'=>'Email confirmation is temporarily unavailable. Use your existing sign-in method.']);
         }
 
         $key = 'linkedin-confirm:'.$user->id;
         if (RateLimiter::tooManyAttempts($key,3)) {
-            return back()->withErrors(['social_auth'=>'Too many confirmation requests. Try again in a few minutes.']);
+            return redirect()->route('social.linkedin.continue')->withErrors(['social_auth'=>'Too many confirmation requests. Try again in a few minutes.']);
         }
         RateLimiter::hit($key,600);
         $code = (string)random_int(10000000,99999999);
@@ -96,7 +98,7 @@ final class SocialLinkedInController extends Controller
                 });
             if (!$sent) throw new \RuntimeException('Confirmation mail was not accepted.');
         } catch (\Throwable) {
-            return back()->withErrors(['social_auth'=>'Could not send your confirmation code. Use your existing sign-in method or try again.']);
+            return redirect()->route('social.linkedin.continue')->withErrors(['social_auth'=>'Could not send your confirmation code. Use your existing sign-in method or try again.']);
         }
         $pending['code_hash'] = self::codeHash($pending,$code);
         $pending['code_at'] = now()->timestamp;
@@ -154,19 +156,26 @@ final class SocialLinkedInController extends Controller
             return self::expired();
         }
         RateLimiter::hit($key,600);
-        if (!is_string($code) || !preg_match('/\A[0-9]{8}\z/D',$code)
-            || !is_int($pending['code_at'] ?? null) || $pending['code_at'] < now()->subMinutes(5)->timestamp
-            || $pending['code_at'] > now()->timestamp || !is_string($pending['code_hash'] ?? null)
-            || !hash_equals($pending['code_hash'],self::codeHash($pending,$code))) {
-            return back()->withErrors(['social_auth'=>'The confirmation code is invalid or expired.']);
+        $password = $request->input('current_password');
+        $current = User::query()->find($pending['user_id']);
+        $byPassword = is_string($password) && strlen($password) <= 4096
+            && self::matches($current,$pending) && Hash::check($password,$current->getAuthPassword());
+        $byEmail = !filled($password) && self::matches($current,$pending)
+            && $current->hasVerifiedEmail() && ($pending['email_confirmable'] ?? false)
+            && is_string($code) && preg_match('/\A[0-9]{8}\z/D',$code)
+            && is_int($pending['code_at'] ?? null) && $pending['code_at'] >= now()->subMinutes(5)->timestamp
+            && $pending['code_at'] <= now()->timestamp && is_string($pending['code_hash'] ?? null)
+            && hash_equals($pending['code_hash'],self::codeHash($pending,$code));
+        if (!$byPassword && !$byEmail) {
+            return redirect()->route('social.linkedin.continue')->withErrors(['social_auth'=>'The password or confirmation code is invalid or expired.']);
         }
 
         // Consume the challenge before binding; recheck current account and identity under lock.
         $request->session()->forget(self::SESSION_KEY);
         try {
-            $user = DB::transaction(function () use ($request,$pending): ?User {
+            $user = DB::transaction(function () use ($request,$pending,$byEmail): ?User {
                 $user = User::query()->lockForUpdate()->find($pending['user_id']);
-                if (!self::matches($user,$pending) || SocialLoginIdentity::query()->where('provider','linkedin')
+                if (!self::matches($user,$pending) || ($byEmail && !$user->hasVerifiedEmail()) || SocialLoginIdentity::query()->where('provider','linkedin')
                     ->where(fn ($q)=>$q->where('user_id',$user->id)->orWhere('subject_hash',$pending['subject']))->exists()) {
                     return null;
                 }
@@ -200,9 +209,8 @@ final class SocialLinkedInController extends Controller
 
     private static function eligible(?User $user): bool
     {
-        // A matching unverified local email could have been pre-registered by
-        // someone else. Never attach a LinkedIn identity to such an account.
-        return $user !== null && $user->account_status === 'active' && $user->hasVerifiedEmail();
+        // An unverified local email can only be connected after password proof.
+        return $user !== null && $user->account_status === 'active';
     }
 
     private static function matches(?User $user,array $pending): bool
