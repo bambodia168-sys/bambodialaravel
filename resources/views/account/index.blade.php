@@ -2,7 +2,7 @@
 @section('workspace','account')
 @section('title','My Account')
 @push('head')
-  <link rel="stylesheet" href="{{ asset('css/customer-account-overview.css') }}?v=1">
+  <link rel="stylesheet" href="{{ asset('css/customer-account-overview.css') }}?v=2">
 @endpush
 @section('content')
 <div class="container inner-page customer-account-overview">
@@ -100,44 +100,36 @@
     </div>
   </section>
 
-  <section class="workspace-overview-block account-overview-section" aria-labelledby="account-actions">
-    <div class="workspace-section-head"><div><h2 id="account-actions">Manage your account</h2>
-      <p>Quick access to your purchases, work, records and support.</p></div></div>
-    <div class="workspace-quick-actions">
-      @if($orderSummary !== null)<a class="btn primary" href="{{ route('account.orders.index') }}"><x-icon name="shopping-cart" size="17"/> Order History</a>@endif
-      <a class="btn primary" href="{{ route('account.downloads') }}"><x-icon name="download" size="17"/> My Downloads</a>
-      <a class="btn subtle" href="{{ route('account.licenses.index') }}"><x-icon name="key-round" size="17"/> My Licenses</a>
-      <a class="btn subtle" href="{{ route('account.saved-listings') }}"><x-icon name="star" size="17"/> Saved Listings</a>
-      <a class="btn subtle" href="{{ route('account.saved-jobs') }}"><x-icon name="bookmark" size="17"/> Saved Jobs</a>
-      <a class="btn subtle" href="{{ route('creators.index') }}"><x-icon name="users" size="17"/> Browse Creators</a>
-      <a class="btn subtle" href="{{ route('contracts.index') }}"><x-icon name="file-check" size="17"/> My Contracts</a>
-      <a class="btn subtle" href="{{ route('account.media.index') }}"><x-icon name="image" size="17"/> My Media Library</a>
-      <a class="btn subtle" href="{{ route('account.notifications') }}"><x-icon name="bell" size="17"/> Notification Center</a>
-      <a class="btn subtle" href="{{ route('account.security') }}"><x-icon name="shield-check" size="17"/> Account Security</a>
-      <a class="btn subtle" href="{{ route('account.policy-receipts') }}"><x-icon name="book" size="17"/> Policy Receipts</a>
-      <a class="btn subtle" href="{{ route('privacy.index') }}"><x-icon name="shield" size="17"/> Privacy Requests</a>
-      <a class="btn subtle" href="{{ route($user->supportTicketRoutePrefix().'.index') }}"><x-icon name="life-buoy" size="17"/> My Support Tickets</a>
-      @if(in_array($user->role,['customer','subscriber','super_admin'],true))
-        <a class="btn subtle" href="{{ route('jobs.mine') }}"><x-icon name="briefcase" size="17"/> My Job Posts</a>
-      @endif
-      @if(in_array($user->role,['customer','subscriber'],true))
-        <a class="btn subtle" href="{{ route('account.inquiries') }}"><x-icon name="message" size="17"/> My Service Requests</a>
-      @endif
-      @if($user->isCreator())
-        <a class="btn subtle" href="{{ route('studio.inquiries') }}"><x-icon name="message" size="17"/> Creator Inquiries</a>
-        <a class="btn subtle" href="{{ route('creator') }}"><x-icon name="palette" size="17"/> Creator Studio</a>
-        <a class="btn subtle" href="{{ route('studio.profile.edit') }}"><x-icon name="user" size="17"/> Edit Creator Profile</a>
-      @elseif(in_array($user->role,['customer','subscriber'],true))
-        <a class="btn subtle" href="{{ route('creator.apply') }}"><x-icon name="user-plus" size="17"/> Become a creator</a>
-      @endif
-      @if($user->role==='freelancer')
-        <a class="btn subtle" href="{{ route('resume.edit') }}"><x-icon name="file-check" size="17"/> Resume Builder</a>
-        <a class="btn subtle" href="{{ route('jobs.applied') }}"><x-icon name="send" size="17"/> My Proposals</a>
+  <section class="account-overview-section" aria-labelledby="account-actions">
+    <div class="workspace-section-head"><div><h2 id="account-actions">Action center</h2>
+      <p>Important account activity that may need your attention.</p></div></div>
+    <div class="panel account-action-center">
+      @if(count($accountActions) === 0 && $supportReplies->isEmpty())
+        <div class="account-action-empty"><span class="account-action-icon is-info"><x-icon name="check-circle" size="22"/></span>
+          <div><strong>You're all caught up</strong><p>No account actions need attention right now.</p></div></div>
+      @else
+        @foreach($accountActions as $action)
+          <div class="account-action-row">
+            <span class="account-action-icon is-{{ $action['tone'] }}"><x-icon :name="$action['icon']" size="22"/></span>
+            <div class="account-action-copy"><strong>{{ $action['title'] }}</strong><p>{{ $action['description'] }}</p></div>
+            <a class="btn compact {{ $action['tone'] === 'attention' ? 'primary' : 'subtle' }}" href="{{ $action['href'] }}">{{ $action['label'] }}</a>
+          </div>
+        @endforeach
+        @foreach($supportReplies as $reply)
+          <div class="account-action-row">
+            <span class="account-action-icon is-info"><x-icon name="message" size="22"/></span>
+            <div class="account-action-copy"><strong>New support reply</strong><p>{{ $reply['subject'] }} · {{ $reply['notice']->title }}</p></div>
+            <form method="post" action="{{ route('account.notifications.read',$reply['notice']) }}">
+              @csrf @method('PATCH')
+              <button type="submit" class="btn subtle compact">View ticket</button>
+            </form>
+          </div>
+        @endforeach
       @endif
     </div>
   </section>
 
-  <div class="workspace-overview-columns account-overview-section">
+  <div class="workspace-overview-columns account-overview-section account-recent-columns">
     @if($orderSummary !== null)
       <section class="panel" aria-labelledby="account-recent-orders">
         <div class="panel-head"><div><h2 id="account-recent-orders">Recent orders</h2>
@@ -205,7 +197,13 @@
           <div><dt>Email</dt><dd>{{ $user->email }}</dd></div>
           <div><dt>Language</dt><dd>{{ strtoupper($user->locale) }}</dd></div>
         </dl>
-        <div class="account-profile-action"><a class="btn subtle" href="{{ route('account.profile.edit') }}"><x-icon name="user" size="17"/> Customize profile &amp; sections</a></div>
+        <div class="account-profile-action">
+          <a class="btn subtle" href="{{ route('account.profile.edit') }}"><x-icon name="user" size="17"/> Customize profile &amp; sections</a>
+          <a class="btn subtle" href="{{ route('account.security') }}"><x-icon name="shield-check" size="17"/> Account Security</a>
+          @if($user->role==='freelancer')
+            <a class="btn subtle" href="{{ route('resume.edit') }}"><x-icon name="file-check" size="17"/> Resume Builder</a>
+          @endif
+        </div>
       </section>
       <section class="panel" aria-labelledby="account-edit-profile">
         <div class="panel-head"><div><h2 id="account-edit-profile">Edit profile</h2><p>Update your display name and preferred language.</p></div></div>
@@ -224,5 +222,41 @@
       </section>
     </div>
   </section>
+
+  @if(in_array($user->role,['customer','subscriber'],true))
+    <section class="panel account-creator-invitation account-overview-section" aria-labelledby="account-creator-invite">
+      <div class="account-creator-invitation-copy">
+        <div class="account-overview-eyebrow">Grow with Bambodia</div>
+        @if($creatorApplicationStatus === 'pending')
+          <h2 id="account-creator-invite">Your creator application is under review.</h2>
+          <p>Continue using your account while the team reviews your application.</p>
+        @elseif($creatorApplicationStatus === 'approved')
+          <h2 id="account-creator-invite">Your creator application has been approved.</h2>
+          <p>Review your application status and access your creator workspace when available.</p>
+        @elseif($creatorApplicationStatus === 'rejected')
+          <h2 id="account-creator-invite">Ready to try again?</h2>
+          <p>Review your previous application and update your experience before resubmitting.</p>
+        @else
+          <h2 id="account-creator-invite">Turn your skills into opportunities.</h2>
+          <p>Sell digital products, offer professional services, showcase your projects and connect with clients.</p>
+        @endif
+        <div class="account-invitation-actions">
+          <a class="btn primary" href="{{ route('creator.apply') }}"><x-icon name="user-plus" size="17"/>
+            {{ $creatorApplicationStatus === 'pending' || $creatorApplicationStatus === 'approved' ? 'View application' : ($creatorApplicationStatus === 'rejected' ? 'Review application' : 'Become a creator') }}</a>
+          <a class="btn subtle" href="{{ route('creators.index') }}"><x-icon name="users" size="17"/> Browse creators</a>
+        </div>
+      </div>
+      <div class="account-invitation-art" aria-hidden="true">
+        <svg viewBox="0 0 160 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="8" width="140" height="112" rx="20" fill="currentColor" opacity=".08"/>
+          <rect x="28" y="26" width="104" height="76" rx="10" class="account-invite-art-surface"/>
+          <path d="M44 85h13V68H44zm25 0h13V55H69zm25 0h13V40H94z" fill="currentColor" opacity=".45"/>
+          <path d="m43 59 24-18 14 7 23-19m-13 0h13v13" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="130" cy="100" r="18" fill="currentColor"/>
+          <path d="M122 100h16m-8-8v16" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </section>
+  @endif
 </div>
 @endsection
