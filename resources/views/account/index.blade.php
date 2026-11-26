@@ -2,7 +2,7 @@
 @section('workspace','account')
 @section('title','My Account')
 @push('head')
-  <link rel="stylesheet" href="{{ asset('css/customer-account-overview.css') }}?v=2">
+  <link rel="stylesheet" href="{{ asset('css/customer-account-overview.css') }}?v=3">
 @endpush
 @section('content')
 <div class="container inner-page customer-account-overview">
