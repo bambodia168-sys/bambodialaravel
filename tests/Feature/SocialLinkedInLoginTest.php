@@ -139,10 +139,16 @@ final class SocialLinkedInLoginTest extends TestCase
 
     public function test_unverified_local_email_is_not_automatically_linked(): void
     {
-        $this->existing(false);
-        $this->callback()->assertRedirect(route('login'))->assertSessionHasErrors('social_auth');
+        $user = $this->existing(false);
+        $this->callback()->assertRedirect(route('social.linkedin.continue'));
+        $this->get(route('social.linkedin.continue'))->assertOk()->assertSee('Confirm with password')->assertDontSee('Send confirmation code');
+        $this->post(route('social.linkedin.code'))->assertRedirect(route('login'));
+        $this->post(route('social.linkedin.store'),['current_password'=>'wrong'])->assertSessionHasErrors('social_auth');
         $this->assertGuest();
         $this->assertDatabaseCount('social_login_identities',0);
+        $this->post(route('social.linkedin.store'),['current_password'=>'ExistingPasswordSecure!123'])->assertRedirect();
+        $this->assertAuthenticatedAs($user);
+        $this->assertDatabaseHas('social_login_identities',['user_id'=>$user->id,'provider'=>'linkedin']);
     }
 
     public function test_existing_different_linkedin_subject_cannot_be_replaced(): void
