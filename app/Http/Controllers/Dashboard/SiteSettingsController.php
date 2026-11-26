@@ -86,6 +86,9 @@ class SiteSettingsController extends Controller
             'textarea'=>['nullable','string','max:'.$definition['max']],
             default=>['required','string','min:3','max:'.$definition['max']],
         };
+        if ($key === 'seo.facebook_app_id') {
+            $rule=['nullable','string','regex:/\A[0-9]{1,32}\z/'];
+        }
         $values=$request->validate(['value'=>$rule]);
         $value=(string)($values['value']??'');
         if ($key === 'site.default_locale') {
