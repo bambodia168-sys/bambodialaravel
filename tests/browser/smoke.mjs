@@ -1494,6 +1494,60 @@ try {
       const accountOverview=page.locator('.customer-account-overview');
       if(!(await accountOverview.locator('a.workspace-overview-metric').first().isVisible()))
         throw new Error('Account personal activity cards missing');
+      // Measure actual CSS layout with role-sized card counts and independently sized content areas.
+      const balanceErrors=await accountOverview.evaluate(root=>{
+        const original=root.querySelector('.workspace-overview-grid');
+        const seed=[...original.children];
+        const errors=[];
+        const measure=(grid,width,expectedColumns,count)=>{
+          const cards=[...grid.children];
+          const rows=[];
+          for(const card of cards){
+            const row=rows.find(r=>r.top===card.offsetTop);
+            if(row)row.cards.push(card);else rows.push({top:card.offsetTop,cards:[card]});
+          }
+          for(const row of rows){
+            const first=row.cards[0],last=row.cards.at(-1);
+            const left=first.offsetLeft,right=last.offsetLeft+last.offsetWidth;
+            if(Math.abs(left)>2 || Math.abs(right-grid.clientWidth)>2)
+              errors.push({width,count,reason:'incomplete row',left,right,gridWidth:grid.clientWidth});
+            if(expectedColumns>=3 && count>=4 && row.cards.length===1)
+              errors.push({width,count,reason:'orphan card'});
+            if(row.cards.length>expectedColumns)
+              errors.push({width,count,reason:'too many columns'});
+            if(row.cards.some(card=>Math.abs(card.offsetWidth-first.offsetWidth)>2))
+              errors.push({width,count,reason:'unequal card widths'});
+            if(row.cards.some(card=>card.scrollWidth>card.clientWidth+2))
+              errors.push({width,count,reason:'card text overflow'});
+          }
+          if(rows.reduce((sum,row)=>sum+row.cards.length,0)!==count)
+            errors.push({width,count,reason:'card count changed'});
+          return rows.map(row=>row.cards.length);
+        };
+        for(const [width,columns] of [[300,1],[360,2],[640,3],[900,4],[1160,4]]){
+          const shell=document.createElement('div');
+          shell.className='customer-account-overview';
+          Object.assign(shell.style,{position:'fixed',top:'0',left:'0',width:width+'px',visibility:'hidden',pointerEvents:'none'});
+          const grid=document.createElement('div');
+          grid.className='workspace-overview-grid';
+          grid.style.position='relative';
+          shell.append(grid);
+          document.body.append(shell);
+          try{
+            for(let count=4;count<=10;count++){
+              grid.replaceChildren(...Array.from({length:count},(_,i)=>seed[i%seed.length].cloneNode(true)));
+              const rowCounts=measure(grid,width,columns,count);
+              if(width===900 && count===10 && rowCounts.join(',')!=='4,4,2')
+                errors.push({width,count,reason:'expected 4,4,2',rowCounts});
+              if(width===640 && count===10 && rowCounts.join(',')!=='3,3,2,2')
+                errors.push({width,count,reason:'expected 3,3,2,2',rowCounts});
+            }
+          }finally{shell.remove();}
+        }
+        return errors;
+      });
+      if(balanceErrors.length)throw new Error('Account metric grid balance regression '+JSON.stringify(balanceErrors));
+
       if(!(await accountOverview.getByRole('heading',{name:'Marketplace activity',exact:true}).isVisible()) ||
          !(await accountOverview.getByRole('heading',{name:'Recent notifications',exact:true}).isVisible()) ||
          !(await accountOverview.getByRole('heading',{name:'Profile details',exact:true}).isVisible()) ||
