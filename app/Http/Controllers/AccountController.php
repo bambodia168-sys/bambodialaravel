@@ -62,7 +62,22 @@ class AccountController extends Controller
         })->whereIn('status',['offered','active','disputed'])
           ->latest('updated_at')->limit(4)->get(['id','public_id','title','status','updated_at']);
 
-        return view('account.index', compact('user','stats','activity','agreements'));
+        // Account overview only: never include seller orders or other buyers' records.
+        $orderSummary = null;
+        $recentOrders = collect();
+        if (config('commerce.enabled')) {
+            $orders = \App\Models\MarketplaceOrder::query()->where('buyer_id', $user->id);
+            $orderSummary = array_fill_keys(array_keys(\App\Models\MarketplaceOrder::STATUSES), 0);
+            $counts = (clone $orders)->select('status', DB::raw('COUNT(*) as aggregate'))
+                ->groupBy('status')->pluck('aggregate', 'status');
+            foreach ($orderSummary as $status => $count) {
+                $orderSummary[$status] = (int) ($counts[$status] ?? 0);
+            }
+            $recentOrders = $orders->latest('id')->limit(5)
+                ->get(['id', 'number', 'public_reference', 'listing_title', 'status', 'currency', 'total', 'created_at']);
+        }
+
+        return view('account.index', compact('user','stats','activity','agreements','orderSummary','recentOrders'));
     }
 
     public function update(Request $request): RedirectResponse
