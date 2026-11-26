@@ -60,7 +60,7 @@ final class SocialLinkedInLoginTest extends TestCase
         ]);
     }
 
-    private function callback(?string $email = 'member@example.test', ?bool $verified = true,
+    private function runLinkedInCallback(?string $email = 'member@example.test', ?bool $verified = true,
         string $subject = 'linkedin-subject', ?string $rawEmail = null)
     {
         $this->enableLinkedIn();
@@ -85,7 +85,7 @@ final class SocialLinkedInLoginTest extends TestCase
     public function test_new_linkedin_member_can_register_after_accepting_terms(): void
     {
         $terms = $this->terms();
-        $this->callback()->assertRedirect(route('social.linkedin.continue'));
+        $this->runLinkedInCallback()->assertRedirect(route('social.linkedin.continue'));
         $this->assertGuest();
         $this->assertDatabaseCount('users',1);
         $this->get(route('social.linkedin.continue'))->assertOk()
@@ -110,7 +110,7 @@ final class SocialLinkedInLoginTest extends TestCase
         $user = $this->existing();
         UserTwoFactor::query()->create(['user_id'=>$user->id,'secret'=>Totp::createSecret(),
             'enabled_at'=>now(),'recovery_hashes'=>[]]);
-        $this->callback()->assertRedirect(route('social.linkedin.continue'));
+        $this->runLinkedInCallback()->assertRedirect(route('social.linkedin.continue'));
         $this->assertGuest();
         $this->assertDatabaseCount('social_login_identities',0);
         $this->post(route('social.linkedin.store'),['confirmation_code'=>'12345678'])->assertSessionHasErrors('social_auth');
@@ -140,7 +140,7 @@ final class SocialLinkedInLoginTest extends TestCase
     public function test_unverified_local_email_is_not_automatically_linked(): void
     {
         $user = $this->existing(false);
-        $this->callback()->assertRedirect(route('social.linkedin.continue'));
+        $this->runLinkedInCallback()->assertRedirect(route('social.linkedin.continue'));
         $this->get(route('social.linkedin.continue'))->assertOk()->assertSee('Confirm with password')->assertDontSee('Send confirmation code');
         $this->post(route('social.linkedin.code'))->assertRedirect(route('login'));
         $this->post(route('social.linkedin.store'),['current_password'=>'wrong'])->assertSessionHasErrors('social_auth');
@@ -156,7 +156,7 @@ final class SocialLinkedInLoginTest extends TestCase
         $user = $this->existing();
         SocialLoginIdentity::query()->create(['user_id'=>$user->id,'provider'=>'linkedin',
             'subject_hash'=>hash('sha256','original-subject')]);
-        $this->callback()->assertRedirect(route('login'))->assertSessionHasErrors('social_auth');
+        $this->runLinkedInCallback()->assertRedirect(route('login'))->assertSessionHasErrors('social_auth');
         $this->assertGuest();
         $this->assertSame(hash('sha256','original-subject'),SocialLoginIdentity::query()->sole()->subject_hash);
     }
@@ -167,14 +167,14 @@ final class SocialLinkedInLoginTest extends TestCase
         SocialLoginIdentity::query()->create(['user_id'=>$user->id,'provider'=>'linkedin',
             'subject_hash'=>hash('sha256','linkedin-subject')]);
         FeatureFlag::query()->updateOrCreate(['key'=>'registration'],['enabled'=>false]);
-        $this->callback(email:null,verified:null)->assertRedirect();
+        $this->runLinkedInCallback(email:null,verified:null)->assertRedirect();
         $this->assertAuthenticatedAs($user);
     }
 
     public function test_new_unverified_provider_email_is_rejected(): void
     {
         $this->terms();
-        $this->callback(verified:false)->assertRedirect(route('login'))->assertSessionHasErrors('social_auth');
+        $this->runLinkedInCallback(verified:false)->assertRedirect(route('login'))->assertSessionHasErrors('social_auth');
         $this->assertGuest();
         $this->assertDatabaseCount('users',1);
     }
@@ -182,7 +182,7 @@ final class SocialLinkedInLoginTest extends TestCase
     public function test_disabled_registration_and_expired_pending_cannot_create_accounts(): void
     {
         $this->terms();
-        $this->callback()->assertRedirect(route('social.linkedin.continue'));
+        $this->runLinkedInCallback()->assertRedirect(route('social.linkedin.continue'));
         $this->travel(11)->minutes();
         $this->get(route('social.linkedin.continue'))->assertRedirect(route('login'));
         $this->assertGuest();
