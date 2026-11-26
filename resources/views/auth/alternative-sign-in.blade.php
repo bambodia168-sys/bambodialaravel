@@ -26,7 +26,7 @@
           @if(in_array($provider, $enabledProviders, true))
             <a class="btn sign-in-provider" href="{{ route('social.start', $provider) }}">
               <x-social-provider-icon :provider="$provider" />
-              <span>{{ $provider === 'google' ? 'Sign in with Google' : $label }}</span>
+              <span>{{ in_array($provider, ['google','linkedin'], true) ? 'Sign in with '.$label : $label }}</span>
             </a>
           @endif
         @endforeach
