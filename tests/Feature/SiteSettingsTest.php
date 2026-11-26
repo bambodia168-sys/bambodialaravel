@@ -65,6 +65,19 @@ class SiteSettingsTest extends TestCase
             ->assertSee('"dark"',false);
     }
 
+    public function test_facebook_app_id_is_configurable_public_metadata(): void
+    {
+        $this->get('/')->assertOk()->assertSee('property="fb:app_id" content="1535118671777032"',false);
+        $admin=$this->account('admin');
+        $this->actingAs($admin)->get('/dashboard/seo-settings')->assertOk()->assertSee('Facebook App ID');
+        $this->patch('/dashboard/seo-settings',['key'=>'seo.facebook_app_id','value'=>'123456789012345'])->assertRedirect();
+        $this->get('/')->assertOk()->assertSee('property="fb:app_id" content="123456789012345"',false);
+        $this->patch('/dashboard/seo-settings',['key'=>'seo.facebook_app_id','value'=>'invalid'])->assertSessionHasErrors('value');
+        $this->assertSame('123456789012345',SiteSetting::setting('seo.facebook_app_id'));
+        $this->patch('/dashboard/seo-settings',['key'=>'seo.facebook_app_id','value'=>''])->assertRedirect();
+        $this->get('/')->assertOk()->assertDontSee('property="fb:app_id"',false);
+    }
+
     public function test_unauthorized_and_invalid_settings_are_rejected(): void
     {
         $customer=$this->account('customer');

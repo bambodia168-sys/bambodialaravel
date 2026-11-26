@@ -19,6 +19,7 @@
     : ($seoPage ? ($seoPage->is_indexable?'index,follow':'noindex,nofollow')
         : \App\Models\SiteSetting::setting('seo.default_robots'));
   $canonical=$seoPage?->canonical_url ?: url()->current();
+  $facebookAppId=trim(\App\Models\SiteSetting::setting('seo.facebook_app_id'));
   $keywords=$seoPage?->keywords ?: \App\Models\SiteSetting::setting('seo.default_keywords');
   $ogImage=trim($__env->yieldContent('social_image',''))
     ?: ($seoPage?->og_image_url ?: \App\Support\SiteIdentity::sharingImage($locale));
@@ -28,6 +29,9 @@
 <meta name="robots" content="{{ $robots }}">
 @if($keywords!=='')<meta name="keywords" content="{{ $keywords }}">@endif
 <link rel="canonical" href="{{ $canonical }}">
+@if(!$privatePath && preg_match('/\A[0-9]{1,32}\z/', $facebookAppId))
+<meta property="fb:app_id" content="{{ $facebookAppId }}">
+@endif
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="{{ $siteName }}">
 <meta property="og:title" content="{{ $pageTitle }}">
