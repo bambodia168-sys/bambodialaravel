@@ -106,7 +106,7 @@
   outline: 2px solid var(--secondary);
   outline-offset: 2px;
 }
-.sign-in-providers .sign-in-provider { min-width: 0; white-space: normal; text-align: center; }
+.sign-in-providers .sign-in-provider { min-width: 0; white-space: normal; text-align: center; justify-content: center; }
 .sign-in-provider span { min-width: 0; overflow-wrap: anywhere; }
 .sign-in-provider svg { flex: none; }
 :root[data-theme="dark"] .sign-in-provider .google-sign-in-icon {
@@ -215,3 +215,56 @@
   font-weight: 700;
 }
 .social-auth-dialog .dialog-actions { flex-wrap: wrap; }
+
+
+/* Read-only provider identity: not a floating-label input field. */
+.auth-shell .social-auth-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  text-align: start;
+}
+.auth-shell .social-auth-identity-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.auth-shell .social-auth-identity-icon svg {
+  position: static;
+  transform: none;
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+.auth-shell .social-auth-identity-icon .linkedin-sign-in-icon { color: #0a66c2; }
+:root[data-theme="dark"] .auth-shell .social-auth-identity-icon .linkedin-sign-in-icon { color: #73bbff; }
+:root[data-theme="dark"] .auth-shell .social-auth-identity-icon .google-sign-in-icon {
+  box-sizing: content-box;
+  padding: 2px;
+  border-radius: 50%;
+  background: #fff;
+}
+.auth-shell .social-auth-identity-details {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 3px;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.auth-shell .social-auth-identity-details strong { font-weight: 700; color: var(--text); }
+.auth-shell .social-auth-identity-details span { color: var(--muted); font-size: var(--font-helper); }
+@media (max-width: 360px) {
+  .auth-shell .social-auth-identity { gap: 9px; padding: 10px; }
+  .auth-shell .social-auth-identity-icon { flex-basis: 36px; width: 36px; height: 36px; }
+}
