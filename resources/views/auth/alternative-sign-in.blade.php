@@ -5,7 +5,7 @@
 @endphp
 @if($passkeysEnabled || $enabledProviders)
   @push('head')
-    <link rel="stylesheet" href="{{ asset('css/system-configuration.css') }}?v=6">
+    <link rel="stylesheet" href="{{ asset('css/system-configuration.css') }}?v=7">
     @if($passkeysEnabled)<script defer src="{{ asset('js/passkeys.js') }}"></script>@endif
   @endpush
   <section class="sign-in-options" aria-labelledby="sign-in-options-title">
@@ -27,7 +27,7 @@
           @if(in_array($provider, $enabledProviders, true))
             <a class="btn sign-in-provider" href="{{ route('social.start', $provider) }}">
               <x-social-provider-icon :provider="$provider" />
-              <span>{{ in_array($provider, ['google','linkedin'], true) ? 'Sign in with '.$label : $label }}</span>
+              <span>{{ $label }}</span>
             </a>
           @endif
         @endforeach
