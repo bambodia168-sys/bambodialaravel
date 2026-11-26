@@ -116,7 +116,7 @@ try {
     await viewer.setViewportSize(viewport);
     const boxes = [];
     for (const [label, key] of providers) {
-      const buttonLabel = ['google', 'linkedin'].includes(key) ? 'Sign in with '+label : label;
+      const buttonLabel = label;
       const link = group.getByRole('link', {name: buttonLabel, exact: true});
       assert.equal(await link.getAttribute('href'), url+'/auth/'+key+'/start');
       assert.equal(await link.locator('svg[aria-hidden=true] + span').textContent(), buttonLabel);
@@ -127,6 +127,7 @@ try {
     }
     assert.equal(boxes[0].y, boxes[1].y);
     assert.equal(boxes[2].y, boxes[3].y);
+    assert(Math.abs(boxes[0].height-boxes[1].height)<1 && Math.abs(boxes[2].height-boxes[3].height)<1);
     assert(boxes[0].x < boxes[1].x && boxes[2].y > boxes[0].y);
     const passkey = await passkeyButton.boundingBox();
     assert(passkey && passkey.y + passkey.height <= boxes[0].y);
@@ -134,6 +135,30 @@ try {
     const nextTheme = viewport.width === 320 ? 'dark' : 'light';
     await viewer.getByRole('button', {name: 'Switch to '+nextTheme+' mode', exact: true}).click();
     await viewer.locator('html[data-theme="'+nextTheme+'"]').waitFor({state: 'attached'});
+    // Exercise the same read-only identity structure as both registration views.
+    const identity = await viewer.evaluate(() => {
+      const card = document.querySelector('.auth-card');
+      const icon = document.querySelector('.sign-in-provider .linkedin-sign-in-icon').cloneNode(true);
+      const row = document.createElement('div');
+      row.className = 'social-auth-identity';
+      const badge = document.createElement('div');
+      badge.className = 'social-auth-identity-icon';
+      badge.append(icon);
+      const details = document.createElement('div');
+      details.className = 'social-auth-identity-details';
+      const name = document.createElement('strong');
+      name.textContent = 'A long provider display name for responsive testing';
+      const email = document.createElement('span');
+      email.textContent = 'long-email-address-for-responsive-testing@example.test';
+      details.append(name,email);
+      row.append(badge,details);
+      card.append(row);
+      try {
+        const a=badge.getBoundingClientRect(), b=details.getBoundingClientRect(), c=row.getBoundingClientRect();
+        return {nonOverlapping:a.right<=b.left,contained:b.right<=c.right+1,iconStatic:getComputedStyle(icon).position==='static',noOverflow:row.scrollWidth<=row.clientWidth+1};
+      } finally { row.remove(); }
+    });
+    assert(identity.nonOverlapping && identity.contained && identity.iconStatic && identity.noOverflow, JSON.stringify(identity));
   }
   for (const [label] of providers) {
     await setSwitch(admin, label+' Login', false);

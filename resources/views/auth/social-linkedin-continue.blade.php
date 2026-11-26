@@ -2,11 +2,17 @@
 @section('title', 'Continue with LinkedIn')
 @section('heading', $pending['user_id'] === null ? 'Complete your LinkedIn registration' : 'Confirm your LinkedIn sign-in')
 @section('intro', $pending['user_id'] === null ? 'Review your details and accept Bambodia’s terms.' : 'Confirm your existing Bambodia account once to securely connect LinkedIn.')
+@push('head')
+  <link rel="stylesheet" href="{{ asset('css/system-configuration.css') }}?v=7">
+@endpush
 @section('content')
 <div class="auth-form">
-  <div class="field">
-    <x-social-provider-icon provider="linkedin" />
-    <p><strong>{{ $pending['name'] }}</strong><br><span>{{ $pending['email'] }}</span></p>
+  <div class="social-auth-identity">
+    <div class="social-auth-identity-icon"><x-social-provider-icon provider="linkedin" /></div>
+    <div class="social-auth-identity-details">
+      <strong>{{ $pending['name'] }}</strong>
+      <span>{{ $pending['email'] }}</span>
+    </div>
   </div>
 </div>
 @if($pending['user_id'] !== null)

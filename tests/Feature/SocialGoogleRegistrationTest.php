@@ -89,7 +89,10 @@ final class SocialGoogleRegistrationTest extends TestCase
         $this->get(route('social.google.registration'))->assertOk()
             ->assertSee('new-member@gmail.com')
             ->assertSee('terms_accepted')
-            ->assertSee('Create account with Google');
+            ->assertSee('Create account with Google')
+            ->assertSee('class="social-auth-identity"', false)
+            ->assertSee('class="social-auth-identity-icon"', false)
+            ->assertSee('class="social-auth-identity-details"', false);
 
         $this->post(route('social.google.registration.store'), [
             'terms_publication_id' => $terms->id,
