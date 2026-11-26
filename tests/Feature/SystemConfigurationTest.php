@@ -80,7 +80,7 @@ class SystemConfigurationTest extends TestCase
         $this->post(route('logout'));
         $this->get('/login')->assertOk()
             ->assertSee('href="'.route('social.start', 'google').'"', false)
-            ->assertSee('<span>Sign in with Google</span>', false)
+            ->assertSee('<span>Google</span>', false)->assertSee('google-sign-in-icon')->assertDontSee('<span>Sign in with Google</span>', false)
             ->assertDontSee('href="'.route('social.start', 'facebook').'"', false);
 
         $response = $this->get(route('social.start', 'google'))->assertRedirect();
