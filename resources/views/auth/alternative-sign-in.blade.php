@@ -1,10 +1,11 @@
 @php
-  $passkeysEnabled = \App\Support\SystemSecurity::enabled('passkeys');
+  $passkeysEnabled = !($registrationOnly ?? false) && \App\Support\SystemSecurity::enabled('passkeys');
   $enabledProviders = \App\Models\SocialLoginProvider::enabledProviders();
+  if ($registrationOnly ?? false) $enabledProviders = array_intersect($enabledProviders, ['google','linkedin']);
 @endphp
 @if($passkeysEnabled || $enabledProviders)
   @push('head')
-    <link rel="stylesheet" href="{{ asset('css/system-configuration.css') }}?v=5">
+    <link rel="stylesheet" href="{{ asset('css/system-configuration.css') }}?v=6">
     @if($passkeysEnabled)<script defer src="{{ asset('js/passkeys.js') }}"></script>@endif
   @endpush
   <section class="sign-in-options" aria-labelledby="sign-in-options-title">
@@ -26,7 +27,7 @@
           @if(in_array($provider, $enabledProviders, true))
             <a class="btn sign-in-provider" href="{{ route('social.start', $provider) }}">
               <x-social-provider-icon :provider="$provider" />
-              <span>{{ $provider === 'google' ? 'Sign in with Google' : $label }}</span>
+              <span>{{ in_array($provider, ['google','linkedin'], true) ? 'Sign in with '.$label : $label }}</span>
             </a>
           @endif
         @endforeach

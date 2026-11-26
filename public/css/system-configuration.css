@@ -106,6 +106,8 @@
   outline: 2px solid var(--secondary);
   outline-offset: 2px;
 }
+.sign-in-providers .sign-in-provider { min-width: 0; white-space: normal; text-align: center; }
+.sign-in-provider span { min-width: 0; overflow-wrap: anywhere; }
 .sign-in-provider svg { flex: none; }
 :root[data-theme="dark"] .sign-in-provider .google-sign-in-icon {
   box-sizing: content-box;
