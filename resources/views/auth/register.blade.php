@@ -4,6 +4,6 @@
 @section('intro','Join a marketplace built around independent talent.')
 @section('content')
 @include('auth.partials.register-form')
-@include('auth.alternative-sign-in')
+@include('auth.alternative-sign-in', ['registrationOnly' => true])
 <p class="form-foot">Already registered? <a href="{{ route('login') }}">Sign in</a></p>
 @endsection
