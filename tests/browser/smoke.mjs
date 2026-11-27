@@ -1829,6 +1829,22 @@ try {
       if(!(await admin.getByText('Feature Manager').first().count()))
         throw new Error('Admin menu lacks real controls');
       await admin.screenshot({path:out+'/desktop-admin-workspace.png',fullPage:false});
+      const profileLink=admin.locator('#workspace-navigation a[title="My Profile"]');
+      if(await profileLink.count()!==1 || !/\/dashboard\/profile$/.test(await profileLink.getAttribute('href')))
+        throw new Error('Admin My Profile does not target administration');
+      // Use the real menu href (including any current language prefix).
+      await admin.goto(new URL(await profileLink.getAttribute('href'),origin).href,{waitUntil:'networkidle'});
+      if(await admin.locator('body').getAttribute('data-workspace')!=='admin' ||
+         await admin.locator('#workspace-navigation a[title="My Profile"]').getAttribute('aria-current')!=='page' ||
+         !await admin.getByRole('heading',{name:'My Profile',exact:true}).isVisible() ||
+         !/\/dashboard\/profile$/.test(await admin.locator('[data-profile-identity-form]').getAttribute('action')))
+        throw new Error('Administration profile editor left admin workspace');
+      const profileFields=await admin.locator('[data-profile-identity-form]').evaluate(el=>{
+        const s=getComputedStyle(el.querySelector('input[name="name"]'));
+        return {width:el.getBoundingClientRect().width,border:s.borderTopStyle};
+      });
+      if(profileFields.width<=0 || profileFields.border==='none')throw new Error('Administration profile stylesheet not active');
+      checks+=3;
       await admin.goto(origin+'/en/dashboard/player-settings',{waitUntil:'domcontentloaded'});
       const typeSelect=admin.getByLabel('Player Type');
       const bamboSettings=admin.locator('[data-player-profile="bambo"]');
