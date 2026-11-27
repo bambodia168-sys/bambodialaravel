@@ -2071,6 +2071,18 @@ try {
       if(await creator.locator('body').getAttribute('data-workspace')!=='creator')
         throw new Error('Creator workspace route did not render correctly');
 
+      const verifyCreatorOrder=async()=>{
+        const layout=await creator.evaluate(()=>{
+          const root=document.querySelector('.studio-dashboard');
+          const sections=[root.querySelector('.page-intro'),root.querySelector('#studio-analytics'),root.querySelector('.workspace-overview-grid'),root.querySelector('#creator-actions').closest('section')];
+          const headings=[root.querySelector('h1'),root.querySelector('#studio-analytics-title'),root.querySelector('#creator-actions')];
+          const typography=headings.map(el=>{const s=getComputedStyle(el);return [s.fontFamily,s.fontSize,s.fontWeight,s.lineHeight,s.letterSpacing]});
+          return {ordered:sections.every((el,i)=>i===0||!!(sections[i-1].compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING)),typography,metrics:root.querySelectorAll('.workspace-overview-metric').length,charts:root.querySelectorAll('#studio-analytics [data-chart]').length,filters:root.querySelectorAll('#studio-analytics [data-filter-type],#studio-analytics [data-filter-period]').length};
+        });
+        if(!layout.ordered||layout.typography.some(t=>JSON.stringify(t)!==JSON.stringify(layout.typography[0]))||layout.metrics!==7||layout.charts!==8||layout.filters!==8)
+          throw new Error('Creator dashboard order, heading or original analytics integrity failed: '+JSON.stringify(layout));
+      };
+      await verifyCreatorOrder();
       await verifyGlassSidebar(creator,'creator');
       await creator.goto(origin+'/en/builder?=197483529',{waitUntil:'networkidle'});
       const featuredSelect=creator.locator('[data-featured-media]');
