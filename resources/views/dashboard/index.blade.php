@@ -3,6 +3,7 @@
 @push('head')
   <link rel="stylesheet" href="{{ asset('css/role-dashboard-overview.css') }}?v=2">
   <script defer src="{{ asset('js/role-dashboard-overview.js') }}?v=2"></script>
+  @if($filters)<link rel="stylesheet" href="{{ asset('css/admin-dashboard-filters.css') }}?v=1">@endif
 @endpush
 @section('content')
 <div class="container inner-page role-dashboard" data-role-dashboard="admin">
@@ -20,20 +21,21 @@
         <h1 id="admin-performance">{{ $isStaff ? 'Support operations' : 'Platform performance' }}</h1>
         <p>Current operational records and management actions permitted for your account.</p>
       </div>
-      <x-role-dashboard-period-filter/>
+      @if($filters) @include('dashboard.partials.performance-filters') @else <x-role-dashboard-period-filter/> @endif
     </div>
+    @if($filters)<p class="admin-report-scope">Calendar-to-date reporting. Type applies to listings and linked orders; account and platform-wide reports use the period only. Management links open full queues.</p>@endif
     @if(!$isStaff)
       <div class="role-dashboard-kpis" aria-label="Platform account totals">
-        <x-role-dashboard-kpi label="Registered accounts" :value="$stats['totalUsers']" icon="users" description="All recorded accounts"
+        <x-role-dashboard-kpi label="Registered accounts" :value="$stats['totalUsers']" icon="users" :description="$filters ? 'Registered in the selected period (all categories)' : 'All recorded accounts'"
           :href="auth()->user()->role==='super_admin' ? route('dashboard.users') : null"/>
-        <x-role-dashboard-kpi label="Approved freelancers" :value="$stats['creators']" icon="user-round-check" description="Accounts with the freelancer role"/>
-        <x-role-dashboard-kpi label="Customers and subscribers" :value="$stats['customers']" icon="user" description="Accounts with customer or subscriber roles"/>
+        <x-role-dashboard-kpi label="Approved freelancers" :value="$stats['creators']" icon="user-round-check" :description="$filters ? 'Registered in the period, currently freelancers' : 'Accounts with the freelancer role'"/>
+        <x-role-dashboard-kpi label="Customers and subscribers" :value="$stats['customers']" icon="user" :description="$filters ? 'Registered in the period, currently customers or subscribers' : 'Accounts with customer or subscriber roles'"/>
         @if($primaryQueue)
-          <x-role-dashboard-kpi label="All listings awaiting review" :value="$primaryQueue['count']" icon="clipboard-check" description="Pending or in-review listings" :href="route($primaryQueue['route'])"/>
+          <x-role-dashboard-kpi :label="$filters ? 'Listings awaiting review in period' : 'All listings awaiting review'" :value="$filters ? $periodPending : $primaryQueue['count']" icon="clipboard-check" :description="$filters ? 'Pending or in-review listings created in selected type and period' : 'Pending or in-review listings'" :href="route($primaryQueue['route'])"/>
         @endif
       </div>
     @endif
-    <x-role-dashboard-trends scope="admin"/>
+    @if($filters) @include('dashboard.partials.performance-trends') @else <x-role-dashboard-trends scope="admin"/> @endif
     @if(count($reports))
       <div class="role-dashboard-charts">
         @foreach($reports as $report)
@@ -45,11 +47,11 @@
 
   <section class="role-dashboard-section" aria-labelledby="admin-queues-title">
     <div class="role-dashboard-heading"><div><h2 id="admin-queues-title">Queues requiring attention</h2>
-      <p>Open the existing permission-controlled screen for each queue. Some queues overlap.</p></div></div>
+      <p>{{ $filters ? 'Current full backlog, independent of the reporting filters. Some queues overlap.' : 'Open the existing permission-controlled screen for each queue. Some queues overlap.' }}</p></div></div>
     @if(count($queues))
       <div class="workspace-overview-grid">
         @foreach($queues as $queue)
-          @continue(!$isStaff && $primaryQueue && $queue['route'] === $primaryQueue['route'])
+          @continue(!$filters && !$isStaff && $primaryQueue && $queue['route'] === $primaryQueue['route'])
           <x-workspace-metric :label="$queue['label']" :value="$queue['count']"
             :icon="$queue['icon']" :href="route($queue['route'], $queue['params'] ?? [])" action="Manage queue"/>
         @endforeach
@@ -64,7 +66,7 @@
     <div class="role-dashboard-tables">
       @if($canReview)
         <section class="panel" aria-labelledby="admin-recent-title" data-dashboard-table>
-          <div class="panel-head"><div><h2 id="admin-recent-title">Latest pending marketplace submissions</h2><p>Latest five records awaiting moderation.</p></div>
+          <div class="panel-head"><div><h2 id="admin-recent-title">Latest pending marketplace submissions</h2><p>{{ $filters ? 'Latest five matching listings created in the selected period.' : 'Latest five records awaiting moderation.' }}</p></div>
             <a class="btn subtle compact" href="{{ route('dashboard.reviews') }}">View queue</a></div>
           <x-role-dashboard-table-filter label="Filter recent submissions" :statuses="['pending'=>'Pending','in_review'=>'In review']"/>
           <div class="table-scroll"><table class="data-table"><thead><tr><th>Submission</th><th>Type</th><th>Status</th><th>Action</th></tr></thead><tbody>
