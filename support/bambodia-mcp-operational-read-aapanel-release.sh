@@ -3,7 +3,7 @@ set -Eeuo pipefail
 set +x
 umask 077
 REPO=bambodia168-sys/bambodialaravel
-HEAD=89ff984c6e7b268225744d66eff68f14d6fd25d1
+HEAD=66cbdf970865cbecdefa484a1e7812befc79d550
 BASE=0ebd371a5c99e901e5541a99c1671aa5727482cd
 SITE=/www/wwwroot/bambodia-staging-qa
 PHP=/www/server/php/85/bin/php
@@ -42,20 +42,25 @@ fetch() { curl -fLsS --retry 2 --connect-timeout 12 --max-time 90 "$1" -o "$2"; 
 echo "=== Bambodia MCP operational read tools release 209: $MODE ==="
 API="https://api.github.com/repos/$REPO"
 fetch "$API/pulls/209" "$WORK/pr.json"
-for run in 46040739620 46040739894 46040739643 46040739452 46040739471; do
-  fetch "$API/actions/runs/$run" "$WORK/$run.json"
-done
+fetch "$API/actions/runs?head_sha=$HEAD&per_page=100" "$WORK/runs.json"
 RELEASE="$(python3 - "$WORK" "$HEAD" "$BASE" "$MODE" <<'PY'
 import json,pathlib,re,sys
 work,head,base,mode=pathlib.Path(sys.argv[1]),*sys.argv[2:]
 pr=json.loads((work/'pr.json').read_text())
 if pr['head']['sha']!=head or pr['base']['ref']!='main' or (not pr.get('merged') and pr['base']['sha']!=base):
     sys.exit('STOP: approved PR changed')
+expected=('Bambodia Quality','Bambodia Browser Emulation Acceptance','Bambodia Operational Acceptance','Bambodia MySQL Installer Acceptance','Bambodia Isolated Authenticated Journeys')
+runs=json.loads((work/'runs.json').read_text())['workflow_runs']
 ready=True
-for run in (46040739620,46040739894,46040739643,46040739452,46040739471):
-    data=json.loads((work/f'{run}.json').read_text())
-    print(f"{data['name']}: {data['status']} / {data['conclusion']}",file=sys.stderr)
-    ready=ready and data['head_sha']==head and data['status']=='completed' and data['conclusion']=='success'
+for name in expected:
+    matches=[r for r in runs if r['name']==name and r['head_sha']==head and r.get('event')=='pull_request']
+    if len(matches)!=1:
+        print(f'{name}: missing or ambiguous pull-request run',file=sys.stderr)
+        ready=False
+        continue
+    data=matches[0]
+    print(f"{name}: {data['status']} / {data['conclusion']}",file=sys.stderr)
+    ready=ready and data['status']=='completed' and data['conclusion']=='success'
 merged=pr.get('merged') is True
 print(f'All CI successful: {ready}; PR merged: {merged}',file=sys.stderr)
 if mode=='--apply' and not (ready and merged):
