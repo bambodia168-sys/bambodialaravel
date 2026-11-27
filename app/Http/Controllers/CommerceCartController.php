@@ -2,26 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AccountNotification;
+use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Models\CommercePaymentMethod;
 use App\Models\FeatureFlag;
 use App\Models\MarketplaceListing;
 use App\Models\PolicyPublication;
 use App\Models\User;
-use App\Notifications\CheckoutVerification;
 use App\Support\CheckoutCart;
 use App\Support\CommerceCollection;
 use App\Support\CommerceOffers;
-use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 
 class CommerceCartController extends Controller
 {
@@ -46,7 +42,7 @@ class CommerceCartController extends Controller
             return redirect()->route('cart');
         }
         if ($request->user() && ! $request->user()->hasVerifiedEmail()) {
-            return redirect()->route('checkout.verification');
+            return EmailVerificationController::requireForCheckout($request);
         }
         if (! $request->user()) {
             $request->session()->put(CheckoutCart::INTENT, true);
@@ -114,74 +110,25 @@ class CommerceCartController extends Controller
         return redirect()->route('cart');
     }
 
-    public function verification(Request $request): Response|RedirectResponse
+    // Legacy checkout URLs continue to work, but never send users to an empty cart.
+    public function verification(Request $request): RedirectResponse
     {
-        abort_unless(config('commerce.enabled'), 404);
-        if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->route('cart');
-        }
-
-        return response()->view('commerce.verify-email')->header('Cache-Control', 'private, no-store');
+        return redirect()->route('verification.notice');
     }
 
     public function sendVerification(Request $request): RedirectResponse
     {
-        abort_unless(config('commerce.enabled'), 404);
-
-        return self::verificationEmail($request->user());
+        return EmailVerificationController::sendFor($request->user());
     }
 
     public static function verificationEmail(User $user): RedirectResponse
     {
-        if ($user->hasVerifiedEmail()) {
-            return redirect()->route('cart');
-        }
-        $response = redirect()->route('checkout.verification');
-        if (app()->environment('production') && in_array(app('mail.manager')->getDefaultDriver(), ['log', 'array', null], true)) {
-            return $response->withErrors(['email' => 'Verification email delivery is temporarily unavailable. Your cart is saved.']);
-        }
-
-        try {
-            $user->notify(new CheckoutVerification);
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return $response->withErrors(['email' => 'The verification email could not be sent. Your cart is saved. Try again shortly.']);
-        }
-
-        AccountNotification::deliver(
-            $user->id,
-            'account.email.verification_sent',
-            'Verification email sent',
-            'Open the verification link sent to your account email address to continue checkout.',
-            route('checkout.verification', absolute: false),
-        );
-
-        return $response->with('status', 'Verification email sent.');
+        return EmailVerificationController::sendFor($user);
     }
 
     public function verify(Request $request, string $id, string $hash): RedirectResponse
     {
-        abort_unless(config('commerce.enabled'), 404);
-        $user = $request->user();
-        abort_unless(hash_equals((string) $user->getKey(), $id)
-            && hash_equals(sha1($user->getEmailForVerification()), $hash), 403);
-        DB::transaction(function () use ($user, $hash) {
-            $member = User::query()->lockForUpdate()->findOrFail($user->id);
-            abort_unless(hash_equals(sha1($member->getEmailForVerification()), $hash), 403);
-            if (!$member->hasVerifiedEmail() && $member->markEmailAsVerified()) {
-                event(new Verified($member));
-                AccountNotification::deliver(
-                    $member->id,
-                    'account.email.verified',
-                    'Email address verified',
-                    'Your account email is confirmed and your cart is ready.',
-                    route('cart', absolute: false),
-                );
-            }
-        });
-
-        return redirect()->route('cart')->with('status', 'Email verified. Your saved cart is ready.');
+        return app(EmailVerificationController::class)->verify($request, $id, $hash);
     }
 
     private function page(Request $request, bool $checkout): Response
