@@ -80,7 +80,8 @@ final class EmailTemplates
                 default => 'Marketplace',
             };
             $enabled = in_array($event, [
-                'listing.reviewed', 'job.reviewed', 'marketplace.submission.received', 'commerce.payment.rejected',
+                'listing.reviewed', 'job.reviewed', 'marketplace.submission.received', 'marketplace.review.requested',
+                'commerce.payment.rejected',
                 'commerce.refund.confirmed', 'support.replied', 'inquiry.received', 'job.proposal.received',
                 'inquiry.replied', 'detail.comment.received', 'contract.message.received', 'support.status_changed',
             ], true);

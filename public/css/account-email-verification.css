@@ -1,0 +1,13 @@
+.email-verification-page{min-height:clamp(440px,65vh,760px);display:grid;place-items:center;padding-block:clamp(32px,7vw,84px)}
+.email-verification-card{width:min(100%,520px);box-sizing:border-box;display:grid;gap:15px;justify-items:center;text-align:center;padding:clamp(24px,5vw,48px);border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:var(--shadow);color:var(--text)}
+.email-verification-icon{width:60px;height:60px;border-radius:17px;display:grid;place-items:center;background:var(--surface-2);color:var(--accent);border:1px solid var(--line)}
+.email-verification-icon.is-success{color:#16803d;background:color-mix(in srgb,#16a34a 12%,var(--surface));border-color:color-mix(in srgb,#16a34a 30%,var(--line))}
+.email-verification-eyebrow{font-size:11px;letter-spacing:.12em;font-weight:800;color:var(--muted)}
+.email-verification-card h1{font-size:clamp(25px,3vw,34px);font-weight:800;line-height:1.2;margin:0;color:var(--text)}
+.email-verification-card p{font-size:14px;line-height:1.65;color:var(--muted);margin:0}
+.email-verification-address{padding:11px 14px;max-width:100%;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);overflow-wrap:anywhere;font-weight:700}
+.email-verification-card form,.email-verification-card>.btn{width:100%}
+.email-verification-card .btn{justify-content:center;width:100%;min-height:43px}
+.email-verification-card .email-verification-status,.email-verification-card .email-verification-error,.email-verification-card .email-verification-hint{border-radius:10px;padding:10px 13px;width:100%;background:var(--surface-2)}
+.email-verification-card .email-verification-error{color:var(--accent)}
+:root[data-theme="dark"] .email-verification-icon.is-success{color:#86efac}

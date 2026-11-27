@@ -11,6 +11,10 @@ final class SubmissionNotifications
 {
     public static function send(MarketplaceListing|MarketplaceJob $record): void
     {
+        // Draft saves and already-published records are not new review submissions.
+        if ($record->status !== 'pending') {
+            return;
+        }
         $ownerId = MarketplaceManagement::ownerId($record);
         $type = MarketplaceManagement::type($record);
         $label = $record instanceof MarketplaceJob ? 'Job' : 'Listing';

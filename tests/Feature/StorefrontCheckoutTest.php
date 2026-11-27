@@ -99,27 +99,51 @@ class StorefrontCheckoutTest extends TestCase
             'password_confirmation' => 'CheckoutFixturePassword123!',
             'terms_accepted' => '1',
             'terms_publication_id' => $terms->id,
-        ])->assertRedirect(route('checkout.verification'));
+        ])->assertRedirect(route('verification.notice'));
 
         $user = User::query()->where('email', 'checkout-customer@example.test')->sole();
         $this->assertArrayHasKey($offer->public_id, CommerceCart::query()->findOrFail($user->id)->items);
         Notification::assertSentTo($user, CheckoutVerification::class);
-        $this->get(route('checkout'))->assertRedirect(route('checkout.verification'));
+        $this->get(route('checkout'))->assertRedirect(route('verification.notice'));
         $this->post(route('localized.en.checkout.place', $offer->public_id))
-            ->assertRedirect(route('localized.en.checkout.verification'));
+            ->assertRedirect(route('localized.en.verification.notice'));
         $url = (new CheckoutVerification)->url($user);
         Auth::logout();
         $this->flushSession();
         $this->get($url)->assertRedirect(route('login'));
         $this->post(route('login.store'), ['email' => $user->email, 'password' => 'CheckoutFixturePassword123!'])
             ->assertRedirect($url);
-        $this->get($url)->assertRedirect(route('cart'));
+        $this->get($url)->assertRedirect(route('verification.verified'));
+        $this->get(route('verification.verified'))->assertOk()->assertSee('Your email verified');
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
         $this->get(route('cart'))->assertOk()->assertSee('Checkout verification fixture');
 
         $this->actingAs($this->user())->get($url)->assertForbidden();
         $this->actingAs($user)->travel(61)->minutes();
         $this->get($url)->assertForbidden();
+    }
+
+    public function test_registration_without_cart_sends_account_verification_even_when_commerce_is_disabled(): void
+    {
+        config(['commerce.enabled' => false]);
+        Notification::fake();
+        $terms = $this->terms();
+        $this->post(route('register.store'), [
+            'name' => 'New Account Customer',
+            'email' => 'account-verification@example.test',
+            'password' => 'AccountFixturePassword123!',
+            'password_confirmation' => 'AccountFixturePassword123!',
+            'terms_accepted' => '1',
+            'terms_publication_id' => $terms->id,
+        ])->assertRedirect(route('verification.notice'));
+        $user = User::query()->where('email', 'account-verification@example.test')->sole();
+        Notification::assertSentTo($user, CheckoutVerification::class);
+        $this->assertFalse($user->hasVerifiedEmail());
+        $this->get(route('verification.notice'))->assertOk()->assertSee('Verify your email')->assertDontSee('Continue checkout');
+        $this->get((new CheckoutVerification)->url($user))->assertRedirect(route('verification.verified'));
+        $this->assertTrue($user->fresh()->hasVerifiedEmail());
+        $this->get(route('verification.verified'))->assertOk()->assertSee('Your email verified')->assertDontSee('Continue checkout');
+        $this->assertDatabaseCount('commerce_carts', 0);
     }
 
     public function test_login_preserves_guest_cart_and_returns_to_checkout(): void

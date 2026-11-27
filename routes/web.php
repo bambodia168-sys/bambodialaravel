@@ -81,6 +81,7 @@ use App\Http\Controllers\SecurityDashboardController;
 use App\Http\Controllers\SecurityAlertController;
 use App\Http\Controllers\SecurityAlertRuleController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Creator\ListingController as CreatorListingController;
 use App\Http\Controllers\Creator\CreatorApplicationController;
@@ -182,10 +183,20 @@ Route::post('/cart/{listing}', [CommerceCartController::class, 'add'])->where('l
 Route::delete('/cart/{listing}', [CommerceCartController::class, 'remove'])->where('listing', '[0-9]{9}')
     ->middleware('throttle:40,1')->block()->name('cart.remove');
 Route::get('/checkout', [CommerceCartController::class, 'checkout'])->block()->name('checkout');
+// Account email verification is independent of commerce and available to every role.
+Route::middleware('auth')->group(function (): void {
+    Route::get('/verify-email', [EmailVerificationController::class, 'show'])->name('verification.notice');
+    Route::post('/verify-email', [EmailVerificationController::class, 'send'])
+        ->middleware('throttle:3,1,email-verification:')->block()->name('verification.send');
+    Route::get('/verify-email/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->whereNumber('id')->middleware(['signed', 'throttle:10,1,email-verification-link:'])->name('verification.verify');
+    Route::get('/email-verified', [EmailVerificationController::class, 'verified'])->name('verification.verified');
+});
+// Existing checkout URLs and signed links remain valid for previously sent emails.
 Route::middleware('auth')->prefix('checkout')->name('checkout.')->group(function (): void {
     Route::get('/verify-email', [CommerceCartController::class, 'verification'])->name('verification');
     Route::post('/verify-email', [CommerceCartController::class, 'sendVerification'])
-        ->middleware('throttle:3,1')->name('verification.send');
+        ->middleware('throttle:3,1,email-verification:')->block()->name('verification.send');
     Route::get('/verify-email/{id}/{hash}', [CommerceCartController::class, 'verify'])
         ->whereNumber('id')->middleware(['signed', 'throttle:10,1'])->name('verify');
     Route::post('/{listing}', [CommerceOrderController::class, 'placeFromCart'])->where('listing', '[0-9]{9}')

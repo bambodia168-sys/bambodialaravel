@@ -8,6 +8,20 @@
     <h1>Account Security</h1>
     <p>Manage your authenticators, recovery codes, and passkeys.</p>
   </div>
+  <section class="panel" id="account-email-verification">
+    <div class="panel-head">
+      <div><h2>Email verification</h2><p>Confirm the email address associated with your account.</p></div>
+      <span class="role-pill">{{ auth()->user()->hasVerifiedEmail() ? 'Verified' : 'Not verified' }}</span>
+    </div>
+    <div class="settings-form">
+      <p>{{ auth()->user()->email }}</p>
+      @if(!auth()->user()->hasVerifiedEmail())
+        <a class="btn primary" href="{{ route('verification.notice') }}"><x-icon name="mail" size="17"/> Verify your email</a>
+      @else
+        <a class="btn subtle" href="{{ route('verification.verified') }}"><x-icon name="check-circle" size="17"/> View verification status</a>
+      @endif
+    </div>
+  </section>
   <section class="panel" id="account-two-factor">
     <div class="panel-head">
       <div><h2>Two-factor authentication</h2>

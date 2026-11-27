@@ -242,7 +242,7 @@ class CommerceOrderController extends Controller
     {
         abort_unless(config('commerce.enabled'), 404);
         if (! $request->user()->hasVerifiedEmail()) {
-            return redirect()->route('checkout.verification');
+            return \App\Http\Controllers\Auth\EmailVerificationController::requireForCheckout($request);
         }
 
         return $this->place($request, $listing, true);

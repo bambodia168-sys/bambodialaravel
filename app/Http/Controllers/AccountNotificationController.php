@@ -40,6 +40,11 @@ class AccountNotificationController extends Controller
         $notification = (clone $owned)->firstOrFail();
         $owned->whereNull('read_at')->update(['read_at' => now()]);
 
+        // Resolve old verification notices by event rather than their obsolete cart URL.
+        if (in_array($notification->event, ['account.email.verification_sent', 'account.email.verified'], true)) {
+            return redirect()->route($request->user()->hasVerifiedEmail() ? 'verification.verified' : 'verification.notice');
+        }
+
         return AccountNotification::isLocalTarget($notification->target_path)
             ? redirect($notification->target_path)
             : redirect()->route('account.notifications');

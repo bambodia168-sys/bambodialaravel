@@ -108,6 +108,10 @@ class NotificationsTest extends TestCase
         ]);
         $reviewAlert = AccountNotification::query()->where('event', 'marketplace.review.requested')->sole();
         $this->assertEquals($reviewer->id, $reviewAlert->user_id);
+        $this->assertDatabaseHas('email_deliveries', ['user_id'=>$member->id, 'event'=>'marketplace.submission.received', 'status'=>'queued']);
+        $this->assertDatabaseHas('email_deliveries', ['user_id'=>$reviewer->id, 'event'=>'marketplace.review.requested', 'status'=>'queued']);
+        $this->assertDatabaseMissing('email_deliveries', ['user_id'=>$excluded->id, 'event'=>'marketplace.review.requested']);
+        $this->assertDatabaseMissing('email_deliveries', ['user_id'=>$staff->id, 'event'=>'marketplace.review.requested']);
         $this->actingAs($reviewer)->get('/dashboard')->assertOk()->assertSee('Notifications, 1 unread');
         $this->get('/account/notifications/tray')->assertSee('Listing ready for review');
         $this->actingAs($staff)->get('/account/notifications/tray')->assertOk()->assertDontSee('Listing ready for review');
@@ -133,13 +137,13 @@ class NotificationsTest extends TestCase
         Notification::fake();
         $member = $this->member('customer');
 
-        $this->actingAs($member)->post(route('checkout.verification.send'))->assertRedirect(route('checkout.verification'));
+        $this->actingAs($member)->post(route('checkout.verification.send'))->assertRedirect(route('verification.notice'));
         Notification::assertSentTo($member, CheckoutVerification::class);
         $this->assertDatabaseHas('account_notifications', ['user_id' => $member->id, 'event' => 'account.email.verification_sent']);
 
         $url = (new CheckoutVerification())->url($member);
-        $this->get($url)->assertRedirect(route('cart'));
-        $this->get($url)->assertRedirect(route('cart'));
+        $this->get($url)->assertRedirect(route('verification.verified'));
+        $this->get($url)->assertRedirect(route('verification.verified'));
         $this->assertSame(1, AccountNotification::query()->where('user_id', $member->id)
             ->where('event', 'account.email.verified')->count());
     }
@@ -221,4 +225,42 @@ class NotificationsTest extends TestCase
         $this->actingAs($this->member('admin'))->get('/dashboard/notification-analytics')
             ->assertOk()->assertSee('Notification Analytics');
     }
+
+    public function test_account_verification_is_independent_of_commerce_and_legacy_bell_links(): void
+    {
+        config(['commerce.enabled'=>false]);
+        Notification::fake();
+        $member = $this->member('freelancer');
+        $other = $this->member('customer');
+        AccountNotification::deliver($member->id,'account.email.verification_sent','Verification email sent','Old checkout copy.','/checkout/verify-email');
+        $note = AccountNotification::query()->where('user_id',$member->id)->firstOrFail();
+        $this->actingAs($other)->patch('/account/notifications/'.$note->id)->assertNotFound();
+        $this->actingAs($member)->patch('/account/notifications/'.$note->id)->assertRedirect(route('verification.notice'));
+        $this->get('/verify-email')->assertOk()->assertSee('Verify your email')->assertDontSee('Back to cart')->assertDontSee('checkout-progress',false);
+        $this->get('/email-verified')->assertRedirect(route('verification.notice'));
+        $this->post('/verify-email')->assertRedirect(route('verification.notice'));
+        Notification::assertSentTo($member, CheckoutVerification::class);
+        $url = (new CheckoutVerification)->url($member);
+        $this->actingAs($other)->get($url)->assertForbidden();
+        $this->assertNull($member->fresh()->email_verified_at);
+        $this->actingAs($member)->get($url.'&tampered=1')->assertForbidden();
+        $this->get($url)->assertRedirect(route('verification.verified'));
+        $this->get('/email-verified')->assertOk()->assertSee('Your email verified')->assertDontSee('Continue checkout');
+        $this->get('/verify-email')->assertRedirect(route('verification.verified'));
+        $this->get('/checkout/verify-email')->assertRedirect(route('verification.notice'));
+        $this->patch('/account/notifications/'.$note->id)->assertRedirect(route('verification.verified'));
+        $this->assertNotNull($member->fresh()->email_verified_at);
+    }
+
+    public function test_existing_signed_checkout_verification_link_remains_valid(): void
+    {
+        config(['commerce.enabled'=>false]);
+        $member = $this->member('admin');
+        $url = \Illuminate\Support\Facades\URL::temporarySignedRoute('checkout.verify',now()->addHour(),[
+            'id'=>$member->id,'hash'=>sha1($member->getEmailForVerification()),
+        ]);
+        $this->actingAs($member)->get($url)->assertRedirect(route('verification.verified'));
+        $this->assertNotNull($member->fresh()->email_verified_at);
+    }
+
 }
