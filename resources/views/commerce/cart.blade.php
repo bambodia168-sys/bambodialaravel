@@ -90,7 +90,10 @@
           <p role="status">Paid checkout is currently unavailable. Your cart stays saved.</p>
         @endif
         @if(!$checkout && $totals !== [])
-          <a class="btn primary" href="{{ route('checkout') }}">Review checkout</a>
+          @if(auth()->check() && !auth()->user()->hasVerifiedEmail())
+            <p class="storefront-notice">Verify your account email before placing an order. Your cart will remain saved.</p>
+          @endif
+          <a class="btn primary" href="{{ route('checkout') }}">{{ auth()->check() && !auth()->user()->hasVerifiedEmail() ? 'Verify email to continue' : 'Review checkout' }}</a>
         @elseif($checkout && !auth()->check() && $totals !== [])
           <a class="btn primary" href="{{ route('checkout', ['account' => 'login']) }}">Sign in to continue</a>
           @if($canRegister)<a class="btn subtle" href="{{ route('checkout', ['account' => 'register']) }}">Create account</a>@endif
