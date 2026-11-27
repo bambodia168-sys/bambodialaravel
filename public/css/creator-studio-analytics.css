@@ -169,3 +169,16 @@
 @media(prefers-reduced-motion:reduce){
  .studio-dashboard *{animation:none!important;scroll-behavior:auto!important;transition-duration:0s!important}
 }
+
+
+/* Match only the three primary Creator Studio dashboard headings.
+   Keep semantic h1/h2 levels and all other component typography intact. */
+.workspace-content .studio-dashboard .page-intro h1,
+.workspace-content .studio-dashboard #studio-analytics-title,
+.workspace-content .studio-dashboard #creator-actions {
+  font-family: inherit;
+  font-size: clamp(25px,2.8vw,36px);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: normal;
+}
