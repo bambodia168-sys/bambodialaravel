@@ -78,6 +78,8 @@ class WorkspaceSelfProfileTest extends TestCase
 
     public function test_workspace_section_and_item_mutations_are_owner_scoped(): void
     {
+        // Exercise every ownership check independently of shared write-rate limits.
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         $foreign = $this->member('customer');
         CreatorProfileSection::ensureDefaults($foreign);
         $foreignSection = CreatorProfileSection::query()->where('user_id',$foreign->id)->firstOrFail();
