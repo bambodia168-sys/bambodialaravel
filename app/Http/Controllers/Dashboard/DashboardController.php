@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\ContractDispute;
 use App\Models\CreatorApplication;
+use App\Models\FreelanceContract;
 use App\Models\MarketplaceJob;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
@@ -56,6 +57,16 @@ class DashboardController extends Controller
             $queues[] = ['label'=>'Unresolved contract disputes',
                 'count'=>ContractDispute::query()->whereIn('status',['open','under_review'])->count(),
                 'route'=>'dashboard.contracts.disputes','icon'=>'shield'];
+            $contractCounts = FreelanceContract::query()->selectRaw('status, COUNT(*) as total')
+                ->groupBy('status')->pluck('total','status');
+            $reports[] = ['title'=>'Contract lifecycle','description'=>'Current agreements by recorded status.','icon'=>'file-check',
+                'rows'=>collect(['draft'=>'Draft','offered'=>'Offered','active'=>'Active','disputed'=>'Disputed','completed'=>'Completed','declined'=>'Declined','cancelled'=>'Cancelled'])->map(fn ($label,$key)=>[
+                    'label'=>$label,'count'=>(int)($contractCounts[$key] ?? 0),'href'=>route('dashboard.contracts.index',['status'=>$key])])->values()->all()];
+            $applicationCounts = CreatorApplication::query()->selectRaw('status, COUNT(*) as total')
+                ->groupBy('status')->pluck('total','status');
+            $reports[] = ['title'=>'Creator applications','description'=>'Recorded applications by decision status.','icon'=>'user-round-check',
+                'rows'=>collect(['pending'=>'Pending','approved'=>'Approved','rejected'=>'Rejected'])->map(fn ($label,$key)=>[
+                    'label'=>$label,'count'=>(int)($applicationCounts[$key] ?? 0),'href'=>route('dashboard.creator-applications',['status'=>$key])])->values()->all()];
             $shortcuts = [
                 ['Account Verification','dashboard.account-verifications.index','shield-check'],
                 ['Contracts','dashboard.contracts.index','file-check'],
