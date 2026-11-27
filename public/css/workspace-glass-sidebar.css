@@ -1,34 +1,41 @@
-/* Bambodia shared workspace navigation: glass surface, not a global theme. */
+/* Bambodia liquid-glass navigation: contrast, refraction-inspired highlights,
+   and real backdrop blur. All dashboard content and role navigation stay intact. */
 .workspace-body {
   --workspace-column: 270px;
   --glass-inset: 12px;
-  --glass-edge: 28px;
-  --glass-rail-bg: #e8edf6;
-  --glass-surface: rgba(255,255,255,.72);
-  --glass-border: rgba(255,255,255,.96);
-  --glass-shadow: 0 8px 30px rgba(37,64,105,.11), 0 0 0 1px rgba(91,119,159,.13);
-  --glass-wash: radial-gradient(ellipse at 0% 0%,rgba(119,154,225,.22),transparent 62%),radial-gradient(ellipse at 100% 100%,rgba(161,182,235,.19),transparent 60%);
+  --glass-edge: 30px;
+  --glass-rail-bg: #7597da;
+  --glass-wash: radial-gradient(ellipse at 4% 12%,#f9e1ba 0%,transparent 28%),radial-gradient(ellipse at 95% 68%,#7ec4ff 0%,transparent 39%),linear-gradient(152deg,#b9d5ff 0%,#7195d9 30%,#385dba 51%,#8da8e8 72%,#e8d7ff 100%);
+  --glass-surface: rgba(245,249,255,.64);
+  --glass-reflection: linear-gradient(118deg,rgba(255,255,255,.57) 0%,rgba(255,255,255,.12) 29%,transparent 44%,rgba(255,255,255,.22) 68%,transparent 85%);
+  --glass-border: rgba(255,255,255,.93);
+  --glass-shadow: 0 12px 28px rgba(20,49,111,.23),0 0 0 1px rgba(37,75,144,.22),inset 1px 1px 1px rgba(255,255,255,.95),inset -1px -1px 2px rgba(76,110,177,.28),inset 0 12px 24px rgba(255,255,255,.18);
   --glass-hover: rgba(255,255,255,.72);
-  --glass-active: linear-gradient(115deg,rgba(255,232,212,.96),rgba(255,249,242,.91));
-  --glass-toggle: #f5f8ff;
-  --glass-toggle-text: #344d70;
-  --glass-identity: rgba(233,240,252,.7);
-  --workspace-nav-text: #334866;
-  --workspace-nav-muted: #536984;
+  --glass-active: linear-gradient(135deg,rgba(255,255,255,.96),rgba(255,220,180,.88));
+  --glass-active-shadow: inset 0 1px 1px #fff,inset 0 -1px 2px rgba(156,65,13,.15),0 3px 10px rgba(66,64,100,.13);
+  --glass-toggle: linear-gradient(145deg,#fff,#cadcfb);
+  --glass-toggle-text: #18365c;
+  --glass-head: rgba(231,240,255,.92);
+  --workspace-nav-text: #102b4e;
+  --workspace-nav-muted: #304b72;
+  --workspace-nav-line: rgba(50,85,146,.30);
 }
 :root[data-theme="dark"] .workspace-body {
-  --glass-rail-bg: #0b1526;
-  --glass-surface: rgba(15,30,52,.82);
-  --glass-border: rgba(154,184,230,.22);
-  --glass-shadow: 0 10px 32px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.045);
-  --glass-wash: radial-gradient(ellipse at 0% 0%,rgba(78,94,181,.25),transparent 58%),radial-gradient(ellipse at 100% 100%,rgba(26,89,153,.22),transparent 62%);
-  --glass-hover: rgba(123,163,219,.12);
-  --glass-active: linear-gradient(115deg,rgba(116,62,32,.69),rgba(79,48,34,.72));
-  --glass-toggle: #1b2d49;
-  --glass-toggle-text: #dbeaff;
-  --glass-identity: rgba(116,153,208,.08);
-  --workspace-nav-text: #e6f0ff;
-  --workspace-nav-muted: #a9bdd8;
+  --glass-rail-bg: #071225;
+  --glass-wash: radial-gradient(ellipse at 9% 8%,#6741be 0%,transparent 32%),radial-gradient(ellipse at 98% 74%,#1367b6 0%,transparent 38%),linear-gradient(155deg,#1b285b 0%,#111a40 37%,#164581 65%,#081221 100%);
+  --glass-surface: rgba(8,18,38,.66);
+  --glass-reflection: linear-gradient(118deg,rgba(222,231,255,.20) 0%,rgba(143,179,255,.06) 29%,transparent 44%,rgba(131,176,255,.11) 68%,transparent 85%);
+  --glass-border: rgba(206,225,255,.49);
+  --glass-shadow: 0 12px 32px rgba(0,0,0,.39),0 0 0 1px rgba(10,21,47,.5),inset 1px 1px 1px rgba(235,242,255,.42),inset -1px -1px 2px rgba(151,189,255,.24),inset 0 14px 30px rgba(109,140,255,.10);
+  --glass-hover: rgba(177,204,255,.17);
+  --glass-active: linear-gradient(135deg,rgba(171,108,55,.63),rgba(83,53,47,.88));
+  --glass-active-shadow: inset 0 1px 1px rgba(255,220,185,.42),inset 0 -1px 2px rgba(255,159,79,.15),0 3px 12px rgba(0,0,0,.24);
+  --glass-toggle: linear-gradient(145deg,#536a9a,#192943);
+  --glass-toggle-text: #f0f6ff;
+  --glass-head: rgba(18,31,59,.94);
+  --workspace-nav-text: #f2f6ff;
+  --workspace-nav-muted: #c3d2ec;
+  --workspace-nav-line: rgba(175,199,246,.26);
 }
 .workspace-body.workspace-collapsed { --workspace-column: 88px; }
 .workspace-body .workspace-shell {
@@ -43,19 +50,60 @@
   border: 1px solid var(--glass-border);
   border-radius: 21px;
   background: var(--glass-surface);
-  background-image: var(--glass-wash);
+  background-image: var(--glass-reflection);
   box-shadow: var(--glass-shadow);
   padding: 16px 10px 12px;
   gap: 11px;
   scrollbar-width: thin;
 }
-@supports ((backdrop-filter: blur(18px)) or (-webkit-backdrop-filter: blur(18px))) {
+@supports ((backdrop-filter: blur(24px)) or (-webkit-backdrop-filter: blur(24px))) {
   .workspace-body .workspace-sidebar {
-    -webkit-backdrop-filter: blur(18px) saturate(125%);
-    backdrop-filter: blur(18px) saturate(125%);
+    -webkit-backdrop-filter: blur(24px) saturate(155%);
+    backdrop-filter: blur(24px) saturate(155%);
   }
 }
-.workspace-body .workspace-sidebar-head { padding: 6px 8px 13px; gap: 12px; }
+.workspace-body .workspace-sidebar-head {
+  position: sticky;
+  top: -16px;
+  z-index: 2;
+  margin-top: -6px;
+  padding: 12px 8px 13px;
+  gap: 8px;
+  background: var(--glass-head);
+  border-radius: 14px 14px 8px 8px;
+  backdrop-filter: blur(20px) saturate(145%);
+}
+.workspace-body .workspace-favicon-pair {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+.workspace-body .workspace-favicon-pair img { width: 36px; height: 36px; object-fit: contain; }
+.workspace-body:not(.workspace-collapsed) .workspace-favicon-pair { display: none; }
+@media (min-width:851px) {
+  .workspace-body.workspace-collapsed .workspace-favicon-pair { display: grid; place-items: center; }
+  .workspace-body.workspace-collapsed .workspace-kind { display: none; }
+}
+.workspace-body .workspace-mobile-trigger {
+  display: none;
+  position: fixed;
+  bottom: max(16px,env(safe-area-inset-bottom));
+  left: 12px;
+  z-index: 79;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  color: var(--glass-toggle-text);
+  background: var(--glass-toggle);
+  box-shadow: var(--glass-shadow);
+  cursor: pointer;
+}
+.workspace-body .workspace-mobile-trigger:focus-visible { outline: 2px solid var(--secondary); outline-offset: 3px; }
 .workspace-body .workspace-navigation { gap: 12px; }
 .workspace-body .workspace-nav-group { gap: 2px; }
 .workspace-body .workspace-nav-heading { padding: 10px 11px 5px; letter-spacing: .09em; }
@@ -78,7 +126,7 @@
   background: var(--glass-active);
   color: var(--workspace-active-text);
   border-color: var(--workspace-active-line);
-  box-shadow: inset 2px 0 0 var(--accent),0 2px 8px rgba(0,0,0,.035);
+  box-shadow: var(--glass-active-shadow),inset 2px 0 0 var(--accent);
   font-weight: 750;
 }
 .workspace-body .workspace-nav-link:focus-visible,
@@ -87,34 +135,6 @@
   outline: 2px solid var(--secondary);
   outline-offset: 2px;
 }
-.workspace-body .workspace-sidebar-identity {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-  padding: 9px 8px;
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  background: var(--glass-identity);
-}
-.workspace-body .workspace-sidebar-identity > .profile-avatar {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
-  border: 1px solid var(--workspace-nav-line);
-  border-radius: 50%;
-  background: var(--glass-surface);
-  color: var(--workspace-nav-text);
-}
-.workspace-body .workspace-sidebar-identity-copy { display: grid; min-width: 0; gap: 3px; }
-.workspace-body .workspace-sidebar-identity-copy strong,
-.workspace-body .workspace-sidebar-identity-copy small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.workspace-body .workspace-sidebar-identity-copy strong { font-size: 12px; color: var(--workspace-nav-text); }
-.workspace-body .workspace-sidebar-identity-copy small { font-size: 10px; color: var(--workspace-nav-muted); }
 .workspace-body .workspace-sidebar-bottom { padding-top: 10px; }
 .workspace-body .workspace-glass-toggle {
   position: absolute;
@@ -126,11 +146,11 @@
   padding: 0;
   display: grid;
   place-items: center;
-  border: 1px solid var(--workspace-nav-line);
+  border: 1px solid var(--glass-border);
   border-radius: 50%;
   color: var(--glass-toggle-text);
   background: var(--glass-toggle);
-  box-shadow: 0 4px 14px rgba(10,32,70,.15);
+  box-shadow: 0 4px 14px rgba(10,32,70,.24),inset 0 1px 1px rgba(255,255,255,.8);
   cursor: pointer;
   transition: inset-inline-start .2s ease, background .16s ease, border-color .16s ease;
 }
@@ -140,15 +160,15 @@
 .workspace-body .workspace-glass-toggle .workspace-glass-chevron-open { display: none; }
 @media (min-width: 851px) {
   .workspace-body.workspace-collapsed .workspace-sidebar { padding: 16px 7px 12px; }
-  .workspace-body.workspace-collapsed .workspace-sidebar-head { padding: 5px 1px 12px; }
-  .workspace-body.workspace-collapsed .workspace-sidebar-identity { justify-content: center; padding: 5px 0; border: 0; background: transparent; }
-  .workspace-body.workspace-collapsed .workspace-sidebar-identity-copy { display: none; }
+  .workspace-body.workspace-collapsed .workspace-sidebar-head { padding: 12px 1px 10px; }
   .workspace-body.workspace-collapsed .workspace-nav-link { justify-content: center; padding: 9px 4px; min-height: 42px; }
-  .workspace-body.workspace-collapsed .workspace-nav-link.active { box-shadow: inset 0 -2px 0 var(--accent); }
+  .workspace-body.workspace-collapsed .workspace-nav-link.active { box-shadow: var(--glass-active-shadow),inset 0 -2px 0 var(--accent); }
   .workspace-body.workspace-collapsed .workspace-glass-chevron-close { display: none; }
   .workspace-body.workspace-collapsed .workspace-glass-toggle .workspace-glass-chevron-open { display: grid; }
 }
 @media (max-width: 850px) {
+  .workspace-body:not(.workspace-mobile-open) .workspace-mobile-trigger { display: grid; }
+  .workspace-body .workspace-favicon-pair { display: none; }
   .workspace-body .workspace-sidebar {
     top: 8px;
     left: 8px;
@@ -159,7 +179,7 @@
     z-index: 90;
     transform: translateX(calc(-100% - 30px));
     visibility: hidden;
-    background-color: var(--glass-toggle);
+    background-color: var(--glass-head);
   }
   .workspace-body.workspace-mobile-open .workspace-sidebar { transform: translateX(0); visibility: visible; }
   .workspace-body .workspace-glass-toggle {
@@ -175,5 +195,5 @@
   .workspace-body .workspace-glass-toggle,.workspace-body .workspace-sidebar,.workspace-body .workspace-nav-link { transition: none; }
 }
 @media print {
-  .workspace-body .workspace-glass-toggle { display: none!important; }
+  .workspace-body .workspace-glass-toggle,.workspace-body .workspace-mobile-trigger { display: none!important; }
 }

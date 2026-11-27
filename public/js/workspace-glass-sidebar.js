@@ -1,4 +1,4 @@
-/* A second control for the existing role-aware navigation state, not a new menu. */
+/* Desktop edge control and mobile-only opener use the existing navigation state. */
 document.addEventListener('DOMContentLoaded', () => {
     const body = document.body;
     const primary = document.querySelector('[data-workspace-toggle]');
@@ -16,12 +16,13 @@ document.addEventListener('DOMContentLoaded', () => {
         edge.title = mobile.matches ? label : (expanded ? 'Show icons only' : 'Show full menu');
         primary.setAttribute('aria-expanded', String(expanded));
         primary.setAttribute('aria-label', label);
-        if (mobile.matches && !expanded && document.activeElement === edge) primary.focus();
+        primary.title = label;
+        if (mobile.matches && !expanded && document.activeElement === edge) primary.focus({preventScroll:true});
     };
     edge.addEventListener('click', () => {
         primary.click();
         sync();
-        if (mobile.matches && !body.classList.contains('workspace-mobile-open')) primary.focus();
+        if (mobile.matches && !body.classList.contains('workspace-mobile-open')) primary.focus({preventScroll:true});
     });
     // The existing toggle owns persisted state, mobile dismissal and menu search.
     new MutationObserver(sync).observe(body, {attributes:true,attributeFilter:['class']});

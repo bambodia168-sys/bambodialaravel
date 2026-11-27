@@ -25,8 +25,8 @@
   @if(config('commerce.enabled') && trim($__env->yieldContent('workspace', 'account')) === 'account')
     @include('layouts.partials.mini-cart-assets')
   @endif
-  <link rel="stylesheet" href="{{ asset('css/workspace-glass-sidebar.css') }}?v=1">
-  <script defer src="{{ asset('js/workspace-glass-sidebar.js') }}?v=1"></script>
+  <link rel="stylesheet" href="{{ asset('css/workspace-glass-sidebar.css') }}?v=2">
+  <script defer src="{{ asset('js/workspace-glass-sidebar.js') }}?v=2"></script>
   @stack('head')
 </head>
 @php
@@ -243,13 +243,12 @@
           <img class="brand-logo-light" src="{{ \App\Models\SiteBrandAsset::urlFor('logo_light') }}" alt="{{ \App\Models\SiteSetting::setting('identity.name') }}" width="550" height="144" decoding="async">
           <img class="brand-logo-dark" src="{{ \App\Models\SiteBrandAsset::urlFor('logo_dark') }}" alt="{{ \App\Models\SiteSetting::setting('identity.name') }}" width="550" height="144" decoding="async">
         </span>
-        <span class="brand-mark workspace-brand-mini" aria-hidden="true">B</span>
+        <span class="workspace-brand-mini brand-logo-pair workspace-favicon-pair" aria-hidden="true">
+          <img class="brand-logo-light" src="{{ \App\Models\SiteBrandAsset::urlFor('favicon_light') }}" alt="" width="36" height="36" decoding="async">
+          <img class="brand-logo-dark" src="{{ \App\Models\SiteBrandAsset::urlFor('favicon_dark') }}" alt="" width="36" height="36" decoding="async">
+        </span>
       </a>
       <span class="workspace-kind"><x-icon name="circle-dot" size="14"/><span>{{ $workspaceTitles[$workspace] }}</span></span>
-      <div class="workspace-sidebar-identity" title="{{ $user->name }}">
-        <x-profile-avatar :user="$user" :size="18"/>
-        <div class="workspace-sidebar-identity-copy"><strong>{{ $user->name }}</strong><small>{{ ucwords(str_replace('_',' ',$user->role)) }}</small></div>
-      </div>
     </div>
     <nav class="workspace-navigation" aria-label="{{ $workspaceTitles[$workspace] }} menu" id="workspace-navigation">
       @foreach($groups as $group)
@@ -305,16 +304,12 @@
     <span class="workspace-glass-chevron-close"><x-icon name="chevron-left" size="17"/></span>
     <span class="workspace-glass-chevron-open"><x-icon name="chevron-right" size="17"/></span>
   </button>
+  <button type="button" class="workspace-mobile-trigger" data-workspace-toggle aria-label="Open navigation" aria-controls="workspace-sidebar" aria-expanded="false" title="Open navigation">
+    <x-icon name="panel-left-open" size="20"/>
+  </button>
   <div class="workspace-backdrop" data-workspace-backdrop aria-hidden="true"></div>
   <div class="workspace-main" id="workspace-main">
     <header class="workspace-topbar">
-      <button type="button" class="icon-button workspace-sidebar-toggle"
-              data-workspace-toggle aria-label="Collapse navigation"
-              aria-controls="workspace-sidebar" aria-expanded="true"
-              title="Show or hide sidebar">
-        <span class="workspace-collapse-icon"><x-icon name="panel-left-close" size="20"/></span>
-        <span class="workspace-expand-icon"><x-icon name="panel-left-open" size="20"/></span>
-      </button>
       <div class="workspace-top-title">
         <strong>{{ $workspaceTitles[$workspace] }}</strong>
       </div>
