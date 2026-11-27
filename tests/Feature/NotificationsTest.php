@@ -288,7 +288,8 @@ class NotificationsTest extends TestCase
         $note = AccountNotification::query()->where('user_id',$member->id)->firstOrFail();
         $this->actingAs($other)->patch('/account/notifications/'.$note->id)->assertNotFound();
         $this->actingAs($member)->patch('/account/notifications/'.$note->id)->assertRedirect(route('verification.notice'));
-        $this->get('/verify-email')->assertOk()->assertSee('Verify your email')->assertDontSee('Back to cart')->assertDontSee('checkout-progress',false);
+        $notice = $this->get('/verify-email')->assertOk()->assertSee('Verify your email')->assertDontSee('Back to cart')->assertDontSee('checkout-progress',false);
+        $this->assertVerificationPageStyles($notice->getContent());
         $this->get('/email-verified')->assertRedirect(route('verification.notice'));
         $this->post('/verify-email')->assertRedirect(route('verification.notice'));
         Notification::assertSentTo($member, CheckoutVerification::class);
@@ -297,11 +298,20 @@ class NotificationsTest extends TestCase
         $this->assertNull($member->fresh()->email_verified_at);
         $this->actingAs($member)->get($url.'&tampered=1')->assertForbidden();
         $this->get($url)->assertRedirect(route('verification.verified'));
-        $this->get('/email-verified')->assertOk()->assertSee('Your email verified')->assertDontSee('Continue checkout');
+        $verified = $this->get('/email-verified')->assertOk()->assertSee('Your email verified')->assertDontSee('Continue checkout');
+        $this->assertVerificationPageStyles($verified->getContent());
         $this->get('/verify-email')->assertRedirect(route('verification.verified'));
         $this->get('/checkout/verify-email')->assertRedirect(route('verification.notice'));
         $this->patch('/account/notifications/'.$note->id)->assertRedirect(route('verification.verified'));
         $this->assertNotNull($member->fresh()->email_verified_at);
+    }
+
+    private function assertVerificationPageStyles(string $html): void
+    {
+        // Guard against pushing to an unused Blade stack: markup alone is not enough.
+        $this->assertMatchesRegularExpression('~<head\\b[^>]*>.*?<link\\s+rel="stylesheet"\\s+href="[^"]*/css/account-email-verification\\.css\\?v=2"[^>]*>.*?</head>~s', $html);
+        $this->assertStringContainsString('class="container inner-page email-verification-page"', $html);
+        $this->assertStringContainsString('class="email-verification-card"', $html);
     }
 
     public function test_existing_signed_checkout_verification_link_remains_valid(): void
