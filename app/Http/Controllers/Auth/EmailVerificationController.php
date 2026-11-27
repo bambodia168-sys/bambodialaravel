@@ -86,6 +86,7 @@ class EmailVerificationController extends Controller
                 );
             }
         });
+        $user->refresh();
 
         return redirect()->route('verification.verified');
     }
