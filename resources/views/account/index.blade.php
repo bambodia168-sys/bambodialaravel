@@ -142,7 +142,7 @@
               <td><a class="btn subtle compact" href="{{ route('account.orders.show',$order->reference()) }}">View</a></td>
             </tr>
           @endforeach
-          <tr data-dashboard-empty @if($recentOrders->isNotEmpty()) hidden @endif><td colspan="4" class="empty-cell">No matching recent orders.</td></tr>
+          <tr data-dashboard-empty @if($recentOrders->isNotEmpty()) hidden @endif><td colspan="4" class="empty-cell">{{ $recentOrders->isEmpty() ? 'You have no recorded orders yet.' : 'No matching recent orders.' }}</td></tr>
         </tbody></table></div>
       </section>
     @endif
@@ -160,7 +160,7 @@
           </form>
         </div>
       @endforeach
-      <p class="workspace-overview-empty" data-dashboard-empty @if($activity->isNotEmpty()) hidden @endif>No matching recent account updates.</p>
+      <p class="workspace-overview-empty" data-dashboard-empty @if($activity->isNotEmpty()) hidden @endif>{{ $activity->isEmpty() ? 'Your recorded marketplace activity will appear here.' : 'No matching recent account updates.' }}</p>
     </section>
   </div>
 
