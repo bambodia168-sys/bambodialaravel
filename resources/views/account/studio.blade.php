@@ -7,9 +7,6 @@
 @endpush
 @section('content')
 <div class="container inner-page studio-dashboard">
-  <div class="page-intro"><div class="eyebrow">Creator workspace</div><h1>Creator Studio</h1>
-    <p>Manage your submissions, digital products and private client conversations.</p></div>
-
   @include('account.partials.studio-performance')
 
   <div class="workspace-overview-grid" aria-label="Your creator activity">
