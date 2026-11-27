@@ -25,7 +25,7 @@
   @if(config('commerce.enabled') && trim($__env->yieldContent('workspace', 'account')) === 'account')
     @include('layouts.partials.mini-cart-assets')
   @endif
-  <link rel="stylesheet" href="{{ asset('css/workspace-glass-sidebar.css') }}?v=2">
+  <link rel="stylesheet" href="{{ asset('css/workspace-glass-sidebar.css') }}?v=3">
   <script defer src="{{ asset('js/workspace-glass-sidebar.js') }}?v=2"></script>
   @stack('head')
 </head>
@@ -310,9 +310,6 @@
   <div class="workspace-backdrop" data-workspace-backdrop aria-hidden="true"></div>
   <div class="workspace-main" id="workspace-main">
     <header class="workspace-topbar">
-      <div class="workspace-top-title">
-        <strong>{{ $workspaceTitles[$workspace] }}</strong>
-      </div>
       <div class="workspace-menu-search">
         <x-icon name="search" size="19"/>
         <input type="search" data-workspace-search
