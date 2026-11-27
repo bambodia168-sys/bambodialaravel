@@ -63,7 +63,7 @@
                 <td><a class="btn subtle compact" href="{{ $item->type === 'product' ? route('dashboard.products.index',['status'=>$item->status,'search'=>$item->title]) : route('dashboard.reviews',['type'=>$item->type,'q'=>$item->title]) }}">Review</a></td>
               </tr>
             @endforeach
-            <tr data-dashboard-empty @if($recent->isNotEmpty()) hidden @endif><td class="empty-cell" colspan="4">No matching recent submissions.</td></tr>
+            <tr data-dashboard-empty @if($recent->isNotEmpty()) hidden @endif><td class="empty-cell" colspan="4">{{ $recent->isEmpty() ? 'No items currently require review in this queue.' : 'No matching recent submissions.' }}</td></tr>
           </tbody></table></div>
         </section>
       @endif
