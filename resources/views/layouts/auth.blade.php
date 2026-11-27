@@ -10,9 +10,10 @@
   @vite(['resources/css/app.css','resources/js/app.js'])
   <link rel="stylesheet" href="{{ asset('css/auth-tools.css') }}">
   @include('layouts.partials.site-typography')
+  <link rel="stylesheet" href="{{ asset('css/page-backgrounds.css') }}?v=1">
   @stack('head')
 </head>
-<body class="auth-body">
+<body class="auth-body" data-page-background="ambient">
 <x-flash-feedback :validation-errors="$errors->all()" />
 <main class="auth-shell">
   <section class="auth-card" aria-labelledby="auth-title">
