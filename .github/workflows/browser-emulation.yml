@@ -98,6 +98,24 @@ jobs:
           # login throttles before a final independent browser session.
           php artisan cache:clear
           node tests/browser/builder-terms-readable.mjs
+      - name: Verify transparent header cart in commerce-enabled browser
+        env:
+          COMMERCE_WORKSPACES_ENABLED: 'true'
+          COMMERCE_PAYMENTS_ENABLED: 'false'
+          COMMERCE_LIVE_GATEWAYS: 'false'
+          BASE_URL: http://127.0.0.1:8096
+          APP_URL: http://127.0.0.1:8096
+        run: |
+          set -Eeuo pipefail
+          php artisan cache:clear
+          php artisan serve --host=127.0.0.1 --port=8096 > /tmp/bambodia-cart-browser.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl -fsS -o /dev/null "$BASE_URL/"; then break; fi
+            sleep 1
+          done
+          node tests/browser/header-cart-icon.mjs
       - name: Keep screenshots for acceptance review
         if: always()
         uses: actions/upload-artifact@v4
