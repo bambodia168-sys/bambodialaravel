@@ -13,10 +13,30 @@
     display: none;
 }
 
-.mini-cart[open] .mini-cart-trigger {
-    border-color: var(--accent);
+/* Header utility icon: match the flat language, home and bell controls.
+   Keep the existing hit area, badge and dropdown panel intact. */
+.site-header .mini-cart > .mini-cart-trigger,
+.workspace-topbar .mini-cart > .mini-cart-trigger {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    color: var(--text);
+}
+
+.site-header .mini-cart > .mini-cart-trigger:hover,
+.workspace-topbar .mini-cart > .mini-cart-trigger:hover,
+.site-header .mini-cart[open] > .mini-cart-trigger,
+.workspace-topbar .mini-cart[open] > .mini-cart-trigger {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
     color: var(--accent);
-    background: var(--surface-2);
+}
+
+.site-header .mini-cart > .mini-cart-trigger:focus-visible,
+.workspace-topbar .mini-cart > .mini-cart-trigger:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 2px;
 }
 
 .mini-cart-badge {
