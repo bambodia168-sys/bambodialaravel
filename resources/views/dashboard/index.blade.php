@@ -6,6 +6,14 @@
 @endpush
 @section('content')
 <div class="container inner-page role-dashboard" data-role-dashboard="admin">
+  @php
+    $primaryQueue = collect($queues)->firstWhere('route','dashboard.reviews');
+    // Keep only operational destinations not already available in KPI, queue or chart actions.
+    $quickActions = collect($shortcuts)->filter(fn($item)=>in_array($item[1],[
+        'dashboard.account-verifications.index','dashboard.licenses.index','dashboard.vault.index',
+        'dashboard.commerce-operations','security.index','dashboard.support-tickets.index'
+    ],true));
+  @endphp
   <section class="role-dashboard-section" aria-labelledby="admin-performance">
     <div class="role-dashboard-heading">
       <div><div class="role-dashboard-eyebrow"><x-icon name="activity" size="18"/> REAL WORKSPACE DATA</div>
@@ -14,7 +22,6 @@
       </div>
       <x-role-dashboard-period-filter/>
     </div>
-    @php($primaryQueue = collect($queues)->firstWhere('route','dashboard.reviews'))
     @if(!$isStaff)
       <div class="role-dashboard-kpis" aria-label="Platform account totals">
         <x-role-dashboard-kpi label="Registered accounts" :value="$stats['totalUsers']" icon="users" description="All recorded accounts"
@@ -22,7 +29,7 @@
         <x-role-dashboard-kpi label="Approved freelancers" :value="$stats['creators']" icon="user-round-check" description="Accounts with the freelancer role"/>
         <x-role-dashboard-kpi label="Customers and subscribers" :value="$stats['customers']" icon="user" description="Accounts with customer or subscriber roles"/>
         @if($primaryQueue)
-          <x-role-dashboard-kpi label="Listings awaiting review" :value="$primaryQueue['count']" icon="clipboard-check" description="Pending or in-review listings" :href="route($primaryQueue['route'])"/>
+          <x-role-dashboard-kpi label="All listings awaiting review" :value="$primaryQueue['count']" icon="clipboard-check" description="Pending or in-review listings" :href="route($primaryQueue['route'])"/>
         @endif
       </div>
     @endif
@@ -91,13 +98,6 @@
   </section>
   @endif
 
-  @php
-    // Keep only operational destinations not already available in KPI, queue or chart actions.
-    $quickActions = collect($shortcuts)->filter(fn($item)=>in_array($item[1],[
-        'dashboard.account-verifications.index','dashboard.licenses.index','dashboard.vault.index',
-        'dashboard.commerce-operations','security.index','dashboard.support-tickets.index'
-    ],true));
-  @endphp
   @if($quickActions->isNotEmpty())
     <section class="role-dashboard-section" aria-labelledby="admin-manage">
       <div class="role-dashboard-heading"><div><h2 id="admin-manage">Manage platform operations</h2><p>Direct access to authorized operational tools.</p></div></div>
