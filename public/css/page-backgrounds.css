@@ -1,0 +1,37 @@
+/* Global page background modes. Preserve the global theme and surface tokens.
+   Standard is neutral; transaction is deliberately flat; ambient is a restrained
+   static gradient; branded sections retain the existing Aurora hero/footer. */
+:root {
+  --page-background-base: var(--bg);
+  --page-background-ambient-primary: rgba(38, 99, 165, .085);
+  --page-background-ambient-secondary: rgba(13, 148, 136, .065);
+  --page-background-brand-grid: rgba(30, 60, 110, .035);
+}
+:root[data-theme="dark"] {
+  --page-background-ambient-primary: rgba(74, 112, 184, .12);
+  --page-background-ambient-secondary: rgba(23, 148, 140, .095);
+  --page-background-brand-grid: rgba(206, 225, 252, .035);
+}
+[data-page-background="standard"],
+[data-page-background="transaction"] {
+  background-color: var(--page-background-base);
+  background-image: none;
+}
+[data-page-background="ambient"] {
+  background-color: var(--page-background-base);
+  background-image:
+    radial-gradient(ellipse 65% 90% at 50% 24%, var(--page-background-ambient-primary), transparent 76%),
+    radial-gradient(ellipse 50% 65% at 87% 82%, var(--page-background-ambient-secondary), transparent 80%);
+}
+[data-page-background="branded"] {
+  background-color: var(--page-background-base);
+  background-image:
+    radial-gradient(ellipse at 15% 10%, var(--page-background-ambient-secondary), transparent 72%),
+    radial-gradient(ellipse at 85% 15%, var(--page-background-ambient-primary), transparent 72%),
+    linear-gradient(var(--page-background-brand-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--page-background-brand-grid) 1px, transparent 1px);
+  background-size: auto, auto, 48px 48px, 48px 48px;
+}
+@media print {
+  [data-page-background] { background: none !important; }
+}
