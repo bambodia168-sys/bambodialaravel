@@ -36,7 +36,7 @@ finish() {
 }
 trap finish EXIT
 fetch() { curl -fLsS --retry 2 --connect-timeout 12 --max-time 90 "$1" -o "$2"; }
-echo "=== Workspace profile release 208: $MODE ==="
+echo "=== Workspace profile release 208 compatibility v2: $MODE ==="
 API="https://api.github.com/repos/$REPO"
 fetch "$API/pulls/208" "$WORK/pr.json"
 for run in 46031927278 46031927297 46031927564 46031927292 46031927285; do
@@ -191,15 +191,56 @@ while IFS='|' read -r file hash; do
 done < "$WORK/effective"
 verify_protected
 (cd "$SITE" && runuser -u www -- "$PHP" artisan route:list --json --no-ansi) > "$WORK/routes-after.json"
-python3 - "$WORK" <<'PY'
-import json,pathlib,sys
-work=pathlib.Path(sys.argv[1])
+python3 - "$WORK" "$BACKUP" <<'PY'
+import collections,difflib,json,pathlib,re,sys,tarfile
+work,backup=map(pathlib.Path,sys.argv[1:])
 before=json.loads((work/'routes-before.json').read_text())
 after=json.loads((work/'routes-after.json').read_text())
+# Laravel 13 includes closure source location in route:list JSON. The reviewed
+# route insertion can move line numbers but must not change any route semantics.
+# Accept only exact line mapping in the original and approved source bytes.
+with tarfile.open(backup/'original-code.tar') as archive:
+    try:
+        original=archive.extractfile('routes/web.php').read().splitlines()
+    except KeyError:
+        original=(work/'target/routes/web.php').read_bytes().splitlines()
+candidate=(work/'target/routes/web.php').read_bytes().splitlines()
+mapping={}
+for i,j,n in difflib.SequenceMatcher(None,original,candidate,autojunk=False).get_matching_blocks():
+    mapping.update({i+k+1:j+k+1 for k in range(n)})
 def identity(row):
     return json.dumps(row,sort_keys=True)
-if not set(map(identity,before)) <= set(map(identity,after)):
-    sys.exit('STOP: an existing route or middleware changed')
+actual=collections.Counter(map(identity,after))
+shifted=0
+missing=[]
+for row in before:
+    key=identity(row)
+    if actual[key]:
+        actual[key]-=1
+        continue
+    adjusted=dict(row)
+    source=row.get('path')
+    match=re.fullmatch(r'((?:.*/)?routes/web\.php):([0-9]+)',source) if isinstance(source,str) else None
+    if row.get('action')=='Closure' and match:
+        line=int(match.group(2))
+        if line in mapping and mapping[line]!=line:
+            adjusted['path']=match.group(1)+':'+str(mapping[line])
+            adjusted_key=identity(adjusted)
+            if actual[adjusted_key]:
+                actual[adjusted_key]-=1
+                shifted+=1
+                continue
+    missing.append(row)
+if missing:
+    print('STOP: existing route identity mismatch; first 12 differences:',file=sys.stderr)
+    for row in missing[:12]:
+        print('BEFORE '+identity(row),file=sys.stderr)
+        matches=[r for r in after if all(r.get(k)==row.get(k) for k in ('domain','method','uri','name'))]
+        for r in matches[:2]:
+            print('AFTER  '+identity(r),file=sys.stderr)
+    sys.exit(1)
+print(f'PASS: {shifted} closure source-line shifts verified against unchanged source lines')
+
 names={r['name']:r for r in after if r.get('name')}
 suffixes=('edit','update','items.store','items.order','items.update','items.destroy','sections.store','sections.order','sections.update','sections.destroy')
 for prefix,role in [('dashboard','role:super_admin,admin,staff'),('studio','role:freelancer,super_admin')]:
