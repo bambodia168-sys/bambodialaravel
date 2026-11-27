@@ -3,8 +3,8 @@
 @section('title','My Account')
 @push('head')
   <link rel="stylesheet" href="{{ asset('css/customer-account-overview.css') }}?v=3">
-  <link rel="stylesheet" href="{{ asset('css/role-dashboard-overview.css') }}?v=1">
-  <script defer src="{{ asset('js/role-dashboard-overview.js') }}?v=1"></script>
+  <link rel="stylesheet" href="{{ asset('css/role-dashboard-overview.css') }}?v=2">
+  <script defer src="{{ asset('js/role-dashboard-overview.js') }}?v=2"></script>
 @endpush
 @section('content')
 <div class="container inner-page customer-account-overview role-dashboard" data-role-dashboard="account">
@@ -19,7 +19,8 @@
         'listings'=>['Creator Listings','layers','studio.listings','View listings'],
         'client_inquiries'=>['Open Client Inquiries','message','studio.inquiries','View inquiries'],
     ];
-    $activityKeys = ['saved','saved_jobs','unread','contracts','jobs','proposals','listings','client_inquiries'];
+    $primaryKeys = $orderSummary === null ? ['saved','saved_jobs','unread','contracts'] : ['saved','unread','contracts'];
+    $activityKeys = array_keys($stats);
     $activityMaximum = max(1, ...array_values($stats));
     $orderTotal = $orderSummary === null ? 0 : array_sum($orderSummary);
     $orderLabels = \App\Models\MarketplaceOrder::STATUSES;
@@ -34,11 +35,20 @@
   @endphp
 
   <section class="account-overview-section role-dashboard-section" aria-labelledby="customer-activity-heading">
-    <div class="workspace-section-head"><div>
-      <div class="account-overview-eyebrow"><x-icon name="activity" size="16"/> Real workspace data</div>
+    <div class="role-dashboard-heading"><div>
+      <div class="role-dashboard-eyebrow"><x-icon name="activity" size="18"/> REAL WORKSPACE DATA</div>
       <h2 id="customer-activity-heading">Marketplace activity</h2>
       <p>Your own recorded activity across the marketplace. No sample metrics.</p>
-    </div></div>
+    </div><x-role-dashboard-period-filter/></div>
+    <div class="role-dashboard-kpis" aria-label="Personal account performance">
+      @if($orderSummary !== null)
+        <x-role-dashboard-kpi label="My orders" :value="$orderTotal" icon="shopping-cart" description="All recorded marketplace purchases" :href="route('account.orders.index')"/>
+      @endif
+      @foreach($primaryKeys as $key)
+        <x-role-dashboard-kpi :label="$accountMetrics[$key][0]" :value="$stats[$key]" :icon="$accountMetrics[$key][1]" :description="$accountMetrics[$key][3]" :href="route($accountMetrics[$key][2])"/>
+      @endforeach
+    </div>
+    <x-role-dashboard-trends scope="account"/>
     <div class="account-overview-charts">
       @if($orderSummary !== null)
         <section class="account-overview-chart" aria-labelledby="account-order-status">
@@ -60,7 +70,6 @@
               @endforeach
             </div>
           </div>
-          <a class="account-chart-link" href="{{ route('account.orders.index') }}">View order history</a>
         </section>
       @endif
       <section class="account-overview-chart" aria-labelledby="account-activity-breakdown">
@@ -77,25 +86,25 @@
             </a>
           @endforeach
         </div>
-        <a class="account-chart-link" href="{{ route('account.notifications') }}">Review account updates</a>
       </section>
     </div>
   </section>
 
+  @if(count(array_diff_key($stats,array_flip($primaryKeys))) || $orderSummary !== null)
   <div class="workspace-overview-grid" aria-label="Your account activity">
     @foreach($stats as $key=>$count)
+      @continue(in_array($key,$primaryKeys,true))
       <x-workspace-metric :label="$accountMetrics[$key][0]" :value="$count" :icon="$accountMetrics[$key][1]"
           :href="route($accountMetrics[$key][2])" :action="$accountMetrics[$key][3]"/>
     @endforeach
     @if($orderSummary !== null)
-      <x-workspace-metric label="My Orders" :value="$orderTotal" icon="shopping-cart"
-          :href="route('account.orders.index')" action="View order history"/>
       <x-workspace-metric label="Completed Orders" :value="$orderSummary['completed']" icon="check-circle"
           :href="route('account.orders.index',['status'=>'completed'])" action="View completed orders"/>
       <x-workspace-metric label="Awaiting Payment" :value="$orderSummary['awaiting_payment']" icon="clock"
           :href="route('account.orders.index',['status'=>'awaiting_payment'])" action="Review unpaid orders"/>
     @endif
   </div>
+  @endif
 
   <section class="account-overview-section" aria-labelledby="account-actions">
     <div class="workspace-section-head"><div><h2 id="account-actions">Action center</h2>
@@ -241,7 +250,7 @@
         <div class="account-invitation-actions">
           <a class="btn primary" href="{{ route('creator.apply') }}"><x-icon name="user-plus" size="17"/>
             {{ $creatorApplicationStatus === 'pending' || $creatorApplicationStatus === 'approved' ? 'View application' : ($creatorApplicationStatus === 'rejected' ? 'Review application' : 'Become a creator') }}</a>
-          <a class="btn subtle" href="{{ route('creators.index') }}"><x-icon name="users" size="17"/> Browse creators</a>
+          
         </div>
       </div>
       <div class="account-invitation-art" aria-hidden="true">
