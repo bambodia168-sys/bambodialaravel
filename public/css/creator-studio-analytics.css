@@ -182,3 +182,30 @@
   line-height: 1.25;
   letter-spacing: normal;
 }
+
+
+/* Fill the vacant fourth column beside Pipeline activity with the original
+   three overview cards. Their shared metric styles and hover states are intact. */
+.studio-dashboard .studio-chart-metric-stack {
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:repeat(3,minmax(min-content,1fr));
+  gap:13px;
+  min-width:0;
+}
+@media(max-width:1250px){
+  .studio-dashboard .studio-chart-metric-stack {
+    grid-column:1/-1;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    grid-template-rows:auto;
+  }
+  .studio-dashboard .workspace-overview-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:620px){
+  .studio-dashboard .studio-chart-metric-stack {
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:repeat(3,minmax(min-content,1fr));
+  }
+}
