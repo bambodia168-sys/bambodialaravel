@@ -16,10 +16,20 @@ class McpOperationalReadToolsTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function actor(string $role): User
+    {
+        $suffix = User::query()->count() + 1;
+        return User::query()->create([
+            'name'=>'MCP test '.$suffix, 'username'=>'mcp_test_'.$suffix,
+            'email'=>'mcp_test_'.$suffix.'@example.test', 'password'=>'TestPassword123!',
+            'role'=>$role, 'locale'=>'en',
+        ]);
+    }
+
     public function test_six_tools_are_read_only_and_return_aggregate_data(): void
     {
-        $admin = User::factory()->create(['role'=>'super_admin']);
-        $customer = User::factory()->create(['role'=>'customer']);
+        $admin = $this->actor('super_admin');
+        $customer = $this->actor('customer');
         $service = new OperationalReadTools();
         config(['commerce.enabled'=>true]);
 
@@ -58,9 +68,9 @@ class McpOperationalReadToolsTest extends TestCase
 
     public function test_all_tools_reject_missing_scope_non_super_admin_and_inactive_owner(): void
     {
-        $admin = User::factory()->create(['role'=>'super_admin']);
-        $staff = User::factory()->create(['role'=>'staff']);
-        $inactive = User::factory()->create(['role'=>'super_admin']);
+        $admin = $this->actor('super_admin');
+        $staff = $this->actor('staff');
+        $inactive = $this->actor('super_admin');
         $inactive->forceFill(['account_status'=>'deactivated']);
         $service = new OperationalReadTools();
         foreach (array_keys(OperationalReadTools::TOOLS) as $name) {
@@ -77,7 +87,7 @@ class McpOperationalReadToolsTest extends TestCase
 
     public function test_disabled_commerce_and_invalid_input_are_rejected(): void
     {
-        $admin = User::factory()->create(['role'=>'super_admin']);
+        $admin = $this->actor('super_admin');
         $service = new OperationalReadTools();
         config(['commerce.enabled'=>false]);
         foreach ([
