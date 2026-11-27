@@ -2,17 +2,17 @@
 @section('workspace','developer')
 @section('title','Developer Dashboard')
 @push('head')
-  <link rel="stylesheet" href="{{ asset('css/role-dashboard-overview.css') }}?v=1">
-  <script defer src="{{ asset('js/role-dashboard-overview.js') }}?v=1"></script>
+  <link rel="stylesheet" href="{{ asset('css/role-dashboard-overview.css') }}?v=2">
+  <script defer src="{{ asset('js/role-dashboard-overview.js') }}?v=2"></script>
 @endpush
 @section('content')
-<div class="role-dashboard" data-role-dashboard="developer">
+<div class="container inner-page role-dashboard" data-role-dashboard="developer">
 <section class="role-dashboard-section" aria-labelledby="developer-health">
   <div class="role-dashboard-heading"><div>
     <div class="role-dashboard-eyebrow"><x-icon name="activity" size="18"/> REAL WORKSPACE DATA</div>
     <h1 id="developer-health">Credential health</h1>
     <p>Your scoped API tokens and recorded integration activity. No secret values are included in these reports.</p>
-  </div></div>
+  </div><x-role-dashboard-period-filter/></div>
 @if(session('issued_token'))
 <section class="panel issued-token">
   <div class="panel-head"><h2>New access token — copy now</h2></div>
@@ -20,18 +20,15 @@
   <p class="hint">This token will not be shown again after you leave or refresh this page. Store it in your server-side secrets manager, never in public JavaScript.</p>
 </section>
 @endif
-<div class="workspace-overview-grid" aria-label="Your API credential health">
-  <x-workspace-metric label="Active tokens" :value="$tokenStats['active']" icon="key-round"
-    :href="route('developer.index',['status'=>'active'])" action="View active"/>
-  <x-workspace-metric label="Expiring within 7 days" :value="$tokenStats['expiring']" icon="alert"
-    :href="route('developer.index',['status'=>'expiring'])" action="Review expiry"/>
-  <x-workspace-metric label="Expired tokens" :value="$tokenStats['expired']" icon="clock"
-    :href="route('developer.index',['status'=>'expired'])" action="View expired"/>
-  <x-workspace-metric label="Revoked tokens" :value="$tokenStats['revoked']" icon="shield"
-    :href="route('developer.index',['status'=>'revoked'])" action="Review revoked"/>
+<div class="role-dashboard-kpis" aria-label="Your API credential health">
+  <x-role-dashboard-kpi label="Active tokens" :value="$tokenStats['active']" icon="key-round" description="Currently valid API credentials" :href="route('developer.index',['status'=>'active']).'#api-token-list'"/>
+  <x-role-dashboard-kpi label="Expiring within 7 days" :value="$tokenStats['expiring']" icon="alert" description="Active credentials nearing expiry" :href="route('developer.index',['status'=>'expiring']).'#api-token-list'"/>
+  <x-role-dashboard-kpi label="Expired tokens" :value="$tokenStats['expired']" icon="clock" description="Credentials past their expiry date" :href="route('developer.index',['status'=>'expired']).'#api-token-list'"/>
+  <x-role-dashboard-kpi label="Revoked tokens" :value="$tokenStats['revoked']" icon="shield" description="Credentials explicitly revoked" :href="route('developer.index',['status'=>'revoked']).'#api-token-list'"/>
 </div>
+<x-role-dashboard-trends scope="developer"/>
 <div class="role-dashboard-charts">
-  <x-role-dashboard-report :report="['title'=>'Token lifecycle','description'=>'Active, expired and revoked are mutually exclusive.','icon'=>'key-round','rows'=>[
+  <x-role-dashboard-report kind="donut" :report="['title'=>'Token lifecycle','description'=>'Active, expired and revoked are mutually exclusive.','icon'=>'key-round','rows'=>[
     ['label'=>'Active','count'=>$tokenStats['active'],'href'=>route('developer.index',['status'=>'active']).'#api-token-list'],
     ['label'=>'Expired','count'=>$tokenStats['expired'],'href'=>route('developer.index',['status'=>'expired']).'#api-token-list'],
     ['label'=>'Revoked','count'=>$tokenStats['revoked'],'href'=>route('developer.index',['status'=>'revoked']).'#api-token-list'],
@@ -43,14 +40,18 @@
   ]]"/>
 </div>
 </section>
-<div class="workspace-quick-actions">
-  <a class="btn subtle compact" href="{{ route('developer.docs') }}"><x-icon name="book" size="16"/> API endpoints and scope reference</a>
-  <a class="btn subtle compact" href="{{ route('developer.index',['status'=>'active']) }}#api-token-list">
-    <x-icon name="key" size="16"/> Review active credentials ({{ $tokenStats['active'] }})
-  </a>
-</div>
-<p class="hint">Credential diagnostics: {{ $tokenStats['unused'] }} active {{ $tokenStats['unused']===1?'token has':'tokens have' }} never been used.
-  Only token prefixes, scopes and usage timestamps are shown. Credentials are not tested using their secrets here.</p>
+<section class="role-dashboard-section" aria-labelledby="developer-manage">
+  <div class="role-dashboard-heading"><div><h2 id="developer-manage">Manage integrations</h2><p>Access your API documentation and configured integration workspaces.</p></div></div>
+  <div class="workspace-quick-actions">
+    <a class="btn subtle" href="{{ route('developer.docs') }}"><x-icon name="book" size="17"/> API documentation</a>
+    @if(\Illuminate\Support\Facades\Route::has('developer.mcp.index'))
+      <a class="btn primary" href="{{ route('developer.mcp.index') }}"><x-icon name="plug" size="17"/> Bambodia Manager MCP</a>
+    @endif
+    @if(\Illuminate\Support\Facades\Route::has('developer.oauth.index'))
+      <a class="btn subtle" href="{{ route('developer.oauth.index') }}"><x-icon name="shield" size="17"/> OAuth connections</a>
+    @endif
+  </div>
+</section>
 @if($tokenStats['expiring']>0)
   <p class="workspace-overview-alert"><x-icon name="alert" size="17"/>
     {{ $tokenStats['expiring'] }} active {{ $tokenStats['expiring']===1?'token expires':'tokens expire' }} within 7 days.
@@ -59,7 +60,7 @@
 
 <section class="panel workspace-overview-block" id="api-token-list" data-dashboard-table>
   <div class="panel-head"><div><h2>API access tokens <span class="count">{{ $tokens->total() }}</span></h2><p>Tokens automatically expire and can be revoked immediately.</p></div>
-    <div class="toolbar-actions"><a class="btn subtle" href="{{ route('developer.docs') }}"><x-icon name="book" size="16"/> API documentation</a><button type="button" class="btn primary" data-modal-open="new-api-token"><x-icon name="key" size="16"/> Create token</button></div>
+    <div class="toolbar-actions"><button type="button" class="btn primary" data-modal-open="new-api-token"><x-icon name="key" size="16"/> Create token</button></div>
   </div>
   <nav class="workspace-token-filters" aria-label="Filter API tokens">
     @foreach(['all'=>'All tokens','active'=>'Active','expiring'=>'Expiring soon','expired'=>'Expired','revoked'=>'Revoked'] as $filter=>$label)
