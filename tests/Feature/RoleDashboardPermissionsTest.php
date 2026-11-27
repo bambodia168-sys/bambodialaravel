@@ -202,7 +202,7 @@ class RoleDashboardPermissionsTest extends TestCase
             ->assertDontSee('data-admin-performance-filters',false)
             ->assertDontSee('admin-dashboard-filters.css',false);
         $customer = $this->actor('customer');
-        $this->actingAs($customer)->get('/account')->assertOk()
+        $this->actingAs($customer)->get('/account?='.$customer->public_id)->assertOk()
             ->assertDontSee('data-admin-performance-filters',false)
             ->assertDontSee('admin-dashboard-filters.css',false);
         $this->get('/dashboard?type=product&period=year')->assertForbidden();
