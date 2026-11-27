@@ -6,6 +6,7 @@ use App\Models\AuditEvent;
 use App\Models\CreatorProfileItem;
 use App\Models\CreatorProfileSection;
 use App\Models\User;
+use App\Support\ProfileWorkspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,7 +52,7 @@ final class CreatorProfileSectionController extends Controller
             ]);
             AuditEvent::record('profile.section.created', $request->user(), $request);
         });
-        return back()->with('status', 'Custom profile section added.');
+        return ProfileWorkspace::redirect($request, 'Custom profile section added.');
     }
 
     public function updateSelf(Request $request, CreatorProfileSection $section): RedirectResponse { return $this->update($request, null, $section); }
@@ -68,7 +69,7 @@ final class CreatorProfileSectionController extends Controller
         ]);
         $section->update($data);
         AuditEvent::record('profile.section.updated', $request->user(), $request);
-        return back()->with('status', 'Profile section updated.');
+        return ProfileWorkspace::redirect($request, 'Profile section updated.');
     }
 
     public function destroySelf(Request $request, CreatorProfileSection $section): RedirectResponse { return $this->destroy($request, null, $section); }
@@ -84,7 +85,7 @@ final class CreatorProfileSectionController extends Controller
             $section->update(['is_visible' => false]);
         }
         AuditEvent::record('profile.section.deleted', $request->user(), $request);
-        return back()->with('status', 'Section removed from public profile. Built-in sections may be restored.');
+        return ProfileWorkspace::redirect($request, 'Section removed from public profile. Built-in sections may be restored.');
     }
 
     public function orderSelf(Request $request): JsonResponse { return $this->order($request, null); }

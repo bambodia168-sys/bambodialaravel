@@ -535,6 +535,14 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/profile', [CreatorProfileController::class,'edit'])->name('studio.profile.edit');
         Route::patch('/profile', [CreatorProfileController::class,'update'])
             ->name('studio.profile.update')->middleware('throttle:10,1');
+        Route::post('/profile/items', [CreatorProfileItemController::class, 'storeSelf'])->name('studio.profile.items.store')->middleware('throttle:20,1');
+        Route::patch('/profile/items/order', [CreatorProfileSectionController::class, 'orderItemsSelf'])->name('studio.profile.items.order')->middleware('throttle:30,1');
+        Route::patch('/profile/items/{item}', [CreatorProfileItemController::class, 'updateSelf'])->name('studio.profile.items.update')->middleware('throttle:20,1');
+        Route::delete('/profile/items/{item}', [CreatorProfileItemController::class, 'destroySelf'])->name('studio.profile.items.destroy')->middleware('throttle:20,1');
+        Route::post('/profile/sections', [CreatorProfileSectionController::class, 'storeSelf'])->name('studio.profile.sections.store')->middleware('throttle:10,1');
+        Route::patch('/profile/sections/order', [CreatorProfileSectionController::class, 'orderSelf'])->name('studio.profile.sections.order')->middleware('throttle:30,1');
+        Route::patch('/profile/sections/{section}', [CreatorProfileSectionController::class, 'updateSelf'])->name('studio.profile.sections.update')->middleware('throttle:20,1');
+        Route::delete('/profile/sections/{section}', [CreatorProfileSectionController::class, 'destroySelf'])->name('studio.profile.sections.destroy')->middleware('throttle:10,1');
         Route::get('/inquiries', [ServiceInquiryController::class, 'index'])->name('studio.inquiries');
         Route::get('/listings', [CreatorListingController::class, 'index'])->name('studio.listings');
         Route::post('/listings', [CreatorListingController::class, 'store'])->name('studio.listings.store')->middleware('throttle:10,1');
@@ -559,6 +567,16 @@ Route::middleware('auth')->group(function (): void {
     });
 
     Route::prefix('dashboard')->middleware('role:super_admin,admin,staff')->group(function (): void {
+        Route::get('/profile', [ProfileEditorController::class, 'editSelf'])->name('dashboard.profile.edit');
+        Route::patch('/profile', [ProfileEditorController::class, 'updateSelf'])->name('dashboard.profile.update')->middleware('throttle:10,1');
+        Route::post('/profile/items', [CreatorProfileItemController::class, 'storeSelf'])->name('dashboard.profile.items.store')->middleware('throttle:20,1');
+        Route::patch('/profile/items/order', [CreatorProfileSectionController::class, 'orderItemsSelf'])->name('dashboard.profile.items.order')->middleware('throttle:30,1');
+        Route::patch('/profile/items/{item}', [CreatorProfileItemController::class, 'updateSelf'])->name('dashboard.profile.items.update')->middleware('throttle:20,1');
+        Route::delete('/profile/items/{item}', [CreatorProfileItemController::class, 'destroySelf'])->name('dashboard.profile.items.destroy')->middleware('throttle:20,1');
+        Route::post('/profile/sections', [CreatorProfileSectionController::class, 'storeSelf'])->name('dashboard.profile.sections.store')->middleware('throttle:10,1');
+        Route::patch('/profile/sections/order', [CreatorProfileSectionController::class, 'orderSelf'])->name('dashboard.profile.sections.order')->middleware('throttle:30,1');
+        Route::patch('/profile/sections/{section}', [CreatorProfileSectionController::class, 'updateSelf'])->name('dashboard.profile.sections.update')->middleware('throttle:20,1');
+        Route::delete('/profile/sections/{section}', [CreatorProfileSectionController::class, 'destroySelf'])->name('dashboard.profile.sections.destroy')->middleware('throttle:10,1');
         Route::middleware('capability:commerce_orders')->group(function (): void {
             Route::get('/orders', [CommerceOrderController::class, 'index'])->name('dashboard.orders.index');
             Route::get('/orders/{number}', [CommerceOrderController::class, 'show'])->where('number', OrderReference::ROUTE)->name('dashboard.orders.show');

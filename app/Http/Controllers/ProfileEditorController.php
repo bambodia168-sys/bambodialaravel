@@ -11,6 +11,7 @@ use App\Models\UserProfile;
 use App\Support\CreatorBadgeAwards;
 use App\Support\EmailOutbox;
 use App\Support\ManualAccountReview;
+use App\Support\ProfileWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +24,11 @@ final class ProfileEditorController extends Controller
 {
     public function editSelf(Request $request): View
     {
-        $workspace = $request->routeIs('studio.profile.edit', 'localized.*.studio.profile.edit') ? 'creator' : 'account';
+        $workspace = match (ProfileWorkspace::prefix($request)) {
+            'dashboard.profile' => 'admin',
+            'studio.profile' => 'creator',
+            default => 'account',
+        };
         return $this->render($request->user(), $workspace, false);
     }
 
@@ -132,7 +137,7 @@ final class ProfileEditorController extends Controller
                 if ($locked->wasChanged('name') || $personal->wasChanged() || $personal->wasRecentlyCreated
                     || $creator?->wasChanged() || $creator?->wasRecentlyCreated) {
                     EmailOutbox::queue('account.details_changed', $locked->id, (string) Str::uuid(), [],
-                        route('account.profile.edit', absolute: false));
+                        route(ProfileWorkspace::prefix($request).'.edit', absolute: false));
                 }
             });
         } catch (\Throwable $error) {
@@ -145,6 +150,6 @@ final class ProfileEditorController extends Controller
             Storage::disk('public')->delete($previousAvatar);
         }
 
-        return back()->with('status', 'Profile changes saved. Public information follows the visibility setting.');
+        return ProfileWorkspace::redirect($request, 'Profile changes saved. Public information follows the visibility setting.');
     }
 }

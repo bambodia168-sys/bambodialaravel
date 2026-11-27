@@ -1,26 +1,34 @@
 @extends('layouts.workspace')
 @section('workspace',$workspace)
-@section('title',$workspace === 'creator' ? 'Creator Profile' : 'Edit Profile')
+@section('title',$workspace === 'creator' ? 'Creator Profile' : ($workspace === 'admin' && !$adminProfile ? 'My Profile' : 'Edit Profile'))
 @section('content')
 @php
-  $profileAction = $adminProfile ? route('dashboard.users.profile.update',$member) : ($workspace === 'creator' ? route('studio.profile.update') : route('account.profile.update'));
-  $createItemRoute = $adminProfile ? route('dashboard.users.profile.items.store',$member) : route('account.profile.items.store');
-  $createSectionRoute = $adminProfile ? route('dashboard.users.profile.sections.store',$member) : route('account.profile.sections.store');
-  $orderSectionRoute = $adminProfile ? route('dashboard.users.profile.sections.order',$member) : route('account.profile.sections.order');
-  $orderItemRoute = $adminProfile ? route('dashboard.users.profile.items.order',$member) : route('account.profile.items.order');
-  $sectionUpdateRoute = fn($section) => $adminProfile ? route('dashboard.users.profile.sections.update',[$member,$section]) : route('account.profile.sections.update',$section);
-  $sectionDestroyRoute = fn($section) => $adminProfile ? route('dashboard.users.profile.sections.destroy',[$member,$section]) : route('account.profile.sections.destroy',$section);
-  $itemUpdateRoute = fn($item) => $adminProfile ? route('dashboard.users.profile.items.update',[$member,$item]) : route('account.profile.items.update',$item);
-  $itemDestroyRoute = fn($item) => $adminProfile ? route('dashboard.users.profile.items.destroy',[$member,$item]) : route('account.profile.items.destroy',$item);
+  $selfPrefix = match ($workspace) {
+      'creator' => 'studio.profile',
+      'admin' => 'dashboard.profile',
+      default => 'account.profile',
+  };
+  $profileAction = $adminProfile ? route('dashboard.users.profile.update',$member) : route($selfPrefix.'.update');
+  $createItemRoute = $adminProfile ? route('dashboard.users.profile.items.store',$member) : route($selfPrefix.'.items.store');
+  $createSectionRoute = $adminProfile ? route('dashboard.users.profile.sections.store',$member) : route($selfPrefix.'.sections.store');
+  $orderSectionRoute = $adminProfile ? route('dashboard.users.profile.sections.order',$member) : route($selfPrefix.'.sections.order');
+  $orderItemRoute = $adminProfile ? route('dashboard.users.profile.items.order',$member) : route($selfPrefix.'.items.order');
+  $sectionUpdateRoute = fn($section) => $adminProfile ? route('dashboard.users.profile.sections.update',[$member,$section]) : route($selfPrefix.'.sections.update',$section);
+  $sectionDestroyRoute = fn($section) => $adminProfile ? route('dashboard.users.profile.sections.destroy',[$member,$section]) : route($selfPrefix.'.sections.destroy',$section);
+  $itemUpdateRoute = fn($item) => $adminProfile ? route('dashboard.users.profile.items.update',[$member,$item]) : route($selfPrefix.'.items.update',$item);
+  $itemDestroyRoute = fn($item) => $adminProfile ? route('dashboard.users.profile.items.destroy',[$member,$item]) : route($selfPrefix.'.items.destroy',$item);
   $languageNames = ['Arabic','Bengali','Burmese','Cantonese','Chinese (Mandarin)','Dutch','English','Filipino','French','German','Gujarati','Hindi','Indonesian','Italian','Japanese','Javanese','Khmer','Korean','Lao','Malay','Nepali','Portuguese','Punjabi','Russian','Spanish','Swahili','Tamil','Telugu','Thai','Turkish','Ukrainian','Urdu','Vietnamese'];
   $proficiencies = ['Native','Fluent','Advanced','Professional','Intermediate','Good','Basic','Beginner'];
 @endphp
 <div class="container inner-page profile-v3 profile-v3-editor profile-v4-editor">
   <div class="page-intro profile-v3-edit-heading">
-    <div><div class="eyebrow">{{ $adminProfile ? 'User Manager / Public presence' : 'My workspace / Profile settings' }}</div>
-      <h1>{{ $workspace === 'creator' ? 'Creator Profile' : 'Edit Profile' }}</h1><p>Customize your public identity, profile sections and professional details.</p></div>
+    <div><div class="eyebrow">{{ $adminProfile ? 'User Manager / Public presence' : ($workspace === 'admin' ? 'Administration / Profile settings' : 'My workspace / Profile settings') }}</div>
+      <h1>{{ $workspace === 'creator' ? 'Creator Profile' : ($workspace === 'admin' && !$adminProfile ? 'My Profile' : 'Edit Profile') }}</h1><p>Customize your public identity, profile sections and professional details.</p></div>
     <div class="profile-v3-actions">
-      @if($adminProfile)<a class="btn subtle" href="{{ route('dashboard.users.show',$member) }}">Back to user</a>@else<a class="btn subtle" href="{{ route('account') }}">My account</a>@endif
+      @if($adminProfile)<a class="btn subtle" href="{{ route('dashboard.users.show',$member) }}">Back to user</a>
+      @elseif($workspace === 'admin')<a class="btn subtle" href="{{ route('dashboard') }}">Dashboard overview</a>
+      @elseif($workspace === 'creator')<a class="btn subtle" href="{{ route('creator') }}">Creator Studio</a>
+      @else<a class="btn subtle" href="{{ route('account') }}">My account</a>@endif
       @if($member->isCreator() && ($creatorProfile?->is_public || $member->publishedListings()->exists()))
         <a class="btn subtle" href="{{ route('creators.show',$member->public_id) }}">View public profile</a>
       @endif
