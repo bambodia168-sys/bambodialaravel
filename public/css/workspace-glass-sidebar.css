@@ -212,3 +212,95 @@
   .workspace-body .workspace-glass-toggle,.workspace-body .workspace-mobile-trigger { display: none!important; }
   .workspace-body .workspace-shell { background: none; }
 }
+
+
+/* V4: glass cards and unboxed header utilities.
+   The accepted V3 sidebar and shared canvas declarations above are unchanged. */
+.workspace-body {
+  --workspace-card-glass: rgba(255,255,255,.60);
+  --workspace-card-reflection: linear-gradient(132deg,rgba(255,255,255,.48),rgba(255,255,255,.13) 38%,transparent 62%,rgba(220,232,249,.17));
+  --workspace-card-rim: rgba(255,255,255,.93);
+  --workspace-card-shadow: 0 8px 22px rgba(38,61,94,.075),0 0 0 1px rgba(111,137,174,.16),inset 0 1px 1px rgba(255,255,255,.96),inset 0 -1px 1px rgba(115,145,190,.11);
+}
+:root[data-theme="dark"] .workspace-body {
+  --workspace-card-glass: rgba(17,32,54,.64);
+  --workspace-card-reflection: linear-gradient(132deg,rgba(151,185,231,.105),rgba(151,185,231,.025) 38%,transparent 62%,rgba(84,128,190,.065));
+  --workspace-card-rim: rgba(159,188,229,.25);
+  --workspace-card-shadow: 0 8px 24px rgba(0,0,0,.19),inset 0 1px 1px rgba(193,216,250,.15),inset 0 -1px 1px rgba(104,148,211,.10);
+}
+
+/* Only the four requested utility triggers. Keep the account avatar, cart,
+   dropdown panels, flag artwork and unread-count badge intact. */
+.workspace-body .workspace-topbar .workspace-top-actions > .workspace-home-link,
+.workspace-body .workspace-topbar .workspace-top-actions > [data-theme-toggle],
+.workspace-body .workspace-topbar .workspace-top-actions > .workspace-notifications > summary.icon-button,
+.workspace-body .workspace-topbar .workspace-top-actions > .language-menu.header-flag-only > .language-trigger {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text);
+}
+.workspace-body .workspace-topbar .workspace-top-actions > .workspace-home-link:hover,
+.workspace-body .workspace-topbar .workspace-top-actions > [data-theme-toggle]:hover,
+.workspace-body .workspace-topbar .workspace-top-actions > .workspace-notifications > summary.icon-button:hover,
+.workspace-body .workspace-topbar .workspace-top-actions > .language-menu.header-flag-only > .language-trigger:hover,
+.workspace-body .workspace-topbar .workspace-top-actions > .workspace-notifications[open] > summary.icon-button,
+.workspace-body .workspace-topbar .workspace-top-actions > .language-menu.header-flag-only[open] > .language-trigger {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--accent);
+}
+.workspace-body .workspace-topbar .workspace-top-actions > .language-menu.header-flag-only[open] > .language-trigger:not(:focus-visible) {
+  outline: none;
+}
+.workspace-body .workspace-topbar .workspace-top-actions > .workspace-home-link:focus-visible,
+.workspace-body .workspace-topbar .workspace-top-actions > [data-theme-toggle]:focus-visible,
+.workspace-body .workspace-topbar .workspace-top-actions > .workspace-notifications > summary.icon-button:focus-visible,
+.workspace-body .workspace-topbar .workspace-top-actions > .language-menu.header-flag-only > .language-trigger:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+}
+
+/* Explicit, reusable card families, scoped to authenticated workspace content.
+   No global --surface override: buttons, form controls, table headers, editor
+   overlays, semantic alerts and the public frontend retain their own styles. */
+.workspace-body #workspace-content :is(
+  .panel,.metric,.account-metric,.workspace-overview-metric,
+  .account-overview-chart,.premium-side-card,.studio-card,.studio-aside-card,
+  .studio-preview-panel,.license-workflow-panel,.license-definition-guide-card,
+  .marketplace-card,.marketplace-freelancer-card,.creator-directory-card,
+  .marketplace-job-card,.marketplace-filter-panel,.policy-card,.blog-post-card,
+  .badge-manager-definition-card,.badge-catalog-restored-card
+):not(.is-fullscreen,.issued-token,.commerce-receipt):not(dialog *):not(.commerce-receipt *) {
+  background-color: var(--workspace-card-glass);
+  background-image: var(--workspace-card-reflection);
+  box-shadow: var(--workspace-card-shadow);
+}
+/* Restrict actual backdrop filters to display-oriented surfaces: applying
+   backdrop-filter to arbitrary editor/form/table panels changes containing
+   blocks and stacking contexts, which can interfere with anchored overlays. */
+.workspace-body #workspace-content :is(.metric,.account-metric,.workspace-overview-metric,.account-overview-chart) {
+  border-color: var(--workspace-card-rim);
+}
+@supports ((backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))) {
+  .workspace-body #workspace-content :is(.metric,.account-metric,.workspace-overview-metric,.account-overview-chart):not(:has(dialog,[data-modal-open],.dropdown,.config-dialog)) {
+    -webkit-backdrop-filter: blur(12px) saturate(125%);
+    backdrop-filter: blur(12px) saturate(125%);
+  }
+}
+.workspace-body #workspace-content :is(a.metric,a.account-metric,a.workspace-overview-metric):hover {
+  border-color: var(--secondary);
+}
+.workspace-body #workspace-content :is(a.metric,a.account-metric,a.workspace-overview-metric):focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 3px;
+}
+@media print {
+  .workspace-body #workspace-content :is(.panel,.metric,.account-metric,.workspace-overview-metric,.account-overview-chart,.premium-side-card,.studio-card,.studio-aside-card,.studio-preview-panel,.license-workflow-panel,.license-definition-guide-card,.marketplace-card,.marketplace-freelancer-card,.creator-directory-card,.marketplace-job-card,.marketplace-filter-panel,.policy-card,.blog-post-card,.badge-manager-definition-card,.badge-catalog-restored-card):not(dialog *):not(.commerce-receipt *) {
+    background: white;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
