@@ -1574,6 +1574,18 @@ try {
       const verifyOverviewFilters=async(viewer,workspace)=>{
         const root=viewer.locator('[data-role-dashboard="'+workspace+'"]');
         if(await root.count()!==1) throw new Error('Missing isolated role overview: '+workspace);
+        const trends=root.locator('[data-dashboard-trends]');
+        if(await trends.count()!==1 || await trends.locator('.role-dashboard-trend').count()<1)
+          throw new Error('Real trend charts missing: '+workspace);
+        const periods=root.locator('[data-dashboard-period-filter]');
+        await periods.waitFor({state:'visible'});
+        const n=await trends.locator('.role-dashboard-trend').count();
+        await periods.locator('[data-dashboard-period="12"]').click();
+        if(await trends.locator('[data-trend-period="12"]:visible').count()!==n || await trends.locator('[data-trend-period="4"]:visible').count()!==0 || await periods.locator('[data-dashboard-period="12"]').getAttribute('aria-pressed')!=='true')
+          throw new Error('Dashboard 12-week report switch failed: '+workspace);
+        await periods.locator('[data-dashboard-period="4"]').click();
+        if(await trends.locator('[data-trend-period="4"]:visible').count()!==n || await trends.locator('[data-trend-period="12"]:visible').count()!==0)
+          throw new Error('Dashboard 4-week report switch failed: '+workspace);
         const tables=root.locator('[data-dashboard-table]');
         if(await tables.count()<1) throw new Error('Missing dashboard record tables: '+workspace);
         for(const table of await tables.all()){
@@ -1663,7 +1675,7 @@ try {
             if(glass.utilities.some(u=>u.missing||u.background!=='rgba(0, 0, 0, 0)'||u.image!=='none'||u.border!=='rgba(0, 0, 0, 0)'||u.shadow!=='none'||u.width<34||u.height<34)||!glass.flag||!glass.profile)
               throw new Error('Unboxed header utility acceptance failed: '+JSON.stringify({workspace,theme,utilities:glass.utilities}));
             const expected=theme==='dark'?'rgba(17, 32, 54, 0.64)':'rgba(255, 255, 255, 0.6)';
-            if(!glass.metricCount || (workspace==='account' && glass.chartCount<1) || glass.cards.some(card=>card.background!==expected||card.reflection==='none'||card.shadow==='none'))
+            if((!glass.metricCount && workspace!=='developer') || (workspace==='account' && glass.chartCount<1) || glass.cards.some(card=>card.background!==expected||card.reflection==='none'||card.shadow==='none'))
               throw new Error('Workspace glass card acceptance failed: '+JSON.stringify({workspace,theme,glass}));
             if(glass.cards.filter(card=>typeof card.className==='string'&&/\b(workspace-overview-metric|account-overview-chart)\b/.test(card.className)).some(card=>!card.blur.includes('blur(')))
               throw new Error('Display-card backdrop blur missing: '+workspace+'/'+theme);
@@ -1751,7 +1763,7 @@ try {
         throw new Error('Admin workspace header is not compact or has missing theme logos '+JSON.stringify(adminHeader));
       if(!(await admin.getByRole('heading',{name:'Queues requiring attention'}).isVisible()))
         throw new Error('Admin operational queues missing');
-      if(!(await admin.locator('.workspace-overview-metric[href*="user-manager"]').count()))
+      if(!(await admin.locator('.role-dashboard-kpi[href*="user-manager"]').count()))
         throw new Error('Super-admin account metrics do not lead to User Manager');
       if(!(await admin.getByText('Latest pending marketplace submissions').isVisible()))
         throw new Error('Pending moderation overview missing');
@@ -1759,7 +1771,7 @@ try {
       if(await admin.locator('body').getAttribute('data-workspace')!=='admin')
         throw new Error('Admin shell missing');
       await verifyOverviewFilters(admin,'admin');
-      if(await admin.locator('[data-role-dashboard="admin"] .role-dashboard-chart').count()<3||await admin.locator('[data-role-dashboard="admin"] .role-dashboard-shortcut').count()<8)
+      if(await admin.locator('[data-role-dashboard="admin"] .role-dashboard-chart').count()<5||await admin.locator('[data-role-dashboard="admin"] .role-dashboard-kpi').count()!==4||await admin.locator('[data-role-dashboard="admin"] .role-dashboard-shortcut').count()!==0)
         throw new Error('Administration reports or authorized management shortcuts missing');
       await verifyGlassSidebar(admin,'admin');
       const sidebar=admin.locator('#workspace-sidebar');
@@ -1895,7 +1907,7 @@ try {
       if(await admin.locator('body').getAttribute('data-workspace')!=='developer')
         throw new Error('Developer workspace is not distinct');
       await verifyOverviewFilters(admin,'developer');
-      if(await admin.locator('[data-role-dashboard="developer"] .role-dashboard-chart').count()!==2)
+      if(await admin.locator('[data-role-dashboard="developer"] .role-dashboard-chart').count()!==4||await admin.locator('[data-role-dashboard="developer"] .role-dashboard-kpi').count()!==4||await admin.locator('[data-role-dashboard="developer"] a[href$="/developer/docs"]').count()!==1)
         throw new Error('Developer credential lifecycle reports missing');
       await verifyGlassSidebar(admin,'developer');
       if(await admin.locator('.workspace-nav-link').getByText('Digital File Vault').count())
