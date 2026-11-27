@@ -1571,6 +1571,34 @@ try {
       if(!(await accountLanguage.locator('summary').getAttribute('aria-label'))?.includes('Language:') ||
          await accountLanguage.locator('.language-options form button[name="locale"]').count()!==8)
         throw new Error('Account language dropdown options or accessibility changed');
+      const verifyOverviewFilters=async(viewer,workspace)=>{
+        const root=viewer.locator('[data-role-dashboard="'+workspace+'"]');
+        if(await root.count()!==1) throw new Error('Missing isolated role overview: '+workspace);
+        const tables=root.locator('[data-dashboard-table]');
+        if(await tables.count()<1) throw new Error('Missing dashboard record tables: '+workspace);
+        for(const table of await tables.all()){
+          const search=table.locator('[data-dashboard-search]');
+          await search.waitFor({state:'visible'});
+          const original=await table.locator('[data-dashboard-row]').count();
+          await search.fill('no-record-should-match-9b2137c6');
+          if(await table.locator('[data-dashboard-row]:visible').count()!==0 || !(await table.locator('[data-dashboard-empty]').isVisible()))
+            throw new Error('Overview search did not filter records: '+workspace);
+          await table.locator('[data-dashboard-reset]').click();
+          if(await table.locator('[data-dashboard-row]:visible').count()!==original || await search.inputValue()!=='')
+            throw new Error('Overview filter reset did not restore records: '+workspace);
+          const status=table.locator('[data-dashboard-status]');
+          if(await status.count()){
+            const value=await status.locator('option').nth(1).getAttribute('value');
+            await status.selectOption(value);
+            const mismatch=await table.locator('[data-dashboard-row]:visible').evaluateAll((nodes,value)=>nodes.some(row=>row.dataset.status!==value),value);
+            if(mismatch)throw new Error('Overview status filter returned wrong records: '+workspace);
+            await table.locator('[data-dashboard-reset]').click();
+          }
+        }
+      };
+      await verifyOverviewFilters(page,'account');
+      if(!(await accountOverview.evaluate(root=>!!(root.querySelector('[aria-labelledby="customer-activity-heading"]').compareDocumentPosition(root.querySelector('.workspace-overview-grid'))&Node.DOCUMENT_POSITION_FOLLOWING))))
+        throw new Error('My Account does not start with marketplace activity');
       const verifyGlassSidebar=async (viewer,workspace)=>{
         const sidebar=viewer.locator('#workspace-sidebar');
         const edge=viewer.locator('[data-workspace-glass-toggle]');
@@ -1730,6 +1758,9 @@ try {
       checks+=3;
       if(await admin.locator('body').getAttribute('data-workspace')!=='admin')
         throw new Error('Admin shell missing');
+      await verifyOverviewFilters(admin,'admin');
+      if(await admin.locator('[data-role-dashboard="admin"] .role-dashboard-chart').count()<3||await admin.locator('[data-role-dashboard="admin"] .role-dashboard-shortcut').count()<8)
+        throw new Error('Administration reports or authorized management shortcuts missing');
       await verifyGlassSidebar(admin,'admin');
       const sidebar=admin.locator('#workspace-sidebar');
       const main=admin.locator('#workspace-main');
@@ -1863,6 +1894,9 @@ try {
       checks+=3;
       if(await admin.locator('body').getAttribute('data-workspace')!=='developer')
         throw new Error('Developer workspace is not distinct');
+      await verifyOverviewFilters(admin,'developer');
+      if(await admin.locator('[data-role-dashboard="developer"] .role-dashboard-chart').count()!==2)
+        throw new Error('Developer credential lifecycle reports missing');
       await verifyGlassSidebar(admin,'developer');
       if(await admin.locator('.workspace-nav-link').getByText('Digital File Vault').count())
         throw new Error('Developer navigation leaked administration modules');
@@ -2082,6 +2116,8 @@ try {
         if(!layout.introRemoved||!layout.ordered||layout.typography.some(t=>JSON.stringify(t)!==JSON.stringify(layout.typography[0]))||layout.metrics!==7||layout.charts!==8||layout.filters!==8)
           throw new Error('Creator dashboard order, heading or original analytics integrity failed: '+JSON.stringify(layout));
       };
+      if(await creator.locator('[data-role-dashboard],link[href*="role-dashboard-overview.css"],script[src*="role-dashboard-overview.js"]').count())
+        throw new Error('Creator Studio must not load the new dashboards or assets');
       await verifyCreatorOrder();
       const creatorViewport=creator.viewportSize();
       try {
