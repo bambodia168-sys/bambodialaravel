@@ -1585,6 +1585,10 @@ try {
           throw new Error('Glass sidebar lost navigation or retained duplicate profile');
         if(await viewer.locator('.workspace-topbar [data-workspace-toggle]').count() || await primary.isVisible())
           throw new Error('Desktop header still has sidebar toggle');
+        if(await viewer.locator('.workspace-topbar .workspace-top-title').count())
+          throw new Error('Duplicated workspace title remains in header');
+        if(!(await viewer.locator('.workspace-menu-search input').isVisible()) || !(await sidebar.locator('.workspace-kind').count()))
+          throw new Error('Workspace search or sidebar workspace name missing');
         try {
           if(originalCollapsed) await edge.click();
           for(const theme of ['light','dark']){
@@ -1593,6 +1597,26 @@ try {
             const expanded=await sidebar.evaluate(el=>({width:el.getBoundingClientRect().width,radius:parseFloat(getComputedStyle(el).borderRadius),background:getComputedStyle(el).backgroundColor,blur:getComputedStyle(el).backdropFilter,reflection:getComputedStyle(el).backgroundImage,underlay:getComputedStyle(el.parentElement).backgroundImage}));
             if(expanded.width<200 || expanded.radius<15 || expanded.background==='rgba(0, 0, 0, 0)' || !expanded.blur.includes('blur(') || expanded.reflection==='none' || expanded.underlay==='none')
               throw new Error('Glass expanded sidebar geometry: '+JSON.stringify({workspace,theme,expanded}));
+            const canvas=await viewer.evaluate(()=>{
+              const shell=document.querySelector('#workspace-shell'),main=document.querySelector('#workspace-main');
+              const probe=document.createElement('span');
+              probe.style.backgroundColor='var(--bg)';
+              shell.append(probe);
+              const themeColor=getComputedStyle(probe).backgroundColor;
+              probe.remove();
+              const header=document.querySelector('.workspace-topbar'),search=header.querySelector('.workspace-menu-search');
+              return {
+                canvas:getComputedStyle(shell).backgroundColor,
+                main:getComputedStyle(main).backgroundColor,
+                themeColor,
+                searchFirst:header.firstElementChild===search,
+                searchWidth:search.getBoundingClientRect().width,
+                overflow:header.scrollWidth>header.clientWidth+2
+              };
+            });
+            if(canvas.canvas!==canvas.themeColor || canvas.main!=='rgba(0, 0, 0, 0)' || !canvas.searchFirst || canvas.searchWidth<150 || canvas.overflow)
+              throw new Error('Shared premium canvas or simplified header failed: '+JSON.stringify({workspace,theme,canvas}));
+            if(workspace==='admin') await viewer.screenshot({path:out+'/unified-glass-'+theme+'-expanded.png',fullPage:false});
             if(await edge.getAttribute('aria-expanded')!=='true') throw new Error('Expanded glass toggle ARIA state incorrect');
             await edge.click();
             await viewer.waitForFunction(()=>document.body.classList.contains('workspace-collapsed') && document.querySelector('#workspace-sidebar').getBoundingClientRect().width<95);
@@ -1606,6 +1630,7 @@ try {
             const faviconSource=await favicon.getAttribute('src');
             const themeFavicon=await viewer.locator('link[data-site-theme-icon]').getAttribute('data-'+theme+'-href');
             if(faviconSource!==themeFavicon) throw new Error('Collapsed sidebar does not use actual site favicon');
+            if(workspace==='admin') await viewer.screenshot({path:out+'/unified-glass-'+theme+'-collapsed.png',fullPage:false});
             const collapsedEntries=await sidebar.locator('a.workspace-nav-link').evaluateAll(nodes=>nodes.map(n=>[n.href,n.title]));
             if(JSON.stringify(entries)!==JSON.stringify(collapsedEntries))
               throw new Error('Sidebar collapse changed role-governed links');
