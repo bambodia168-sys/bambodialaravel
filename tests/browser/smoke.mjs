@@ -1616,7 +1616,30 @@ try {
             });
             if(canvas.canvas!==canvas.themeColor || canvas.main!=='rgba(0, 0, 0, 0)' || !canvas.searchFirst || canvas.searchWidth<150 || canvas.overflow)
               throw new Error('Shared premium canvas or simplified header failed: '+JSON.stringify({workspace,theme,canvas}));
-            if(workspace==='admin') await viewer.screenshot({path:out+'/unified-glass-'+theme+'-expanded.png',fullPage:false});
+            const glass=await viewer.evaluate(()=>{
+              const header=document.querySelector('.workspace-top-actions');
+              const utilitySelectors=[':scope > .workspace-home-link',':scope > .workspace-notifications > summary',':scope > [data-theme-toggle]',':scope > .language-menu.header-flag-only > .language-trigger'];
+              const utilities=utilitySelectors.map(selector=>{
+                const el=header.querySelector(selector);
+                if(!el)return {selector,missing:true};
+                const style=getComputedStyle(el),rect=el.getBoundingClientRect();
+                return {selector,background:style.backgroundColor,image:style.backgroundImage,border:style.borderTopColor,shadow:style.boxShadow,width:rect.width,height:rect.height};
+              });
+              const cards=[...document.querySelectorAll('#workspace-content .workspace-overview-metric,#workspace-content .metric,#workspace-content .account-metric,#workspace-content .account-overview-chart,#workspace-content .panel:not(.issued-token)')].filter(el=>el.getClientRects().length);
+              const describe=el=>{
+                const style=getComputedStyle(el);
+                return {className:el.className,background:style.backgroundColor,reflection:style.backgroundImage,shadow:style.boxShadow,blur:style.backdropFilter};
+              };
+              return {utilities,cards:cards.map(describe),metricCount:cards.filter(el=>el.matches('.workspace-overview-metric,.metric,.account-metric')).length,chartCount:cards.filter(el=>el.matches('.account-overview-chart')).length,flag:!!header.querySelector('.language-trigger .locale-flag'),profile:!!header.querySelector('.workspace-profile')};
+            });
+            if(glass.utilities.some(u=>u.missing||u.background!=='rgba(0, 0, 0, 0)'||u.image!=='none'||u.border!=='rgba(0, 0, 0, 0)'||u.shadow!=='none'||u.width<34||u.height<34)||!glass.flag||!glass.profile)
+              throw new Error('Unboxed header utility acceptance failed: '+JSON.stringify({workspace,theme,utilities:glass.utilities}));
+            const expected=theme==='dark'?'rgba(17, 32, 54, 0.64)':'rgba(255, 255, 255, 0.6)';
+            if(!glass.metricCount || (workspace==='account' && glass.chartCount<1) || glass.cards.some(card=>card.background!==expected||card.reflection==='none'||card.shadow==='none'))
+              throw new Error('Workspace glass card acceptance failed: '+JSON.stringify({workspace,theme,glass}));
+            if(glass.cards.filter(card=>typeof card.className==='string'&&/\b(workspace-overview-metric|account-overview-chart)\b/.test(card.className)).some(card=>!card.blur.includes('blur(')))
+              throw new Error('Display-card backdrop blur missing: '+workspace+'/'+theme);
+            await viewer.screenshot({path:out+'/glass-v4-'+workspace+'-'+theme+'-expanded.png',fullPage:false});
             if(await edge.getAttribute('aria-expanded')!=='true') throw new Error('Expanded glass toggle ARIA state incorrect');
             await edge.click();
             await viewer.waitForFunction(()=>document.body.classList.contains('workspace-collapsed') && document.querySelector('#workspace-sidebar').getBoundingClientRect().width<95);
