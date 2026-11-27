@@ -1,7 +1,7 @@
 @extends('layouts.main')
 @section('title', 'Verify your email')
-@push('head')
-<link rel="stylesheet" href="{{ asset('css/account-email-verification.css') }}?v=1">
+@push('page-styles')
+<link rel="stylesheet" href="{{ asset('css/account-email-verification.css') }}?v=2">
 @endpush
 @section('content')
 <div class="container inner-page email-verification-page">
