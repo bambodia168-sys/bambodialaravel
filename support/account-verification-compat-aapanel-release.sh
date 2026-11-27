@@ -11,7 +11,7 @@ if [[ $# == 1 ]]; then MODE="$1"; fi
 [[ $# -le 1 && ( "$MODE" == "--preflight" || "$MODE" == "--apply" ) ]]
 [[ "$(id -u)" == 0 ]]
 for cmd in curl git python3 tar flock runuser install; do command -v "$cmd" >/dev/null; done
-echo "=== Account verification release 202 compatibility: $MODE ==="
+echo "=== Account verification release 202 compatibility v2: $MODE ==="
 test -f "$SITE/artisan"
 test -f "$SITE/vendor/autoload.php"
 test -x "$PHP"
@@ -165,6 +165,14 @@ require "vendor/autoload.php";
 $app = require "bootstrap/app.php";
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 echo "MAIL_TRANSPORT_CONFIGURED=".(App\Support\EmailOutbox::deliveryReady()?"YES":"NO").PHP_EOL;
+$reviewers=App\Models\User::query()->whereIn("role",["admin","super_admin"])->where("account_status","active")->get(["id","role","account_status"]);
+$eligible=$reviewers->filter(fn($user)=>App\Support\UserManagementAccess::allows($user,"marketplace_review"));
+echo "ACTIVE_ADMIN_ACCOUNTS=".$reviewers->count().PHP_EOL;
+echo "ELIGIBLE_MARKETPLACE_REVIEWERS=".$eligible->count().PHP_EOL;
+echo "ACTIVE_ADMIN_ACCOUNTS_WITHOUT_REVIEW_ACCESS=".($reviewers->count()-$eligible->count()).PHP_EOL;
+$owners=App\Models\AccountNotification::query()->where("event","marketplace.submission.received")->where("created_at",">=",now()->subDays(7))->pluck("user_id");
+echo "RECENT_SUBMISSION_NOTICES_WITH_ELIGIBLE_OTHER_REVIEWER=".$owners->filter(fn($id)=>$eligible->contains(fn($reviewer)=>(int)$reviewer->id!==(int)$id))->count().PHP_EOL;
+
 foreach (["marketplace.submission.received","marketplace.review.requested"] as $event) {
     $override=App\Models\EmailTemplate::query()->find($event);
     echo $event." saved_template_override=".($override && $override->enabled !== null ? ($override->enabled ? "enabled":"disabled"):"default").PHP_EOL;
@@ -216,7 +224,9 @@ while IFS='|' read -r path actual; do
     [[ ! -L "$SITE/$path" && "$(git hash-object "$SITE/$path")" == "$actual" ]]
   fi
 done < "$WORK/observed"
-ROUTE_CACHED="$(cd "$SITE" && runuser -u www -- "$PHP" -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; echo $app->routesAreCached()?"YES":"NO";')"
+ROUTE_CACHED="$(cd "$SITE" && runuser -u www -- "$PHP" -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo $app->routesAreCached()?"YES":"NO";')"
+[[ "$ROUTE_CACHED" == YES || "$ROUTE_CACHED" == NO ]]
+echo "PASS: bootstrapped Laravel route-cache check ($ROUTE_CACHED)"
 APPLYING=1
 while IFS= read -r path; do
   tmp="$(mktemp "$(dirname "$SITE/$path")/.reference-dashboard.XXXXXXXX")"
