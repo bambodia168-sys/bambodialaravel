@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\CommerceCartController;
 use App\Support\CheckoutCart;
 use App\Support\EmailOutbox;
 use App\Support\Security\SignIn;
@@ -111,10 +110,11 @@ class AuthController extends Controller
 
         if ($guestItems !== []) {
             $request->session()->forget([CheckoutCart::SESSION, CheckoutCart::INTENT]);
-            return CommerceCartController::verificationEmail($user);
+            $request->session()->put(EmailVerificationController::CHECKOUT_RETURN, $user->id);
         }
 
-        return redirect($user->defaultWorkspaceUrl());
+        // Account registration is never dependent on the cart or commerce feature.
+        return EmailVerificationController::sendFor($user);
     }
 
     public function logout(Request $request): RedirectResponse
