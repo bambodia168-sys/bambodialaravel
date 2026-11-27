@@ -32,12 +32,12 @@ class StorefrontCheckoutTest extends TestCase
 
         $this->get($first->publicUrl())->assertOk()->assertSee('Add to cart');
         $this->post(route('cart.add', $first->public_id), ['tier' => 'standard'])->assertRedirect(route('cart'));
-        $this->get(route('cart'))->assertOk()->assertSee('Added to cart')->assertSee('USD 30.25')
+        $this->get(route('cart'))->assertOk()->assertSee('data-page-background="transaction"', false)->assertSee('Added to cart')->assertSee('USD 30.25')
             ->assertSee('data-step="cart" data-state="current"', false)
             ->assertSee('data-step="review" data-state="upcoming"', false);
         $this->post(route('cart.add', $second->public_id), ['tier' => 'standard'])->assertRedirect(route('cart'));
         $this->get(route('checkout', ['account' => 'login']))->assertOk()
-            ->assertSee('Sign in to checkout')->assertSee('USD 45.30')->assertDontSee('Continue to payment')
+            ->assertSee('data-page-background="transaction"', false)->assertSee('Sign in to checkout')->assertSee('USD 45.30')->assertDontSee('Continue to payment')
             ->assertSee('data-step="checkout" data-state="current"', false);
         $this->delete(route('cart.remove', $first->public_id))->assertRedirect(route('cart'));
         $this->get(route('cart'))->assertOk()->assertSee('USD 15.05')->assertDontSee('Logo setup');

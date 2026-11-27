@@ -8,6 +8,7 @@
   <script>document.documentElement.dataset.theme = localStorage.getItem('bambodia-theme') || @json(\App\Models\SiteSetting::setting('site.default_theme'));</script>
   @vite(['resources/css/app.css','resources/js/app.js'])
   @include('layouts.partials.site-typography')
+  <link rel="stylesheet" href="{{ asset('css/page-backgrounds.css') }}?v=1">
   @stack('page-styles')
   <link rel="stylesheet" href="{{ asset('css/marketplace-pricing.css') }}?v=1">
   <link rel="stylesheet" href="{{ asset('css/save-star.css') }}?v=2">
@@ -166,7 +167,14 @@
     </div>
   </div>
 </header>
-<main class="site-main" @if($contentControls) data-protected-content @endif>@yield('content')</main>
+@php
+  $pageBackground = match (true) {
+    request()->routeIs('verification.notice', 'verification.verified', 'localized.*.verification.notice', 'localized.*.verification.verified') => 'ambient',
+    request()->routeIs('cart', 'checkout', 'localized.*.cart', 'localized.*.checkout') => 'transaction',
+    default => 'standard',
+  };
+@endphp
+<main class="site-main" data-page-background="{{ $pageBackground }}" @if($contentControls) data-protected-content @endif>@yield('content')</main>
 @php
   $footerPolicies = \App\Models\Policy::query()->where('status', 'published')
       ->whereIn('category', ['cookies', 'gdpr', 'privacy'])
