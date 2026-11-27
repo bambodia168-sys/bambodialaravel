@@ -98,7 +98,7 @@
         </td>
       </tr>
     @endforeach
-      <tr data-dashboard-empty @if($tokens->count()) hidden @endif><td class="empty-cell" colspan="7">No matching displayed tokens.</td></tr>
+      <tr data-dashboard-empty @if($tokens->count()) hidden @endif><td class="empty-cell" colspan="7">{{ $tokens->isEmpty() ? ($status==='all' ? 'No API tokens have been issued.' : 'No tokens match this status.') : 'No matching displayed tokens.' }}</td></tr>
     </tbody></table>
   </div>
   <x-pagination :paginator="$tokens"/>
@@ -111,7 +111,7 @@
     @foreach($recentActivity as $activity)
       <tr data-dashboard-row><td><strong>{{ str_replace('.',' / ',$activity->event) }}</strong></td><td>{{ $activity->created_at->format('d M Y H:i') }}</td><td><span class="role-pill">Recorded</span></td></tr>
     @endforeach
-    <tr data-dashboard-empty @if($recentActivity->isNotEmpty()) hidden @endif><td colspan="3" class="empty-cell">No matching recorded credential activity.</td></tr>
+    <tr data-dashboard-empty @if($recentActivity->isNotEmpty()) hidden @endif><td colspan="3" class="empty-cell">{{ $recentActivity->isEmpty() ? 'No recorded credential activity yet.' : 'No matching recorded credential activity.' }}</td></tr>
   </tbody></table></div>
 </section>
 <dialog id="new-api-token" class="config-dialog">
