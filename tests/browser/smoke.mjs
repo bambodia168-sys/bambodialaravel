@@ -1581,23 +1581,31 @@ try {
         if(await viewer.locator('body').getAttribute('data-workspace')!==workspace)
           throw new Error('Unexpected workspace for glass sidebar test: '+workspace);
         const entries=await sidebar.locator('a.workspace-nav-link').evaluateAll(nodes=>nodes.map(n=>[n.href,n.title]));
-        if(!entries.length || !(await sidebar.locator('.workspace-sidebar-identity').count()))
-          throw new Error('Glass sidebar lost navigation or identity');
+        if(!entries.length || await sidebar.locator('.workspace-sidebar-identity, .profile-avatar').count())
+          throw new Error('Glass sidebar lost navigation or retained duplicate profile');
+        if(await viewer.locator('.workspace-topbar [data-workspace-toggle]').count() || await primary.isVisible())
+          throw new Error('Desktop header still has sidebar toggle');
         try {
-          if(originalCollapsed) await primary.click();
+          if(originalCollapsed) await edge.click();
           for(const theme of ['light','dark']){
             await viewer.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
             await edge.waitFor({state:'visible'});
-            const expanded=await sidebar.evaluate(el=>({width:el.getBoundingClientRect().width,radius:parseFloat(getComputedStyle(el).borderRadius),background:getComputedStyle(el).backgroundColor}));
-            if(expanded.width<200 || expanded.radius<15 || expanded.background==='rgba(0, 0, 0, 0)')
+            const expanded=await sidebar.evaluate(el=>({width:el.getBoundingClientRect().width,radius:parseFloat(getComputedStyle(el).borderRadius),background:getComputedStyle(el).backgroundColor,blur:getComputedStyle(el).backdropFilter,reflection:getComputedStyle(el).backgroundImage,underlay:getComputedStyle(el.parentElement).backgroundImage}));
+            if(expanded.width<200 || expanded.radius<15 || expanded.background==='rgba(0, 0, 0, 0)' || !expanded.blur.includes('blur(') || expanded.reflection==='none' || expanded.underlay==='none')
               throw new Error('Glass expanded sidebar geometry: '+JSON.stringify({workspace,theme,expanded}));
             if(await edge.getAttribute('aria-expanded')!=='true') throw new Error('Expanded glass toggle ARIA state incorrect');
             await edge.click();
             await viewer.waitForFunction(()=>document.body.classList.contains('workspace-collapsed') && document.querySelector('#workspace-sidebar').getBoundingClientRect().width<95);
             if(await edge.getAttribute('aria-expanded')!=='false' || await primary.getAttribute('aria-expanded')!=='false')
               throw new Error('Glass and header controls out of sync');
-            if(await sidebar.locator('.workspace-nav-text:visible').count() || await sidebar.locator('.workspace-sidebar-identity-copy').isVisible())
+            if(await sidebar.locator('.workspace-nav-text:visible').count() || await sidebar.locator('.workspace-brand-pair').isVisible())
               throw new Error('Collapsed sidebar did not become icon-only');
+            const favicon=sidebar.locator('.workspace-favicon-pair img.brand-logo-'+theme);
+            if(!(await favicon.isVisible()) || await sidebar.locator('.workspace-favicon-pair img:visible').count()!==1)
+              throw new Error('Theme-specific favicon missing in collapsed sidebar');
+            const faviconSource=await favicon.getAttribute('src');
+            const themeFavicon=await viewer.locator('link[data-site-theme-icon]').getAttribute('data-'+theme+'-href');
+            if(faviconSource!==themeFavicon) throw new Error('Collapsed sidebar does not use actual site favicon');
             const collapsedEntries=await sidebar.locator('a.workspace-nav-link').evaluateAll(nodes=>nodes.map(n=>[n.href,n.title]));
             if(JSON.stringify(entries)!==JSON.stringify(collapsedEntries))
               throw new Error('Sidebar collapse changed role-governed links');
@@ -1616,7 +1624,7 @@ try {
               primary.getAttribute('aria-expanded')==='false' &&
               edge.getAttribute('aria-expanded')==='false';
           });
-          if(await edge.isVisible() || await primary.getAttribute('aria-expanded')!=='false') throw new Error('Closed mobile drawer state incorrect');
+          if(await edge.isVisible() || !(await primary.isVisible()) || await primary.getAttribute('aria-expanded')!=='false') throw new Error('Closed mobile drawer state incorrect');
           await primary.click();
           await edge.waitFor({state:'visible'});
           if(await edge.getAttribute('aria-expanded')!=='true' || !(await sidebar.locator('.workspace-nav-text').first().isVisible()))
@@ -1631,19 +1639,19 @@ try {
           await viewer.setViewportSize(viewport);
           await viewer.waitForFunction(()=>!document.body.classList.contains('workspace-mobile-open'));
           const current=await viewer.locator('body.workspace-collapsed').count();
-          if(current!==originalCollapsed) await primary.click();
+          if(current!==originalCollapsed) await edge.click();
           await viewer.evaluate(theme=>document.documentElement.dataset.theme=theme,originalTheme);
         }
       };
       await verifyGlassSidebar(page,'account');
-      await page.locator('[data-workspace-toggle]').click();
+      await page.locator('[data-workspace-glass-toggle]').click();
       if(!(await page.locator('body.workspace-collapsed').count()))
         throw new Error('Desktop sidebar did not collapse to icons');
       await page.goto(origin+'/en/account/saved-jobs',{waitUntil:'networkidle'});
       if(!(await page.locator('body.workspace-collapsed').count()))
         throw new Error('Sidebar collapse preference was not persisted between pages');
       // Expand labels before checking visibility of matching menu text.
-      await page.locator('[data-workspace-toggle]').click();
+      await page.locator('[data-workspace-glass-toggle]').click();
       await page.locator('[data-workspace-search]').fill('Notifications');
       if(!(await page.locator('.workspace-nav-link:visible').getByText('Notifications').isVisible()))
         throw new Error('Workspace navigation search not functional');
