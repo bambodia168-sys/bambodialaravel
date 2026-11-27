@@ -131,6 +131,58 @@ class NotificationsTest extends TestCase
         $this->patch('/account/notifications/'.$reviewAlert->id)->assertNotFound();
     }
 
+    public function test_sole_super_admin_submission_creates_both_distinct_notifications_and_emails(): void
+    {
+        $owner = $this->member('super_admin');
+        $this->actingAs($owner)->post('/studio/listings', [
+            'type' => 'freelance',
+            'title' => 'Sole administrator listing',
+            'description' => 'A genuine marketplace submission for review by the only authorized administrator.',
+        ])->assertRedirect();
+        $listing = MarketplaceListing::query()->sole();
+        $this->assertSame('pending', $listing->status);
+        $confirmation = AccountNotification::query()->where('user_id', $owner->id)
+            ->where('event', 'marketplace.submission.received')->sole();
+        $review = AccountNotification::query()->where('user_id', $owner->id)
+            ->where('event', 'marketplace.review.requested')->sole();
+        $this->assertSame('/builder?='.$listing->public_id, $confirmation->target_path);
+        $this->assertNotSame($confirmation->target_path, $review->target_path);
+        foreach (['marketplace.submission.received', 'marketplace.review.requested'] as $event) {
+            $this->assertSame(1, \App\Models\EmailDelivery::query()->where('user_id', $owner->id)
+                ->where('event', $event)->where('status', 'queued')->count());
+        }
+        $this->get('/account/notifications/tray')->assertOk()
+            ->assertSee('Listing submitted for review')->assertSee('Listing ready for review');
+        $this->patch('/account/notifications/'.$review->id)->assertRedirect($review->target_path);
+        $this->get($review->target_path)->assertOk()->assertSee($listing->title);
+        $this->assertSame('pending', $listing->fresh()->status);
+    }
+
+    public function test_self_submission_does_not_bypass_review_permissions_or_notify_for_drafts(): void
+    {
+        $owner = $this->member('admin');
+        DB::table('user_permission_overrides')->insert([
+            'user_id' => $owner->id, 'permission' => 'marketplace_review', 'allowed' => false,
+        ]);
+        $record = MarketplaceListing::query()->create([
+            'user_id' => $owner->id, 'type' => 'service', 'title' => 'Permission fixture',
+            'description' => 'A fixture for checking that review access is never expanded.', 'status' => 'draft',
+        ]);
+        \App\Support\SubmissionNotifications::send($record);
+        $this->assertDatabaseCount('account_notifications', 0);
+        $record->update(['status' => 'pending']);
+        \App\Support\SubmissionNotifications::send($record);
+        $this->assertDatabaseHas('account_notifications', [
+            'user_id' => $owner->id, 'event' => 'marketplace.submission.received',
+        ]);
+        $this->assertDatabaseMissing('account_notifications', [
+            'user_id' => $owner->id, 'event' => 'marketplace.review.requested',
+        ]);
+        $this->assertDatabaseMissing('email_deliveries', [
+            'user_id' => $owner->id, 'event' => 'marketplace.review.requested',
+        ]);
+    }
+
     public function test_checkout_verification_email_status_generates_private_notifications(): void
     {
         config(['commerce.enabled' => true]);
