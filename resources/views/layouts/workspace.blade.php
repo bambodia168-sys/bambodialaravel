@@ -25,6 +25,8 @@
   @if(config('commerce.enabled') && trim($__env->yieldContent('workspace', 'account')) === 'account')
     @include('layouts.partials.mini-cart-assets')
   @endif
+  <link rel="stylesheet" href="{{ asset('css/workspace-glass-sidebar.css') }}?v=1">
+  <script defer src="{{ asset('js/workspace-glass-sidebar.js') }}?v=1"></script>
   @stack('head')
 </head>
 @php
@@ -244,6 +246,10 @@
         <span class="brand-mark workspace-brand-mini" aria-hidden="true">B</span>
       </a>
       <span class="workspace-kind"><x-icon name="circle-dot" size="14"/><span>{{ $workspaceTitles[$workspace] }}</span></span>
+      <div class="workspace-sidebar-identity" title="{{ $user->name }}">
+        <x-profile-avatar :user="$user" :size="18"/>
+        <div class="workspace-sidebar-identity-copy"><strong>{{ $user->name }}</strong><small>{{ ucwords(str_replace('_',' ',$user->role)) }}</small></div>
+      </div>
     </div>
     <nav class="workspace-navigation" aria-label="{{ $workspaceTitles[$workspace] }} menu" id="workspace-navigation">
       @foreach($groups as $group)
@@ -295,6 +301,10 @@
       </a>
     </div>
   </aside>
+  <button type="button" class="workspace-glass-toggle" data-workspace-glass-toggle aria-controls="workspace-sidebar" aria-expanded="true" aria-label="Collapse navigation" title="Show icons only" hidden>
+    <span class="workspace-glass-chevron-close"><x-icon name="chevron-left" size="17"/></span>
+    <span class="workspace-glass-chevron-open"><x-icon name="chevron-right" size="17"/></span>
+  </button>
   <div class="workspace-backdrop" data-workspace-backdrop aria-hidden="true"></div>
   <div class="workspace-main" id="workspace-main">
     <header class="workspace-topbar">

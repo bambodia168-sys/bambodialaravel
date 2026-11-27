@@ -1571,6 +1571,71 @@ try {
       if(!(await accountLanguage.locator('summary').getAttribute('aria-label'))?.includes('Language:') ||
          await accountLanguage.locator('.language-options form button[name="locale"]').count()!==8)
         throw new Error('Account language dropdown options or accessibility changed');
+      const verifyGlassSidebar=async (viewer,workspace)=>{
+        const sidebar=viewer.locator('#workspace-sidebar');
+        const edge=viewer.locator('[data-workspace-glass-toggle]');
+        const primary=viewer.locator('[data-workspace-toggle]');
+        const viewport=viewer.viewportSize();
+        const originalTheme=await viewer.evaluate(()=>document.documentElement.dataset.theme);
+        const originalCollapsed=await viewer.locator('body.workspace-collapsed').count();
+        if(await viewer.locator('body').getAttribute('data-workspace')!==workspace)
+          throw new Error('Unexpected workspace for glass sidebar test: '+workspace);
+        const entries=await sidebar.locator('a.workspace-nav-link').evaluateAll(nodes=>nodes.map(n=>[n.href,n.title]));
+        if(!entries.length || !(await sidebar.locator('.workspace-sidebar-identity').count()))
+          throw new Error('Glass sidebar lost navigation or identity');
+        try {
+          if(originalCollapsed) await primary.click();
+          for(const theme of ['light','dark']){
+            await viewer.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
+            await edge.waitFor({state:'visible'});
+            const expanded=await sidebar.evaluate(el=>({width:el.getBoundingClientRect().width,radius:parseFloat(getComputedStyle(el).borderRadius),background:getComputedStyle(el).backgroundColor}));
+            if(expanded.width<200 || expanded.radius<15 || expanded.background==='rgba(0, 0, 0, 0)')
+              throw new Error('Glass expanded sidebar geometry: '+JSON.stringify({workspace,theme,expanded}));
+            if(await edge.getAttribute('aria-expanded')!=='true') throw new Error('Expanded glass toggle ARIA state incorrect');
+            await edge.click();
+            await viewer.waitForFunction(()=>document.body.classList.contains('workspace-collapsed') && document.querySelector('#workspace-sidebar').getBoundingClientRect().width<95);
+            if(await edge.getAttribute('aria-expanded')!=='false' || await primary.getAttribute('aria-expanded')!=='false')
+              throw new Error('Glass and header controls out of sync');
+            if(await sidebar.locator('.workspace-nav-text:visible').count() || await sidebar.locator('.workspace-sidebar-identity-copy').isVisible())
+              throw new Error('Collapsed sidebar did not become icon-only');
+            const collapsedEntries=await sidebar.locator('a.workspace-nav-link').evaluateAll(nodes=>nodes.map(n=>[n.href,n.title]));
+            if(JSON.stringify(entries)!==JSON.stringify(collapsedEntries))
+              throw new Error('Sidebar collapse changed role-governed links');
+            await edge.click();
+            await viewer.waitForFunction(()=>!document.body.classList.contains('workspace-collapsed') && document.querySelector('#workspace-sidebar').getBoundingClientRect().width>200);
+          }
+          await viewer.setViewportSize({width:390,height:844});
+          // Resize resolves before matchMedia listeners necessarily finish synchronizing.
+          await viewer.waitForFunction(()=>{
+            const edge=document.querySelector('[data-workspace-glass-toggle]');
+            const primary=document.querySelector('[data-workspace-toggle]');
+            return matchMedia('(max-width:850px)').matches &&
+              !document.body.classList.contains('workspace-collapsed') &&
+              !document.body.classList.contains('workspace-mobile-open') &&
+              getComputedStyle(edge).display==='none' &&
+              primary.getAttribute('aria-expanded')==='false' &&
+              edge.getAttribute('aria-expanded')==='false';
+          });
+          if(await edge.isVisible() || await primary.getAttribute('aria-expanded')!=='false') throw new Error('Closed mobile drawer state incorrect');
+          await primary.click();
+          await edge.waitFor({state:'visible'});
+          if(await edge.getAttribute('aria-expanded')!=='true' || !(await sidebar.locator('.workspace-nav-text').first().isVisible()))
+            throw new Error('Mobile drawer did not reveal role-governed navigation');
+          await edge.click();
+          await edge.waitFor({state:'hidden'});
+          if(await primary.getAttribute('aria-expanded')!=='false') throw new Error('Mobile drawer failed to close');
+          await primary.click();
+          await viewer.keyboard.press('Escape');
+          await edge.waitFor({state:'hidden'});
+        } finally {
+          await viewer.setViewportSize(viewport);
+          await viewer.waitForFunction(()=>!document.body.classList.contains('workspace-mobile-open'));
+          const current=await viewer.locator('body.workspace-collapsed').count();
+          if(current!==originalCollapsed) await primary.click();
+          await viewer.evaluate(theme=>document.documentElement.dataset.theme=theme,originalTheme);
+        }
+      };
+      await verifyGlassSidebar(page,'account');
       await page.locator('[data-workspace-toggle]').click();
       if(!(await page.locator('body.workspace-collapsed').count()))
         throw new Error('Desktop sidebar did not collapse to icons');
@@ -1609,6 +1674,7 @@ try {
       checks+=3;
       if(await admin.locator('body').getAttribute('data-workspace')!=='admin')
         throw new Error('Admin shell missing');
+      await verifyGlassSidebar(admin,'admin');
       const sidebar=admin.locator('#workspace-sidebar');
       const main=admin.locator('#workspace-main');
       const scrollBefore=await main.evaluate(node=>node.scrollTop);
@@ -1741,6 +1807,7 @@ try {
       checks+=3;
       if(await admin.locator('body').getAttribute('data-workspace')!=='developer')
         throw new Error('Developer workspace is not distinct');
+      await verifyGlassSidebar(admin,'developer');
       if(await admin.locator('.workspace-nav-link').getByText('Digital File Vault').count())
         throw new Error('Developer navigation leaked administration modules');
 
@@ -1948,6 +2015,7 @@ try {
       if(await creator.locator('body').getAttribute('data-workspace')!=='creator')
         throw new Error('Creator workspace route did not render correctly');
 
+      await verifyGlassSidebar(creator,'creator');
       await creator.goto(origin+'/en/builder?=197483529',{waitUntil:'networkidle'});
       const featuredSelect=creator.locator('[data-featured-media]');
       const featuredImage=creator.locator('[data-featured-preview] img');
