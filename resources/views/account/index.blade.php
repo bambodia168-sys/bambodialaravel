@@ -3,14 +3,11 @@
 @section('title','My Account')
 @push('head')
   <link rel="stylesheet" href="{{ asset('css/customer-account-overview.css') }}?v=3">
+  <link rel="stylesheet" href="{{ asset('css/role-dashboard-overview.css') }}?v=1">
+  <script defer src="{{ asset('js/role-dashboard-overview.js') }}?v=1"></script>
 @endpush
 @section('content')
-<div class="container inner-page customer-account-overview">
-  <div class="page-intro">
-    <div class="eyebrow">Account workspace</div>
-    <h1>My account</h1>
-    <p>Welcome, {{ $user->name }}. Manage your purchases, saved work and private account activity.</p>
-  </div>
+<div class="container inner-page customer-account-overview role-dashboard" data-role-dashboard="account">
   @php
     $accountMetrics = [
         'saved'=>['Saved Listings','star','account.saved-listings','View saved listings'],
@@ -36,22 +33,7 @@
     }
   @endphp
 
-  <div class="workspace-overview-grid" aria-label="Your account activity">
-    @foreach($stats as $key=>$count)
-      <x-workspace-metric :label="$accountMetrics[$key][0]" :value="$count" :icon="$accountMetrics[$key][1]"
-          :href="route($accountMetrics[$key][2])" :action="$accountMetrics[$key][3]"/>
-    @endforeach
-    @if($orderSummary !== null)
-      <x-workspace-metric label="My Orders" :value="$orderTotal" icon="shopping-cart"
-          :href="route('account.orders.index')" action="View order history"/>
-      <x-workspace-metric label="Completed Orders" :value="$orderSummary['completed']" icon="check-circle"
-          :href="route('account.orders.index',['status'=>'completed'])" action="View completed orders"/>
-      <x-workspace-metric label="Awaiting Payment" :value="$orderSummary['awaiting_payment']" icon="clock"
-          :href="route('account.orders.index',['status'=>'awaiting_payment'])" action="Review unpaid orders"/>
-    @endif
-  </div>
-
-  <section class="account-overview-section" aria-labelledby="customer-activity-heading">
+  <section class="account-overview-section role-dashboard-section" aria-labelledby="customer-activity-heading">
     <div class="workspace-section-head"><div>
       <div class="account-overview-eyebrow"><x-icon name="activity" size="16"/> Real workspace data</div>
       <h2 id="customer-activity-heading">Marketplace activity</h2>
@@ -100,6 +82,21 @@
     </div>
   </section>
 
+  <div class="workspace-overview-grid" aria-label="Your account activity">
+    @foreach($stats as $key=>$count)
+      <x-workspace-metric :label="$accountMetrics[$key][0]" :value="$count" :icon="$accountMetrics[$key][1]"
+          :href="route($accountMetrics[$key][2])" :action="$accountMetrics[$key][3]"/>
+    @endforeach
+    @if($orderSummary !== null)
+      <x-workspace-metric label="My Orders" :value="$orderTotal" icon="shopping-cart"
+          :href="route('account.orders.index')" action="View order history"/>
+      <x-workspace-metric label="Completed Orders" :value="$orderSummary['completed']" icon="check-circle"
+          :href="route('account.orders.index',['status'=>'completed'])" action="View completed orders"/>
+      <x-workspace-metric label="Awaiting Payment" :value="$orderSummary['awaiting_payment']" icon="clock"
+          :href="route('account.orders.index',['status'=>'awaiting_payment'])" action="Review unpaid orders"/>
+    @endif
+  </div>
+
   <section class="account-overview-section" aria-labelledby="account-actions">
     <div class="workspace-section-head"><div><h2 id="account-actions">Action center</h2>
       <p>Important account activity that may need your attention.</p></div></div>
@@ -131,38 +128,39 @@
 
   <div class="workspace-overview-columns account-overview-section account-recent-columns">
     @if($orderSummary !== null)
-      <section class="panel" aria-labelledby="account-recent-orders">
+      <section class="panel" aria-labelledby="account-recent-orders" data-dashboard-table>
         <div class="panel-head"><div><h2 id="account-recent-orders">Recent orders</h2>
           <p>Your latest marketplace purchases.</p></div>
           <a class="btn subtle compact" href="{{ route('account.orders.index') }}">View all</a></div>
-        <div class="workspace-overview-list">
-          @forelse($recentOrders as $order)
-            <a class="workspace-overview-row" href="{{ route('account.orders.show',$order->reference()) }}">
-              <span class="workspace-overview-row-main"><strong>{{ $order->listing_title }}</strong>
-                <small>{{ $orderLabels[$order->status] ?? ucfirst($order->status) }} · {{ $order->created_at->format('d M Y') }}</small></span>
-              <span class="workspace-overview-row-action">{{ $order->currency }} {{ $order->total }}</span>
-            </a>
-          @empty
-            <p class="workspace-overview-empty">You have no recorded orders yet.</p>
-          @endforelse
-        </div>
+        <x-role-dashboard-table-filter label="Filter recent orders" :statuses="$orderLabels"/>
+        <div class="table-scroll"><table class="data-table"><thead><tr><th>Order</th><th>Status</th><th>Total</th><th>Action</th></tr></thead><tbody>
+          @foreach($recentOrders as $order)
+            <tr data-dashboard-row data-status="{{ $order->status }}">
+              <td><strong>{{ $order->listing_title }}</strong><br><small>{{ $order->created_at->format('d M Y') }}</small></td>
+              <td><span class="role-pill">{{ $orderLabels[$order->status] ?? ucfirst($order->status) }}</span></td>
+              <td>{{ $order->currency }} {{ $order->total }}</td>
+              <td><a class="btn subtle compact" href="{{ route('account.orders.show',$order->reference()) }}">View</a></td>
+            </tr>
+          @endforeach
+          <tr data-dashboard-empty @if($recentOrders->isNotEmpty()) hidden @endif><td colspan="4" class="empty-cell">{{ $recentOrders->isEmpty() ? 'You have no recorded orders yet.' : 'No matching recent orders.' }}</td></tr>
+        </tbody></table></div>
       </section>
     @endif
-    <section class="panel account-recent-activity" aria-labelledby="account-recent-updates">
+    <section class="panel account-recent-activity" aria-labelledby="account-recent-updates" data-dashboard-table>
       <div class="panel-head"><div><h2 id="account-recent-updates">Recent notifications</h2>
         <p>Your latest private account updates.</p></div>
         <a href="{{ route('account.notifications') }}" class="btn subtle compact">View all</a></div>
-      @forelse($activity as $entry)
-        <div class="account-activity-row">
+      <x-role-dashboard-table-filter label="Filter recent notifications" :statuses="['unread'=>'Unread','read'=>'Read']"/>
+      @foreach($activity as $entry)
+        <div class="account-activity-row" data-dashboard-row data-status="{{ $entry->read_at ? 'read' : 'unread' }}">
           <div><strong>{{ $entry->title }}</strong><p>{{ $entry->message }}</p><small>{{ $entry->created_at->format('d M Y H:i') }}</small></div>
           <form method="post" action="{{ route('account.notifications.read',$entry) }}">
             @csrf @method('PATCH')
             <button class="btn subtle compact" type="submit">Open update</button>
           </form>
         </div>
-      @empty
-        <p class="workspace-overview-empty">Your recorded marketplace activity will appear here.</p>
-      @endforelse
+      @endforeach
+      <p class="workspace-overview-empty" data-dashboard-empty @if($activity->isNotEmpty()) hidden @endif>{{ $activity->isEmpty() ? 'Your recorded marketplace activity will appear here.' : 'No matching recent account updates.' }}</p>
     </section>
   </div>
 
