@@ -1597,15 +1597,39 @@ try {
         const trends=root.locator('[data-dashboard-trends]');
         if(await trends.count()!==1 || await trends.locator('.role-dashboard-trend').count()<1)
           throw new Error('Real trend charts missing: '+workspace);
-        const periods=root.locator('[data-dashboard-period-filter]');
-        await periods.waitFor({state:'visible'});
-        const n=await trends.locator('.role-dashboard-trend').count();
-        await periods.locator('[data-dashboard-period="12"]').click();
-        if(await trends.locator('[data-trend-period="12"]:visible').count()!==n || await trends.locator('[data-trend-period="4"]:visible').count()!==0 || await periods.locator('[data-dashboard-period="12"]').getAttribute('aria-pressed')!=='true')
-          throw new Error('Dashboard 12-week report switch failed: '+workspace);
-        await periods.locator('[data-dashboard-period="4"]').click();
-        if(await trends.locator('[data-trend-period="4"]:visible').count()!==n || await trends.locator('[data-trend-period="12"]:visible').count()!==0)
-          throw new Error('Dashboard 4-week report switch failed: '+workspace);
+        if(workspace==='admin'){
+          const controls=root.locator('[data-admin-performance-filters]');
+          if(await controls.locator('[data-admin-filter-type]').count()!==5 || await controls.locator('[data-admin-filter-period]').count()!==3)
+            throw new Error('Missing admin type and calendar period controls');
+          const initialPath=new URL(viewer.url()).pathname;
+          for(const [kind,value,type,period] of [
+            ['type','product','product','month'],['period','quarter','product','quarter'],
+            ['type','project','project','quarter'],['period','year','project','year'],
+            ['type','freelance','freelance','year'],['type','service','service','year'],
+            ['type','all','all','year'],['period','month','all','month'],
+          ]){
+            await controls.locator('[data-admin-filter-'+kind+'="'+value+'"]').click();
+            await viewer.waitForURL(url=>url.pathname===initialPath && url.searchParams.get('type')===type && url.searchParams.get('period')===period);
+            if(await controls.locator('[data-admin-filter-type="'+type+'"]').getAttribute('aria-current')!=='true' ||
+               await controls.locator('[data-admin-filter-period="'+period+'"]').getAttribute('aria-current')!=='true')
+              throw new Error('Admin filters did not preserve selected workstream and calendar period');
+            if(await root.locator('[data-admin-performance-trends]').count()!==1 || !await controls.locator('[data-admin-report-range]').isVisible())
+              throw new Error('Admin reporting range or real charts missing');
+          }
+          const extent=await controls.evaluate(el=>({width:el.scrollWidth,client:el.clientWidth}));
+          if(extent.width>extent.client+5)throw new Error('Admin filter overflow '+JSON.stringify(extent));
+        }else{
+          if(await root.locator('[data-admin-performance-filters]').count())throw new Error('Admin filters leaked to '+workspace);
+          const periods=root.locator('[data-dashboard-period-filter]');
+          await periods.waitFor({state:'visible'});
+          const n=await trends.locator('.role-dashboard-trend').count();
+          await periods.locator('[data-dashboard-period="12"]').click();
+          if(await trends.locator('[data-trend-period="12"]:visible').count()!==n || await trends.locator('[data-trend-period="4"]:visible').count()!==0 || await periods.locator('[data-dashboard-period="12"]').getAttribute('aria-pressed')!=='true')
+            throw new Error('Dashboard 12-week report switch failed: '+workspace);
+          await periods.locator('[data-dashboard-period="4"]').click();
+          if(await trends.locator('[data-trend-period="4"]:visible').count()!==n || await trends.locator('[data-trend-period="12"]:visible').count()!==0)
+            throw new Error('Dashboard 4-week report switch failed: '+workspace);
+        }
         const tables=root.locator('[data-dashboard-table]');
         if(await tables.count()<1) throw new Error('Missing dashboard record tables: '+workspace);
         for(const table of await tables.all()){
