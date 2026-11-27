@@ -33,7 +33,7 @@
     ['label'=>'Expired','count'=>$tokenStats['expired'],'href'=>route('developer.index',['status'=>'expired']).'#api-token-list'],
     ['label'=>'Revoked','count'=>$tokenStats['revoked'],'href'=>route('developer.index',['status'=>'revoked']).'#api-token-list'],
   ]]"/>
-  <x-role-dashboard-report :report="['title'=>'Active credential diagnostics','description'=>'Expiry and unused counts may overlap.','icon'=>'shield-check','rows'=>[
+  <x-role-dashboard-report :report="['title'=>'Credential diagnostics: active tokens','description'=>'Expiry and unused counts may overlap.','icon'=>'shield-check','rows'=>[
     ['label'=>'Expiring within 7 days','count'=>$tokenStats['expiring'],'href'=>route('developer.index',['status'=>'expiring']).'#api-token-list'],
     ['label'=>'Active tokens never used','count'=>$tokenStats['unused']],
     ['label'=>'Active tokens used','count'=>max(0,$tokenStats['active']-$tokenStats['unused'])],
