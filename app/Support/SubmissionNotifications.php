@@ -28,8 +28,10 @@ final class SubmissionNotifications
         );
 
         $reviewPath = route('builder', ['type' => $type, 'item' => $record->public_id, 'mode' => 'preview'], false);
+        // Submission confirmation and review assignment are distinct events.
+        // An authorized reviewer may also own the submission (including a sole super-admin).
         foreach (User::query()->whereIn('role', ['admin', 'super_admin'])->where('account_status', 'active')
-            ->whereKeyNot($ownerId)->cursor() as $reviewer) {
+            ->cursor() as $reviewer) {
             if (UserManagementAccess::allows($reviewer, 'marketplace_review')) {
                 AccountNotification::deliver(
                     $reviewer->id,
