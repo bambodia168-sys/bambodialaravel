@@ -113,4 +113,39 @@ class RoleDashboardPermissionsTest extends TestCase
         $this->assertContains('Marketplace orders',array_column($data['reports'],'title'));
         $this->assertContains('dashboard.payment-methods.index',array_column($data['shortcuts'],1));
     }
+
+    public function test_trend_reports_use_only_authorized_real_records(): void
+    {
+        config(['commerce.enabled'=>false]);
+        $owner = $this->actor('customer');
+        $other = $this->actor('subscriber');
+        foreach ([$owner,$other] as $recipient) {
+            \App\Models\AccountNotification::query()->create([
+                'user_id'=>$recipient->id,'event'=>'support.replied','title'=>'Fixture update',
+                'message'=>'Fixture message','target_path'=>'/account',
+            ]);
+        }
+        $this->dashboardActor($owner);
+        $charts = (new \App\View\Components\RoleDashboardTrends('account'))->render()->getData()['series'];
+        $this->assertSame(['Account updates'],array_column($charts,'title'));
+        $this->assertCount(12,$charts[0]['weeks']);
+        $this->assertSame(1,array_sum(array_column($charts[0]['weeks'],'count')));
+        $staff = $this->actor('staff');
+        $this->permission($staff,'support_center',false);
+        $this->permission($staff,'marketplace_transfer',false);
+        $this->dashboardActor($staff);
+        $this->assertSame([], (new \App\View\Components\RoleDashboardTrends('admin'))->render()->getData()['series']);
+        $this->permission($staff,'support_center',true);
+        SupportTicket::query()->create(['user_id'=>$owner->id,'subject'=>'Trend fixture','status'=>'open']);
+        $charts = (new \App\View\Components\RoleDashboardTrends('admin'))->render()->getData()['series'];
+        $this->assertSame(['Support ticket activity'],array_column($charts,'title'));
+        $this->assertSame(1,array_sum(array_column($charts[0]['weeks'],'count')));
+    }
+
+    private function dashboardActor(User $user): void
+    {
+        $this->actingAs($user);
+        request()->setUserResolver(fn () => $user);
+    }
+
 }
