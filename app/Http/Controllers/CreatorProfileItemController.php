@@ -7,6 +7,7 @@ use App\Models\CreatorProfileItem;
 use App\Models\CreatorProfileSection;
 use App\Models\User;
 use App\Support\EmailOutbox;
+use App\Support\ProfileWorkspace;
 use Illuminate\Support\Str;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -76,9 +77,9 @@ final class CreatorProfileItemController extends Controller
         ]);
         AuditEvent::record('profile.item.created', $request->user(), $request);
         if ($kind === 'link') {
-            self::linkChanged($owner);
+            self::linkChanged($request, $owner);
         }
-        return back()->with('status', 'Profile section item added.');
+        return ProfileWorkspace::redirect($request, 'Profile section item added.');
     }
 
     public function updateSelf(Request $request, CreatorProfileItem $item): RedirectResponse
@@ -105,9 +106,9 @@ final class CreatorProfileItemController extends Controller
         ]);
         AuditEvent::record('profile.item.updated', $request->user(), $request);
         if ($item->kind === 'link' && $item->wasChanged(['label', 'detail', 'url', 'is_visible'])) {
-            self::linkChanged($owner);
+            self::linkChanged($request, $owner);
         }
-        return back()->with('status', 'Profile section item updated.');
+        return ProfileWorkspace::redirect($request, 'Profile section item updated.');
     }
 
     public function destroySelf(Request $request, CreatorProfileItem $item): RedirectResponse
@@ -127,14 +128,14 @@ final class CreatorProfileItemController extends Controller
         $item->delete();
         AuditEvent::record('profile.item.deleted', $request->user(), $request);
         if ($item->kind === 'link') {
-            self::linkChanged($owner);
+            self::linkChanged($request, $owner);
         }
-        return back()->with('status', 'Profile section item removed.');
+        return ProfileWorkspace::redirect($request, 'Profile section item removed.');
     }
 
-    private static function linkChanged(User $owner): void
+    private static function linkChanged(Request $request, User $owner): void
     {
         EmailOutbox::queue('account.profile_links_changed', $owner->id, (string) Str::uuid(), [],
-            route('account.profile.edit', absolute: false));
+            route(ProfileWorkspace::prefix($request).'.edit', absolute: false));
     }
 }
