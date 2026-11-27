@@ -17,7 +17,7 @@ class CheckoutVerification extends Notification
 
     public function url(object $notifiable): string
     {
-        return URL::temporarySignedRoute('checkout.verify', now()->addHour(), [
+        return URL::temporarySignedRoute('verification.verify', now()->addHour(), [
             'id' => $notifiable->getKey(),
             'hash' => sha1($notifiable->getEmailForVerification()),
         ]);
