@@ -34,3 +34,21 @@
     apply();
   });
 })();
+
+/* Period selector changes only the server-rendered, authorized historical series. */
+document.querySelectorAll('[data-role-dashboard]').forEach(root => {
+  const controls = root.querySelector('[data-dashboard-period-filter]');
+  const charts = root.querySelectorAll('[data-trend-period]');
+  if (!controls || !charts.length) return;
+  const buttons = controls.querySelectorAll('[data-dashboard-period]');
+  buttons.forEach(button => button.addEventListener('click', () => {
+    const period = button.dataset.dashboardPeriod;
+    buttons.forEach(item => {
+      const active = item === button;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-pressed', String(active));
+    });
+    charts.forEach(chart => { chart.hidden = chart.dataset.trendPeriod !== period; });
+  }));
+  controls.hidden = false;
+});
