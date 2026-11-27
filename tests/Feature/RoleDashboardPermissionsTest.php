@@ -142,6 +142,72 @@ class RoleDashboardPermissionsTest extends TestCase
         $this->assertSame(1,array_sum(array_column($charts[0]['weeks'],'count')));
     }
 
+    public function test_admin_calendar_and_type_filters_change_real_reports_without_hiding_backlog(): void
+    {
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-20 12:00:00'));
+        config(['commerce.enabled'=>false]);
+        $admin = $this->actor('super_admin');
+        $owner = $this->actor('freelancer');
+        foreach ([
+            ['product','Current product','2026-11-01 00:00:00'],
+            ['product','Quarter product','2026-10-01 00:00:00'],
+            ['product','Year product','2026-01-01 00:00:00'],
+            ['product','Old product','2025-12-31 23:59:59'],
+            ['project','Current project','2026-11-10 08:00:00'],
+            ['freelance','Current freelance','2026-11-10 08:00:00'],
+            ['service','Current service','2026-11-10 08:00:00'],
+        ] as [$type,$title,$date]) {
+            $listing = \App\Models\MarketplaceListing::query()->create([
+                'user_id'=>$owner->id,'type'=>$type,'title'=>$title,
+                'description'=>'Isolated dashboard filtering fixture','status'=>'pending','currency'=>'USD',
+            ]);
+            $listing->forceFill(['created_at'=>$date])->save();
+        }
+        $this->actingAs($admin);
+        foreach (['month'=>1,'quarter'=>2,'year'=>3] as $period=>$expected) {
+            $response = $this->get('/dashboard?type=product&period='.$period)->assertOk()
+                ->assertSee('data-admin-filter-type="product"', false);
+            $data = $response->original->getData();
+            $this->assertSame('product',$data['filters']->type);
+            $this->assertSame($period,$data['filters']->period);
+            $this->assertSame($expected,$data['periodPending']);
+            $inventory = collect($data['reports'])->firstWhere('title','Marketplace inventory');
+            $this->assertSame(['Digital products'],array_column($inventory['rows'],'label'));
+            $this->assertSame([$expected],array_column($inventory['rows'],'count'));
+            $trend = collect($data['adminTrends'])->firstWhere('title','Marketplace submissions');
+            $this->assertSame($expected,array_sum(array_column($trend['buckets'],'count')));
+            $this->assertSame(7,collect($data['queues'])->firstWhere('route','dashboard.reviews')['count']);
+            $this->assertCount($expected,$data['recent']);
+        }
+        $all = $this->get('/dashboard')->assertOk()->original->getData();
+        $this->assertSame('all',$all['filters']->type);
+        $this->assertSame('month',$all['filters']->period);
+        $this->assertSame(4,$all['periodPending']);
+        foreach (['project','freelance','service'] as $type) {
+            $data = $this->get('/dashboard?type='.$type.'&period=month')->assertOk()->original->getData();
+            $this->assertSame(1,$data['periodPending']);
+            $this->assertSame($type,$data['recent']->sole()->type);
+        }
+        $fallback = $this->get('/dashboard?type=invalid&period=invalid')->assertOk()->original->getData();
+        $this->assertSame('all',$fallback['filters']->type);
+        $this->assertSame('month',$fallback['filters']->period);
+        $this->travelBack();
+    }
+
+    public function test_new_filters_are_not_exposed_to_staff_or_other_workspaces(): void
+    {
+        config(['commerce.enabled'=>false]);
+        $staff = $this->actor('staff');
+        $this->actingAs($staff)->get('/dashboard?type=product&period=year')->assertOk()
+            ->assertDontSee('data-admin-performance-filters',false)
+            ->assertDontSee('admin-dashboard-filters.css',false);
+        $customer = $this->actor('customer');
+        $this->actingAs($customer)->get('/account?='.$customer->public_id)->assertOk()
+            ->assertDontSee('data-admin-performance-filters',false)
+            ->assertDontSee('admin-dashboard-filters.css',false);
+        $this->get('/dashboard?type=product&period=year')->assertForbidden();
+    }
+
     private function dashboardActor(User $user): void
     {
         $this->actingAs($user);

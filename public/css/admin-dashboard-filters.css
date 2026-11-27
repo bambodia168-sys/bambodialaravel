@@ -1,0 +1,28 @@
+/* Only the administrator overview; no shared account or workspace changes. */
+.role-dashboard[data-role-dashboard="admin"] .admin-performance-filters {
+  display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:flex-end;
+  gap:8px; min-width:0; max-width:100%;
+}
+.role-dashboard[data-role-dashboard="admin"] .admin-performance-filters .role-dashboard-filter-group {
+  flex:0 1 auto; max-width:100%;
+}
+.role-dashboard[data-role-dashboard="admin"] .admin-performance-filters a {
+  display:inline-flex; align-items:center; justify-content:center; min-height:34px;
+  padding:8px 11px; border-radius:9px; color:var(--muted); font-size:12px;
+  font-weight:750; line-height:1.25; white-space:nowrap;
+}
+.role-dashboard[data-role-dashboard="admin"] .admin-performance-filters a:hover {background:var(--surface);color:var(--text)}
+.role-dashboard[data-role-dashboard="admin"] .admin-performance-filters a.is-active {background:var(--dashboard-blue);color:#fff;box-shadow:0 3px 10px #0002}
+:root[data-theme="dark"] .role-dashboard[data-role-dashboard="admin"] .admin-performance-filters a.is-active {color:#0b1424}
+.role-dashboard[data-role-dashboard="admin"] .admin-performance-filters a:focus-visible {outline:2px solid var(--secondary);outline-offset:2px}
+.role-dashboard[data-role-dashboard="admin"] .admin-performance-range {flex:1 0 100%;text-align:end;margin:0}
+.role-dashboard[data-role-dashboard="admin"] .admin-report-scope {color:var(--muted);font-size:12px;margin:0 0 14px}
+@media(max-width:740px) {
+  .role-dashboard[data-role-dashboard="admin"] .admin-performance-filters {justify-content:flex-start}
+  .role-dashboard[data-role-dashboard="admin"] .admin-performance-range {text-align:start}
+}
+@media(max-width:480px) {
+  .role-dashboard[data-role-dashboard="admin"] .admin-performance-filters .role-dashboard-filter-group {width:100%;flex:1 1 100%}
+  .role-dashboard[data-role-dashboard="admin"] .admin-performance-filters a {flex:1 0 auto;padding:7px 8px;font-size:11px}
+}
+@media print {.role-dashboard[data-role-dashboard="admin"] .admin-performance-filters {display:none}}
