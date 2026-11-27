@@ -2,13 +2,15 @@
 @section('workspace','creator')
 @section('title','Creator Studio')
 @push('head')
-  <link rel="stylesheet" href="{{ asset('css/creator-studio-analytics.css') }}?v=1">
+  <link rel="stylesheet" href="{{ asset('css/creator-studio-analytics.css') }}?v=2">
   <script defer src="{{ asset('js/creator-studio-analytics.js') }}?v=1"></script>
 @endpush
 @section('content')
 <div class="container inner-page studio-dashboard">
   <div class="page-intro"><div class="eyebrow">Creator workspace</div><h1>Creator Studio</h1>
     <p>Manage your submissions, digital products and private client conversations.</p></div>
+
+  @include('account.partials.studio-performance')
 
   <div class="workspace-overview-grid" aria-label="Your creator activity">
     <x-workspace-metric label="Approved listings" :value="$stats['published']" icon="check" :href="route('studio.listings')" action="View listings"/>
@@ -19,8 +21,6 @@
     <x-workspace-metric label="Products awaiting review" :value="$stats['product_pending']" icon="clipboard-check" :href="route('studio.products.index')" action="Review status"/>
     <x-workspace-metric label="Open client inquiries" :value="$stats['inquiries']" icon="message" :href="route('studio.inquiries')" action="Reply to clients"/>
   </div>
-
-  @include('account.partials.studio-performance')
 
   <section class="workspace-overview-block" aria-labelledby="creator-actions">
     <div class="workspace-section-head"><div><h2 id="creator-actions">Manage your work</h2>
