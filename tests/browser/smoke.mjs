@@ -1605,7 +1605,17 @@ try {
             await viewer.waitForFunction(()=>!document.body.classList.contains('workspace-collapsed') && document.querySelector('#workspace-sidebar').getBoundingClientRect().width>200);
           }
           await viewer.setViewportSize({width:390,height:844});
-          await viewer.waitForFunction(()=>!document.body.classList.contains('workspace-collapsed') && !document.body.classList.contains('workspace-mobile-open'));
+          // Resize resolves before matchMedia listeners necessarily finish synchronizing.
+          await viewer.waitForFunction(()=>{
+            const edge=document.querySelector('[data-workspace-glass-toggle]');
+            const primary=document.querySelector('[data-workspace-toggle]');
+            return matchMedia('(max-width:850px)').matches &&
+              !document.body.classList.contains('workspace-collapsed') &&
+              !document.body.classList.contains('workspace-mobile-open') &&
+              getComputedStyle(edge).display==='none' &&
+              primary.getAttribute('aria-expanded')==='false' &&
+              edge.getAttribute('aria-expanded')==='false';
+          });
           if(await edge.isVisible() || await primary.getAttribute('aria-expanded')!=='false') throw new Error('Closed mobile drawer state incorrect');
           await primary.click();
           await edge.waitFor({state:'visible'});
