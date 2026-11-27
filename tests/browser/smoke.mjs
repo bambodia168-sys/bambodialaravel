@@ -2083,6 +2083,29 @@ try {
           throw new Error('Creator dashboard order, heading or original analytics integrity failed: '+JSON.stringify(layout));
       };
       await verifyCreatorOrder();
+      const creatorViewport=creator.viewportSize();
+      try {
+        for(const width of [1440,1100,390]){
+          await creator.setViewportSize({width,height:900});
+          await creator.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+          const stack=await creator.evaluate(()=>{
+            const root=document.querySelector('.studio-dashboard');
+            const group=root.querySelector('.studio-chart-metric-stack');
+            const pipeline=root.querySelector('[data-chart="pipeline"]').closest('.studio-chart-card');
+            const cards=[...group.querySelectorAll('.workspace-overview-metric')];
+            const rect=el=>{const {x,y,width,height,right,bottom}=el.getBoundingClientRect();return {x,y,width,height,right,bottom}};
+            return {group:rect(group),pipeline:rect(pipeline),cards:cards.map(rect),labels:cards.map(el=>el.querySelector('.workspace-overview-metric-label').textContent.trim()),remaining:root.querySelectorAll('.workspace-overview-grid > .workspace-overview-metric').length,links:cards.every(el=>el.tagName==='A'&&el.hasAttribute('href')),viewport:document.documentElement.clientWidth};
+          });
+          if(stack.cards.length!==3||stack.remaining!==4||!stack.links||JSON.stringify(stack.labels)!==JSON.stringify(['Product drafts and rejections','Products awaiting review','Open client inquiries'])||stack.cards.some(r=>r.width<1||r.height<130||r.right>stack.viewport+2))
+            throw new Error('Creator relocated cards missing or clipped: '+JSON.stringify(stack));
+          if(width>1250){
+            if(Math.abs(stack.group.y-stack.pipeline.y)>2||Math.abs(stack.group.bottom-stack.pipeline.bottom)>2||Math.abs(stack.group.width-stack.pipeline.width)>2||stack.group.x<=stack.pipeline.right||stack.cards.some((r,i)=>Math.abs(r.x-stack.group.x)>2||Math.abs(r.width-stack.group.width)>2||(i>0&&r.y<stack.cards[i-1].bottom)))
+              throw new Error('Creator pipeline fourth-column vertical stack misaligned: '+JSON.stringify(stack));
+          }else if(stack.group.y<stack.pipeline.bottom-2){
+            throw new Error('Creator metric stack overlaps charts on narrow viewport: '+JSON.stringify(stack));
+          }
+        }
+      } finally {await creator.setViewportSize(creatorViewport);}
       await verifyGlassSidebar(creator,'creator');
       await creator.goto(origin+'/en/builder?=197483529',{waitUntil:'networkidle'});
       const featuredSelect=creator.locator('[data-featured-media]');
