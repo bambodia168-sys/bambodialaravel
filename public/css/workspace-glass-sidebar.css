@@ -1,47 +1,59 @@
-/* Bambodia liquid-glass navigation: contrast, refraction-inspired highlights,
-   and real backdrop blur. All dashboard content and role navigation stay intact. */
+/* Unified premium glass workspace. One theme canvas extends beneath the
+   sidebar and content; restrained blue light is an accent, not a separate rail. */
 .workspace-body {
   --workspace-column: 270px;
   --glass-inset: 12px;
   --glass-edge: 30px;
-  --glass-rail-bg: #7597da;
-  --glass-wash: radial-gradient(ellipse at 4% 12%,#f9e1ba 0%,transparent 28%),radial-gradient(ellipse at 95% 68%,#7ec4ff 0%,transparent 39%),linear-gradient(152deg,#b9d5ff 0%,#7195d9 30%,#385dba 51%,#8da8e8 72%,#e8d7ff 100%);
-  --glass-surface: rgba(245,249,255,.64);
-  --glass-reflection: linear-gradient(118deg,rgba(255,255,255,.57) 0%,rgba(255,255,255,.12) 29%,transparent 44%,rgba(255,255,255,.22) 68%,transparent 85%);
-  --glass-border: rgba(255,255,255,.93);
-  --glass-shadow: 0 12px 28px rgba(20,49,111,.23),0 0 0 1px rgba(37,75,144,.22),inset 1px 1px 1px rgba(255,255,255,.95),inset -1px -1px 2px rgba(76,110,177,.28),inset 0 12px 24px rgba(255,255,255,.18);
-  --glass-hover: rgba(255,255,255,.72);
-  --glass-active: linear-gradient(135deg,rgba(255,255,255,.96),rgba(255,220,180,.88));
-  --glass-active-shadow: inset 0 1px 1px #fff,inset 0 -1px 2px rgba(156,65,13,.15),0 3px 10px rgba(66,64,100,.13);
-  --glass-toggle: linear-gradient(145deg,#fff,#cadcfb);
-  --glass-toggle-text: #18365c;
-  --glass-head: rgba(231,240,255,.92);
-  --workspace-nav-text: #102b4e;
-  --workspace-nav-muted: #304b72;
-  --workspace-nav-line: rgba(50,85,146,.30);
+  --glass-rail-bg: var(--bg);
+  --glass-wash: radial-gradient(ellipse 480px 650px at 0% 18%,rgba(125,158,212,.24),transparent 78%),radial-gradient(ellipse 340px 460px at 0% 88%,rgba(146,169,208,.21),transparent 80%),radial-gradient(ellipse 740px 300px at 28% 0%,rgba(198,215,241,.25),transparent 86%);
+  --glass-surface: rgba(255,255,255,.44);
+  --glass-reflection: linear-gradient(126deg,rgba(255,255,255,.72) 0%,rgba(255,255,255,.18) 27%,transparent 46%,rgba(255,255,255,.27) 70%,transparent 92%);
+  --glass-border: rgba(255,255,255,.96);
+  --glass-shadow: 0 10px 26px rgba(26,48,78,.12),0 0 0 1px rgba(111,137,174,.23),inset 1px 1px 1px rgba(255,255,255,.98),inset -1px -1px 2px rgba(76,108,158,.18),inset 0 12px 24px rgba(255,255,255,.21);
+  --glass-hover: rgba(255,255,255,.76);
+  --glass-active: linear-gradient(135deg,rgba(255,255,255,.96),rgba(255,232,209,.92));
+  --glass-active-shadow: inset 0 1px 1px #fff,inset 0 -1px 2px rgba(156,65,13,.12),0 3px 9px rgba(66,64,100,.09);
+  --glass-toggle: linear-gradient(145deg,#fff,#e0e8f5);
+  --glass-toggle-text: var(--text);
+  --glass-head: rgba(245,248,253,.73);
+  --workspace-nav-text: var(--text);
+  --workspace-nav-muted: var(--muted);
+  --workspace-nav-line: rgba(91,119,157,.24);
 }
 :root[data-theme="dark"] .workspace-body {
-  --glass-rail-bg: #071225;
-  --glass-wash: radial-gradient(ellipse at 9% 8%,#6741be 0%,transparent 32%),radial-gradient(ellipse at 98% 74%,#1367b6 0%,transparent 38%),linear-gradient(155deg,#1b285b 0%,#111a40 37%,#164581 65%,#081221 100%);
-  --glass-surface: rgba(8,18,38,.66);
-  --glass-reflection: linear-gradient(118deg,rgba(222,231,255,.20) 0%,rgba(143,179,255,.06) 29%,transparent 44%,rgba(131,176,255,.11) 68%,transparent 85%);
-  --glass-border: rgba(206,225,255,.49);
-  --glass-shadow: 0 12px 32px rgba(0,0,0,.39),0 0 0 1px rgba(10,21,47,.5),inset 1px 1px 1px rgba(235,242,255,.42),inset -1px -1px 2px rgba(151,189,255,.24),inset 0 14px 30px rgba(109,140,255,.10);
-  --glass-hover: rgba(177,204,255,.17);
-  --glass-active: linear-gradient(135deg,rgba(171,108,55,.63),rgba(83,53,47,.88));
-  --glass-active-shadow: inset 0 1px 1px rgba(255,220,185,.42),inset 0 -1px 2px rgba(255,159,79,.15),0 3px 12px rgba(0,0,0,.24);
-  --glass-toggle: linear-gradient(145deg,#536a9a,#192943);
-  --glass-toggle-text: #f0f6ff;
-  --glass-head: rgba(18,31,59,.94);
-  --workspace-nav-text: #f2f6ff;
-  --workspace-nav-muted: #c3d2ec;
-  --workspace-nav-line: rgba(175,199,246,.26);
+  --glass-rail-bg: var(--bg);
+  --glass-wash: radial-gradient(ellipse 480px 600px at 0% 14%,rgba(64,108,169,.29),transparent 79%),radial-gradient(ellipse 340px 480px at 0% 88%,rgba(47,89,139,.28),transparent 81%),radial-gradient(ellipse 740px 320px at 27% 0%,rgba(49,77,115,.16),transparent 85%);
+  --glass-surface: rgba(17,32,54,.57);
+  --glass-reflection: linear-gradient(126deg,rgba(193,217,249,.18) 0%,rgba(151,187,234,.055) 28%,transparent 46%,rgba(138,179,235,.095) 70%,transparent 92%);
+  --glass-border: rgba(190,213,244,.37);
+  --glass-shadow: 0 12px 32px rgba(0,0,0,.28),0 0 0 1px rgba(5,13,26,.37),inset 1px 1px 1px rgba(226,237,255,.27),inset -1px -1px 2px rgba(122,165,222,.17),inset 0 14px 30px rgba(120,157,216,.07);
+  --glass-hover: rgba(164,196,237,.13);
+  --glass-active: linear-gradient(135deg,rgba(123,79,49,.69),rgba(69,45,35,.88));
+  --glass-active-shadow: inset 0 1px 1px rgba(255,220,185,.29),inset 0 -1px 2px rgba(255,159,79,.12),0 3px 10px rgba(0,0,0,.2);
+  --glass-toggle: linear-gradient(145deg,#3b5473,#1a2b43);
+  --glass-toggle-text: var(--text);
+  --glass-head: rgba(17,32,54,.78);
+  --workspace-nav-text: var(--text);
+  --workspace-nav-muted: var(--muted);
+  --workspace-nav-line: rgba(161,191,230,.20);
 }
 .workspace-body.workspace-collapsed { --workspace-column: 88px; }
 .workspace-body .workspace-shell {
   position: relative;
   background: var(--glass-rail-bg);
   background-image: var(--glass-wash);
+}
+.workspace-body .workspace-main {
+  /* Both panels reveal the same continuous canvas. Individual cards retain
+     their existing surface, text and border tokens. */
+  background: transparent;
+}
+.workspace-body .workspace-topbar {
+  background: var(--surface);
+}
+.workspace-body .workspace-menu-search {
+  max-width: none;
+  min-width: 0;
 }
 .workspace-body .workspace-sidebar {
   box-sizing: border-box;
@@ -71,6 +83,7 @@
   gap: 8px;
   background: var(--glass-head);
   border-radius: 14px 14px 8px 8px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
   backdrop-filter: blur(20px) saturate(145%);
 }
 .workspace-body .workspace-favicon-pair {
@@ -167,6 +180,7 @@
   .workspace-body.workspace-collapsed .workspace-glass-toggle .workspace-glass-chevron-open { display: grid; }
 }
 @media (max-width: 850px) {
+  .workspace-body .workspace-top-actions { margin-inline-start: auto; }
   .workspace-body:not(.workspace-mobile-open) .workspace-mobile-trigger { display: grid; }
   .workspace-body .workspace-favicon-pair { display: none; }
   .workspace-body .workspace-sidebar {
@@ -196,4 +210,5 @@
 }
 @media print {
   .workspace-body .workspace-glass-toggle,.workspace-body .workspace-mobile-trigger { display: none!important; }
+  .workspace-body .workspace-shell { background: none; }
 }
