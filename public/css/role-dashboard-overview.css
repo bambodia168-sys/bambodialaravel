@@ -155,3 +155,13 @@
   .role-dashboard .role-dashboard-filter-group button {font-size:11px;padding:7px}
 }
 @media(prefers-reduced-motion:reduce) {.role-dashboard .workspace-overview-metric:hover{transform:none}.role-dashboard *{animation:none!important;transition-duration:0s!important}}
+
+/* Balance the diagnostic grid at every report count without orphan columns. */
+@media(min-width:1251px) {
+ .role-dashboard .role-dashboard-charts:has(>.role-dashboard-chart:first-child:nth-last-child(4))>.role-dashboard-chart {grid-column:span 6}
+}
+@media(min-width:621px) and (max-width:1250px) {
+ .role-dashboard .role-dashboard-charts>.role-dashboard-chart {grid-column:span 6!important}
+ .role-dashboard .role-dashboard-charts>.role-dashboard-chart:last-child:nth-child(odd) {grid-column:span 12!important}
+}
+.role-dashboard .role-dashboard-kpi:focus-visible,.role-dashboard .role-dashboard-legend-row:focus-visible {outline:2px solid var(--secondary);outline-offset:3px}
