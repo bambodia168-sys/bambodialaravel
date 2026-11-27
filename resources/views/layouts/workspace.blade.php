@@ -25,7 +25,7 @@
   @if(config('commerce.enabled') && trim($__env->yieldContent('workspace', 'account')) === 'account')
     @include('layouts.partials.mini-cart-assets')
   @endif
-  <link rel="stylesheet" href="{{ asset('css/workspace-glass-sidebar.css') }}?v=3">
+  <link rel="stylesheet" href="{{ asset('css/workspace-glass-sidebar.css') }}?v=4">
   <script defer src="{{ asset('js/workspace-glass-sidebar.js') }}?v=2"></script>
   @stack('head')
 </head>
