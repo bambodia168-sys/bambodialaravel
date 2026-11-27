@@ -39,6 +39,26 @@ try {
       if(typeSize!==14)
         throw new Error(device.name+' '+path+' body font must use 14px platform token, saw '+typeSize);
       checks++;
+      // Page backgrounds must be static, theme-aware and scoped to page content.
+      const isAuth=['/login','/register','/forgot-password'].includes(path);
+      const backdrop=page.locator(isAuth?'body.auth-body':'main.site-main');
+      if(await backdrop.getAttribute('data-page-background')!==(isAuth?'ambient':'standard'))
+        throw new Error(device.name+' '+path+' incorrect background mode');
+      const backgrounds=[];
+      for(const theme of ['light','dark']){
+        const snapshot=await backdrop.evaluate((el,theme)=>{
+          document.documentElement.dataset.theme=theme;
+          const style=getComputedStyle(el);
+          return {image:style.backgroundImage,color:style.backgroundColor,animation:style.animationName};
+        },theme);
+        if(snapshot.animation!=='none' || (isAuth ? !snapshot.image.includes('radial-gradient') : snapshot.image!=='none'))
+          throw new Error(device.name+' '+path+' '+theme+' background mode regression '+JSON.stringify(snapshot));
+        backgrounds.push(snapshot);
+      }
+      if(backgrounds[0].color===backgrounds[1].color)
+        throw new Error(device.name+' '+path+' background must respond to theme');
+      await page.evaluate(()=>{document.documentElement.dataset.theme=localStorage.getItem('bambodia-theme')||'light';});
+      checks+=3;
       if(path==='/'){
         // The static Aurora hero preserves the original content geometry,
         // responds to both themes, and does not introduce animation or controls.
