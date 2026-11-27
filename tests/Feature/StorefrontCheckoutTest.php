@@ -123,6 +123,29 @@ class StorefrontCheckoutTest extends TestCase
         $this->get($url)->assertForbidden();
     }
 
+    public function test_registration_without_cart_sends_account_verification_even_when_commerce_is_disabled(): void
+    {
+        config(['commerce.enabled' => false]);
+        Notification::fake();
+        $terms = $this->terms();
+        $this->post(route('register.store'), [
+            'name' => 'New Account Customer',
+            'email' => 'account-verification@example.test',
+            'password' => 'AccountFixturePassword123!',
+            'password_confirmation' => 'AccountFixturePassword123!',
+            'terms_accepted' => '1',
+            'terms_publication_id' => $terms->id,
+        ])->assertRedirect(route('verification.notice'));
+        $user = User::query()->where('email', 'account-verification@example.test')->sole();
+        Notification::assertSentTo($user, CheckoutVerification::class);
+        $this->assertFalse($user->hasVerifiedEmail());
+        $this->get(route('verification.notice'))->assertOk()->assertSee('Verify your email')->assertDontSee('Continue checkout');
+        $this->get((new CheckoutVerification)->url($user))->assertRedirect(route('verification.verified'));
+        $this->assertTrue($user->fresh()->hasVerifiedEmail());
+        $this->get(route('verification.verified'))->assertOk()->assertSee('Your email verified')->assertDontSee('Continue checkout');
+        $this->assertDatabaseCount('commerce_carts', 0);
+    }
+
     public function test_login_preserves_guest_cart_and_returns_to_checkout(): void
     {
         config(['commerce.enabled' => true]);
