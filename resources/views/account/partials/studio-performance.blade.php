@@ -89,6 +89,11 @@
       <div data-chart="pipeline" class="studio-pipeline" aria-label="Inquiries, proposals and accepted contracts"></div>
       <a class="studio-small-link" href="{{ route('studio.inquiries') }}">Review inquiries </a>
     </article>
+    <div class="studio-chart-metric-stack" role="group" aria-label="Additional creator activity">
+      <x-workspace-metric label="Product drafts and rejections" :value="$stats['product_drafts']" icon="edit" :href="route('studio.products.index')" action="Edit products"/>
+      <x-workspace-metric label="Products awaiting review" :value="$stats['product_pending']" icon="clipboard-check" :href="route('studio.products.index')" action="Review status"/>
+      <x-workspace-metric label="Open client inquiries" :value="$stats['inquiries']" icon="message" :href="route('studio.inquiries')" action="Reply to clients"/>
+    </div>
   </div>
   <script type="application/json" id="studio-analytics-payload">@json($analytics)</script>
 </section>
