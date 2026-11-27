@@ -18,7 +18,7 @@
   {{-- Badge tips are portalled to a viewport-safe layer without changing their artwork or layout. --}}
   <link rel="stylesheet" href="{{ asset('css/creator-badge-tooltip-viewport.css') }}?v=1">
   <script defer src="{{ asset('js/creator-badge-tooltip-viewport.js') }}?v=1"></script>
-  @if(request()->routeIs('creators.show','account.profile.edit','studio.profile.edit','dashboard.users.profile.edit','localized.*.creators.show','localized.*.account.profile.edit','localized.*.studio.profile.edit','localized.*.dashboard.users.profile.edit'))
+  @if(request()->routeIs('creators.show','account.profile.edit','studio.profile.edit','dashboard.profile.edit','dashboard.users.profile.edit','localized.*.creators.show','localized.*.account.profile.edit','localized.*.studio.profile.edit','localized.*.dashboard.profile.edit','localized.*.dashboard.users.profile.edit'))
     <link rel="stylesheet" href="{{ asset('css/creator-profile-v3.css') }}?v=3">
     <script defer src="{{ asset('js/creator-profile-v3.js') }}?v=3"></script>
   @endif
@@ -47,7 +47,7 @@
     $groups[] = ['heading'=>'Overview','items'=>[
       ['route'=>'dashboard','label'=>'Dashboard overview','icon'=>'layout-dashboard'],
       ['route'=>'dashboard.badges.index','label'=>'Creator Badges','icon'=>'award'],
-      ['route'=>'account.profile.edit','label'=>'My Profile','icon'=>'user-round'],
+      ['route'=>'dashboard.profile.edit','label'=>'My Profile','icon'=>'user-round'],
       ['route'=>'account.security','label'=>'Account Security','icon'=>'shield-check'],
     ]];
     if (config('commerce.enabled') && \App\Support\UserManagementAccess::allows($user, 'commerce_orders')) {
