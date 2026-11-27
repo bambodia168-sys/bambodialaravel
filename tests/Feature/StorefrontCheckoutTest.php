@@ -99,21 +99,22 @@ class StorefrontCheckoutTest extends TestCase
             'password_confirmation' => 'CheckoutFixturePassword123!',
             'terms_accepted' => '1',
             'terms_publication_id' => $terms->id,
-        ])->assertRedirect(route('checkout.verification'));
+        ])->assertRedirect(route('verification.notice'));
 
         $user = User::query()->where('email', 'checkout-customer@example.test')->sole();
         $this->assertArrayHasKey($offer->public_id, CommerceCart::query()->findOrFail($user->id)->items);
         Notification::assertSentTo($user, CheckoutVerification::class);
-        $this->get(route('checkout'))->assertRedirect(route('checkout.verification'));
+        $this->get(route('checkout'))->assertRedirect(route('verification.notice'));
         $this->post(route('localized.en.checkout.place', $offer->public_id))
-            ->assertRedirect(route('localized.en.checkout.verification'));
+            ->assertRedirect(route('localized.en.verification.notice'));
         $url = (new CheckoutVerification)->url($user);
         Auth::logout();
         $this->flushSession();
         $this->get($url)->assertRedirect(route('login'));
         $this->post(route('login.store'), ['email' => $user->email, 'password' => 'CheckoutFixturePassword123!'])
             ->assertRedirect($url);
-        $this->get($url)->assertRedirect(route('cart'));
+        $this->get($url)->assertRedirect(route('verification.verified'));
+        $this->get(route('verification.verified'))->assertOk()->assertSee('Your email verified');
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
         $this->get(route('cart'))->assertOk()->assertSee('Checkout verification fixture');
 
