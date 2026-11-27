@@ -1,32 +1,36 @@
 @extends('layouts.dashboard')
 @section('title','Overview')
 @push('head')
-  <link rel="stylesheet" href="{{ asset('css/role-dashboard-overview.css') }}?v=1">
-  <script defer src="{{ asset('js/role-dashboard-overview.js') }}?v=1"></script>
+  <link rel="stylesheet" href="{{ asset('css/role-dashboard-overview.css') }}?v=2">
+  <script defer src="{{ asset('js/role-dashboard-overview.js') }}?v=2"></script>
 @endpush
 @section('content')
-<div class="role-dashboard" data-role-dashboard="admin">
+<div class="container inner-page role-dashboard" data-role-dashboard="admin">
   <section class="role-dashboard-section" aria-labelledby="admin-performance">
     <div class="role-dashboard-heading">
       <div><div class="role-dashboard-eyebrow"><x-icon name="activity" size="18"/> REAL WORKSPACE DATA</div>
         <h1 id="admin-performance">{{ $isStaff ? 'Support operations' : 'Platform performance' }}</h1>
         <p>Current operational records and management actions permitted for your account.</p>
       </div>
+      <x-role-dashboard-period-filter/>
     </div>
+    @php($primaryQueue = collect($queues)->firstWhere('route','dashboard.reviews'))
     @if(!$isStaff)
-      <div class="workspace-overview-grid" aria-label="Platform account totals">
-        <x-workspace-metric label="Registered accounts" :value="$stats['totalUsers']" icon="users"
-          :href="auth()->user()->role==='super_admin' ? route('dashboard.users') : null" action="Manage accounts"/>
-        <x-workspace-metric label="Approved freelancers" :value="$stats['creators']" icon="user-round-check"
-          :href="auth()->user()->role==='super_admin' ? route('dashboard.users') : null" action="Manage accounts"/>
-        <x-workspace-metric label="Customers and subscribers" :value="$stats['customers']" icon="user"
-          :href="auth()->user()->role==='super_admin' ? route('dashboard.users') : null" action="Manage accounts"/>
+      <div class="role-dashboard-kpis" aria-label="Platform account totals">
+        <x-role-dashboard-kpi label="Registered accounts" :value="$stats['totalUsers']" icon="users" description="All recorded accounts"
+          :href="auth()->user()->role==='super_admin' ? route('dashboard.users') : null"/>
+        <x-role-dashboard-kpi label="Approved freelancers" :value="$stats['creators']" icon="user-round-check" description="Accounts with the freelancer role"/>
+        <x-role-dashboard-kpi label="Customers and subscribers" :value="$stats['customers']" icon="user" description="Accounts with customer or subscriber roles"/>
+        @if($primaryQueue)
+          <x-role-dashboard-kpi label="Listings awaiting review" :value="$primaryQueue['count']" icon="clipboard-check" description="Pending or in-review listings" :href="route($primaryQueue['route'])"/>
+        @endif
       </div>
     @endif
+    <x-role-dashboard-trends scope="admin"/>
     @if(count($reports))
       <div class="role-dashboard-charts">
         @foreach($reports as $report)
-          <x-role-dashboard-report :report="$report"/>
+          <x-role-dashboard-report :report="$report" :kind="in_array($report['title'],['Support ticket status','Creator applications','Marketplace orders'],true) ? 'donut' : 'bars'"/>
         @endforeach
       </div>
     @endif
@@ -38,6 +42,7 @@
     @if(count($queues))
       <div class="workspace-overview-grid">
         @foreach($queues as $queue)
+          @continue(!$isStaff && $primaryQueue && $queue['route'] === $primaryQueue['route'])
           <x-workspace-metric :label="$queue['label']" :value="$queue['count']"
             :icon="$queue['icon']" :href="route($queue['route'], $queue['params'] ?? [])" action="Manage queue"/>
         @endforeach
@@ -86,13 +91,22 @@
   </section>
   @endif
 
-  <section class="role-dashboard-section" aria-labelledby="admin-manage">
-    <div class="role-dashboard-heading"><div><h2 id="admin-manage">Manage platform operations</h2><p>Management workspaces available to your assigned role and permissions.</p></div></div>
-    <div class="role-dashboard-shortcuts">
-      @foreach($shortcuts as [$label,$route,$icon])
-        <a class="role-dashboard-shortcut" href="{{ route($route) }}"><x-icon :name="$icon" size="20"/><span>{{ $label }}</span><x-icon name="arrow-right" size="16"/></a>
-      @endforeach
-    </div>
-  </section>
+  @php
+    // Keep only operational destinations not already available in KPI, queue or chart actions.
+    $quickActions = collect($shortcuts)->filter(fn($item)=>in_array($item[1],[
+        'dashboard.account-verifications.index','dashboard.licenses.index','dashboard.vault.index',
+        'dashboard.commerce-operations','security.index','dashboard.support-tickets.index'
+    ],true));
+  @endphp
+  @if($quickActions->isNotEmpty())
+    <section class="role-dashboard-section" aria-labelledby="admin-manage">
+      <div class="role-dashboard-heading"><div><h2 id="admin-manage">Manage platform operations</h2><p>Direct access to authorized operational tools.</p></div></div>
+      <div class="workspace-quick-actions">
+        @foreach($quickActions as [$label,$route,$icon])
+          <a class="btn subtle" href="{{ route($route) }}"><x-icon :name="$icon" size="17"/> {{ $label }}</a>
+        @endforeach
+      </div>
+    </section>
+  @endif
 </div>
 @endsection
