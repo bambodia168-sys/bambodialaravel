@@ -312,6 +312,8 @@ class NotificationsTest extends TestCase
         $this->assertMatchesRegularExpression('~<head\\b[^>]*>.*?<link\\s+rel="stylesheet"\\s+href="[^"]*/css/account-email-verification\\.css\\?v=2"[^>]*>.*?</head>~s', $html);
         $this->assertStringContainsString('class="container inner-page email-verification-page"', $html);
         $this->assertStringContainsString('class="email-verification-card"', $html);
+        $this->assertStringContainsString('data-page-background="ambient"', $html);
+        $this->assertStringContainsString('/css/page-backgrounds.css?v=1', $html);
     }
 
     public function test_existing_signed_checkout_verification_link_remains_valid(): void
