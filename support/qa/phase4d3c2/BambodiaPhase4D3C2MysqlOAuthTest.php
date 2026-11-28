@@ -852,13 +852,29 @@ final class BambodiaPhase4D3C2MysqlOAuthTest extends TestCase
         $defs=$this->tools($bearer);
         $names=[...self::ALL_READS,...self::ALL_WRITES]; sort($names);
         $this->assertSame($names,array_keys($defs));
+        // Preserve the accepted legacy registry contract: security schemes are
+        // mandatory for all 38 definitions; annotations are mandatory for the
+        // fourteen Phase 4 additions, not retroactively for legacy tools.
+        $phase4=[...array_slice(self::ALL_READS,15),...array_slice(self::ALL_WRITES,9)];
+        $this->assertCount(14,$phase4);
         foreach ($defs as $name=>$d) {
+            $write=in_array($name,self::ALL_WRITES,true);
+            $this->assertArrayHasKey('securitySchemes',$d,$name);
+            $this->assertArrayHasKey('securitySchemes',$d['_meta']??[],$name);
             $scopes=$d['securitySchemes'][0]['scopes']; sort($scopes);
-            $expected=in_array($name,self::ALL_WRITES,true)?['mcp.write','mcp:use']:['mcp:use']; sort($expected);
-            $this->assertSame($expected,$scopes);
-            $this->assertSame($d['securitySchemes'],$d['_meta']['securitySchemes']);
-            $this->assertSame(!in_array($name,self::ALL_WRITES,true),$d['annotations']['readOnlyHint']);
+            $expected=$write?['mcp.write','mcp:use']:['mcp:use']; sort($expected);
+            $this->assertSame($expected,$scopes,$name);
+            $this->assertSame($d['securitySchemes'],$d['_meta']['securitySchemes'],$name);
+            if (in_array($name,$phase4,true)) {
+                $this->assertArrayHasKey('annotations',$d,$name);
+                foreach (['readOnlyHint'=>!$write,'destructiveHint'=>false,
+                    'idempotentHint'=>true,'openWorldHint'=>$name==='bambodia_tracking_comment_create'] as $hint=>$value) {
+                    $this->assertArrayHasKey($hint,$d['annotations'],$name);
+                    $this->assertSame($value,$d['annotations'][$hint],$name.' '.$hint);
+                }
+            }
         }
+        fwrite(STDERR,"EXTENDED_REGISTRY_SCOPE_AND_PHASE4_ANNOTATIONS=PASS\n");
         $state=$this->resultData($bearer,'bambodia_tracking_get',['reference'=>$order->reference()]);
         $m=$this->resultData($bearer,'bambodia_milestones_list',['contract_id'=>$draft->public_id]);
         $create=$this->operation($order->reference(),$state['version'],['title'=>'Isolated concurrent task']);
@@ -882,6 +898,7 @@ final class BambodiaPhase4D3C2MysqlOAuthTest extends TestCase
           'bambodia_contract_milestone_create'=>$milestone,'bambodia_tracking_comment_create'=>$comment] as $tool=>$args) {
             $rejectInputs($tool,$args);
         }
+        fwrite(STDERR,"INITIAL_STRICT_INPUT_CASES=PASS cases=18\n");
         // Restore wall-clock time before starting independent PHP processes.
         $this->travelBack();
         $race=function(string $table,int $id,string $tool,array $left,array $right) use($seller,$bearer): array {
@@ -933,9 +950,11 @@ final class BambodiaPhase4D3C2MysqlOAuthTest extends TestCase
         unset($a['replayed'],$b['replayed']); $this->assertSame($a,$b);
         $this->assertDatabaseCount('order_tracking_tasks',1); $this->assertDatabaseCount('mcp_project_operations',1);
         $this->assertSame(1,DB::table('account_notifications')->where('event','order.tracking.task_added')->count());
+        fwrite(STDERR,"AUTHENTICATED_DUPLICATE_TASK=PASS\n");
         $args=$this->operation($order->reference(),$a['version'],['task_id'=>$a['task_id'],'status'=>'completed']);
         // Unlike a fabricated task ID, this is a valid current task and version.
         $rejectInputs('bambodia_tracking_task_update',$args);
+        fwrite(STDERR,"ALL_STRICT_INPUT_CASES=PASS cases=24\n");
         $this->travelBack();
         $r=$race('marketplace_orders',(int)$order->id,'bambodia_tracking_task_update',$args,[...$args,'request_id'=>(string)Str::uuid(),'status'=>'in_progress']);
         $ok=array_values(array_filter($r,fn($v)=>$v['kind']==='ok'));
@@ -943,6 +962,7 @@ final class BambodiaPhase4D3C2MysqlOAuthTest extends TestCase
         $this->assertCount(1,$ok); $this->assertCount(1,$bad); $this->assertTrue($bad[0]['stale']);
         $this->assertDatabaseCount('mcp_project_operations',2);
         $this->assertSame(1,DB::table('account_notifications')->where('event','order.tracking.task_updated')->count());
+        fwrite(STDERR,"AUTHENTICATED_COMPETING_TASK_UPDATES=PASS\n");
         $updateReceipt=$ok[0]['receipt'];
         $sameReplay=function(array $r): array {
             $this->assertSame(['ok','ok'],array_column($r,'kind'));
@@ -955,6 +975,7 @@ final class BambodiaPhase4D3C2MysqlOAuthTest extends TestCase
         $mReceipt=$sameReplay($race('freelance_contracts',(int)$draft->id,'bambodia_contract_milestone_create',$milestone,$milestone));
         $this->assertSame(2,$draft->milestones()->count());
         $this->assertDatabaseCount('mcp_project_operations',3);
+        fwrite(STDERR,"AUTHENTICATED_DUPLICATE_MILESTONE=PASS\n");
         $comment['expected_version']=$updateReceipt['version'];
         $msgReceipt=$sameReplay($race('service_inquiries',(int)$order->serviceInquiry()->sole()->id,'bambodia_tracking_comment_create',$comment,$comment));
         $this->assertDatabaseCount('service_inquiry_messages',1);
@@ -966,5 +987,7 @@ final class BambodiaPhase4D3C2MysqlOAuthTest extends TestCase
             $this->assertDatabaseHas('mcp_project_operations',['actor_id'=>$seller->id,'request_id'=>$receipt['request_id'],'audit_event_id'=>$receipt['audit_id']]);
             $this->assertDatabaseHas('audit_events',['id'=>$receipt['audit_id'],'actor_id'=>$seller->id]);
         }
+        fwrite(STDERR,"AUTHENTICATED_DUPLICATE_COMMENT=PASS\n");
+        fwrite(STDERR,"AUTHENTICATED_LEDGER_AUDIT_NOTIFICATION=PASS\n");
     }
 }

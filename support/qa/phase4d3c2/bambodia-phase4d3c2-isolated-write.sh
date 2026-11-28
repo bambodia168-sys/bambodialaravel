@@ -38,11 +38,11 @@ cleanup(){
     [[ "$RUNTIME" =~ ^/var/tmp/bambodia-phase4d3c2-runtime\.[A-Za-z0-9]+$ && ! -L "$RUNTIME" ]] || exit 2
     # Only synthetic test logs, no keys, environment, raw database or token files.
     if [[ "$rc" != 0 ]]; then
-      for name in MYSQL_OAUTH_ALL_FOURTEEN MYSQL_OAUTH_CONCURRENCY_AND_STRICT_CONFIRMATION service concurrency migration; do
-        p="$RUNTIME/$name.private.log"
+      for name in MYSQL_OAUTH_ALL_FOURTEEN.private.log MYSQL_OAUTH_CONCURRENCY_AND_STRICT_CONFIRMATION.private.log service.private.log concurrency.private.log migration.private.log mysql-init.log mysql-init.stdout mysql.log mysql.stdout keys.private.log; do
+        p="$RUNTIME/$name"
         if [[ -f "$p" && ! -L "$p" ]]; then
           # Retain private PHPUnit/fixture diagnostics; never emit them to terminal.
-          install -m 600 "$p" "$WORK/$name.private.log" || true
+          install -m 600 "$p" "$WORK/$name" || true
         fi
       done
     fi
@@ -119,7 +119,7 @@ PY
 HERE=$(dirname "$(realpath "$0")")
 check_blob "$HERE/guard.php" c459bc92a4fa13af2007e13001503770841c13b1
 check_blob "$HERE/oauth-worker.php" 1b03584ddd569ee4ef934cc1acb06efa47ee7496
-check_blob "$HERE/BambodiaPhase4D3C2MysqlOAuthTest.php" e2a056b8570bfcc59a85a2d2ef57d15c0081903b
+check_blob "$HERE/BambodiaPhase4D3C2MysqlOAuthTest.php" 5855477ed66085acd593c78e4203fdb5dd8b8583
 # Private source-only copy from already sealed evidence, not a live deployment.
 RUNTIME=$(mktemp -d /var/tmp/bambodia-phase4d3c2-runtime.XXXXXXXX)
 chmod 700 "$RUNTIME"
@@ -200,9 +200,20 @@ fresh(){
 }
 run_test(){
   local filter=$1 label=$2
+  echo "ISOLATED_TEST_START=$label"
   fresh
-  php vendor/bin/phpunit --colors=never tests/Feature/BambodiaPhase4D3C2MysqlOAuthTest.php --filter "$filter" >"$label.private.log" 2>&1
+  if ! php vendor/bin/phpunit --colors=never tests/Feature/BambodiaPhase4D3C2MysqlOAuthTest.php --filter "$filter" >"$label.private.log" 2>&1; then
+    echo "ISOLATED_TEST_FAILED=$label"
+    grep -E '^EXTENDED_REGISTRY_SCOPE_AND_PHASE4_ANNOTATIONS=PASS$|^INITIAL_STRICT_INPUT_CASES=PASS cases=18$|^ALL_STRICT_INPUT_CASES=PASS cases=24$|^AUTHENTICATED_(DUPLICATE_TASK|COMPETING_TASK_UPDATES|DUPLICATE_MILESTONE|DUPLICATE_COMMENT|LEDGER_AUDIT_NOTIFICATION)=PASS$' "$label.private.log" || true
+    exit 1
+  fi
   grep -E '^OK \(1 test, [0-9]+ assertions?\)' "$label.private.log"
+  if [[ "$label" == MYSQL_OAUTH_CONCURRENCY_AND_STRICT_CONFIRMATION ]]; then
+    for checkpoint in 'EXTENDED_REGISTRY_SCOPE_AND_PHASE4_ANNOTATIONS=PASS' 'INITIAL_STRICT_INPUT_CASES=PASS cases=18' 'ALL_STRICT_INPUT_CASES=PASS cases=24' 'AUTHENTICATED_DUPLICATE_TASK=PASS' 'AUTHENTICATED_COMPETING_TASK_UPDATES=PASS' 'AUTHENTICATED_DUPLICATE_MILESTONE=PASS' 'AUTHENTICATED_DUPLICATE_COMMENT=PASS' 'AUTHENTICATED_LEDGER_AUDIT_NOTIFICATION=PASS'; do
+      grep -Fxq "$checkpoint" "$label.private.log"
+      echo "$checkpoint"
+    done
+  fi
   echo "$label=PASS"
 }
 run_test test_all_fourteen_new_tools_through_real_oauth_and_all_write_scope_gates MYSQL_OAUTH_ALL_FOURTEEN
@@ -251,11 +262,14 @@ composer_before=$(sha256sum "$RUNTIME/composer.lock")
 namespace_run composer "$PHP" -d include_path=/usr/share/php:. /usr/bin/composer install --no-scripts --no-plugins --prefer-dist --no-interaction --no-progress >"$WORK/composer.private.log" 2>&1 || fail LOCKED_COMPOSER_INSTALL
 [[ $(sha256sum "$RUNTIME/composer.lock") == "$composer_before" && -f "$RUNTIME/vendor/bin/phpunit" ]] || fail COMPOSER_LOCK_DRIFT
 echo "LOCKED_DEPENDENCIES=PASS"
-namespace_run test bash "$RUNTIME/run-isolated.sh" >"$WORK/test-summary.private.log" 2>&1 || fail ISOLATED_TEST_EXECUTION
+if ! namespace_run test bash "$RUNTIME/run-isolated.sh" >"$WORK/test-summary.private.log" 2>&1; then
+  grep -E '^OK \([0-9]+ tests?, [0-9]+ assertions?\)$|^ISOLATED_TEST_(START|FAILED)=MYSQL_OAUTH_(ALL_FOURTEEN|CONCURRENCY_AND_STRICT_CONFIRMATION)$|^(PRIVATE_MYSQL_IDENTITY_AND_NETWORK_DISABLED|INDEPENDENT_TEST_OAUTH_KEYS|MYSQL_OAUTH_ALL_FOURTEEN|EXTENDED_REGISTRY_SCOPE_AND_PHASE4_ANNOTATIONS|AUTHENTICATED_DUPLICATE_TASK|AUTHENTICATED_COMPETING_TASK_UPDATES|AUTHENTICATED_DUPLICATE_MILESTONE|AUTHENTICATED_DUPLICATE_COMMENT|AUTHENTICATED_LEDGER_AUDIT_NOTIFICATION)=PASS$|^(INITIAL_STRICT_INPUT_CASES|ALL_STRICT_INPUT_CASES)=PASS cases=(18|24)$' "$WORK/test-summary.private.log" || true
+  fail ISOLATED_TEST_EXECUTION
+fi
 for marker in 'PRIVATE_MYSQL_IDENTITY_AND_NETWORK_DISABLED=PASS' 'INDEPENDENT_TEST_OAUTH_KEYS=PASS' 'MYSQL_OAUTH_ALL_FOURTEEN=PASS' 'MYSQL_OAUTH_CONCURRENCY_AND_STRICT_CONFIRMATION=PASS' 'MYSQL_PROJECT_SERVICE_TESTS=PASS' 'MCP_PROJECT_CONCURRENCY=PASS scenarios=6' 'ISOLATED_MYSQL_TEST_SUITES=PASS'; do
   grep -Fxq "$marker" "$WORK/test-summary.private.log" || fail TEST_MARKER
 done
-grep -E '^OK \(|^PASS |^[A-Z0-9_]+=(PASS|PASS scenarios=6)$' "$WORK/test-summary.private.log"
+grep -E '^OK \(|^PASS |^[A-Z0-9_]+=(PASS|PASS scenarios=6|PASS cases=18|PASS cases=24)$' "$WORK/test-summary.private.log"
 verify_evidence
 rm -rf --one-file-system -- "$RUNTIME"
 [[ ! -e "$RUNTIME" ]] || fail CLEANUP
