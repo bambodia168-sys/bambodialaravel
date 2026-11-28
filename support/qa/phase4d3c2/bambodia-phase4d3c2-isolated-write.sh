@@ -17,7 +17,7 @@ CTRL=app/Http/Controllers/Api/BambodiaMcpController.php
 NEW=a302fa364f1f52b6320b77688b7595b91894ca13
 fail(){ echo "PHASE4D3C2_BLOCKED=$*" >&2; exit 1; }
 [[ $# == 1 && "$1" == --isolated-acceptance && $(id -u) == 0 ]] || fail MODE_OR_ROOT
-for cmd in git curl python3 sha256sum realpath stat find openssl unshare mount setpriv getent cmp timeout flock gh; do command -v "$cmd" >/dev/null || fail "MISSING_$cmd"; done
+for cmd in git curl python3 sha256sum realpath stat find openssl unshare mount setpriv getent cmp timeout flock gh findmnt; do command -v "$cmd" >/dev/null || fail "MISSING_$cmd"; done
 [[ -x "$PHP" && -x "$MYSQLBASE/bin/mysql" && -x "$MYSQLBASE/bin/mysqld" && -f /usr/bin/composer && ! -L /usr/bin/composer ]] || fail RUNTIME_MISSING
 "$PHP" -r 'exit(PHP_VERSION_ID>=80500 && extension_loaded("pdo_mysql") && extension_loaded("openssl") ? 0 : 1);' || fail PHP_EXTENSIONS
 "$PHP" -r 'exit(preg_match("/(?:\A|\n)<\?php\b/",file_get_contents("/usr/bin/composer",false,null,0,1024))?0:1);' || fail COMPOSER_NOT_PHP
@@ -36,6 +36,16 @@ cleanup(){
   trap - EXIT
   if [[ -n "$RUNTIME" ]]; then
     [[ "$RUNTIME" =~ ^/var/tmp/bambodia-phase4d3c2-runtime\.[A-Za-z0-9]+$ && ! -L "$RUNTIME" ]] || exit 2
+    # Only synthetic test logs, no keys, environment, raw database or token files.
+    if [[ "$rc" != 0 ]]; then
+      for name in MYSQL_OAUTH_ALL_FOURTEEN MYSQL_OAUTH_CONCURRENCY_AND_STRICT_CONFIRMATION service concurrency migration; do
+        p="$RUNTIME/$name.private.log"
+        if [[ -f "$p" && ! -L "$p" ]]; then
+          # Retain private PHPUnit/fixture diagnostics; never emit them to terminal.
+          install -m 600 "$p" "$WORK/$name.private.log" || true
+        fi
+      done
+    fi
     rm -rf --one-file-system -- "$RUNTIME" || exit 2
     [[ ! -e "$RUNTIME" ]] || exit 2
   fi
@@ -61,6 +71,9 @@ verify_evidence(){
   [[ -z $(find "$STAGE/source" "$PACKAGE/source" -type l -print -quit) ]] || fail EVIDENCE_SYMLINK
   (cd "$LIVE"; sha256sum --check --status "$PACKAGE/evidence/protected.sha256") || fail PROTECTED_CONFIG_DRIFT
   sha256sum --check --status "$PACKAGE/evidence/vhost.sha256" || fail VHOST_DRIFT
+  while read -r path state; do
+    [[ "$state" == absent && ! -e "$LIVE/$path" && ! -L "$LIVE/$path" ]] || fail PROTECTED_ABSENCE_DRIFT
+  done <"$PACKAGE/evidence/protected-absent.txt"
   python3 - "$STAGE/verified/live-source.sha256" "$CTRL" "$LIVE" <<'PY'
 import pathlib,sys,hashlib
 manifest,ctrl,live=sys.argv[1:]
@@ -105,8 +118,8 @@ print('EXACT_RELEASE_AND_SIX_CI=PASS')
 PY
 HERE=$(dirname "$(realpath "$0")")
 check_blob "$HERE/guard.php" c459bc92a4fa13af2007e13001503770841c13b1
-check_blob "$HERE/oauth-worker.php" e91b35c8011a1e9eb3f00830ac7a67e536ed1f05
-check_blob "$HERE/BambodiaPhase4D3C2MysqlOAuthTest.php" 8c4b62663628d2b40ec75cf62a88e4f81556b5fc
+check_blob "$HERE/oauth-worker.php" 1b03584ddd569ee4ef934cc1acb06efa47ee7496
+check_blob "$HERE/BambodiaPhase4D3C2MysqlOAuthTest.php" e2a056b8570bfcc59a85a2d2ef57d15c0081903b
 # Private source-only copy from already sealed evidence, not a live deployment.
 RUNTIME=$(mktemp -d /var/tmp/bambodia-phase4d3c2-runtime.XXXXXXXX)
 chmod 700 "$RUNTIME"

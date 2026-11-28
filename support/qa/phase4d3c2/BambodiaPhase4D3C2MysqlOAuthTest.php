@@ -856,6 +856,8 @@ final class BambodiaPhase4D3C2MysqlOAuthTest extends TestCase
             $scopes=$d['securitySchemes'][0]['scopes']; sort($scopes);
             $expected=in_array($name,self::ALL_WRITES,true)?['mcp.write','mcp:use']:['mcp:use']; sort($expected);
             $this->assertSame($expected,$scopes);
+            $this->assertSame($d['securitySchemes'],$d['_meta']['securitySchemes']);
+            $this->assertSame(!in_array($name,self::ALL_WRITES,true),$d['annotations']['readOnlyHint']);
         }
         $state=$this->resultData($bearer,'bambodia_tracking_get',['reference'=>$order->reference()]);
         $m=$this->resultData($bearer,'bambodia_milestones_list',['contract_id'=>$draft->public_id]);
@@ -863,19 +865,22 @@ final class BambodiaPhase4D3C2MysqlOAuthTest extends TestCase
         $comment=$this->operation($order->reference(),$state['version'],['message'=>'Isolated comment']);
         $milestone=['contract_id'=>$draft->public_id,'expected_version'=>$m['version'],'request_id'=>(string)Str::uuid(),
           'confirm'=>true,'title'=>'Isolated milestone','description'=>'A complete disposable acceptance milestone for testing.','amount'=>'50.00'];
-        $update=$this->operation($order->reference(),$state['version'],['task_id'=>1,'status'=>'completed']);
-        foreach (['bambodia_tracking_task_create'=>$create,'bambodia_tracking_task_update'=>$update,
-          'bambodia_contract_milestone_create'=>$milestone,'bambodia_tracking_comment_create'=>$comment] as $tool=>$args) {
+        $snapshot=function(): array {
+            $tables=['mcp_project_operations','order_tracking_tasks','service_inquiry_messages','contract_milestones','audit_events','account_notifications','email_deliveries'];
+            return array_map(fn($table)=>hash('sha256',json_encode(DB::table($table)->orderBy('id')->get()->all(),JSON_THROW_ON_ERROR)),$tables);
+        };
+        $rejectInputs=function(string $tool,array $args)use($bearer,$snapshot): void {
             $this->nextMcpRateWindow();
+            $before=$snapshot();
             foreach ([array_diff_key($args,['confirm'=>true]),[...$args,'confirm'=>false],[...$args,'confirm'=>'true'],
-                [...$args,'request_id'=>'not-a-uuid'],[...$args,'expected_version'=>'bad'],[...$args,'unexpected'=>1]] as $bad)
+                [...$args,'request_id'=>'not-a-uuid'],[...$args,'expected_version'=>'bad'],[...$args,'unexpected'=>1]] as $bad) {
                 $this->callRpc($bearer,$tool,$bad)->assertJsonPath('result.isError',true);
-            $this->assertDatabaseCount('mcp_project_operations',0);
-            $this->assertDatabaseCount('order_tracking_tasks',0);
-            $this->assertDatabaseCount('service_inquiry_messages',0);
-            $this->assertSame(1,$draft->milestones()->count());
-            $this->assertSame(0,DB::table('audit_events')->where('event','like','mcp.phase4.%')->count());
-            $this->assertSame(0,DB::table('account_notifications')->whereIn('event',['order.tracking.task_added','order.tracking.task_updated','inquiry.replied'])->count());
+                $this->assertSame($before,$snapshot(),'Rejected input changed fixture domain/audit/notification/outbox state');
+            }
+        };
+        foreach (['bambodia_tracking_task_create'=>$create,
+          'bambodia_contract_milestone_create'=>$milestone,'bambodia_tracking_comment_create'=>$comment] as $tool=>$args) {
+            $rejectInputs($tool,$args);
         }
         // Restore wall-clock time before starting independent PHP processes.
         $this->travelBack();
@@ -929,13 +934,37 @@ final class BambodiaPhase4D3C2MysqlOAuthTest extends TestCase
         $this->assertDatabaseCount('order_tracking_tasks',1); $this->assertDatabaseCount('mcp_project_operations',1);
         $this->assertSame(1,DB::table('account_notifications')->where('event','order.tracking.task_added')->count());
         $args=$this->operation($order->reference(),$a['version'],['task_id'=>$a['task_id'],'status'=>'completed']);
+        // Unlike a fabricated task ID, this is a valid current task and version.
+        $rejectInputs('bambodia_tracking_task_update',$args);
+        $this->travelBack();
         $r=$race('marketplace_orders',(int)$order->id,'bambodia_tracking_task_update',$args,[...$args,'request_id'=>(string)Str::uuid(),'status'=>'in_progress']);
         $ok=array_values(array_filter($r,fn($v)=>$v['kind']==='ok'));
         $bad=array_values(array_filter($r,fn($v)=>$v['kind']==='rejected'));
         $this->assertCount(1,$ok); $this->assertCount(1,$bad); $this->assertTrue($bad[0]['stale']);
         $this->assertDatabaseCount('mcp_project_operations',2);
         $this->assertSame(1,DB::table('account_notifications')->where('event','order.tracking.task_updated')->count());
-        foreach ([$a,$ok[0]['receipt']] as $receipt)
+        $updateReceipt=$ok[0]['receipt'];
+        $sameReplay=function(array $r): array {
+            $this->assertSame(['ok','ok'],array_column($r,'kind'));
+            $first=$r[0]['receipt']; $second=$r[1]['receipt'];
+            $this->assertNotSame($first['replayed'],$second['replayed']);
+            unset($first['replayed'],$second['replayed']);
+            $this->assertSame($first,$second);
+            return $first;
+        };
+        $mReceipt=$sameReplay($race('freelance_contracts',(int)$draft->id,'bambodia_contract_milestone_create',$milestone,$milestone));
+        $this->assertSame(2,$draft->milestones()->count());
+        $this->assertDatabaseCount('mcp_project_operations',3);
+        $comment['expected_version']=$updateReceipt['version'];
+        $msgReceipt=$sameReplay($race('service_inquiries',(int)$order->serviceInquiry()->sole()->id,'bambodia_tracking_comment_create',$comment,$comment));
+        $this->assertDatabaseCount('service_inquiry_messages',1);
+        $this->assertDatabaseCount('mcp_project_operations',4);
+        $this->assertSame(3,DB::table('account_notifications')->where('user_id',$buyer->id)->whereIn('event',['order.tracking.task_added','order.tracking.task_updated','inquiry.replied'])->count());
+        $this->assertSame(1,DB::table('email_deliveries')->where('user_id',$buyer->id)->where('event','inquiry.replied')->count());
+        $this->assertSame(4,DB::table('audit_events')->where('event','like','mcp.phase4.%')->count());
+        foreach ([$a,$updateReceipt,$mReceipt,$msgReceipt] as $receipt) {
             $this->assertDatabaseHas('mcp_project_operations',['actor_id'=>$seller->id,'request_id'=>$receipt['request_id'],'audit_event_id'=>$receipt['audit_id']]);
+            $this->assertDatabaseHas('audit_events',['id'=>$receipt['audit_id'],'actor_id'=>$seller->id]);
+        }
     }
 }

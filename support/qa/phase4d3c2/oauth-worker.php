@@ -21,8 +21,8 @@ $kernel=$app->make(\Illuminate\Contracts\Http\Kernel::class);
 $response=$kernel->handle($request);
 $body=json_decode($response->getContent(),true,512,JSON_THROW_ON_ERROR);
 if ($response->getStatusCode()!==200 || !isset($body['result']['isError'])) throw new RuntimeException('UNEXPECTED_RPC_RESPONSE');
-$grant=$request->attributes->get('bambodia_api_token');
-$actor=$request->attributes->get('bambodia_api_owner');
+$grant=$app['request']->attributes->get('bambodia_api_token');
+$actor=$app['request']->attributes->get('bambodia_api_owner');
 if (!$grant instanceof \App\Support\Mcp\McpAccessGrant || !$actor instanceof \App\Models\User
     || (string)$actor->id!==(string)$input['actor'] || !$grant->allows('mcp.read') || !$grant->allows('mcp.write'))
     throw new RuntimeException('OAUTH_WORKER_IDENTITY_MISMATCH');
