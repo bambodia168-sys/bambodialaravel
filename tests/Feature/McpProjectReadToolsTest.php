@@ -159,7 +159,8 @@ class McpProjectReadToolsTest extends TestCase
         $this->assertSame(now()->addDays(3)->toDateString(),$r['approved_due_on']);
         $this->assertSame(['task_id','position','title','status','due_on','completed_at'],array_keys($r['tasks'][0]));
         $this->assertSame(['reference','listing_title','listing_type','relationship','delivery_status','verified_live_payment','completed_at',
-            'task_count','completed_task_count','tasks_truncated','tasks','delivery_progress_percent','progress_basis','approved_due_on','pending_extension'],array_keys($r));
+            'task_count','completed_task_count','tasks_truncated','tasks','delivery_progress_percent','progress_basis','approved_due_on','pending_extension','version'],array_keys($r));
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/',$r['version']);
         $json=json_encode($r);
         foreach (['PRIVATE_CHAT','PRIVATE_EXTENSION_REASON','PRIVATE_BUYER','PRIVATE_SELLER','PRIVATE_SUBJECT','OTHER_TASK','settlement_reference','created_by'] as $secret)
             $this->assertStringNotContainsString($secret,$json);

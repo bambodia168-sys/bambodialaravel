@@ -72,3 +72,4 @@ jobs:
           php artisan test --filter=McpAdvancedContentToolsTest
           php artisan test --filter=McpCommerceReadToolsTest
           php artisan test --filter=McpProjectReadToolsTest
+          php artisan test --filter=McpProjectWriteToolsTest
