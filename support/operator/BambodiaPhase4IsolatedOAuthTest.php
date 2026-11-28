@@ -26,6 +26,8 @@ final class BambodiaPhase4IsolatedOAuthTest extends TestCase
 {
     use RefreshDatabase;
 
+    private array $issuedIdentities = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -70,7 +72,16 @@ final class BambodiaPhase4IsolatedOAuthTest extends TestCase
     private function authorizedBearer(User $actor, string $scope): string
     {
         $this->flushHeaders();
+        // Feature tests reuse one application/router across simulated HTTP requests.
+        // A cached Passport consent controller may hold a previous SessionGuard.
+        // Reset the test browser session and cached controller objects before a
+        // new authorization flow; no middleware is disabled or replaced.
+        $this->app['session']->driver()->flush();
         \Illuminate\Support\Facades\Auth::forgetGuards();
+        \Illuminate\Support\Facades\Auth::shouldUse('web');
+        foreach ($this->app['router']->getRoutes() as $route) {
+            if (str_starts_with($route->uri(), 'oauth/')) $route->flushController();
+        }
         $callback = 'https://chatgpt.com/connector/oauth/qa-callback';
         $registered = $this->postJson('/oauth/register', [
             'client_name' => 'Bambodia Security Acceptance',
@@ -92,6 +103,10 @@ final class BambodiaPhase4IsolatedOAuthTest extends TestCase
             'resource' => url('/mcp'),
         ]);
 
+        // Model a separate browser login, including the session identity, not
+        // just an in-memory actingAs user on a potentially cached guard.
+        $guard=\Illuminate\Support\Facades\Auth::guard('web');
+        $this->withSession([$guard->getName()=>$actor->getAuthIdentifier()]);
         $this->actingAs($actor, 'web')
             ->get('/oauth/authorize?'.$query)
             ->assertOk();
@@ -117,6 +132,17 @@ final class BambodiaPhase4IsolatedOAuthTest extends TestCase
 
         $secret = $exchange->json('access_token');
         $this->assertIsString($secret);
+        $claims=$this->claims($secret);
+        $this->assertSame((string)$actor->id,(string)($claims['sub']??''),'OAUTH_ISSUANCE_SUBJECT_MISMATCH');
+        $row=DB::table('oauth_access_tokens')->where('id',$claims['jti'])->first();
+        $this->assertNotNull($row,'OAUTH_ISSUANCE_TOKEN_ROW_MISSING');
+        $this->assertSame((string)$actor->id,(string)$row->user_id,'OAUTH_ISSUANCE_DATABASE_OWNER_MISMATCH');
+        $this->assertSame((string)$clientId,(string)$row->client_id,'OAUTH_ISSUANCE_CLIENT_MISMATCH');
+        $scopes=json_decode($row->scopes,true,512,JSON_THROW_ON_ERROR);
+        $this->assertContains(explode(' ',$scope)[0],$scopes,'OAUTH_ISSUANCE_SCOPE_MISSING');
+        $mayWrite=in_array('mcp.write',explode(' ',$scope),true);
+        $this->assertSame($mayWrite,in_array('mcp.write',$scopes,true),'OAUTH_ISSUANCE_WRITE_SCOPE_MISMATCH');
+        $this->issuedIdentities[hash('sha256',$secret)]=['id'=>(string)$actor->id,'write'=>$mayWrite];
         \Illuminate\Support\Facades\Auth::forgetGuards();
 
         return $secret;
@@ -129,8 +155,24 @@ final class BambodiaPhase4IsolatedOAuthTest extends TestCase
     private function requestRpc(string $bearer, string $method, array $params=[]): \Illuminate\Testing\TestResponse
     {
         $this->flushHeaders();
+        // MCP requests must be bearer-only. Never carry a simulated consent
+        // browser login into the API request, even for a different actor.
+        $this->app['session']->driver()->flush();
         \Illuminate\Support\Facades\Auth::forgetGuards();
-        return $this->withToken($bearer)->postJson('/mcp', $this->rpc($method,$params));
+        \Illuminate\Support\Facades\Auth::shouldUse('web');
+        $response=$this->withToken($bearer)->postJson('/mcp', $this->rpc($method,$params));
+        $expected=$this->issuedIdentities[hash('sha256',$bearer)]??null;
+        if ($expected!==null && $response->getStatusCode()===200) {
+            $request=$this->app['request'];
+            $resolved=$request->attributes->get('bambodia_api_owner');
+            $grant=$request->attributes->get('bambodia_api_token');
+            $this->assertInstanceOf(User::class,$resolved,'MCP_RESOLVED_OWNER_MISSING');
+            $this->assertSame($expected['id'],(string)$resolved->id,'MCP_RESOLVED_OWNER_MISMATCH');
+            $this->assertInstanceOf(\App\Support\Mcp\McpAccessGrant::class,$grant,'MCP_RESOLVED_GRANT_MISSING');
+            $this->assertTrue($grant->allows('mcp.read'),'MCP_RESOLVED_READ_SCOPE_MISSING');
+            $this->assertSame($expected['write'],$grant->allows('mcp.write'),'MCP_RESOLVED_WRITE_SCOPE_MISMATCH');
+        }
+        return $response;
     }
     private function tools(string $bearer): array
     {
@@ -738,10 +780,25 @@ final class BambodiaPhase4IsolatedOAuthTest extends TestCase
         }
         $this->assertDatabaseCount('mcp_project_operations',0);
         $this->nextMcpRateWindow();
-        $this->callRpc($foreign,'bambodia_tracking_task_create',$create)->assertJsonPath('result.isError',true);
-        $this->callRpc($buyer,'bambodia_tracking_task_create',$create)->assertJsonPath('result.isError',true);
-        $this->callRpc($buyer,'bambodia_contract_milestone_create',$milestone)->assertJsonPath('result.isError',true);
-        $this->callRpc($write,'bambodia_tracking_comment_create',[...$comment,'confirm'=>false])->assertJsonPath('result.isError',true);
+        $this->assertSame((string)$a->id,(string)$order->fresh()->seller_id,'FIXTURE_SELLER_MISMATCH');
+        $this->assertNotSame((string)$c->id,(string)$order->fresh()->seller_id,'FIXTURE_FOREIGN_ACTOR_IS_SELLER');
+        $this->assertSame((string)$b->id,(string)$order->fresh()->buyer_id,'FIXTURE_BUYER_MISMATCH');
+        foreach ([
+            [$foreign,'bambodia_tracking_task_create',$create],
+            [$buyer,'bambodia_tracking_task_create',$create],
+            [$buyer,'bambodia_contract_milestone_create',$milestone],
+            [$write,'bambodia_tracking_comment_create',[...$comment,'confirm'=>false]],
+        ] as [$token,$tool,$args]) {
+            $response=$this->callRpc($token,$tool,$args);
+            $this->assertDatabaseCount('mcp_project_operations',0);
+            $this->assertDatabaseCount('order_tracking_tasks',0);
+            $this->assertDatabaseCount('service_inquiry_messages',0);
+            $this->assertSame(1,$draft->milestones()->count());
+            $this->assertSame(0,DB::table('account_notifications')->whereIn('event',
+                ['order.tracking.task_added','order.tracking.task_updated','inquiry.replied'])->count());
+            $this->assertSame(0,DB::table('audit_events')->where('event','like','mcp.phase4.%')->count());
+            $response->assertJsonPath('result.isError',true);
+        }
         $r=$this->resultData($write,'bambodia_tracking_task_create',$create);
         $this->assertFalse($r['replayed']);
         $replay=$this->resultData($write,'bambodia_tracking_task_create',$create);
