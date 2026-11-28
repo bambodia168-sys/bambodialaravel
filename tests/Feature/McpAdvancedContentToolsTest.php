@@ -24,7 +24,7 @@ class McpAdvancedContentToolsTest extends TestCase
         return User::query()->create(['name'=>'MCP Phase 3 '.$n,'username'=>'mcp3_'.$n,'email'=>'mcp3_'.$n.'@example.test','password'=>'TestPassword123!','role'=>$role,'locale'=>'en']);
     }
 
-    private function post(User $owner,string $status='draft'): ContentEntry
+    private function createPostFixture(User $owner,string $status='draft'): ContentEntry
     {
         return ContentEntry::query()->create(['author_id'=>$owner->id,'type'=>'post','title'=>'Original draft title','body'=>'A sufficiently long draft body for testing.','status'=>$status,'published_at'=>$status==='published'?now():null]);
     }
@@ -77,9 +77,9 @@ class McpAdvancedContentToolsTest extends TestCase
     {
         $owner=$this->actor();
         $other=$this->actor();
-        $post=$this->post($owner);
-        $foreign=$this->post($other);
-        $public=$this->post($owner,'published');
+        $post=$this->createPostFixture($owner);
+        $foreign=$this->createPostFixture($other);
+        $public=$this->createPostFixture($owner,'published');
         $ownMedia=$this->asset($owner);
         $this->asset($owner,'pending');
         $this->asset($other);
@@ -116,9 +116,9 @@ class McpAdvancedContentToolsTest extends TestCase
         config(['mcp.production_writes_enabled'=>true]);
         $owner=$this->actor();
         $other=$this->actor();
-        $post=$this->post($owner);
-        $foreign=$this->post($other);
-        $public=$this->post($owner,'published');
+        $post=$this->createPostFixture($owner);
+        $foreign=$this->createPostFixture($other);
+        $public=$this->createPostFixture($owner,'published');
         $asset=$this->asset($owner);
         $foreignAsset=$this->asset($other);
         $pending=$this->asset($owner,'pending');
