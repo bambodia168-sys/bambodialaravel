@@ -45,12 +45,46 @@ def patch(base,candidate,live,path):
         need(old!=new,"EMPTY_PATCH:"+path)
         out=out.replace(old,new,1)
     return out
+def route_patch(base,candidate,live):
+    path="routes/web.php"
+    b=base.splitlines(keepends=True); c=candidate.splitlines(keepends=True)
+    edits=[(tag,i,j,k,l) for tag,i,j,k,l in difflib.SequenceMatcher(None,b,c,autojunk=False).get_opcodes() if tag!="equal"]
+    need(len(edits)==3,"ROUTE_INSERTION_GROUPS")
+    anchors=(
+        b"use App\\Http\\Controllers\\CommerceOrderController;\n",
+        b"    Route::get('/account/policy-receipts', [PolicyAcknowledgementController::class,'index'])->name('account.policy-receipts');\n",
+        b"    Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {\n",
+    )
+    pairs=[]
+    for (tag,i,j,k,l),anchor,count in zip(edits,anchors,(1,2,6)):
+        addition=b"".join(c[k:l])
+        need(tag=="insert" and i>0 and b[i-1]==anchor and len(c[k:l])==count and b"MarketplaceInvoiceController" in addition,"UNEXPECTED_ROUTE_EDIT")
+        pairs.append((anchor,addition))
+    def apply(source):
+        need(b"MarketplaceInvoiceController" not in source,"INVOICE_ROUTES_ALREADY_PRESENT")
+        out=source
+        for anchor,addition in pairs:
+            need(out.splitlines(keepends=True).count(anchor)==1 and out.count(anchor)==1,"ROUTE_ANCHOR_NOT_UNIQUE")
+            need(addition not in out,"ROUTE_INSERTION_ALREADY_PRESENT")
+            out=out.replace(anchor,anchor+addition,1)
+        return out
+    need(apply(base)==candidate,"TRACKED_ROUTE_RECONSTRUCTION")
+    out=apply(live)
+    restored=out
+    for anchor,addition in reversed(pairs):
+        need(restored.count(anchor+addition)==1,"ROUTE_REVERSE_ANCHOR")
+        restored=restored.replace(anchor+addition,anchor,1)
+    need(restored==live and len(out.splitlines())-len(live.splitlines())==9,"ROUTE_REVERSE_MISMATCH")
+    return out
 def load_manifest(p):
     m=json.loads(p.read_text())
     need((m.get("repo"),m.get("base"),m.get("application"),m.get("operator"),m.get("oauth_stage_manifest"),m.get("oauth_stage"))==(REPO,BASE,APP,OP,STAGE_HASH,str(STAGE)),"MANIFEST_IDENTITY")
     f=m["files"];need(len(f)==20 and len({x["path"] for x in f})==20,"FILE_INVENTORY")
     need(sum(x["mode"]=="add" for x in f)==14 and sum(x["mode"]=="patch" for x in f)==4 and sum(x["mode"]=="accepted_overlay" for x in f)==2,"FILE_MODE_INVENTORY")
     need(m["flags"]=={"INVOICES_ENABLED":False,"INVOICES_DRAFT_WRITES_ENABLED":False},"FEATURE_POLICY")
+    reviewed={"routes/web.php":("375dc03d5d0cca5e4e584f997501d5b528bca29a","d622b26ff1dffaee4620f1c3ed59432d4d5384f3","exact_invoice_route_insertions"),"resources/views/layouts/workspace.blade.php":("378f2411d646bce1a9c1c227109627fd9d7ac58f","f357adb0b0ccb6e824614b9e195d5b7df6502601","exact_context_patch")}
+    for e in f:
+        if e["path"] in reviewed: need((e["live"],e["staged"],e["strategy"])==reviewed[e["path"]],"RECONCILED_PIN_MISMATCH")
     return m
 def selftest(m,root):
     for e in m["files"]:
@@ -64,6 +98,15 @@ def selftest(m,root):
                 # Simulate unrelated appended overlay bytes and prove retention.
                 extra=b"\n// Synthetic unrelated OAuth overlay sentinel\n"
                 need(patch(b,c,b+extra,path)==c+extra,"OVERLAY_RETENTION")
+                need(route_patch(b,c,b)==c,"TARGETED_ROUTE_RECONSTRUCTION")
+                cart=b"use App\\Http\\Controllers\\CommerceCartController;\n"
+                review=b"use App\\Http\\Controllers\\MarketplaceOrderReviewController;\n"
+                need(b.count(review+cart)==1,"IMPORT_REORDER_FIXTURE")
+                drift=b.replace(review+cart,cart+review,1)+extra
+                need(route_patch(b,c,drift)==c.replace(review+cart,cart+review,1)+extra,"TARGETED_ROUTE_DRIFT_RETENTION")
+                try: route_patch(b,c,drift.replace(b"use App\\Http\\Controllers\\CommerceOrderController;\n",b"",1))
+                except SystemExit: pass
+                else: need(False,"MISSING_TARGETED_ANCHOR_ACCEPTED")
                 try: patch(b,c,b"",path)
                 except SystemExit: pass
                 else: need(False,"MISSING_ANCHOR_ACCEPTED")
@@ -109,11 +152,14 @@ def prepare(m):
                 b=pinned(download(BASE,path),e["base"],path)
                 c=pinned(download(APP,path),e["candidate"],path)
                 need(patch(b,c,b,path)==c,"PATCH_RECONSTRUCTION:"+path)
-                out=patch(b,c,before,path)
+                out=route_patch(b,c,before) if path=="routes/web.php" else patch(b,c,before,path)
                 if before==b: need(out==c,"EXACT_CANDIDATE_MISMATCH:"+path)
-                if path=="routes/web.php":
-                    # Reverse all native edits; existing OAuth bytes must return exactly.
-                    need(patch(c,b,out,path)==before,"ROUTE_REVERSIBILITY")
+                if path=="resources/views/layouts/workspace.blade.php":
+                    need(patch(c,b,out,path)==before,"WORKSPACE_REVERSIBILITY")
+                    for name in (b"studio.invoices.index",b"account.invoices.index"):
+                        need(before.count(name)==0 and out.count(name)==1,"WORKSPACE_INVOICE_NAVIGATION")
+                if path in ("routes/web.php","resources/views/layouts/workspace.blade.php"):
+                    pinned(out,e["staged"],"RECONCILED:"+path)
         dest.write_bytes(out)
         if path.endswith(".php") and not path.endswith(".blade.php"):
             subprocess.run([PHP,"-l",str(dest)],check=True,stdout=subprocess.DEVNULL)
