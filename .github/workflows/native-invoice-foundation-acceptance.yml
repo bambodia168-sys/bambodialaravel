@@ -121,3 +121,15 @@ jobs:
           php -r '$p=new PDO("mysql:host=127.0.0.1;port=3306;dbname=bambodia_invoice_acceptance",getenv("DB_USERNAME"),getenv("DB_PASSWORD")); if($p->query("SELECT DATABASE()")->fetchColumn()!=="bambodia_invoice_acceptance")exit(1); echo "DISPOSABLE_MYSQL_IDENTITY=PASS\n";'
       - name: Invoice tests against disposable MySQL
         run: php artisan test --filter='InvoiceMoneyTest|NativeInvoiceFoundationTest|McpInvoiceReadToolsTest|McpInvoiceWriteToolsTest'
+
+      - name: Independent MySQL concurrency and retry acceptance
+        env:
+          INVOICE_CONCURRENCY_ISOLATED: '1'
+        run: |
+          set -Eeuo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$DB_HOST" = 127.0.0.1
+          test "$DB_DATABASE" = bambodia_invoice_acceptance
+          test -z "$DB_URL"
+          php -l support/bambodia-mcp-phase4e3-concurrency.php
+          php support/bambodia-mcp-phase4e3-concurrency.php
