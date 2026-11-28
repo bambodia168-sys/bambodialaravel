@@ -134,14 +134,29 @@ accept(){
   while getent passwd "$uid" >/dev/null || getent group "$uid" >/dev/null; do uid=$((uid+1)); [[ "$uid" -lt 63000 ]] || fail NO_UNUSED_UID; done
   run=$(mktemp -d /var/tmp/bambodia-phase3-runtime.XXXXXXXX)
   cleanup(){
-    local rc=$?
+    local rc=$1 runtime=$2
     trap - EXIT
-    if [[ "$run" =~ ^/var/tmp/bambodia-phase3-runtime\.[A-Za-z0-9]+$ && -d "$run" && ! -L "$run" ]]; then rm -rf --one-file-system -- "$run"; fi
+    if [[ ! "$runtime" =~ ^/var/tmp/bambodia-phase3-runtime\.[A-Za-z0-9]+$ || -L "$runtime" ]]; then
+      echo "ISOLATED_RUNTIME_AND_EPHEMERAL_KEYS_REMOVED=NO" >&2
+      exit 1
+    fi
+    if [[ -e "$runtime" ]]; then
+      if ! rm -rf --one-file-system -- "$runtime"; then
+        echo "ISOLATED_RUNTIME_AND_EPHEMERAL_KEYS_REMOVED=NO" >&2
+        exit 1
+      fi
+    fi
+    if [[ -e "$runtime" || -L "$runtime" ]]; then
+      echo "ISOLATED_RUNTIME_AND_EPHEMERAL_KEYS_REMOVED=NO" >&2
+      exit 1
+    fi
     if [[ "$rc" != 0 ]]; then echo "ACTUAL_OAUTH_ACCEPTANCE=FAILED_OR_BLOCKED"; fi
     echo "ISOLATED_RUNTIME_AND_EPHEMERAL_KEYS_REMOVED=YES"
     exit "$rc"
   }
-  trap cleanup EXIT
+  # Capture the path now; accept() locals are out of scope at shell EXIT.
+  trap 'cleanup "$?" '"$(printf '%q' "$run")" EXIT
+  echo "ISOLATED_RUNTIME=$run"
   cp -a "$stage/source/." "$run/"
   mkdir -p "$run"/{bootstrap/cache,storage/app/private,storage/app/public,storage/framework/cache/data,storage/framework/sessions,storage/framework/views,storage/logs,public,.composer-home,.composer-cache,.mask}
   key="base64:$(openssl rand -base64 32)"
