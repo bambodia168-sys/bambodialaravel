@@ -68,6 +68,9 @@ jobs:
           php -l support/operator/BambodiaPhase4E5IsolatedOAuthTest.php
           php -l support/operator/bambodia-phase4e5-fpm-probe.php
           echo PHASE4E5_OPERATOR_PACKAGE_SYNTAX=PASS
+          bash -n support/operator/bambodia-phase4e6-combined-acceptance.sh
+          awk '/^  cat > "\$run\/qa-route-snapshot.php" <<.ROUTEPHP./{p=1;next} /^ROUTEPHP$/{p=0;found=1} p{print} END{if(!found)exit 1}' support/operator/bambodia-phase4e6-combined-acceptance.sh | php -l
+          echo PHASE4E6_COMBINED_PACKAGE_SYNTAX=PASS
       - name: Invoice isolated tests
         run: php artisan test --filter='InvoiceMoneyTest|NativeInvoiceFoundationTest|McpInvoiceReadToolsTest|McpInvoiceWriteToolsTest'
       - uses: actions/setup-node@v4
