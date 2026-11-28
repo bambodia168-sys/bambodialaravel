@@ -72,8 +72,9 @@ final class NativeInvoiceFoundationTest extends TestCase
     public function test_defaults_hidden_and_read_only_switch_never_enables_draft_writes(): void
     {
         [$seller,$buyer,$order]=$this->fixture();
-        config(['commerce.enabled'=>true,'invoices.enabled'=>false,'invoices.draft_writes_enabled'=>false]);
+        config(['commerce.enabled'=>true]);
         $this->assertFalse(config('invoices.enabled'));
+        $this->assertFalse(config('invoices.draft_writes_enabled'));
         $this->get(route('studio.invoices.index'))->assertRedirect(route('login'));
         $this->actingAs($seller)->get(route('studio.invoices.index'))->assertNotFound();
         $this->get(route('studio.invoices.preview',['order_reference'=>$order->reference()]))->assertNotFound();
@@ -211,6 +212,28 @@ final class NativeInvoiceFoundationTest extends TestCase
         $this->postJson(route('studio.invoices.store'),[...$base,'due_on'=>now(config('invoices.timezone'))->addDays(366)->toDateString()])->assertUnprocessable();
         $this->assertDatabaseCount('marketplace_invoices',0);
         $this->assertDatabaseCount('mcp_invoice_operations',0);
+    }
+
+    public function test_domain_confirmation_is_literal_and_replay_requires_current_owner(): void
+    {
+        $this->enable();
+        [$seller,$buyer,$order]=$this->fixture();
+        $p=$this->svc()->preview($seller,$order->reference());
+        $id=(string)Str::uuid();
+        foreach ([false,'true','1',1,null] as $bad) {
+            try {
+                $this->svc()->mutate($seller,'create',$order->reference(),$p['version'],$id,$bad);
+                $this->fail('Non-boolean confirmation was accepted.');
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                $this->assertArrayHasKey('request',$e->errors());
+            }
+        }
+        $this->assertDatabaseCount('marketplace_invoices',0);
+        $r=$this->svc()->mutate($seller,'create',$order->reference(),$p['version'],$id,true);
+        $seller->update(['account_status'=>'suspended']);
+        $this->rejects(fn()=>$this->svc()->mutate($seller,'create',$order->reference(),$p['version'],$id,true),404);
+        $this->assertDatabaseCount('mcp_invoice_operations',1);
+        $this->assertDatabaseCount('marketplace_invoices',1);
     }
 
     public function test_late_audit_failure_rolls_back_invoice_item_and_operation(): void

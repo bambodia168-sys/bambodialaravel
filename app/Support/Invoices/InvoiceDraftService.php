@@ -118,12 +118,12 @@ final class InvoiceDraftService
     }
 
     // Used by native UI now and by the separately authorized future MCP adapter.
-    // Caller supplies literal boolean confirmation (HTML transport converts its
+    // Caller must supply literal boolean confirmation (HTML transport converts its
     // validated checkbox value before calling). No caller-supplied prices/parties.
-    public function mutate(User $actor,string $action,string $resource,string $version,string $requestId,bool $confirm,?string $dueOn=null): array
+    public function mutate(User $actor,string $action,string $resource,string $version,string $requestId,mixed $confirm,?string $dueOn=null): array
     {
         abort_unless(MarketplaceInvoicePolicy::writesEnabled() && $actor->isCreator() && $actor->account_status==='active',404);
-        if (!in_array($action,['create','update','discard'],true) || !$confirm
+        if (!in_array($action,['create','update','discard'],true) || $confirm!==true
             || !preg_match('/^[a-f0-9]{64}$/D',$version) || !Str::isUuid($requestId)
             || ($action==='discard' && $dueOn!==null)) {
             throw ValidationException::withMessages(['request'=>'Invalid confirmed invoice operation.']);
