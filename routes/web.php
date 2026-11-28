@@ -9,6 +9,7 @@ use App\Http\Controllers\Dashboard\SystemSecurityController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CommerceSettlementController;
 use App\Http\Controllers\CommerceOrderController;
+use App\Http\Controllers\MarketplaceInvoiceController;
 use App\Http\Controllers\MarketplaceOrderReviewController;
 use App\Http\Controllers\CommerceCartController;
 use App\Http\Controllers\CommercePaymentMethodController;
@@ -332,6 +333,8 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/privacy-requests/{privacyRequest}/close', [PrivacyRequestController::class,'close'])
         ->name('privacy.close')->where('privacyRequest','[0-9]{9}');
     Route::get('/account/policy-receipts', [PolicyAcknowledgementController::class,'index'])->name('account.policy-receipts');
+    Route::get('/account/invoices', [MarketplaceInvoiceController::class,'accountIndex'])->name('account.invoices.index');
+    Route::get('/account/invoices/{invoice}', [MarketplaceInvoiceController::class,'accountShow'])->whereUuid('invoice')->name('account.invoices.show');
     Route::prefix('account/orders')->name('account.orders.')->group(function (): void {
         Route::get('/', [CommerceOrderController::class, 'index'])->name('index');
         Route::get('/new/{listing}', [CommerceOrderController::class, 'create'])->where('listing', '[0-9]{9}')->name('create');
@@ -519,6 +522,12 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/creator/apply', [CreatorApplicationController::class, 'show'])->name('creator.apply');
     Route::post('/creator/apply', [CreatorApplicationController::class, 'submit'])->name('creator.apply.store')->middleware('throttle:3,1');
     Route::middleware('role:freelancer,super_admin')->prefix('studio')->group(function (): void {
+        Route::get('/invoices', [MarketplaceInvoiceController::class,'studioIndex'])->name('studio.invoices.index');
+        Route::get('/invoices/new', [MarketplaceInvoiceController::class,'preview'])->name('studio.invoices.preview');
+        Route::post('/invoices', [MarketplaceInvoiceController::class,'store'])->middleware('throttle:10,1')->name('studio.invoices.store');
+        Route::get('/invoices/{invoice}', [MarketplaceInvoiceController::class,'studioShow'])->whereUuid('invoice')->name('studio.invoices.show');
+        Route::patch('/invoices/{invoice}', [MarketplaceInvoiceController::class,'update'])->whereUuid('invoice')->middleware('throttle:10,1')->name('studio.invoices.update');
+        Route::post('/invoices/{invoice}/discard', [MarketplaceInvoiceController::class,'discard'])->whereUuid('invoice')->middleware('throttle:5,1')->name('studio.invoices.discard');
         Route::get('/analytics/data', [StudioAnalyticsController::class, 'data'])->name('studio.analytics.data');
         Route::post('/analytics/preferences', [StudioAnalyticsController::class, 'preferences'])->name('studio.analytics.preferences')->middleware('throttle:10,1');
         Route::post('/analytics/time', [StudioAnalyticsController::class, 'logTime'])->name('studio.analytics.time.store')->middleware('throttle:20,1');

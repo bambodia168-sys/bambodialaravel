@@ -1,0 +1,14 @@
+.invoice-workspace{display:grid;gap:1rem;min-width:0}
+.invoice-workspace .invoice-panel{padding:clamp(1rem,3vw,1.5rem);display:grid;gap:.85rem}
+.invoice-workspace .invoice-panel h2,.invoice-workspace .invoice-panel p{margin:0}
+.invoice-workspace .invoice-form{display:grid;gap:.8rem;max-width:36rem}
+.invoice-workspace .invoice-form label{display:grid;gap:.35rem;min-width:0}
+.invoice-workspace .invoice-form .invoice-confirm{display:flex;align-items:flex-start;gap:.55rem}
+.invoice-workspace .invoice-confirm input{width:auto;flex:none;margin-top:.3em}
+.invoice-workspace .invoice-form input:not([type=checkbox]){width:100%;box-sizing:border-box}
+.invoice-workspace .invoice-actions{display:flex;flex-wrap:wrap;gap:.6rem}
+.invoice-workspace .invoice-total{font-weight:700;font-variant-numeric:tabular-nums;text-align:end}
+.invoice-workspace .invoice-notice{border:1px dashed currentColor;border-radius:.6rem;padding:.75rem;font-weight:600}
+.invoice-workspace .table-scroll{min-width:0;overflow:auto}
+.invoice-workspace .invoice-form .btn{justify-self:start}
+@media(max-width:600px){.invoice-workspace .panel-head{flex-wrap:wrap}.invoice-workspace .invoice-form .btn{width:100%}}

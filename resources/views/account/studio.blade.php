@@ -8,6 +8,12 @@
 @section('content')
 <div class="container inner-page studio-dashboard">
   @include('account.partials.studio-performance')
+  @if(\App\Policies\MarketplaceInvoicePolicy::enabled())
+    <section class="panel" aria-labelledby="studio-invoices">
+      <div class="panel-head"><div><h2 id="studio-invoices">Invoices</h2><p>Private order-linked drafts, separate from verified sales revenue.</p></div>
+        <a class="btn subtle compact" href="{{ route('studio.invoices.index') }}">Manage invoices</a></div>
+    </section>
+  @endif
 
   <div class="workspace-overview-grid" aria-label="Your creator activity">
     <x-workspace-metric label="Approved listings" :value="$stats['published']" icon="check" :href="route('studio.listings')" action="View listings"/>
