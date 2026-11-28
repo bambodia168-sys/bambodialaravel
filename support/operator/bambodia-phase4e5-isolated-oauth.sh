@@ -165,7 +165,7 @@ PY
 accept(){
   [[ $# == 2 ]] || fail ACCEPT_REQUIRES_STAGE_AND_REVIEWED_MANIFEST_SHA256
   local stage=$1 reviewed=$2 run uid key composer_hash lock_hash
-  [[ "$stage" =~ ^/var/tmp/bambodia-phase4-review\.[A-Za-z0-9]+$ && -d "$stage" && ! -L "$stage" && $(stat -c '%u:%a' "$stage") == 0:700 ]] || fail UNSAFE_STAGE
+  [[ "$stage" =~ ^/var/tmp/bambodia-phase4e5-review\.[A-Za-z0-9]+$ && -d "$stage" && ! -L "$stage" && $(stat -c '%u:%a' "$stage") == 0:700 ]] || fail UNSAFE_STAGE
   [[ "$reviewed" =~ ^[a-f0-9]{64}$ && $(sha256sum "$stage/manifest.sha256"|cut -d' ' -f1) == "$reviewed" ]] || fail REVIEWED_MANIFEST_MISMATCH
   [[ -z $(find "$stage/source" "$stage/candidate" "$stage/verified" -type l -print -quit) ]] || fail STAGED_SYMLINK
   (cd "$stage"; find source candidate verified -type f -print0 | sort -z | xargs -0 sha256sum | cmp -s - manifest.sha256) || fail STAGED_FILE_SET_OR_CONTENT_DRIFT
@@ -196,7 +196,7 @@ accept(){
   cleanup(){
     local rc=$1 runtime=$2
     trap - EXIT
-    if [[ ! "$runtime" =~ ^/var/tmp/bambodia-phase4-runtime\.[A-Za-z0-9]+$ || -L "$runtime" ]]; then
+    if [[ ! "$runtime" =~ ^/var/tmp/bambodia-phase4e5-runtime\.[A-Za-z0-9]+$ || -L "$runtime" ]]; then
       echo "ISOLATED_RUNTIME_AND_EPHEMERAL_KEYS_REMOVED=NO" >&2
       exit 1
     fi
@@ -227,13 +227,13 @@ accept(){
   # additionally run without network. No weaker fallback if unshare fails.
   isolated(){
     local network=$1 mode=$2 db=$3; shift 3
-    local flags=(--mount --fork)
+    local flags=(--mount --pid --fork --kill-child --mount-proc)
     [[ "$network" == off ]] && flags+=(--net)
     unshare "${flags[@]}" bash -c '
       set -Eeuo pipefail
       run=$1; uid=$2; key=$3; mode=$4; php=$5; db=$6; mysqlbase=$7; shift 7
       mount --make-rprivate /
-      for target in /www/wwwroot /tmp /www/server/data /run/mysqld; do
+      for target in /www/wwwroot /tmp /www/server/data /www/server/mysql/data /run; do
         if [[ -d "$target" ]]; then mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs "$target"; fi
       done
       cd "$run"
@@ -320,10 +320,10 @@ DBSH
   echo "BASELINE_REGISTRY=38 READ=25 WRITE=13"
   echo "=== Install invoice MCP candidate into disposable runtime ONLY ==="
   for path in "$CONTROLLER" "$AUDIT" "${ADDITIONS[@]}"; do
-    mkdir -p "$run/$(dirname "$path")"
+    install -d -o "$uid" -g "$uid" -m 700 "$run/$(dirname "$path")"
     install -o "$uid" -g "$uid" -m 600 "$stage/candidate/$path" "$run/$path"
   done
-  # New directories created by root are traversable; PHP files are fixture-UID owned.
+  # Every candidate parent and PHP file is accessible only to the fixture UID.
   for db in sqlite mysql; do test_run candidate "$db"; done
   echo "CANDIDATE_REGISTRY=45 READ=29 WRITE=16"
   echo "=== Rehearse code rollback and baseline discovery ==="

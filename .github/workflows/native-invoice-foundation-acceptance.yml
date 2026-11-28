@@ -55,6 +55,14 @@ jobs:
         run: python3 -B support/bambodia-mcp-stage-invoice-read.py --self-test
       - name: Additive invoice WRITE overlay fixture
         run: python3 -B support/bambodia-mcp-stage-invoice-write.py --self-test
+      - name: Phase 4E.5 operator package syntax (not actual OAuth acceptance)
+        run: |
+          set -Eeuo pipefail
+          bash -n support/operator/bambodia-phase4e5-isolated-oauth.sh
+          awk '/^  cat >"\$run\/qa-isolated-db.sh" <<.DBSH./{p=1;next} /^DBSH$/{p=0;found=1} p{print} END{if(!found)exit 1}' support/operator/bambodia-phase4e5-isolated-oauth.sh | bash -n
+          php -l support/operator/BambodiaPhase4E5IsolatedOAuthTest.php
+          php -l support/operator/bambodia-phase4e5-fpm-probe.php
+          echo PHASE4E5_OPERATOR_PACKAGE_SYNTAX=PASS
       - name: Invoice isolated tests
         run: php artisan test --filter='InvoiceMoneyTest|NativeInvoiceFoundationTest|McpInvoiceReadToolsTest|McpInvoiceWriteToolsTest'
       - uses: actions/setup-node@v4
