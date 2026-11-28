@@ -202,7 +202,9 @@
       el('pipeline').innerHTML=stages.map(s=>'<div class="studio-pipeline-row"><div><span>'+escape(s.label)+'</span><strong>'+decimal(s.value)+'</strong></div>'+
         '<span class="studio-progress-rail"><span style="width:'+(s.value/highest*100)+'%"></span></span></div>').join('');
       const heat=Array.isArray(d.heatmap)?d.heatmap:[];
-      el('heatmap').innerHTML=heat.map(item=>'<span class="studio-heat-cell" data-heat="'+
+      // The compact Studio dashboard may omit the optional activity heatmap.
+      const heatmap=el('heatmap');
+      if (heatmap) heatmap.innerHTML=heat.map(item=>'<span class="studio-heat-cell" data-heat="'+
         Math.min(4,Math.ceil(toNumber(item.hours)/2))+'" title="'+escape(item.date+' · '+decimal(item.hours)+' hours')+'"></span>').join('');
       renderProjects(d);
       if (!reduceMotion) root.querySelectorAll('.studio-chart-canvas,.studio-donut,.studio-gauge-fill,.studio-heat-cell').forEach(node=>{

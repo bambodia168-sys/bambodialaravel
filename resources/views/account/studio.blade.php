@@ -3,7 +3,7 @@
 @section('title','Creator Studio')
 @push('head')
   <link rel="stylesheet" href="{{ asset('css/creator-studio-analytics.css') }}?v=3">
-  <script defer src="{{ asset('js/creator-studio-analytics.js') }}?v=1"></script>
+  <script defer src="{{ asset('js/creator-studio-analytics.js') }}?v=2"></script>
 @endpush
 @section('content')
 <div class="container inner-page studio-dashboard">

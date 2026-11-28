@@ -62,8 +62,9 @@ async function capture(page,name){
    return {width:root.clientWidth,scroll:root.scrollWidth,left:r.left,right:r.right,fit:controls.every(b=>b.width>0&&b.left>=-3&&b.right<=root.clientWidth+3),palette:[style.backgroundColor,style.color]};
   });
   assert.ok(layout.scroll<=layout.width+4&&layout.left>=-3&&layout.right<=layout.width+3&&layout.fit,JSON.stringify(layout));
-  palettes[theme]=layout.palette;assert.deepEqual(monitored.get(page),[],name+' browser errors');
+  palettes[theme]=layout.palette;
   const file=name+'-'+theme+'.png';await page.screenshot({path:dir+'/'+file,fullPage:true,animations:'disabled',timeout:15000});evidence.screenshots.push(file);
+  assert.deepEqual(monitored.get(page),[],name+' browser errors');
  }
  assert.notDeepEqual(palettes.light,palettes.dark,name+' theme palette');
  record(name+' both themes, responsive layout and private headers');
@@ -75,6 +76,16 @@ try{
  browser=await browsers[engine].launch({headless:true});
  const guest=await newPage();await visit(guest,'/studio/invoices');assert.equal(new URL(guest.url()).pathname,'/login');await guest.context().close();
  const seller=await login('seller'),buyer=await login('buyer'),recipient=await login('recipient'),outsider=await login('outsider'),admin=await login('admin');
+ // Verify the dashboard itself, including a real filter refresh, before opening invoices.
+ await visit(seller,'/studio');
+ await seller.locator('[data-chart="revenue"] svg').waitFor();
+ assert.deepEqual(monitored.get(seller),[],'Studio initial render');
+ const period=seller.locator('[data-filter-period="quarter"]');
+ await period.click();
+ await seller.waitForFunction(()=>document.querySelector('[data-filter-period="quarter"]').getAttribute('aria-pressed')==='true' && !document.querySelector('[data-studio-analytics]').hasAttribute('aria-busy'));
+ assert.equal(await seller.locator('[data-studio-error]').isHidden(),true);
+ assert.deepEqual(monitored.get(seller),[],'Studio analytics refresh');
+ record('Studio analytics initial render and quarter refresh with optional heatmap absent');
  execFileSync('php',['tests/browser/native-invoice-fixture.php','baseline'],{stdio:'inherit'});
  await visit(seller,'/studio/invoices');await seller.getByRole('heading',{name:'Sales invoices',exact:true}).waitFor();await capture(seller,'01-studio-list');
  const toggle=seller.locator('[data-theme-toggle]').first();
