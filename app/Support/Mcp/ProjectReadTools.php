@@ -158,7 +158,8 @@ final class ProjectReadTools
             'tasks_truncated'=>$total>20,'tasks'=>$tasks,'delivery_progress_percent'=>$progress,
             'progress_basis'=>'Native delivery-state estimate; checklist completion is not customer acceptance.',
             'approved_due_on'=>(clone $extensions)->where('status','approved')->latest('id')->value('proposed_due_on'),
-            'pending_extension'=>(clone $extensions)->where('status','pending')->exists()];
+            'pending_extension'=>(clone $extensions)->where('status','pending')->exists(),
+            'version'=>ProjectStateVersion::tracking((int)$order->id,(int)$order->serviceInquiry->id)];
     }
 
     private function contracts(User $actor,string $role='both'): Builder
@@ -203,7 +204,8 @@ final class ProjectReadTools
             ...$this->page($page,fn ($r)=>['milestone_id'=>(int)$r->id,'sequence'=>(int)$r->sequence,'title'=>$r->title,
                 'amount'=>(string)$r->amount,'due_on'=>$r->due_on?->toDateString(),'status'=>$r->status,
                 'accepted_at'=>$r->accepted_at?->toIso8601String()]),
-            'amount_basis'=>'Contractual milestone amount, not payment or escrow status.'];
+            'amount_basis'=>'Contractual milestone amount, not payment or escrow status.',
+            'version'=>ProjectStateVersion::contract((int)$contract->id)];
     }
 
     private function page($page,callable $map): array
