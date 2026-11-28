@@ -55,7 +55,7 @@ return new class extends Migration {
         // MySQL enforces the accounting invariants in addition to the service.
         // SQLite test fixtures exercise the same domain checks and FK/unique constraints.
         if (DB::getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE marketplace_invoices ADD CONSTRAINT invoice_amount_check CHECK (currency = 'USD' AND total > 0 AND subtotal = total AND issuer_id <> recipient_id AND revision >= 1)");
+            DB::statement("ALTER TABLE marketplace_invoices ADD CONSTRAINT invoice_amount_check CHECK (currency = 'USD' AND total > 0 AND subtotal = total AND revision >= 1)");
             DB::statement("ALTER TABLE marketplace_invoices ADD CONSTRAINT invoice_lifecycle_check CHECK ((status = 'draft' AND invoice_number IS NULL AND issued_at IS NULL AND voided_at IS NULL AND discarded_at IS NULL) OR (status = 'discarded' AND invoice_number IS NULL AND issued_at IS NULL AND voided_at IS NULL AND discarded_at IS NOT NULL) OR (status = 'issued' AND invoice_number IS NOT NULL AND issued_at IS NOT NULL AND voided_at IS NULL AND discarded_at IS NULL) OR (status = 'void' AND invoice_number IS NOT NULL AND issued_at IS NOT NULL AND voided_at IS NOT NULL AND discarded_at IS NULL))");
             DB::statement('ALTER TABLE marketplace_invoice_items ADD CONSTRAINT invoice_item_amount_check CHECK (position = 1 AND quantity = 1 AND unit_amount > 0 AND line_total = unit_amount)');
         }

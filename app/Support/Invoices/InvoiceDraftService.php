@@ -196,6 +196,7 @@ final class InvoiceDraftService
 
     public function list(User $actor,bool $studio,?string $status=null): mixed
     {
+        $actor=User::query()->whereKey($actor->id)->firstOrFail();
         return $this->policy->scoped($actor,$studio)->when($status,fn($q)=>$q->where('status',$status))
             ->with('order:id,public_reference')->latest('id')->paginate(20)->withQueryString();
     }
@@ -216,6 +217,8 @@ final class InvoiceDraftService
         // Recipient has no draft visibility. Lock parent order for a coherent
         // snapshot; do not expose actor/version tokens to recipients.
         return DB::transaction(function()use($actor,$hint): array {
+            $actor=User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
+            abort_unless($this->policy->viewAny($actor),404);
             $o=MarketplaceOrder::query()->whereKey($hint->marketplace_order_id)->where('buyer_id',$actor->id)->lockForUpdate()->firstOrFail();
             $payments=$o->payments()->orderBy('id')->lockForUpdate()->get(['id','status','live_mode','settlement_reference']);
             $i=$this->policy->scoped($actor,false)->whereKey($hint->id)->lockForUpdate()->firstOrFail();
