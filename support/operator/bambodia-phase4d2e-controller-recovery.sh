@@ -118,7 +118,21 @@ verify_retained(){
   echo "RETAINED_FIVE_FILES_AND_CANDIDATE_PACKAGE=PASS"
 }
 
-api(){ curl -fLsS --retry 2 --max-time 60 "https://api.github.com/repos/$REPO/$1" -o "$2"; }
+# Use the existing root GitHub CLI session; never print or export its token.
+# Keep the original GET endpoints, JSON validation and fail-closed gates.
+api(){
+  local endpoint=$1 target=$2
+  command -v gh >/dev/null && command -v timeout >/dev/null || fail GITHUB_CLI_RUNTIME_MISSING
+  if ! timeout 60s env -u GH_DEBUG -u DEBUG GH_PROMPT_DISABLED=1 GH_PAGER=cat GH_HOST=github.com \
+    gh api --hostname github.com --method GET "repos/$REPO/$endpoint" \
+    >"$target.partial" 2>>"$WORK/github-api.private.log"; then
+    rm -f -- "$target.partial"
+    echo "GITHUB_API_FAILED_ENDPOINT=$endpoint" >&2
+    fail GITHUB_AUTHENTICATED_GET_FAILED
+  fi
+  [[ -s "$target.partial" ]] || fail GITHUB_EMPTY_RESPONSE
+  mv -fT -- "$target.partial" "$target"
+}
 repo_gate(){
   api commits/main "$WORK/main.json"
   api "actions/runs?head_sha=$RELEASE&event=push" "$WORK/ci.json"
