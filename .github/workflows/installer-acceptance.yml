@@ -69,3 +69,4 @@ jobs:
           php artisan test --filter=CreatorBadgePublicDisplayTest
           php artisan test --filter=UserManagerCrudTest
           php artisan test --filter=ManualAccountVerificationTest
+          php artisan test --filter=McpAdvancedContentToolsTest

@@ -4,6 +4,8 @@ import argparse
 import hashlib
 from pathlib import Path
 import re
+import subprocess
+import tempfile
 
 READS = ("bambodia_categories", "bambodia_content_summary", "bambodia_media_search",
          "bambodia_draft_validate", "bambodia_draft_preview")
@@ -35,7 +37,7 @@ def stage(source):
     dispatch = b"            " + b",\n            ".join(b"'" + x.encode() + b"'" for x in READS + WRITES) + b" => app(" + CLASS + b"::class)->call($name, $args, $owner, $token->allows('mcp.read'), $token->allows('mcp.write')),\n"
     definitions = b"        $base = [...$base, ..." + CLASS + b"::definitions((bool) config('mcp.production_writes_enabled', false))];\n"
     new_writes = OLD_WRITES[:-2] + b"," + names(WRITES) + b"];"
-    new_security = SECURITY_WRITES[:-10] + b"\n            " + names(WRITES) + b",\n        ];"
+    new_security = SECURITY_WRITES.removesuffix(b"        ];") + b"            " + names(WRITES) + b",\n        ];"
     changes = [(DISPATCH, dispatch + DISPATCH), (DEFINITION, definitions + DEFINITION),
                (OLD_WRITES, new_writes), (SECURITY_WRITES, new_security)]
     output = source
@@ -67,6 +69,14 @@ def self_test():
         except ValueError:
             continue
         raise AssertionError("Unsafe candidate accepted")
+    # Synthetic controller fixture verifies executable PHP registry behavior only.
+    # The actual installed OAuth middleware/controller still requires staging acceptance.
+    fixture = Path(__file__).with_name("bambodia-mcp-phase3-controller-fixture.php").read_bytes()
+    with tempfile.TemporaryDirectory(prefix="bambodia-mcp-phase3-") as tmp:
+        candidate = Path(tmp) / "candidate.php"
+        candidate.write_bytes(stage(fixture))
+        subprocess.run(["php", "-l", str(candidate)], check=True)
+        subprocess.run(["php", str(candidate)], check=True)
     print("PASS: additive registry, write lists, existing gate, duplicate and drift rejection")
 
 def main():

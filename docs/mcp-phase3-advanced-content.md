@@ -18,3 +18,19 @@ Five reads and three writes, preserving the existing 16 tools. Draft preview/val
 python3 support/bambodia-mcp-stage-advanced-content.py --self-test
 php artisan test --filter=McpAdvancedContentToolsTest
 ```
+
+## Phase 3B isolated acceptance checklist
+The executable synthetic controller test checks the exact eight inserted dispatch paths, both OAuth metadata locations, the existing WRITE gate and insufficient-scope challenge, and 24/15 discovery under enabled/disabled config. It is not the actual OAuth middleware or a grant-lifecycle test. The MySQL installer workflow also explicitly runs the Phase 3 feature tests; the Quality workflow runs them on SQLite.
+
+Before an operator deploys: use a fresh isolated Laravel application copy, throwaway database and synthetic accounts, separate OAuth client and signing keys, no production mail, object storage, payment credentials or network callbacks. Bind the HTTP service to a private loopback interface; do not expose the staging copy publicly. Use the actual reviewed overlay source and its middleware, routing and grant model, without copying any production credentials. If issuer validation requires the production hostname, use an isolated test-only issuer/host configuration with no production DNS or callbacks and document the difference. Refuse to relax the production issuer check.
+
+Record the exact candidate commit and blob hashes, fixture counts, and each result:
+- Before patch: baseline tool registry for WRITE off/on; record names and metadata, never token values.
+- After patch: compare old tools byte-for-byte at the definition level; confirm only five READ and three WRITE additions.
+- With valid read grant: all five reads succeed; direct calls to each of the three writes are rejected with OAuth insufficient-scope challenge. With valid write grant: all three writes work on synthetic owned fixtures.
+- Without bearer, wrong audience/issuer/client, expired or revoked access grant, revoked consent, inactive user, staff and customer: reject access; do not trust browser session.
+- With second super administrator: all owner-scoped reads and writes against foreign draft or media fail identically to nonexistent IDs. Check published, pending, wrong-entity, unsupported fields, forged owner, malformed and oversized input. Rejected operations must not create audit success events or modify fixtures.
+- Confirm duplicate source intact, fresh draft identity, no media/licenses/files/terms/commerce state, plain-text preview, approved owned media only; validate audit event actor and no-op metadata changes.
+- Roll back staged controller and service; rerun baseline discovery. Discard the isolated database and credentials. Do not migrate or write to production.
+
+The actual installed overlay is not part of this PR. Record this gate as BLOCKED until a reviewed copy is available and the isolated HTTP tests have been run. Do not claim production OAuth acceptance on the synthetic fixture alone.

@@ -131,6 +131,14 @@ final class AdvancedContentTools
         if (array_diff(array_keys($values),array_keys($rules))) {
             $this->reject('arguments','Unsupported arguments or fields.');
         }
+        // Enforce JSON scalar types as advertised, not Laravel's coercible forms.
+        foreach ($values as $field=>$value) {
+            $rule=$rules[$field];
+            if ((in_array('integer',$rule,true) && ! is_int($value))
+                || (in_array('boolean',$rule,true) && ! is_bool($value))) {
+                $this->reject($field,'Invalid JSON scalar type.');
+            }
+        }
         return Validator::make($values,$rules)->validate();
     }
 
@@ -144,7 +152,7 @@ final class AdvancedContentTools
     private function page(Builder $query,array $v,array $columns): array
     {
         $page = $query->paginate(20,$columns,'page',(int)($v['page']??1));
-        return ['data'=>$page->items(),'page'=>$page->currentPage(),'pages'=>$page->lastPage(),'per_page'=>20,'total'=>$page->total()];
+        return ['data'=>array_map(fn (Model $row)=>$row->only($columns),$page->items()),'page'=>$page->currentPage(),'pages'=>$page->lastPage(),'per_page'=>20,'total'=>$page->total()];
     }
 
     private function summary(): array

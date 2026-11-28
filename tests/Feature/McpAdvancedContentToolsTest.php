@@ -94,7 +94,7 @@ class McpAdvancedContentToolsTest extends TestCase
         $this->assertStringNotContainsString($post->title,json_encode($summary));
         $media=$s->call('bambodia_media_search',['mime_type'=>'image/png','search'=>'cover'],$owner,true,false);
         $this->assertSame(1,$media['total']);
-        $this->assertSame($ownMedia->id,$media['data'][0]->id);
+        $this->assertSame($ownMedia->id,$media['data'][0]['id']);
         $this->assertStringNotContainsString('storage_path',json_encode($media));
         $args=['entity'=>'post','id'=>$post->id];
         $validation=$s->call('bambodia_draft_validate',$args,$owner,true,false);
@@ -107,6 +107,10 @@ class McpAdvancedContentToolsTest extends TestCase
             $this->reject(fn ()=>$s->call($name,['entity'=>'policy','id'=>1],$owner,true,false),'entity');
         }
         $this->reject(fn ()=>$s->call('bambodia_media_search',['user_id'=>$other->id],$owner,true,false),'arguments');
+        $this->reject(fn ()=>$s->call('bambodia_media_search',['page'=>'1'],$owner,true,false),'page');
+        $this->reject(fn ()=>$s->call('bambodia_media_search',['page'=>1001],$owner,true,false),'page');
+        $this->assertSame(0,$s->call('bambodia_media_search',['search'=>'%'],$owner,true,false)['total']);
+        $this->assertSame(0,$s->call('bambodia_media_search',['search'=>'_'],$owner,true,false)['total']);
         $this->assertDatabaseCount('content_entries',3);
         $this->assertDatabaseCount('media_assets',3);
     }
@@ -142,6 +146,10 @@ class McpAdvancedContentToolsTest extends TestCase
         foreach (['review_status','storage_path','rights_basis','user_id'] as $field) $this->reject(fn ()=>$s->call('bambodia_media_metadata',['id'=>$asset->id,'confirm_metadata_change'=>true,'fields'=>[$field=>'blocked']],$owner,true,true),'arguments');
         $this->reject(fn ()=>$s->call('bambodia_media_metadata',['id'=>$asset->id,'confirm_metadata_change'=>false,'fields'=>['alt_text'=>'Blocked alt']],$owner,true,true),'confirm_metadata_change');
         $this->reject(fn ()=>$s->call('bambodia_content_metadata',['entity'=>'post','id'=>$post->id,'fields'=>['seo_title'=>'<script>alert(1)</script>']],$owner,true,true),'seo_title');
+        $this->reject(fn ()=>$s->call('bambodia_media_metadata',['id'=>$asset->id,'confirm_metadata_change'=>1,'fields'=>['alt_text'=>'Blocked alt']],$owner,true,true),'confirm_metadata_change');
+        $this->reject(fn ()=>$s->call('bambodia_content_metadata',['entity'=>'post','id'=>$post->id,'fields'=>[]],$owner,true,true),'fields');
+        $s->call('bambodia_content_metadata',['entity'=>'post','id'=>$copy['id'],'fields'=>['seo_title'=>'New SEO title']],$owner,true,true);
+        $s->call('bambodia_media_metadata',['id'=>$asset->id,'confirm_metadata_change'=>true,'fields'=>['alt_text'=>'Updated alt text']],$owner,true,true);
         $this->assertSame(3,AuditEvent::query()->where('event','like','mcp.phase3.%')->count());
         $this->assertSame('published',$public->fresh()->status);
         $this->assertDatabaseCount('content_entries',4);
