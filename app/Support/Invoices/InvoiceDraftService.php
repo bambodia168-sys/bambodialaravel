@@ -7,6 +7,7 @@ use App\Models\MarketplaceInvoice;
 use App\Models\MarketplaceInvoiceItem;
 use App\Models\MarketplaceOrder;
 use App\Models\User;
+use App\Support\UserManagementAccess;
 use App\Policies\MarketplaceInvoicePolicy;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -107,10 +108,17 @@ final class InvoiceDraftService
         }
     }
 
-    public function preview(User $actor,string $reference): array
+    private function assertMcpReader(User $actor): void
     {
-        return DB::transaction(function()use($actor,$reference): array {
+        abort_unless($actor->role==='super_admin' && $actor->account_status==='active'
+            && MarketplaceInvoicePolicy::enabled() && UserManagementAccess::allows($actor,'commerce_orders'),404);
+    }
+
+    public function preview(User $actor,string $reference,bool $mcp=false): array
+    {
+        return DB::transaction(function()use($actor,$reference,$mcp): array {
             [$seller,$buyer,$o,$payments,$invoice]=$this->lockSource($actor,$this->order($reference,(int)$actor->id));
+            if ($mcp) $this->assertMcpReader($seller);
             abort_unless($this->eligible($buyer,$o,$payments) && !$invoice,404);
             return ['reference'=>$o->public_reference,'description'=>$o->listing_title,'currency'=>$o->currency,
                 'total'=>$o->total,'version'=>$this->sourceVersion($o,$payments,null)];
@@ -201,29 +209,41 @@ final class InvoiceDraftService
             ->with('order:id,public_reference')->latest('id')->paginate(20)->withQueryString();
     }
 
-    public function detail(User $actor,bool $studio,string $id): array
+    public function detail(User $actor,bool $studio,string $id,bool $mcp=false): array
     {
         abort_unless(Str::isUuid($id),404);
         $hint=$this->policy->scoped($actor,$studio)->where('public_id',$id)->firstOrFail();
         if ($studio) {
-            return DB::transaction(function()use($actor,$hint): array {
+            return DB::transaction(function()use($actor,$hint,$mcp): array {
                 [$seller,$buyer,$o,$payments,$i,$items]=$this->lockSource($actor,$hint->order()->firstOrFail());
                 abort_unless($i && $i->public_id===$hint->public_id && $this->policy->view($seller,$i),404);
-                return $this->detailData($i,$o,$payments,$items,
-                    MarketplaceInvoicePolicy::writesEnabled() && $this->privateDraft($i),
+                if ($mcp) $this->assertMcpReader($seller);
+                $data=$this->detailData($i,$o,$payments,$items,
+                    ($mcp || MarketplaceInvoicePolicy::writesEnabled()) && $this->privateDraft($i),
                     $this->eligible($buyer,$o,$payments));
+                return $mcp ? $this->mcpMetadata($i,$data,true) : $data;
             },3);
         }
         // Recipient has no draft visibility. Lock parent order for a coherent
         // snapshot; do not expose actor/version tokens to recipients.
-        return DB::transaction(function()use($actor,$hint): array {
+        return DB::transaction(function()use($actor,$hint,$mcp): array {
             $actor=User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
             abort_unless($this->policy->viewAny($actor),404);
+            if ($mcp) $this->assertMcpReader($actor);
             $o=MarketplaceOrder::query()->whereKey($hint->marketplace_order_id)->where('buyer_id',$actor->id)->lockForUpdate()->firstOrFail();
             $payments=$o->payments()->orderBy('id')->lockForUpdate()->get(['id','status','live_mode','settlement_reference']);
             $i=$this->policy->scoped($actor,false)->whereKey($hint->id)->lockForUpdate()->firstOrFail();
-            return $this->detailData($i,$o,$payments,$i->items()->lockForUpdate()->get(),false,false);
+            $data=$this->detailData($i,$o,$payments,$i->items()->lockForUpdate()->get(),false,false);
+            return $mcp ? $this->mcpMetadata($i,$data,false) : $data;
         },3);
+    }
+
+    private function mcpMetadata(MarketplaceInvoice $i,array $data,bool $issuer): array
+    {
+        return [...$data,'relationship'=>$issuer?'issuer':'recipient',
+            'created_at'=>$i->created_at?->toIso8601String(),'issued_at'=>$i->issued_at?->toIso8601String(),
+            'voided_at'=>$i->voided_at?->toIso8601String(),'discarded_at'=>$i->discarded_at?->toIso8601String(),
+            'revision'=>$data['can_update']?$i->revision:null,'version'=>$data['can_update']?$data['version']:null];
     }
 
     private function detailData(MarketplaceInvoice $i,MarketplaceOrder $o,Collection $payments,Collection $items,bool $draftActions,bool $eligible): array

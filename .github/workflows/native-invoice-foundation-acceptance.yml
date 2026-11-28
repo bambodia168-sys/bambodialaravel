@@ -51,8 +51,10 @@ jobs:
           php -l routes/web.php
           php artisan view:cache
           php artisan route:list --path=invoices
+      - name: Additive invoice READ overlay fixture
+        run: python3 -B support/bambodia-mcp-stage-invoice-read.py --self-test
       - name: Invoice isolated tests
-        run: php artisan test --filter='InvoiceMoneyTest|NativeInvoiceFoundationTest'
+        run: php artisan test --filter='InvoiceMoneyTest|NativeInvoiceFoundationTest|McpInvoiceReadToolsTest'
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -116,4 +118,4 @@ jobs:
           php artisan config:clear
           php -r '$p=new PDO("mysql:host=127.0.0.1;port=3306;dbname=bambodia_invoice_acceptance",getenv("DB_USERNAME"),getenv("DB_PASSWORD")); if($p->query("SELECT DATABASE()")->fetchColumn()!=="bambodia_invoice_acceptance")exit(1); echo "DISPOSABLE_MYSQL_IDENTITY=PASS\n";'
       - name: Invoice tests against disposable MySQL
-        run: php artisan test --filter='InvoiceMoneyTest|NativeInvoiceFoundationTest'
+        run: php artisan test --filter='InvoiceMoneyTest|NativeInvoiceFoundationTest|McpInvoiceReadToolsTest'
