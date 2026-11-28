@@ -32,9 +32,21 @@ final class InvoiceDraftService
             (string)$o->listing_title,(string)$o->currency,InvoiceMoney::format(InvoiceMoney::cents($o->total))];
     }
 
+    // All native payment/refund writers acquire the source order before changing
+    // evidence. Lock the operation row as well, avoiding a stale consistent read.
+    private function refundEvidence(MarketplaceOrder $o): ?array
+    {
+        $record=$o->operations()->lockForUpdate()->first();
+        if (!$record || ($record->refund_status===null && $record->refund_reference===null
+            && $record->refund_resolved_at===null)) return null;
+        return [(int)$record->commerce_payment_id,$record->refund_status,$record->refund_reference,
+            $record->refund_resolved_at?->toIso8601String()];
+    }
+
     private function sourceVersion(MarketplaceOrder $o,Collection $payments,?MarketplaceInvoice $invoice): string
     {
         return $this->digest('source-v1',[$this->sourceSnapshot($o),$o->status,$o->completed_at?->toIso8601String(),
+            $o->receipt_number,$this->refundEvidence($o),
             $payments->map(fn($p)=>[(int)$p->id,$p->status,(bool)$p->live_mode,$p->settlement_reference])->all(),
             $invoice?->public_id,$invoice?->revision,$invoice?->status]);
     }
@@ -77,7 +89,7 @@ final class InvoiceDraftService
         return $buyer->account_status==='active' && $o->status==='awaiting_payment'
             && $o->currency==='USD' && InvoiceMoney::cents($o->total)>0
             && $o->receipt_number===null && $o->completed_at===null
-            && ! $payments->contains(fn($p)=>$p->status==='paid');
+            && ! $payments->contains(fn($p)=>$p->status==='paid') && $this->refundEvidence($o)===null;
     }
 
     private function snapshotMatches(MarketplaceOrder $o,MarketplaceInvoice $i,Collection $items): bool
@@ -263,13 +275,14 @@ final class InvoiceDraftService
         $paid=$payments->filter(fn($p)=>$p->status==='paid' && $p->live_mode && filled($p->settlement_reference));
         $anyPaid=$payments->contains(fn($p)=>$p->status==='paid');
         $state='review_required';
+        $refund=$this->refundEvidence($o);
         if ($matches) {
-            if ($o->status==='awaiting_payment' && !$anyPaid && !$o->receipt_number && !$o->completed_at) $state='unpaid';
-            elseif ($o->status==='cancelled' && !$anyPaid) $state='cancelled';
+            if ($o->status==='awaiting_payment' && !$anyPaid && !$o->receipt_number && !$o->completed_at && $refund===null) $state='unpaid';
+            elseif ($o->status==='cancelled' && !$anyPaid && !$o->receipt_number && !$o->completed_at && $refund===null) $state='cancelled';
             elseif ($paid->count()===1 && $payments->where('status','paid')->count()===1 && $o->receipt_number && $o->completed_at) {
-                if ($o->status==='completed') $state='paid';
-                elseif ($o->status==='refunded' && $o->operations()->where('commerce_payment_id',$paid->first()->id)
-                    ->where('refund_status','refunded')->whereNotNull('refund_reference')->whereNotNull('refund_resolved_at')->exists()) $state='refunded';
+                if ($o->status==='completed' && $refund===null) $state='paid';
+                elseif ($o->status==='refunded' && $refund!==null && $refund[0]===(int)$paid->first()->id
+                    && $refund[1]==='refunded' && filled($refund[2]) && $refund[3]!==null) $state='refunded';
             }
         }
         $overdue=$i->status==='issued' && $state==='unpaid' && $i->due_on

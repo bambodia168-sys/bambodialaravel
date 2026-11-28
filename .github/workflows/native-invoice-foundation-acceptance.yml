@@ -133,3 +133,11 @@ jobs:
           test -z "$DB_URL"
           php -l support/bambodia-mcp-phase4e3-concurrency.php
           php support/bambodia-mcp-phase4e3-concurrency.php
+
+      - name: Actual MySQL deadlock and native manual review race
+        env:
+          INVOICE_CONCURRENCY_ISOLATED: '1'
+        run: |
+          set -Eeuo pipefail
+          php -l support/bambodia-mcp-phase4e4-financial-concurrency.php
+          php support/bambodia-mcp-phase4e4-financial-concurrency.php

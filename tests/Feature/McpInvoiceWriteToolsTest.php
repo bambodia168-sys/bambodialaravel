@@ -180,4 +180,41 @@ final class McpInvoiceWriteToolsTest extends TestCase
         $r=$this->write('create',$args,$a);$this->assertFalse($r['replayed']);
         $this->assertDatabaseCount('mcp_invoice_operations',1);
     }
+
+    public function test_native_http_and_mcp_share_replay_ledger_without_duplicate_audit(): void
+    {
+        $a=$this->actor();$a->markEmailAsVerified();$b=$this->actor();$o=$this->order($a,$b);
+        $args=$this->createArgs($a,$o);$before=$this->protected();
+        $this->actingAs($a)->post(route('studio.invoices.store'),[...$args,'confirm'=>'1'])->assertRedirect();
+        $i=MarketplaceInvoice::query()->sole();
+        $r=$this->write('create',$args,$a);
+        $this->assertTrue($r['replayed']);$this->assertSame($i->public_id,$r['invoice_id']);
+        $this->assertDatabaseCount('mcp_invoice_operations',1);
+        $this->assertDatabaseHas('audit_events',['id'=>$r['audit_id'],'event'=>'invoice.draft.create','actor_id'=>$a->id]);
+        $u=[...$this->args($r),'due_on'=>now(config('invoices.timezone'))->addDay()->toDateString()];
+        $updated=$this->write('update',$u,$a);
+        $html=$u;unset($html['invoice_id']);$html['confirm']='1';
+        $this->patch(route('studio.invoices.update',$i->public_id),$html)->assertRedirect(route('studio.invoices.show',$i->public_id));
+        $this->assertSame(2,$i->fresh()->revision);
+        $this->assertDatabaseCount('mcp_invoice_operations',2);
+        $this->assertSame(2,AuditEvent::query()->where('event','like','invoice.draft.%')->count());
+        $this->assertSame(1,AuditEvent::query()->where('event','like','mcp.invoice.draft.%')->count());
+        $this->assertDatabaseHas('audit_events',['id'=>$updated['audit_id'],'event'=>'mcp.invoice.draft.update']);
+        $this->assertSame($before,$this->protected());
+        // Foreign keys must preserve the source, canonical item, ledger and audit linkage.
+        foreach([
+            ['marketplace_orders','id',$o->id],['marketplace_invoices','id',$i->id],
+            ['audit_events','id',$updated['audit_id']],['users','id',$a->id],
+        ] as [$table,$column,$id]) {
+            try {
+                DB::transaction(fn()=>DB::table($table)->where($column,$id)->delete());
+                $this->fail('Financial history deletion must be restricted.');
+            } catch(\Illuminate\Database\QueryException $e) {
+                $this->assertSame('23000',(string)$e->getCode());
+            }
+        }
+        $this->assertSame(2,$i->fresh()->revision);
+        $this->assertDatabaseCount('mcp_invoice_operations',2);
+        $this->assertSame($before,$this->protected());
+    }
 }

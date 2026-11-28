@@ -167,6 +167,13 @@ final class McpInvoiceReadToolsTest extends TestCase
         $o->operations()->create(['commerce_payment_id'=>$payment->id,'refund_status'=>'refunded','refund_reference'=>'SECRET-'.Str::uuid(),'refund_resolved_at'=>now()]);
         $this->assertSame('refunded',$get()['payment_state']);$this->assertSame('0.00',$get()['outstanding_amount']);
         $o->update(['status'=>'completed']);
+        $this->assertSame('review_required',$get()['payment_state']);
+        $this->assertNull($get()['outstanding_amount']);
+        $o->update(['status'=>'refunded']);
+        $o->operations()->update(['refund_reference'=>'']);
+        $this->assertSame('review_required',$get()['payment_state']);
+        $o->operations()->update(['refund_reference'=>'SECRET-'.Str::uuid()]);
+        $o->update(['status'=>'completed']);
         $o->payments()->create(['number'=>(string)Str::uuid(),'commerce_payment_method_id'=>$method->id,
             'method_name'=>$method->name,'provider'=>'bank_transfer','status'=>'paid','live_mode'=>true,'settlement_reference'=>'SECRET-'.Str::uuid()]);
         $this->assertSame('review_required',$get()['payment_state']);
@@ -185,5 +192,35 @@ final class McpInvoiceReadToolsTest extends TestCase
         $b->update(['account_status'=>'active']);
         $zero=$this->order($a,$b,'0.00');
         $this->rejects(fn()=>$this->callTool('invoice_source_preview',['order_reference'=>$zero->reference()],$a),'resource');
+    }
+
+    public function test_contradictory_cancellation_and_refund_evidence_fail_closed(): void
+    {
+        $a=$this->actor();$b=$this->actor();
+        $o=$this->order($a,$b);$i=$this->invoice($a,$o,'issued');
+        $get=fn()=>$this->callTool('invoice_get',['invoice_id'=>$i->public_id],$a);
+        $o->update(['status'=>'cancelled']);
+        $this->assertSame('cancelled',$get()['payment_state']);
+        $o->update(['receipt_number'=>(string)Str::uuid()]);
+        $this->assertSame('review_required',$get()['payment_state']);
+        $this->assertNull($get()['outstanding_amount']);
+        $o->update(['receipt_number'=>null,'completed_at'=>now()]);
+        $this->assertSame('review_required',$get()['payment_state']);
+        $o->update(['completed_at'=>null,'status'=>'awaiting_payment']);
+        $method=CommercePaymentMethod::query()->firstOrCreate(['name'=>'Synthetic evidence bank'],['available'=>true]);
+        $p=$o->payments()->create(['number'=>(string)Str::uuid(),'commerce_payment_method_id'=>$method->id,
+            'method_name'=>$method->name,'provider'=>'bank_transfer','status'=>'rejected','live_mode'=>true]);
+        $o->operations()->create(['commerce_payment_id'=>$p->id,'refund_status'=>'refunded','refund_reference'=>'QA-'.Str::uuid(),'refund_resolved_at'=>now()]);
+        $before=$this->snapshot();
+        $this->assertSame('review_required',$get()['payment_state']);
+        $this->assertNull($get()['outstanding_amount']);
+        $s=$this->callTool('invoices_summary',[],$a);
+        $this->assertSame(1,$s['review_required_count']);$this->assertSame('0.00',$s['issued_unpaid_total']);
+        $this->assertSame($before,$this->snapshot());
+        $source=$this->order($a,$b);
+        $p=$source->payments()->create(['number'=>(string)Str::uuid(),'commerce_payment_method_id'=>$method->id,
+            'method_name'=>$method->name,'provider'=>'bank_transfer','status'=>'rejected','live_mode'=>true]);
+        $source->operations()->create(['commerce_payment_id'=>$p->id,'refund_status'=>'refunded','refund_reference'=>'QA-'.Str::uuid(),'refund_resolved_at'=>now()]);
+        $this->rejects(fn()=>$this->callTool('invoice_source_preview',['order_reference'=>$source->reference()],$a),'resource');
     }
 }
