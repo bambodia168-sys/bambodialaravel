@@ -1,0 +1,11 @@
+# Phase 4B — Commerce READ candidate
+
+Six tools, no migration or financial mutations. All queries require a fresh active super-admin and the native commerce_orders capability; individual orders and licenses additionally require buyer/seller or customer/product-owner participation. No platform-wide detail bypass. The existing aggregate orders_summary is unchanged. New transaction summary is participant-scoped, grouped by currency and current completed/refunded status, using completion time and live verified paid attempts (including a settlement reference). Free orders are excluded from financial totals. Gross original order values are not settlement amounts or profit.
+
+Receipt status uses native OrderReceipt::status; receipt UUID, token, QR, verification URL, names and emails never returned. License response separates installation validity from time-limited download entitlement, uses native methods, and excludes keys, prefixes, domains, secrets and paths. License scope checks linked entitlement owner and release consistency. All schemas reject unknown keys and nonmatching scalar types. Public order references are ten-digit strings; license UUID only. No calls to gateway or fulfillment methods, no read-side mutation.
+
+Existing 24 definitions and OAuth/write lists remain unchanged. The actual production controller is an out-of-tree OAuth overlay. The staging script accepts only the previously deployed Phase 3 controller blob 832c692c12ef23e3584cc820512619383822c406 and writes a separate candidate. Synthetic PHP acceptance compares 24→30 and write-disabled 15→21 definitions. Actual OAuth acceptance against the staged overlay and disposable DB, including negative and redaction tests, remains a required separate release gate. No production installation performed.
+
+Invoice/project tools are out of scope. All changes are on a draft feature PR.
+
+Security review: regression tests assert exact output keys, inconsistent entitlement holder/release/product rejection, and all nine prior WRITE gates including disabled WRITE configuration. Actual isolated OAuth integration remains pending.

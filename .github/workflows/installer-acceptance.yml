@@ -70,3 +70,4 @@ jobs:
           php artisan test --filter=UserManagerCrudTest
           php artisan test --filter=ManualAccountVerificationTest
           php artisan test --filter=McpAdvancedContentToolsTest
+          php artisan test --filter=McpCommerceReadToolsTest
