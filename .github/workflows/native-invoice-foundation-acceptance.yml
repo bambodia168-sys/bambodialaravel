@@ -58,7 +58,7 @@ jobs:
           node-version: '24'
       - name: Build existing frontend assets for regression tests
         run: |
-          npm ci --ignore-scripts
+          npm install --ignore-scripts
           npm run build
           test -s public/build/manifest.json
       - name: Existing commerce and project regression tests
