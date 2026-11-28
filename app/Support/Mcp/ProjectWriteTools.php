@@ -84,6 +84,13 @@ final class ProjectWriteTools
                 return [...json_decode($prior->result,true,512,JSON_THROW_ON_ERROR),'replayed'=>true];
             }
             if (!hash_equals($current,$v['expected_version'])) $this->reject('expected_version','Project state changed. Read the latest version and review again.');
+            // Date eligibility is checked for new writes only, so a completed request can
+            // still be replayed after its due date has passed.
+            if (isset($v['due_on'])) {
+                $rules=['required','date_format:Y-m-d','after_or_equal:today'];
+                if ($name==='bambodia_tracking_task_create') $rules[]='before_or_equal:'.now()->addYear()->toDateString();
+                Validator::make(['due_on'=>$v['due_on']],['due_on'=>$rules])->validate();
+            }
             if ($contractMode) {
                 $data=$this->addMilestone($contract,$v);
                 $event='contract.milestone.created';
@@ -127,9 +134,9 @@ final class ProjectWriteTools
     {
         $ref=['required','string','regex:/^'.OrderReference::DIGITS.'$/D'];
         $title=['required','string','min:5','max:180'];
-        $date=['sometimes','nullable','string','date_format:Y-m-d','after_or_equal:today'];
+        $date=['sometimes','nullable','string','date_format:Y-m-d'];
         $rules=match($name) {
-            'bambodia_tracking_task_create'=>['reference'=>$ref,'title'=>$title,'due_on'=>[...$date,'before_or_equal:'.now()->addYear()->toDateString()]],
+            'bambodia_tracking_task_create'=>['reference'=>$ref,'title'=>$title,'due_on'=>$date],
             'bambodia_tracking_task_update'=>['reference'=>$ref,'task_id'=>['required','integer','min:1'],'status'=>['required','string','in:'.implode(',',self::STATUSES)]],
             'bambodia_contract_milestone_create'=>['contract_id'=>['required','string','regex:/^[1-9][0-9]{8}$/D'],
                 'title'=>$title,'description'=>['required','string','min:30','max:4000'],

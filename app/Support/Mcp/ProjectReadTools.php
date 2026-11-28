@@ -140,6 +140,11 @@ final class ProjectReadTools
     {
         $order=$this->tracking($actor)->where('public_reference',$reference)->first();
         if (!$order) $this->reject('reference','Authorized verified project not found.');
+        $version=ProjectStateVersion::tracking((int)$order->id,(int)$order->serviceInquiry->id);
+        // Re-read the authorized parent after capturing the token. Reject a changing
+        // snapshot rather than return metadata from an earlier state with a newer token.
+        $order=$this->tracking($actor)->where('public_reference',$reference)->first();
+        if (!$order) $this->reject('reference','Authorized verified project not found.');
         $data=$this->trackingData($order,$actor);
         $query=DB::table('order_tracking_tasks')->where('marketplace_order_id',$order->id);
         $total=(clone $query)->count();
@@ -154,12 +159,15 @@ final class ProjectReadTools
             'delivered'=>85,'revision_requested'=>65,'accepted'=>100,default=>0,
         };
         $extensions=DB::table('order_tracking_extension_requests')->where('marketplace_order_id',$order->id);
-        return [...$data,'task_count'=>$total,'completed_task_count'=>$completed,
+        $result=[...$data,'task_count'=>$total,'completed_task_count'=>$completed,
             'tasks_truncated'=>$total>20,'tasks'=>$tasks,'delivery_progress_percent'=>$progress,
             'progress_basis'=>'Native delivery-state estimate; checklist completion is not customer acceptance.',
             'approved_due_on'=>(clone $extensions)->where('status','approved')->latest('id')->value('proposed_due_on'),
             'pending_extension'=>(clone $extensions)->where('status','pending')->exists(),
-            'version'=>ProjectStateVersion::tracking((int)$order->id,(int)$order->serviceInquiry->id)];
+            'version'=>$version];
+        if (!hash_equals($version,ProjectStateVersion::tracking((int)$order->id,(int)$order->serviceInquiry->id)))
+            $this->reject('reference','Project changed during inspection. Read again.');
+        return $result;
     }
 
     private function contracts(User $actor,string $role='both'): Builder
@@ -198,14 +206,20 @@ final class ProjectReadTools
     {
         $contract=$this->contracts($actor)->where('public_id',$v['contract_id'])->first();
         if (!$contract) $this->reject('contract_id','Authorized contract not found.');
+        $version=ProjectStateVersion::contract((int)$contract->id);
+        $contract=$this->contracts($actor)->where('public_id',$v['contract_id'])->first();
+        if (!$contract) $this->reject('contract_id','Authorized contract not found.');
         $page=$contract->milestones()->select(['id','freelance_contract_id','sequence','title','amount','due_on','status','accepted_at'])
             ->paginate(20,page:(int)($v['page']??1));
-        return ['contract'=>$this->contractData($contract,$actor),
+        $result=['contract'=>$this->contractData($contract,$actor),
             ...$this->page($page,fn ($r)=>['milestone_id'=>(int)$r->id,'sequence'=>(int)$r->sequence,'title'=>$r->title,
                 'amount'=>(string)$r->amount,'due_on'=>$r->due_on?->toDateString(),'status'=>$r->status,
                 'accepted_at'=>$r->accepted_at?->toIso8601String()]),
             'amount_basis'=>'Contractual milestone amount, not payment or escrow status.',
-            'version'=>ProjectStateVersion::contract((int)$contract->id)];
+            'version'=>$version];
+        if (!hash_equals($version,ProjectStateVersion::contract((int)$contract->id)))
+            $this->reject('contract_id','Contract changed during inspection. Read again.');
+        return $result;
     }
 
     private function page($page,callable $map): array

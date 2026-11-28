@@ -244,6 +244,23 @@ class McpProjectWriteToolsTest extends TestCase
         $this->assertSame(0,DB::table('account_notifications')->where('event','order.tracking.task_added')->count());
     }
 
+    public function test_completed_request_can_replay_after_due_date(): void
+    {
+        $a=$this->actor(); $b=$this->actor();
+        $order=$this->order($b,$a);
+        $s=new ProjectWriteTools();
+        $args=$this->trackingArgs($order,$a,['title'=>'Dated checklist fixture','due_on'=>now()->toDateString()]);
+        $r=$s->call('bambodia_tracking_task_create',$args,$a,true,true);
+        $this->travel(2)->days();
+        try {
+            $this->assertSame([...$r,'replayed'=>true],$s->call('bambodia_tracking_task_create',$args,$a,true,true));
+            $new=$this->trackingArgs($order,$a,['title'=>'Expired date fixture','due_on'=>$args['due_on']]);
+            $this->reject(fn()=>$s->call('bambodia_tracking_task_create',$new,$a,true,true),'due_on');
+            $this->assertDatabaseCount('order_tracking_tasks',1);
+            $this->assertDatabaseCount('mcp_project_operations',1);
+        } finally { $this->travelBack(); }
+    }
+
     public function test_staging_preserves_thirty_four_prior_definitions_and_write_gates(): void
     {
         $p=new Process(['python3',base_path('support/bambodia-mcp-stage-project-write.py'),'--self-test']);
