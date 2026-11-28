@@ -7,3 +7,5 @@ Receipt status uses native OrderReceipt::status; receipt UUID, token, QR, verifi
 Existing 24 definitions and OAuth/write lists remain unchanged. The actual production controller is an out-of-tree OAuth overlay. The staging script accepts only the previously deployed Phase 3 controller blob 832c692c12ef23e3584cc820512619383822c406 and writes a separate candidate. Synthetic PHP acceptance compares 24→30 and write-disabled 15→21 definitions. Actual OAuth acceptance against the staged overlay and disposable DB, including negative and redaction tests, remains a required separate release gate. No production installation performed.
 
 Invoice/project tools are out of scope. All changes are on a draft feature PR.
+
+Security review: regression tests assert exact output keys, inconsistent entitlement holder/release/product rejection, and all nine prior WRITE gates including disabled WRITE configuration. Actual isolated OAuth integration remains pending.

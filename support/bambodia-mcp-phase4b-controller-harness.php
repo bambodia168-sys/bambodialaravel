@@ -37,8 +37,12 @@ namespace {
             verify($b[$n]['_meta']['securitySchemes']===$b[$n]['securitySchemes'],'Meta scope');
             foreach ([true,false] as $read) verify($new->invoke($n,new FixtureGrant($read,false))===['called'=>$n,'read'=>$read],'Read flag dispatch');
         }
-        foreach (['bambodia_draft_duplicate','bambodia_content_metadata','bambodia_media_metadata'] as $n)
+        foreach (['bambodia_create_draft','bambodia_update_draft','bambodia_delete_draft',
+            'bambodia_update_own_profile','bambodia_manage_site','bambodia_draft_media',
+            'bambodia_draft_duplicate','bambodia_content_metadata','bambodia_media_metadata'] as $n) {
             verify(($new->invoke($n,new FixtureGrant(true,false))['isError']??false)===true,'Existing WRITE gate');
+            if (!$enabled) verify(($new->invoke($n,new FixtureGrant(true,true))['isError']??false)===true,'Disabled WRITE gate');
+        }
     }
     echo "PASS: synthetic registry preserves every existing definition and write scope\n";
 }

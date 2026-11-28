@@ -136,6 +136,9 @@ class McpCommerceReadToolsTest extends TestCase
         $this->assertSame(1,$s->call('bambodia_orders_list',['status'=>'refunded'],$a,true)['total']);
         $get=fn($o)=>$s->call('bambodia_order_get',['reference'=>$o->reference()],$a,true);
         $receipt=fn($o)=>$s->call('bambodia_receipt_get',['reference'=>$o->reference()],$a,true);
+        $this->assertSame(['reference','listing_title','relationship','total','currency','status',
+            'verified_live_payment','receipt_status','created_at','completed_at','cancelled_at'],array_keys($get($own)));
+        $this->assertSame(['reference','status','currency','total','completed_at'],array_keys($receipt($own)));
         $this->assertTrue($get($own)['verified_live_payment']);
         $this->assertFalse($get($test)['verified_live_payment']);
         $this->assertFalse($get($unsettled)['verified_live_payment']);
@@ -170,6 +173,8 @@ class McpCommerceReadToolsTest extends TestCase
         $this->assertSame(1,$s->call('bambodia_licenses_list',['scope'=>'creator'],$a,true)['total']);
         $get=fn($l)=>$s->call('bambodia_license_get',['license_id'=>$l->public_id],$a,true);
         $row=$get($held);
+        $this->assertSame(['license_id','product_id','product_title','relationship','tier','status',
+            'installation_active','download_entitlement_active','max_domains','active_activations','support_status','support_expires_at'],array_keys($row));
         $this->assertTrue($row['installation_active']);
         $this->assertFalse($row['download_entitlement_active']);
         $this->assertSame(1,$row['active_activations']);
@@ -181,6 +186,25 @@ class McpCommerceReadToolsTest extends TestCase
         $this->assertSame($before,DB::table('product_licenses')->orderBy('id')->get()->toJson());
         $held->entitlement->update(['status'=>'revoked','revoked_at'=>now()]);
         $this->assertFalse($get($held)['installation_active']);
+    }
+
+    public function test_inconsistent_license_links_are_not_exposed(): void
+    {
+        $a=$this->actor(); $b=$this->actor(); $c=$this->actor();
+        $wrongHolder=$this->licenseFixture($a,$b);
+        $wrongHolder->entitlement->update(['user_id'=>$c->id]);
+        $wrongProduct=$this->licenseFixture($a,$b);
+        $wrongProduct->version->update(['marketplace_listing_id'=>$this->listing($c)->id]);
+        $wrongVersion=$this->licenseFixture($a,$b);
+        $other=$this->licenseFixture($c,$b);
+        $wrongVersion->update(['product_file_version_id'=>$other->product_file_version_id]);
+        $s=new CommerceReadTools();
+        foreach ([$wrongHolder,$wrongProduct,$wrongVersion] as $record) {
+            foreach ([$a,$b] as $actor)
+                $this->reject(fn()=>$s->call('bambodia_license_get',['license_id'=>$record->public_id],$actor,true),'license_id');
+        }
+        $this->assertSame(0,$s->call('bambodia_licenses_list',[],$a,true)['total']);
+        $this->assertSame(1,$s->call('bambodia_licenses_list',[],$b,true)['total']);
     }
 
     public function test_pagination_and_completion_window_are_bounded(): void
