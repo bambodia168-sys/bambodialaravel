@@ -1,0 +1,110 @@
+name: Bambodia Native Invoice Browser Acceptance
+on:
+  push:
+    branches: [feature/mcp-phase4e2a-native-invoice-foundation-20261128]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [chromium, firefox, webkit]
+        viewport: [desktop, tablet, mobile]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: isolated-invoice-browser-root
+          MYSQL_DATABASE: bambodia_invoice_browser
+          MYSQL_USER: invoice_browser
+          MYSQL_PASSWORD: isolated-invoice-browser-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      APP_URL: http://127.0.0.1:8098
+      BASE_URL: http://127.0.0.1:8098
+      DB_CONNECTION: mysql
+      DB_URL: ''
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: bambodia_invoice_browser
+      DB_USERNAME: invoice_browser
+      DB_PASSWORD: isolated-invoice-browser-only
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      MAIL_MAILER: array
+      QUEUE_CONNECTION: sync
+      COMMERCE_WORKSPACES_ENABLED: 'true'
+      COMMERCE_PAYMENTS_ENABLED: 'false'
+      COMMERCE_LIVE_GATEWAYS: 'false'
+      INVOICES_ENABLED: 'true'
+      INVOICES_DRAFT_WRITES_ENABLED: 'true'
+      INVOICE_BROWSER_ISOLATED: '1'
+      INVOICE_ENGINE: ${{ matrix.engine }}
+      INVOICE_VIEWPORT: ${{ matrix.viewport }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, dom, pdo_mysql, fileinfo, xml, curl, zip
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax checks and dependencies
+        run: |
+          php -l tests/browser/native-invoice-fixture.php
+          node --check tests/browser/native-invoice-acceptance.mjs
+          composer install --prefer-dist --no-interaction --no-progress
+          npm install --ignore-scripts
+          npm run build
+          npm install --no-save --ignore-scripts playwright
+          npx playwright install --with-deps "$INVOICE_ENGINE"
+      - name: Disposable MySQL identity and synthetic fixtures
+        run: |
+          set -Eeuo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$INVOICE_BROWSER_ISOLATED" = 1
+          test "$DB_HOST" = 127.0.0.1
+          test "$DB_DATABASE" = bambodia_invoice_browser
+          test -z "$DB_URL"
+          php -r '$p=new PDO("mysql:host=127.0.0.1;port=3306;dbname=bambodia_invoice_browser",getenv("DB_USERNAME"),getenv("DB_PASSWORD")); if($p->query("SELECT DATABASE()")->fetchColumn()!=="bambodia_invoice_browser")exit(1); if((int)$p->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()")->fetchColumn()!==0)exit(1);'
+          cp .env.example .env
+          php artisan key:generate
+          php artisan migrate --force --no-interaction
+          mkdir -p storage/framework storage/app
+          touch storage/app/installed.lock
+          php artisan storage:link
+          php tests/browser/native-invoice-fixture.php seed
+      - name: Native browser journey and screenshot evidence
+        run: |
+          set -Eeuo pipefail
+          php artisan serve --host=127.0.0.1 --port=8098 > "$RUNNER_TEMP/invoice-browser-server.log" 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://127.0.0.1:8098/login; then break; fi
+            sleep 1
+          done
+          curl -fsS -o /dev/null http://127.0.0.1:8098/login
+          node tests/browser/native-invoice-acceptance.mjs
+      - name: Upload synthetic visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: invoice-browser-${{ matrix.engine }}-${{ matrix.viewport }}
+          path: invoice-browser-evidence/
+          retention-days: 7
+          if-no-files-found: warn
