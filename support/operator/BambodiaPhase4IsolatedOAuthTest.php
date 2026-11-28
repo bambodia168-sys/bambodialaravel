@@ -650,6 +650,40 @@ final class BambodiaPhase4IsolatedOAuthTest extends TestCase
         return ['reference'=>$reference,'expected_version'=>$version,'request_id'=>(string)Str::uuid(),'confirm'=>true,...$args];
     }
 
+    // Advance only the isolated Laravel test clock; never alter or bypass
+    // production rate limits, middleware, cache keys or OAuth verification.
+    private function nextMcpRateWindow(): void
+    {
+        $this->assertSame('testing', app()->environment());
+        $this->assertSame('array', config('cache.default'));
+        $this->travelTo(now()->addSeconds(65));
+    }
+
+    public function test_actual_mcp_throttle_rejects_burst_and_recovers_next_window(): void
+    {
+        $token=$this->authorizedBearer($this->user(),'mcp:use');
+        $this->nextMcpRateWindow();
+        try {
+            $accepted=0;
+            $blocked=false;
+            for ($i=0;$i<60;$i++) {
+                $response=$this->requestRpc($token,'tools/list');
+                if ($response->getStatusCode()===429) {
+                    $blocked=true;
+                    break;
+                }
+                $response->assertOk();
+                $accepted++;
+            }
+            $this->assertGreaterThan(0,$accepted);
+            $this->assertTrue($blocked,'Expected real MCP middleware to throttle the burst');
+            $this->nextMcpRateWindow();
+            $this->assertCount(38,$this->tools($token));
+        } finally {
+            $this->travelBack();
+        }
+    }
+
     public function test_all_fourteen_new_tools_through_real_oauth_and_all_write_scope_gates(): void
     {
         $a=$this->user(); $b=$this->user(); $c=$this->user();
@@ -664,6 +698,7 @@ final class BambodiaPhase4IsolatedOAuthTest extends TestCase
         $write=$this->authorizedBearer($a,'mcp:use mcp.write');
         $foreign=$this->authorizedBearer($c,'mcp:use mcp.write');
         $buyer=$this->authorizedBearer($b,'mcp:use mcp.write');
+        $this->nextMcpRateWindow();
         $this->assertSame(2,$this->resultData($read,'bambodia_orders_list')['total']);
         $this->assertTrue($this->resultData($read,'bambodia_order_get',['reference'=>$order->reference()])['verified_live_payment']);
         $this->assertSame('Paid',$this->resultData($read,'bambodia_receipt_get',['reference'=>$order->reference()])['status']);
@@ -689,6 +724,7 @@ final class BambodiaPhase4IsolatedOAuthTest extends TestCase
         $milestone=['contract_id'=>$draft->public_id,'expected_version'=>$milestones['version'],'request_id'=>(string)Str::uuid(),
             'confirm'=>true,'title'=>'Isolated milestone','description'=>'A disposable OAuth acceptance milestone with clear deliverables.','amount'=>'50.00'];
         $comment=$this->operation($order->reference(),$tracking['version'],['message'=>'PRIVATE_OAUTH_COMMENT fixture.']);
+        $this->nextMcpRateWindow();
         foreach (self::ALL_WRITES as $tool) {
             $args=match($tool) {
                 'bambodia_tracking_task_create'=>$create,
@@ -701,6 +737,7 @@ final class BambodiaPhase4IsolatedOAuthTest extends TestCase
             $this->assertStringContainsString('insufficient_scope',json_encode($r['_meta']['mcp/www_authenticate']??[],JSON_THROW_ON_ERROR),$tool);
         }
         $this->assertDatabaseCount('mcp_project_operations',0);
+        $this->nextMcpRateWindow();
         $this->callRpc($foreign,'bambodia_tracking_task_create',$create)->assertJsonPath('result.isError',true);
         $this->callRpc($buyer,'bambodia_tracking_task_create',$create)->assertJsonPath('result.isError',true);
         $this->callRpc($buyer,'bambodia_contract_milestone_create',$milestone)->assertJsonPath('result.isError',true);
@@ -734,9 +771,11 @@ final class BambodiaPhase4IsolatedOAuthTest extends TestCase
             $this->assertDatabaseHas('mcp_project_operations',['actor_id'=>$a->id,'request_id'=>$receipt['request_id'],'audit_event_id'=>$receipt['audit_id']]);
             $this->assertDatabaseHas('audit_events',['id'=>$receipt['audit_id'],'actor_id'=>$a->id]);
         }
+        $this->nextMcpRateWindow();
         config(['mcp.production_writes_enabled'=>false]);
         $this->assertCount(25,$this->tools($write));
         foreach (self::ALL_WRITES as $tool) $this->callRpc($write,$tool,[])->assertJsonPath('result.isError',true);
         $this->assertDatabaseCount('mcp_project_operations',4);
+        $this->travelBack();
     }
 }

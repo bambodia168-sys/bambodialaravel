@@ -12,7 +12,7 @@ CONTROLLER_BLOB=832c692c12ef23e3584cc820512619383822c406
 SERVICE=app/Support/Mcp/ProjectWriteTools.php
 MIGRATION=database/migrations/2026_11_28_100000_create_mcp_project_operations.php
 PATCH=support/bambodia-mcp-stage-project-write.py
-HARNESS_BLOB=12d1a1057bda1fcba311f41d1f824e8d1d1606cc
+HARNESS_BLOB=9ea832ad040c18db820506d351ffc75fb622dd47
 EXTRAS=(app/Support/Mcp/CommerceReadTools.php app/Support/Mcp/ProjectReadTools.php app/Support/Mcp/ProjectStateVersion.php)
 fail(){ echo "PHASE4D1_BLOCKED=$*" >&2; exit 1; }
 [[ $(id -u) == 0 ]] || fail ROOT_REQUIRED
