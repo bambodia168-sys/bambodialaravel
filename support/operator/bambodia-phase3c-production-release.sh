@@ -115,9 +115,9 @@ stage_gate(){
   [[ $(sha256sum "$STAGE/manifest.sha256"|cut -d' ' -f1) == "$MANIFEST" ]] || fail QA_MANIFEST_DRIFT
   [[ -z $(find "$STAGE/source" "$STAGE/candidate" "$STAGE/verified" -type l -print -quit) ]] || fail STAGE_SYMLINK
   (cd "$STAGE"; find source candidate verified -type f -print0 | sort -z | xargs -0 sha256sum | cmp -s - manifest.sha256) || fail QA_INVENTORY_DRIFT
-  grep -Fx 'OK (1 test, 30 assertions)' "$STAGE/baseline-qa.log"
-  grep -Fx 'OK (16 tests, 374 assertions)' "$STAGE/candidate-qa.log"
-  grep -Fx 'OK (1 test, 29 assertions)' "$STAGE/rollback-qa.log"
+  grep -F 'OK (1 test, 30 assertions)' "$STAGE/baseline-qa.log"
+  grep -F 'OK (16 tests, 374 assertions)' "$STAGE/candidate-qa.log"
+  grep -F 'OK (1 test, 29 assertions)' "$STAGE/rollback-qa.log"
   blob "$STAGE/source/$CTRL" "$OLD"
   blob "$STAGE/candidate/$CTRL" "$NEW"
   blob "$STAGE/candidate/$SERVICE" "$SERVICE_BLOB"
@@ -174,7 +174,7 @@ echo json_encode(['host'=>$cfg['host']??null,'port'=>$cfg['port']??3306,'socket'
 PHP
   ) >"$WORK/db.json" 2>"$WORK/db-probe.private.log" || fail DB_OR_MCP_CONFIG_GATE
   python3 - "$WORK" "$phase" <<'PY'
-import json,pathlib,re,sys
+import hashlib,json,pathlib,re,sys
 w=pathlib.Path(sys.argv[1]); phase=sys.argv[2]; d=json.loads((w/'db.json').read_text())
 if phase=='before':
     assert d['column'] is None and d['migration_count']==0,'PHASE3_SCHEMA_ALREADY_PRESENT'
@@ -189,6 +189,7 @@ if d['socket']: lines+=['protocol=SOCKET','socket='+q(d['socket'])]
 else: lines+=['host='+q(d['host']),'port='+q(d['port'])]
 (w/'mysql.cnf').write_text('\n'.join(lines)+'\n')
 (w/'db-name').write_text(d['database'])
+(w/'db-target.sha256').write_text(hashlib.sha256(json.dumps({k:d[k] for k in ('host','port','socket','database','username')},sort_keys=True).encode()).hexdigest()+'\n')
 print('MYSQL_SCHEMA_AND_MCP_CONFIG=PASS')
 PY
   rm -f -- "$WORK/db.json"
@@ -209,22 +210,22 @@ PY
 }
 protected_capture(){
   (cd "$SITE"; 
-    for f in .env storage/oauth-private.key storage/oauth-public.key routes/web.php bootstrap/app.php app/Providers/AppServiceProvider.php config/mcp.php composer.json composer.lock; do
+    for f in .env storage/oauth-private.key storage/oauth-public.key bootstrap/cache/config.php routes/web.php bootstrap/app.php app/Providers/AppServiceProvider.php config/mcp.php composer.json composer.lock; do
       if [[ -e "$f" || -L "$f" ]]; then
         [[ -f "$f" && ! -L "$f" ]] || exit 1
         sha256sum "$f"
-      elif [[ "$f" != storage/oauth-private.key && "$f" != storage/oauth-public.key ]]; then exit 1; fi
+      elif [[ "$f" != storage/oauth-private.key && "$f" != storage/oauth-public.key && "$f" != bootstrap/cache/config.php ]]; then exit 1; fi
     done
   ) > "$BACKUP/protected.sha256" || fail PROTECTED_FILE_CAPTURE
   sha256sum "$VHOST" >"$BACKUP/vhost.sha256"
-  for f in storage/oauth-private.key storage/oauth-public.key; do
+  for f in storage/oauth-private.key storage/oauth-public.key bootstrap/cache/config.php; do
     if [[ -e "$SITE/$f" ]]; then echo "$f present"; else echo "$f absent"; fi
   done >"$BACKUP/key-presence.txt"
 }
 protected_verify(){
   (cd "$SITE"; sha256sum --check --status "$BACKUP/protected.sha256") || fail PROTECTED_FILE_DRIFT
   sha256sum --check --status "$BACKUP/vhost.sha256" || fail VHOST_DRIFT
-  for f in storage/oauth-private.key storage/oauth-public.key; do
+  for f in storage/oauth-private.key storage/oauth-public.key bootstrap/cache/config.php; do
     if [[ -e "$SITE/$f" ]]; then echo "$f present"; else echo "$f absent"; fi
   done | cmp -s - "$BACKUP/key-presence.txt" || fail KEY_PRESENCE_DRIFT
   echo "OAUTH_KEYS_ENV_AND_PROTECTED_SOURCE_UNCHANGED=PASS"
@@ -242,6 +243,7 @@ if [[ "$MODE" == --preflight ]]; then
   cp -a -- "$SITE/$CTRL" "$BACKUP/controller.original.php"
   blob "$BACKUP/controller.original.php" "$OLD"
   protected_capture
+  cp -- "$WORK/db-target.sha256" "$BACKUP/db-target.sha256"
   DUMP=/www/server/mysql/bin/mysqldump
   if [[ ! -x "$DUMP" ]]; then DUMP=$(command -v mysqldump) || fail MYSQLDUMP_NOT_AVAILABLE; fi
   DB=$(cat "$WORK/db-name")
@@ -255,7 +257,7 @@ if [[ "$MODE" == --preflight ]]; then
   source_gate before
   protected_verify
   printf '%s\n' "$HEAD" > "$BACKUP/PREFLIGHT_PASS"
-  (cd "$BACKUP"; sha256sum controller.original.php database.sql.gz protected.sha256 vhost.sha256 key-presence.txt PREFLIGHT_PASS > backup.sha256)
+  (cd "$BACKUP"; sha256sum controller.original.php database.sql.gz protected.sha256 vhost.sha256 key-presence.txt db-target.sha256 PREFLIGHT_PASS > backup.sha256)
   verify_backup
   echo "DATABASE_BACKUP_BYTES=$(stat -c '%s' "$BACKUP/database.sql.gz")"
   echo "BACKUP_MANIFEST_SHA256=$(sha256sum "$BACKUP/backup.sha256"|cut -d' ' -f1)"
@@ -276,12 +278,14 @@ elif [[ "$MODE" == --apply ]]; then
   source_gate before
   protected_verify
   db_gate before
+  cmp -s "$WORK/db-target.sha256" "$BACKUP/db-target.sha256" || fail BACKUP_DATABASE_TARGET_DRIFT
   rm -f -- "$WORK/mysql.cnf" "$WORK/db-name"
   health
   APPLYING=1
   new_file "$STAGE/candidate/$MIGRATION" "$SITE/$MIGRATION" || fail MIGRATION_INSTALL_FAILED
   (cd "$SITE"; runuser -u www -- "$PHP" artisan migrate --path="$MIGRATION" --force --no-interaction --no-ansi) >"$BACKUP/migration.private.log" 2>&1 || fail MIGRATION_FAILED
   db_gate after
+  cmp -s "$WORK/db-target.sha256" "$BACKUP/db-target.sha256" || fail DATABASE_TARGET_CHANGED
   rm -f -- "$WORK/mysql.cnf" "$WORK/db-name"
   new_file "$STAGE/candidate/$SERVICE" "$SITE/$SERVICE" || fail SERVICE_INSTALL_FAILED
   cp -- "$STAGE/candidate/$CTRL" "$WORK/controller.new.php"
