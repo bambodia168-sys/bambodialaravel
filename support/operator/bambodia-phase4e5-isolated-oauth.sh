@@ -13,6 +13,7 @@ PATCH=support/bambodia-mcp-stage-invoice-write.py
 HARNESS_BLOB=34a735f87c58d0f3cee5611307ecfc87771f7cea
 AUDIT=app/Models/AuditEvent.php
 AUDIT_BASE=478ab1fd7d6ed75028aca3e64ced4a572f286a27
+AUDIT_LIVE=430b4d81e53934a78b3c0ed74a087a36a0376566
 AUDIT_CANDIDATE=4812c5d412c4711e37237d4e2f83bf0daf98657a
 ADDITIONS=(
   app/Models/MarketplaceInvoice.php
@@ -68,10 +69,117 @@ verify_live(){
   check_blob "$LIVE/app/Support/Mcp/ProjectStateVersion.php" 40159625dff463d6911e9f61cfe542dd61b05497
   check_blob "$LIVE/app/Support/Mcp/ProjectWriteTools.php" 7c31cf5acd15669a2fbf5b718d13298fdb34ca4c
   check_blob "$LIVE/database/migrations/2026_11_28_100000_create_mcp_project_operations.php" 982b0ca4816ffe5ae69b1961c34c18fa276bc08f
-  check_blob "$LIVE/$AUDIT" "$AUDIT_BASE"
+  check_blob "$LIVE/$AUDIT" "$AUDIT_LIVE"
   for path in "${ADDITIONS[@]}"; do
     [[ ! -e "$LIVE/$path" && ! -L "$LIVE/$path" ]] || fail INVOICE_FILES_ALREADY_LIVE
   done
+}
+reconcile_audit(){
+  python3 - "$@" <<'AUDITPY'
+import hashlib
+import pathlib
+import re
+import sys
+
+BASE = "478ab1fd7d6ed75028aca3e64ced4a572f286a27"
+LIVE = "430b4d81e53934a78b3c0ed74a087a36a0376566"
+CANDIDATE = "4812c5d412c4711e37237d4e2f83bf0daf98657a"
+LEGACY = frozenset("""
+job.owner.archived job.owner.deleted job.owner.draft
+job.review.archived job.review.deleted
+license.definition.archived license.definition.deleted
+listing.review.archived listing.review.deleted
+mcp.draft.created mcp.draft.deleted mcp.draft.updated
+mcp.media.attached mcp.media.detached
+""".split())
+INVOICE = (
+    "invoice.draft.create", "invoice.draft.update", "invoice.draft.discard",
+    "mcp.invoice.draft.create", "mcp.invoice.draft.update", "mcp.invoice.draft.discard",
+)
+PATTERN = rb"\s*'([a-zA-Z0-9_.-]+)'\s*,"
+
+def require(ok, message):
+    if not ok:
+        raise ValueError(message)
+
+def blob(data):
+    return hashlib.sha1(b"blob "+str(len(data)).encode()+b"\0"+data).hexdigest()
+
+def inspect(data):
+    matches = list(re.finditer(rb"public const EVENTS\s*=\s*\[(.*?)\];", data, re.S))
+    require(len(matches)==1, "Unique audit allowlist required")
+    m=matches[0]
+    body=m.group(1)
+    events=[x.decode("ascii") for x in re.findall(PATTERN,body)]
+    require(not re.sub(PATTERN,b"",body).strip(), "Unknown audit allowlist structure")
+    require(len(events)==len(set(events)), "Duplicate audit event")
+    return events,data[:m.start(1)]+data[m.end(1):],m
+
+def append(data, additions):
+    events,_,m=inspect(data)
+    require(not set(events).intersection(additions), "Event already present")
+    # Insert before the existing closing indentation, preserving all original bytes.
+    end=m.end(1)
+    trailing=re.search(rb"\n[ \t]*$",m.group(1))
+    require(trailing is not None, "Expected closing indentation")
+    pos=m.start(1)+trailing.start()
+    inserted=b"".join(b"\n        '"+x.encode("ascii")+b"'," for x in additions)
+    result=data[:pos]+inserted+data[pos:]
+    require(result[:pos]+result[pos+len(inserted):]==data, "Non-additive edit")
+    return result
+
+def merge(base,live,candidate):
+    b,bc,_=inspect(base); l,lc,_=inspect(live); c,cc,_=inspect(candidate)
+    require(bc==lc==cc, "Non-allowlist source drift")
+    require(len(b)==245 and len(l)==259 and len(c)==251, "Unexpected event count")
+    require(set(l)==set(b)|LEGACY and not set(b)&LEGACY, "Unexpected legacy additions")
+    require(set(c)==set(b)|set(INVOICE) and not set(l)&set(INVOICE), "Unexpected invoice additions")
+    require([x for x in l if x in set(b)]==b, "Baseline order changed")
+    require([x for x in c if x in set(b)]==b, "Candidate baseline order changed")
+    out=append(live,INVOICE)
+    o,oc,_=inspect(out)
+    require(o==l+list(INVOICE) and len(o)==265 and oc==lc, "Merged audit verification failed")
+    return out
+
+def selftest(candidate):
+    require(blob(candidate)==CANDIDATE,"Accepted candidate fingerprint mismatch")
+    # Reconstruct the tracked base by removing exactly the accepted six lines.
+    base=candidate
+    for x in INVOICE:
+        line=b"        '"+x.encode()+b"',\n"
+        require(base.count(line)==1,"Expected candidate event line")
+        base=base.replace(line,b"",1)
+    require(blob(base)==BASE,"Reconstructed baseline mismatch")
+    live=append(base,sorted(LEGACY))
+    out=merge(base,live,candidate)
+    require(len(inspect(out)[0])==265,"Synthetic merge count")
+    for bad in (live+b"\n",append(live,["unexpected.event"]),live.replace(b"'mcp.draft.created'",b"'mcp.draft.updated'"),live.replace(b"'mcp.draft.created',",b"")):
+        try:
+            merge(base,bad,candidate)
+        except ValueError:
+            continue
+        raise ValueError("Unsafe fixture accepted")
+    print("AUDIT_ADDITIVE_OVERLAY_SELF_TEST=PASS")
+
+if sys.argv[1]=="--self-test" and len(sys.argv)==3:
+    selftest(pathlib.Path(sys.argv[2]).read_bytes())
+elif len(sys.argv)==5:
+    paths=list(map(pathlib.Path,sys.argv[1:]))
+    require(all(p.is_file() and not p.is_symlink() for p in paths[:3]),"Unsafe input path")
+    base,live,candidate=[p.read_bytes() for p in paths[:3]]
+    require([blob(x) for x in (base,live,candidate)]==[BASE,LIVE,CANDIDATE],"Exact approved source fingerprints required")
+    require(not paths[3].exists() and not paths[3].is_symlink(),"Output must be new")
+    out=merge(base,live,candidate)
+    with paths[3].open("xb") as f: f.write(out)
+    print("AUDIT_LIVE_EVENTS_PRESERVED=259")
+    print("AUDIT_INVOICE_EVENTS_ADDED=6")
+    print("AUDIT_MERGED_EVENTS=265")
+    print("AUDIT_NON_ALLOWLIST_CODE_UNCHANGED=YES")
+    print("AUDIT_MERGED_BLOB="+blob(out))
+    print("AUDIT_ADDITIVE_OVERLAY=PASS")
+else:
+    raise SystemExit("Invalid audit reconciliation arguments")
+AUDITPY
 }
 prepare(){
   [[ $# == 1 ]] || fail PREPARE_REQUIRES_VERIFIED_HARNESS_PATH
@@ -127,7 +235,12 @@ PY
   for i in "${!ADDITIONS[@]}"; do
     download "${ADDITIONS[$i]}" "${BLOBS[$i]}" "$stage/candidate/${ADDITIONS[$i]}"
   done
-  download "$AUDIT" "$AUDIT_CANDIDATE" "$stage/candidate/$AUDIT"
+  check_blob "$stage/source/$AUDIT" "$AUDIT_LIVE"
+  curl -fLsS --retry 3 --connect-timeout 15 --max-time 120 "https://raw.githubusercontent.com/$REPO/c1db97f9798cdd0e9291fb943d5a1a697c2b9f48/$AUDIT" -o "$stage/verified/audit-base.php"
+  check_blob "$stage/verified/audit-base.php" "$AUDIT_BASE"
+  download "$AUDIT" "$AUDIT_CANDIDATE" "$stage/verified/audit-invoice.php"
+  mkdir -p "$stage/candidate/$(dirname "$AUDIT")"
+  reconcile_audit "$stage/verified/audit-base.php" "$stage/source/$AUDIT" "$stage/verified/audit-invoice.php" "$stage/candidate/$AUDIT"
   download "$PATCH" e546fd64a5b21f8aa596c9f0796b3cdd2ef2f "$stage/verified/$(basename "$PATCH")"
   download support/bambodia-mcp-stage-invoice-read.py f609302a172c8bd2bb23a92706e10b47adfe8f9c "$stage/verified/bambodia-mcp-stage-invoice-read.py"
   download support/bambodia-mcp-stage-project-write.py b987de1ae5e3c7986df16abb66d4d4315eeafd4c "$stage/verified/bambodia-mcp-stage-project-write.py"
@@ -176,8 +289,9 @@ accept(){
   check_blob "$stage/source/tests/Feature/BambodiaPhase4E5IsolatedOAuthTest.php" "$HARNESS_BLOB"
   (cd "$LIVE"; sha256sum --check --status "$stage/verified/live-source.sha256") || fail LIVE_SOURCE_DRIFT
   check_blob "$stage/source/$CONTROLLER" "$CONTROLLER_BLOB"
-  check_blob "$stage/source/$AUDIT" "$AUDIT_BASE"
-  check_blob "$stage/candidate/$AUDIT" "$AUDIT_CANDIDATE"
+  check_blob "$stage/source/$AUDIT" "$AUDIT_LIVE"
+  check_blob "$stage/verified/audit-base.php" "$AUDIT_BASE"
+  check_blob "$stage/verified/audit-invoice.php" "$AUDIT_CANDIDATE"
   for i in "${!ADDITIONS[@]}"; do check_blob "$stage/candidate/${ADDITIONS[$i]}" "${BLOBS[$i]}"; done
   [[ -x "$MYSQL_BASE/bin/mysqld" && -x "$MYSQL_BASE/bin/mysql" ]] || fail PRIVATE_MYSQL_BINARY_MISSING
   # Restage from the pinned source and compare exact bytes before execution.
@@ -185,7 +299,9 @@ accept(){
   reproduced=$(mktemp -d "$stage/recheck.XXXXXXXX")
   PYTHONDONTWRITEBYTECODE=1 python3 "$stage/verified/$(basename "$PATCH")" --source "$stage/source/$CONTROLLER" --output "$reproduced/controller.php"
   cmp -s "$reproduced/controller.php" "$stage/candidate/$CONTROLLER" || fail CONTROLLER_REPRODUCTION_MISMATCH
-  rm -- "$reproduced/controller.php"; rmdir "$reproduced"
+  reconcile_audit "$stage/verified/audit-base.php" "$stage/source/$AUDIT" "$stage/verified/audit-invoice.php" "$reproduced/audit.php"
+  cmp -s "$reproduced/audit.php" "$stage/candidate/$AUDIT" || fail AUDIT_REPRODUCTION_MISMATCH
+  rm -- "$reproduced/controller.php" "$reproduced/audit.php"; rmdir "$reproduced"
   "$PHP" -r 'exit(PHP_VERSION_ID>=80500 && extension_loaded("pdo_sqlite") && extension_loaded("pdo_mysql") && extension_loaded("openssl") ? 0 : 1);' || fail PHP_EXTENSIONS
   [[ -f /usr/bin/composer && ! -L /usr/bin/composer ]] || fail COMPOSER_PHP_ENTRY_MISSING
   "$PHP" -r 'exit(preg_match("/(?:\A|\n)<\?php\b/",file_get_contents("/usr/bin/composer",false,null,0,1024))?0:1);' || fail COMPOSER_NOT_PHP
