@@ -48,7 +48,7 @@ final class MarketplaceInvoiceController extends Controller
     private function show(Request $request,bool $studio,string $invoice): Response
     {
         return $this->page('show',['studio'=>$studio,'invoice'=>$this->invoices->detail($request->user(),$studio,$invoice),
-            'updateRequest'=>(string)Str::uuid(),'discardRequest'=>(string)Str::uuid()]);
+            'updateRequest'=>(string)Str::uuid(),'clearRequest'=>(string)Str::uuid(),'discardRequest'=>(string)Str::uuid()]);
     }
 
     public function studioShow(Request $request,string $invoice): Response { return $this->show($request,true,$invoice); }

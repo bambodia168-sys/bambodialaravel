@@ -129,9 +129,25 @@ try{
  await update.locator('input[name="due_on"]').fill(fixture.updatedDate);await update.locator('input[name="confirm"]').check();
  await submit(seller,update.getByRole('button',{name:'Save due date'}),/\/studio\/invoices\/[a-f0-9-]{36}$/);
  await seller.getByText('Due date: '+fixture.updatedDate,{exact:true}).waitFor();await capture(seller,'07-updated-date');
- await update.locator('input[name="due_on"]').fill('');await update.locator('input[name="confirm"]').check();
- await submit(seller,update.getByRole('button',{name:'Save due date'}),/\/studio\/invoices\/[a-f0-9-]{36}$/);
+ // Exercise a real, explicitly confirmed clear action instead of relying on native date-editor clearing.
+ const clear=seller.locator('form.invoice-form').filter({has:seller.getByRole('button',{name:'Clear due date',exact:true})});
+ const clearCheckbox=clear.locator('input[name="confirm"]');
+ assert.equal(await clearCheckbox.isChecked(),false);assert.equal(await clearCheckbox.evaluate(e=>e.required),true);
+ assert.equal(await clear.locator('input[name="due_on"]').inputValue(),'');
+ await clear.getByRole('button',{name:'Clear due date',exact:true}).click();
+ assert.equal(await clearCheckbox.evaluate(e=>e.validity.valueMissing),true);
+ await seller.getByText('Due date: '+fixture.updatedDate,{exact:true}).waitFor();
+ await clearCheckbox.check();
+ const clearAction=await clear.getAttribute('action');
+ const [clearRequest]=await Promise.all([
+  seller.waitForRequest(r=>r.method()==='POST'&&r.url()===clearAction),
+  submit(seller,clear.getByRole('button',{name:'Clear due date',exact:true}),/\/studio\/invoices\/[a-f0-9-]{36}$/)
+ ]);
+ const clearPayload=new URLSearchParams(clearRequest.postData()??'');
+ assert.equal(clearPayload.get('due_on'),'');assert.equal(clearPayload.get('_method'),'PATCH');assert.equal(clearPayload.get('confirm'),'1');
  await seller.getByText('Due date: Not set',{exact:true}).waitFor();
+ assert.equal(await seller.getByRole('button',{name:'Clear due date',exact:true}).count(),0);
+ await capture(seller,'07b-cleared-date');record('Explicit confirmed due date removal persisted');
  const discard=seller.locator('form.invoice-form').filter({has:seller.getByRole('button',{name:'Discard draft'})});
  assert.equal(await discard.locator('input[name="confirm"]').isChecked(),false);assert.equal(await discard.locator('input[name="confirm"]').evaluate(e=>e.required),true);
  await discard.getByRole('button',{name:'Discard draft'}).click();await seller.getByRole('heading',{name:'Discard private draft'}).waitFor();

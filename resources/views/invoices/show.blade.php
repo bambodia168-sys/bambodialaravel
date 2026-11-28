@@ -36,6 +36,16 @@
         <label class="invoice-confirm"><input type="checkbox" name="confirm" value="1" required> Confirm this due date change.</label>
         <button class="btn primary" type="submit">Save due date</button>
       </form>
+      @if($invoice['due_on'] !== null)
+        <form method="post" action="{{ route('studio.invoices.update',$invoice['id']) }}" class="invoice-form">
+          @csrf @method('PATCH')
+          <input type="hidden" name="expected_version" value="{{ $invoice['version'] }}">
+          <input type="hidden" name="request_id" value="{{ $clearRequest }}">
+          <input type="hidden" name="due_on" value="">
+          <label class="invoice-confirm"><input type="checkbox" name="confirm" value="1" required> Confirm removal of the current due date.</label>
+          <button class="btn subtle" type="submit">Clear due date</button>
+        </form>
+      @endif
     </section>
   @endif
   @if($studio && $invoice['can_discard'])
