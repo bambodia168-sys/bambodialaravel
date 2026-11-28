@@ -59,11 +59,19 @@ async function capture(page,name){
    const r=el.getBoundingClientRect(),root=document.documentElement;
    const controls=[...el.querySelectorAll('.invoice-form input:not([type=hidden]),.invoice-form button,.invoice-actions a')].filter(n=>n.getClientRects().length).map(n=>n.getBoundingClientRect());
    const style=getComputedStyle(el.querySelector('.panel'));
-   return {width:root.clientWidth,scroll:root.scrollWidth,left:r.left,right:r.right,fit:controls.every(b=>b.width>0&&b.left>=-3&&b.right<=root.clientWidth+3),palette:[style.backgroundColor,style.color]};
+   const empty=el.querySelector('.invoice-empty'),emptyRect=empty?.getBoundingClientRect();
+   const lineTables=[...el.querySelectorAll('.invoice-panel .table-scroll')];
+   return {width:root.clientWidth,scroll:root.scrollWidth,left:r.left,right:r.right,fit:controls.every(b=>b.width>0&&b.left>=-3&&b.right<=root.clientWidth+3),palette:[style.backgroundColor,style.color],emptyFits:!emptyRect||(emptyRect.left>=-3&&emptyRect.right<=root.clientWidth+3),lineTablesFit:lineTables.every(t=>t.scrollWidth<=t.clientWidth+2)};
   });
-  assert.ok(layout.scroll<=layout.width+4&&layout.left>=-3&&layout.right<=layout.width+3&&layout.fit,JSON.stringify(layout));
+  assert.ok(layout.scroll<=layout.width+4&&layout.left>=-3&&layout.right<=layout.width+3&&layout.fit&&layout.emptyFits&&layout.lineTablesFit,JSON.stringify(layout));
   palettes[theme]=layout.palette;
   const file=name+'-'+theme+'.png';await page.screenshot({path:dir+'/'+file,fullPage:true,animations:'disabled',timeout:15000});evidence.screenshots.push(file);
+  const discardHeading=page.getByRole('heading',{name:'Discard private draft',exact:true});
+  if(await discardHeading.count()){
+   await discardHeading.scrollIntoViewIfNeeded();
+   const bottom=name+'-'+theme+'-discard-section.png';
+   await page.screenshot({path:dir+'/'+bottom,animations:'disabled',timeout:15000});evidence.screenshots.push(bottom);
+  }
   assert.deepEqual(monitored.get(page),[],name+' browser errors');
  }
  assert.notDeepEqual(palettes.light,palettes.dark,name+' theme palette');
@@ -103,7 +111,16 @@ try{
  await seller.getByText('PRIVATE — NOT ISSUED — NOT A TAX INVOICE',{exact:true}).waitFor();
  await seller.getByText('Due date: '+fixture.date,{exact:true}).waitFor();await capture(seller,'03-private-draft');
  await visit(buyer,'/account/invoices');await buyer.getByText('No invoices found.',{exact:true}).waitFor();await capture(buyer,'04-buyer-empty');
- await visit(recipient,'/account/invoices');await recipient.getByText('QA-ONLY-ISSUED',{exact:true}).waitFor();await recipient.getByText('QA-ONLY-VOID',{exact:true}).waitFor();await capture(recipient,'05-recipient-list');
+ await visit(recipient,'/account/invoices');
+ assert.equal(await recipient.locator('.invoice-document-number').count(),2);
+ for(const status of ['issued','void']){
+  const row=recipient.locator('.invoice-workspace tbody tr').filter({has:recipient.locator('.invoice-document-number').getByText('QA-ONLY-'+status.toUpperCase(),{exact:true})});
+  await row.waitFor({state:'visible'});
+  assert.equal(await row.count(),1);
+  assert.equal(await row.getByRole('link',{name:'View',exact:true}).getAttribute('href'),origin+'/account/invoices/'+fixture[status]);
+  await row.getByText(status[0].toUpperCase()+status.slice(1),{exact:true}).waitFor();
+ }
+ await capture(recipient,'05-recipient-list');
  for(const status of ['issued','void']){
   await visit(recipient,'/account/invoices/'+fixture[status]);await recipient.getByRole('heading',{name:'QA-ONLY-'+status.toUpperCase(),exact:true}).waitFor();
   assert.equal(await recipient.locator('form.invoice-form').count(),0);await capture(recipient,'06-recipient-'+status);

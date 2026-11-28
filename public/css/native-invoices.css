@@ -12,3 +12,12 @@
 .invoice-workspace .table-scroll{min-width:0;overflow:auto}
 .invoice-workspace .invoice-form .btn{justify-self:start}
 @media(max-width:600px){.invoice-workspace .panel-head{flex-wrap:wrap}.invoice-workspace .invoice-form .btn{width:100%}}
+
+/* Keep the empty message outside the intentionally scrollable document grid. */
+.invoice-workspace .invoice-empty{text-align:center;padding:2.5rem 1rem;margin:0;color:var(--muted)}
+.invoice-workspace .table-scroll:focus-visible{outline:2px solid var(--secondary);outline-offset:-2px}
+/* Three-column line items fit small screens without clipping quantity or amount. */
+.invoice-workspace .invoice-panel .data-table{min-width:0;table-layout:fixed}
+.invoice-workspace .invoice-panel .data-table th:first-child{width:48%}
+.invoice-workspace .invoice-panel .data-table th,.invoice-workspace .invoice-panel .data-table td{overflow-wrap:anywhere}
+@media(max-width:600px){.invoice-workspace .invoice-panel .data-table th,.invoice-workspace .invoice-panel .data-table td{padding:10px 6px}.invoice-workspace .invoice-panel .data-table th{letter-spacing:0}}

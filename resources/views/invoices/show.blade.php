@@ -2,7 +2,7 @@
 @section('workspace', $studio ? 'creator' : 'account')
 @section('title', 'Invoice details')
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/native-invoices.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/native-invoices.css') }}?v=2">
 @endpush
 @section('content')
 <div class="container inner-page invoice-workspace">

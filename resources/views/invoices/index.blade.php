@@ -2,7 +2,7 @@
 @section('workspace', $studio ? 'creator' : 'account')
 @section('title', 'Invoices')
 @push('head')
-<link rel="stylesheet" href="{{ asset('css/native-invoices.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/native-invoices.css') }}?v=2">
 @endpush
 @section('content')
 <div class="container inner-page invoice-workspace">
@@ -35,25 +35,27 @@
       </form>
       <span class="count">{{ $invoices->total() }} invoices</span>
     </div>
-    <div class="table-scroll">
+    @if($invoices->isEmpty())
+      <p class="invoice-empty" role="status">No invoices found.</p>
+    @else
+    <div class="table-scroll" role="region" aria-label="Invoice documents" tabindex="0">
       <table class="data-table">
         <thead><tr><th>Document</th><th>Order</th><th>Status</th><th>Amount</th><th>Due date</th><th>Action</th></tr></thead>
         <tbody>
-          @forelse($invoices as $invoice)
+          @foreach($invoices as $invoice)
             <tr>
-              <td>{{ $invoice->invoice_number ?? 'Private draft' }}<br><small>{{ $invoice->created_at->format('d M Y') }}</small></td>
+              <td><span class="invoice-document-number">{{ $invoice->invoice_number ?? 'Private draft' }}</span><br><small>{{ $invoice->created_at->format('d M Y') }}</small></td>
               <td>{{ $invoice->order->public_reference }}</td>
               <td><span class="role-pill">{{ ucfirst($invoice->status) }}</span></td>
               <td>{{ $invoice->currency }} {{ $invoice->total }}</td>
               <td>{{ $invoice->due_on?->format('d M Y') ?? '—' }}</td>
               <td><a class="btn subtle compact" href="{{ route($studio?'studio.invoices.show':'account.invoices.show',$invoice->public_id) }}">View</a></td>
             </tr>
-          @empty
-            <tr><td colspan="6" class="empty-cell">No invoices found.</td></tr>
-          @endforelse
+          @endforeach
         </tbody>
       </table>
     </div>
+    @endif
     {{ $invoices->links() }}
   </section>
 </div>
