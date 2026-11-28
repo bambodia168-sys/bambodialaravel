@@ -83,8 +83,8 @@ class McpAdvancedContentToolsTest extends TestCase
         $ownMedia=$this->asset($owner);
         $this->asset($owner,'pending');
         $this->asset($other);
-        MarketplaceCategory::query()->create(['type'=>'product','name'=>'Phase 3 test category','is_active'=>true,'sort_order'=>1]);
-        MarketplaceCategory::query()->create(['type'=>'product','name'=>'Inactive fixture','is_active'=>false,'sort_order'=>2]);
+        MarketplaceCategory::query()->create(['type'=>'product','name'=>'Phase 3 test category','is_active'=>true,'sort_order'=>1,'created_by'=>$owner->id]);
+        MarketplaceCategory::query()->create(['type'=>'product','name'=>'Inactive fixture','is_active'=>false,'sort_order'=>2,'created_by'=>$owner->id]);
         $s=new AdvancedContentTools();
         $categories=$s->call('bambodia_categories',['type'=>'product'],$owner,true,false);
         $this->assertStringContainsString('Phase 3 test category',json_encode($categories));
@@ -155,6 +155,29 @@ class McpAdvancedContentToolsTest extends TestCase
         $this->assertContains('active_license_required',$result['issues']);
         $this->assertContains('approved_owned_cover_required',$result['issues']);
         $this->assertFalse($result['passes_basic_checks']);
+    }
+
+    public function test_product_duplication_does_not_copy_commercial_state_or_media(): void
+    {
+        config(['mcp.production_writes_enabled'=>true]);
+        $owner=$this->actor();
+        $other=$this->actor();
+        $asset=$this->asset($owner);
+        $source=MarketplaceListing::query()->create(['user_id'=>$owner->id,'type'=>'product','title'=>'Original product fixture','description'=>str_repeat('Test description. ',4),'price'=>19,'currency'=>'USD','status'=>'draft','cover_media_id'=>$asset->id,'license_terms'=>'Source license terms']);
+        $s=new AdvancedContentTools();
+        $args=['entity'=>'product','id'=>$source->id,'title'=>'Copied product fixture'];
+        $this->reject(fn ()=>$s->call('bambodia_draft_duplicate',$args,$other,true,true),'id');
+        $this->reject(fn ()=>$s->call('bambodia_draft_duplicate',array_replace($args,['entity'=>'service']),$owner,true,true),'id');
+        $copy=$s->call('bambodia_draft_duplicate',$args,$owner,true,true);
+        $new=MarketplaceListing::query()->findOrFail($copy['id']);
+        $this->assertSame('draft',$new->status);
+        $this->assertSame($source->description,$new->description);
+        $this->assertNull($new->price);
+        $this->assertNull($new->cover_media_id);
+        $this->assertNull($new->license_terms);
+        $this->assertNull($new->license_definition_id);
+        $this->assertSame($asset->id,$source->fresh()->cover_media_id);
+        $this->assertSame(2,MarketplaceListing::query()->count());
     }
 
     public function test_staging_script_rejects_drift_and_preserves_original_registry(): void
