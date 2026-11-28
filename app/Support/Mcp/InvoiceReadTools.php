@@ -136,6 +136,7 @@ final class InvoiceReadTools
             $out['items']=!$d['snapshot_valid']?[]:array_map(
                 fn($l)=>['description'=>$l['description'],'quantity'=>$l['quantity'],'amount'=>$l['amount']],$d['items']);
             $out['description_is_untrusted_user_content']=true;
+            if ($d['discard_version']!==null) $out['discard_version']=$d['discard_version'];
             if ($d['revision']!==null && $d['version']!==null) {
                 $out['revision']=$d['revision']; $out['version']=$d['version'];
             }

@@ -259,6 +259,9 @@ class AuditEvent extends Model
         'invoice.draft.create',
         'invoice.draft.update',
         'invoice.draft.discard',
+        'mcp.invoice.draft.create',
+        'mcp.invoice.draft.update',
+        'mcp.invoice.draft.discard',
     ];
 
     protected $fillable = ['actor_id', 'event', 'ip_fingerprint', 'created_at'];

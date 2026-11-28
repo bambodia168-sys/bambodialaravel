@@ -125,10 +125,10 @@ final class InvoiceDraftService
         },3);
     }
 
-    // Used by native UI now and by the separately authorized future MCP adapter.
+    // Native UI and controlled MCP adapter share one operation ledger.
     // Caller must supply literal boolean confirmation (HTML transport converts its
     // validated checkbox value before calling). No caller-supplied prices/parties.
-    public function mutate(User $actor,string $action,string $resource,string $version,string $requestId,mixed $confirm,?string $dueOn=null): array
+    public function mutate(User $actor,string $action,string $resource,string $version,string $requestId,mixed $confirm,?string $dueOn=null,bool $mcp=false): array
     {
         abort_unless(MarketplaceInvoicePolicy::writesEnabled() && $actor->isCreator() && $actor->account_status==='active',404);
         if (!in_array($action,['create','update','discard'],true) || $confirm!==true
@@ -137,7 +137,7 @@ final class InvoiceDraftService
             throw ValidationException::withMessages(['request'=>'Invalid confirmed invoice operation.']);
         }
         $requestId=strtolower($requestId);
-        return DB::transaction(function()use($actor,$action,$resource,$version,$requestId,$dueOn): array {
+        return DB::transaction(function()use($actor,$action,$resource,$version,$requestId,$dueOn,$mcp): array {
             if ($action==='create') {
                 $hint=$this->order($resource,(int)$actor->id);
             } else {
@@ -146,6 +146,10 @@ final class InvoiceDraftService
                 $hint=$hintInvoice->order()->firstOrFail();
             }
             [$seller,$buyer,$o,$payments,$invoice,$items]=$this->lockSource($actor,$hint);
+            if ($mcp) {
+                $this->assertMcpReader($seller);
+                abort_unless(config('mcp.production_writes_enabled',false) === true,404);
+            }
             abort_unless($this->policy->create($seller,$o) && ($action==='create' || ($invoice && $invoice->public_id===$resource && $this->policy->update($seller,$invoice))),404);
             $tool='invoice.draft.'.$action;
             $digest=$this->digest('request-v1',[$tool,$resource,$version,$dueOn]);
@@ -191,6 +195,11 @@ final class InvoiceDraftService
             // event under the same actor lock, then link it to the ledger.
             AuditEvent::record($tool,$seller);
             $audit=AuditEvent::query()->where('actor_id',$seller->id)->where('event',$tool)->latest('id')->firstOrFail();
+            if ($mcp) {
+                $event='mcp.'.$tool;
+                AuditEvent::record($event,$seller);
+                $audit=AuditEvent::query()->where('actor_id',$seller->id)->where('event',$event)->latest('id')->firstOrFail();
+            }
             $invoice->refresh();
             $result=['invoice_id'=>$invoice->public_id,'status'=>$invoice->status,'revision'=>$invoice->revision,
                 'version'=>$this->version($o,$payments,$invoice,$items),'request_id'=>$requestId,'audit_id'=>(int)$audit->id];
@@ -240,7 +249,9 @@ final class InvoiceDraftService
 
     private function mcpMetadata(MarketplaceInvoice $i,array $data,bool $issuer): array
     {
-        return [...$data,'relationship'=>$issuer?'issuer':'recipient',
+        $discardOnly=$issuer && $data['can_discard'] && !$data['can_update']
+            && MarketplaceInvoicePolicy::writesEnabled() && config('mcp.production_writes_enabled',false) === true;
+        return [...$data,'discard_version'=>$discardOnly?$data['version']:null,'relationship'=>$issuer?'issuer':'recipient',
             'created_at'=>$i->created_at?->toIso8601String(),'issued_at'=>$i->issued_at?->toIso8601String(),
             'voided_at'=>$i->voided_at?->toIso8601String(),'discarded_at'=>$i->discarded_at?->toIso8601String(),
             'revision'=>$data['can_update']?$i->revision:null,'version'=>$data['can_update']?$data['version']:null];
