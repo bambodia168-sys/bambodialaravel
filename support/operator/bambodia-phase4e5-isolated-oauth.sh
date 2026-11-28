@@ -10,6 +10,7 @@ RELEASE=fd91345ed14fea36ed62f60d0cf43d3dc26024f2
 CONTROLLER=app/Http/Controllers/Api/BambodiaMcpController.php
 CONTROLLER_BLOB=a302fa364f1f52b6320b77688b7595b91894ca13
 PATCH=support/bambodia-mcp-stage-invoice-write.py
+PATCH_BLOB=e546fd64a5b21f8ef8aa596c9f0796b3cdd2ef2f
 HARNESS_BLOB=34a735f87c58d0f3cee5611307ecfc87771f7cea
 AUDIT=app/Models/AuditEvent.php
 AUDIT_BASE=478ab1fd7d6ed75028aca3e64ced4a572f286a27
@@ -241,7 +242,7 @@ PY
   download "$AUDIT" "$AUDIT_CANDIDATE" "$stage/verified/audit-invoice.php"
   mkdir -p "$stage/candidate/$(dirname "$AUDIT")"
   reconcile_audit "$stage/verified/audit-base.php" "$stage/source/$AUDIT" "$stage/verified/audit-invoice.php" "$stage/candidate/$AUDIT"
-  download "$PATCH" e546fd64a5b21f8aa596c9f0796b3cdd2ef2f "$stage/verified/$(basename "$PATCH")"
+  download "$PATCH" "$PATCH_BLOB" "$stage/verified/$(basename "$PATCH")"
   download support/bambodia-mcp-stage-invoice-read.py f609302a172c8bd2bb23a92706e10b47adfe8f9c "$stage/verified/bambodia-mcp-stage-invoice-read.py"
   download support/bambodia-mcp-stage-project-write.py b987de1ae5e3c7986df16abb66d4d4315eeafd4c "$stage/verified/bambodia-mcp-stage-project-write.py"
   download support/bambodia-mcp-stage-commerce-read.py f3da978caeef2f94ea3fa5b7718d5f1a2f1969f2 "$stage/verified/bambodia-mcp-stage-commerce-read.py"
@@ -285,7 +286,7 @@ accept(){
   (cd "$stage"; sha256sum --check --status manifest.sha256) || fail STAGED_SOURCE_DRIFT
   verify_live
   for path in "${ADDITIONS[@]}"; do [[ ! -e "$stage/source/$path" ]] || fail BASELINE_ALREADY_HAS_INVOICE_FILES; done
-  check_blob "$stage/verified/$(basename "$PATCH")" e546fd64a5b21f8aa596c9f0796b3cdd2ef2f
+  check_blob "$stage/verified/$(basename "$PATCH")" "$PATCH_BLOB"
   check_blob "$stage/source/tests/Feature/BambodiaPhase4E5IsolatedOAuthTest.php" "$HARNESS_BLOB"
   (cd "$LIVE"; sha256sum --check --status "$stage/verified/live-source.sha256") || fail LIVE_SOURCE_DRIFT
   check_blob "$stage/source/$CONTROLLER" "$CONTROLLER_BLOB"

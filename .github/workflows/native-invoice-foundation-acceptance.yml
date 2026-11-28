@@ -58,6 +58,7 @@ jobs:
       - name: Phase 4E.5 operator package syntax (not actual OAuth acceptance)
         run: |
           set -Eeuo pipefail
+          python3 -B support/operator/verify-phase4e5-package.py
           bash -n support/operator/bambodia-phase4e5-isolated-oauth.sh
           awk '/^  cat >"\$run\/qa-isolated-db.sh" <<.DBSH./{p=1;next} /^DBSH$/{p=0;found=1} p{print} END{if(!found)exit 1}' support/operator/bambodia-phase4e5-isolated-oauth.sh | bash -n
           awk '/^  python3 - "\$@" <<.AUDITPY./{p=1;next} /^AUDITPY$/{p=0;found=1} p{print} END{if(!found)exit 1}' support/operator/bambodia-phase4e5-isolated-oauth.sh | python3 - --self-test app/Models/AuditEvent.php
