@@ -53,6 +53,14 @@ jobs:
           php artisan route:list --path=invoices
       - name: Invoice isolated tests
         run: php artisan test --filter='InvoiceMoneyTest|NativeInvoiceFoundationTest'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build existing frontend assets for regression tests
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+          test -s public/build/manifest.json
       - name: Existing commerce and project regression tests
         run: php artisan test --filter='CommerceWorkspacesTest|CommercePaymentsTest|CreatorStudioAnalyticsTest|CustomerAccountOverviewTest|McpCommerceReadToolsTest|McpProjectReadToolsTest|McpProjectWriteToolsTest'
   mysql:
