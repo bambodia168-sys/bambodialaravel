@@ -68,7 +68,7 @@ class McpCommerceReadToolsTest extends TestCase
             'permissions'=>'Fixture permissions','restrictions'=>'Fixture restrictions','status'=>'active','created_by'=>$creator->id]);
         $release=ProductFileVersion::query()->create(['marketplace_listing_id'=>$product->id,'uploaded_by'=>$creator->id,
             'version'=>'1.0.0','release_notes'=>'Fixture release','original_filename'=>'secret.zip','storage_path'=>'private/'.Str::uuid().'.zip',
-            'file_type'=>'zip','byte_size'=>100,'sha256'=>hash('sha256',(string)Str::uuid()),'status'=>'approved']);
+            'file_type'=>'zip','byte_size'=>100,'sha256'=>hash('sha256',(string)Str::uuid()),'status'=>'approved','rights_attested_at'=>now()]);
         $entitlement=ProductEntitlement::query()->create(['user_id'=>$customer->id,'product_file_version_id'=>$release->id,
             'granted_by'=>$creator->id,'grant_reason'=>'Fixture grant','status'=>'active','expires_at'=>now()->subDay()]);
         $license=ProductLicense::query()->create(['product_entitlement_id'=>$entitlement->id,'marketplace_listing_id'=>$product->id,
@@ -181,6 +181,27 @@ class McpCommerceReadToolsTest extends TestCase
         $this->assertSame($before,DB::table('product_licenses')->orderBy('id')->get()->toJson());
         $held->entitlement->update(['status'=>'revoked','revoked_at'=>now()]);
         $this->assertFalse($get($held)['installation_active']);
+    }
+
+    public function test_pagination_and_completion_window_are_bounded(): void
+    {
+        $a=$this->actor(); $b=$this->actor();
+        for ($i=0;$i<21;$i++) $this->orderFixture($a,$b,'awaiting_payment');
+        $old=$this->orderFixture($a,$b);
+        $old->update(['completed_at'=>now()->subDays(8)]);
+        $this->paid($old);
+        $pending=$this->orderFixture($a,$b,'awaiting_payment');
+        $this->paid($pending);
+        $s=new CommerceReadTools();
+        $first=$s->call('bambodia_orders_list',['page'=>1],$a,true);
+        $second=$s->call('bambodia_orders_list',['page'=>2],$a,true);
+        $this->assertSame(23,$first['total']);
+        $this->assertCount(20,$first['data']);
+        $this->assertCount(3,$second['data']);
+        $this->assertEmpty(array_intersect(array_column($first['data'],'reference'),array_column($second['data'],'reference')));
+        $this->assertSame([],$s->call('bambodia_transactions_summary',[],$a,true)['by_currency_and_status']);
+        $this->assertSame(1,$s->call('bambodia_transactions_summary',['days'=>9],$a,true)['by_currency_and_status'][0]['orders']);
+        $this->reject(fn()=>$s->call('bambodia_receipt_get',['reference'=>$pending->reference()],$a,true),'reference');
     }
 
     public function test_stage_adds_only_six_read_definitions(): void
