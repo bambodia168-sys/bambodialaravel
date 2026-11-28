@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "repo": "bambodia168-sys/bambodialaravel",
+  "base": "c1db97f9798cdd0e9291fb943d5a1a697c2b9f48",
+  "application": "fd91345ed14fea36ed62f60d0cf43d3dc26024f2",
+  "operator": "aafab0d6bcc387fb1b464b9d827e8ff3fc2344b6",
+  "oauth_stage_manifest": "8e1321863391d2b442d812dc3784d1963aae53902d89b2dd997eed5239242e1d",
+  "oauth_stage": "/var/tmp/bambodia-phase4e5-review.h8f9V45B",
+  "files": [
+    {
+      "path": "app/Http/Controllers/Api/BambodiaMcpController.php",
+      "base": null,
+      "candidate": null,
+      "mode": "accepted_overlay",
+      "live": "a302fa364f1f52b6320b77688b7595b91894ca13",
+      "staged": "97996e712c04b1cabe2647aecedd56e64f5dcd8c"
+    },
+    {
+      "path": "app/Http/Controllers/MarketplaceInvoiceController.php",
+      "base": null,
+      "candidate": "2bf546984470f632737f7466ab6808206bc77060",
+      "mode": "add"
+    },
+    {
+      "path": "app/Models/AuditEvent.php",
+      "base": "478ab1fd7d6ed75028aca3e64ced4a572f286a27",
+      "candidate": "4812c5d412c4711e37237d4e2f83bf0daf98657a",
+      "mode": "accepted_overlay",
+      "live": "430b4d81e53934a78b3c0ed74a087a36a0376566",
+      "staged": "39b2103391358fcb8bf03af677beb08840fb3cab"
+    },
+    {
+      "path": "app/Models/MarketplaceInvoice.php",
+      "base": null,
+      "candidate": "a791525667e3ab195c62bce7e42a29817680a678",
+      "mode": "add"
+    },
+    {
+      "path": "app/Models/MarketplaceInvoiceItem.php",
+      "base": null,
+      "candidate": "629bb895e6d970b5bee54cbc472d7b86f3f071ad",
+      "mode": "add"
+    },
+    {
+      "path": "app/Policies/MarketplaceInvoicePolicy.php",
+      "base": null,
+      "candidate": "3f16123ee1794933dbca1a7ada4a54fb2e052fad",
+      "mode": "add"
+    },
+    {
+      "path": "app/Support/Invoices/InvoiceDraftService.php",
+      "base": null,
+      "candidate": "86e043a56bf764952f7d6cf1988b3b7088fc3b09",
+      "mode": "add"
+    },
+    {
+      "path": "app/Support/Invoices/InvoiceMoney.php",
+      "base": null,
+      "candidate": "d393ddf8dc7f2a471a3404022dc8e98118447da6",
+      "mode": "add"
+    },
+    {
+      "path": "app/Support/Mcp/InvoiceReadTools.php",
+      "base": null,
+      "candidate": "3a1830746923cc7a78a20970143a57ec87119e05",
+      "mode": "add"
+    },
+    {
+      "path": "app/Support/Mcp/InvoiceWriteTools.php",
+      "base": null,
+      "candidate": "259f8cfe1c60d261584199cf6483c57fa5636ccc",
+      "mode": "add"
+    },
+    {
+      "path": "config/invoices.php",
+      "base": null,
+      "candidate": "7f86f47b819152e628ee999ad88dd3efe54d70d5",
+      "mode": "add"
+    },
+    {
+      "path": "database/migrations/2026_11_28_120000_create_marketplace_invoice_foundation.php",
+      "base": null,
+      "candidate": "c70ab314663276fa5a715513f7576068835461df",
+      "mode": "add"
+    },
+    {
+      "path": "public/css/native-invoices.css",
+      "base": null,
+      "candidate": "570a170475b0b7c4dd75705e327499e0df352e79",
+      "mode": "add"
+    },
+    {
+      "path": "public/js/creator-studio-analytics.js",
+      "base": "ac2c82e555319ee89fd0e12845944fdf9558a6c9",
+      "candidate": "bc3f55e18987564b278516bb9de6dc54e401d964",
+      "mode": "patch",
+      "live": "ac2c82e555319ee89fd0e12845944fdf9558a6c9"
+    },
+    {
+      "path": "resources/views/account/studio.blade.php",
+      "base": "eab0ca6accc64a81b88df708ba312c62814a4344",
+      "candidate": "df8ac3b1bf234dd5b0fc2954ddde3e3444464df4",
+      "mode": "patch",
+      "live": "eab0ca6accc64a81b88df708ba312c62814a4344"
+    },
+    {
+      "path": "resources/views/invoices/index.blade.php",
+      "base": null,
+      "candidate": "275096c75a9c38fc43669427e69a33b42c7dff14",
+      "mode": "add"
+    },
+    {
+      "path": "resources/views/invoices/preview.blade.php",
+      "base": null,
+      "candidate": "56260e9f8b9269e02d1759c038de5d4299b6e589",
+      "mode": "add"
+    },
+    {
+      "path": "resources/views/invoices/show.blade.php",
+      "base": null,
+      "candidate": "98fe06f3ab2b736d5bd50bf46b892ee2abae0054",
+      "mode": "add"
+    },
+    {
+      "path": "resources/views/layouts/workspace.blade.php",
+      "base": "46d54b11a3c4353703d622b966deac7eb71d9006",
+      "candidate": "eb152f83ba286f009ed747152d0c94a08775b78e",
+      "mode": "patch",
+      "live": "46d54b11a3c4353703d622b966deac7eb71d9006"
+    },
+    {
+      "path": "routes/web.php",
+      "base": "3c375455912dba025a676c672af452ea5e4ae505",
+      "candidate": "5c1812de1eef3115bc2a47675d6094a9887c7536",
+      "mode": "patch",
+      "live": "375dc03d5d0cca5e4e584f997501d5b528bca29a"
+    }
+  ],
+  "flags": {
+    "INVOICES_ENABLED": false,
+    "INVOICES_DRAFT_WRITES_ENABLED": false
+  },
+  "financial_workflow": 46154174179,
+  "browser_workflow": 46154174202,
+  "production_registry": 38,
+  "candidate_registry": 45,
+  "fpm_checks": 19
+}
