@@ -132,7 +132,12 @@ jobs:
           test "$DB_DATABASE" = bambodia_invoice_acceptance
           test -z "$DB_URL"
           php -l support/bambodia-mcp-phase4e3-concurrency.php
-          php support/bambodia-mcp-phase4e3-concurrency.php
+          log=$(mktemp)
+          trap 'rm -f "$log"' EXIT
+          php support/bambodia-mcp-phase4e3-concurrency.php | tee "$log"
+          for marker in CONCURRENT_SAME_UUID_CREATE CONCURRENT_DISTINCT_UUID_CREATE CONCURRENT_UPDATE_DISCARD CONCURRENT_SOURCE_PAYMENT_TRANSITION SYNTHETIC_LATE_DEADLOCK_RETRY BOUNDED_RETRY_EXHAUSTION_ROLLBACK INDEPENDENT_MYSQL_CONCURRENCY; do
+            test "$(grep -Fxc "$marker=PASS" "$log")" -eq 1
+          done
 
       - name: Actual MySQL deadlock and native manual review race
         env:
@@ -140,4 +145,10 @@ jobs:
         run: |
           set -Eeuo pipefail
           php -l support/bambodia-mcp-phase4e4-financial-concurrency.php
-          php support/bambodia-mcp-phase4e4-financial-concurrency.php
+          log=$(mktemp)
+          trap 'rm -f "$log"' EXIT
+          php support/bambodia-mcp-phase4e4-financial-concurrency.php | tee "$log"
+          for marker in MYSQL_ENGINE_DEADLOCK_SQLSTATE_40001_DRIVER_1213 MYSQL_ENGINE_DEADLOCK_RETRY_EXACTLY_ONCE NATIVE_MANUAL_APPROVAL_VS_CREATE NATIVE_MANUAL_APPROVAL_VS_UPDATE NATIVE_PAYMENT_TRANSITION_CONCURRENCY; do
+            test "$(grep -Fxc "$marker=PASS" "$log")" -eq 1
+          done
+          test "$(grep -Fxc 'EXTERNAL_DELIVERY=NONE' "$log")" -eq 1

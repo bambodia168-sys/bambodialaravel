@@ -20,6 +20,12 @@ demand(getenv('GITHUB_ACTIONS')==='true' && getenv('INVOICE_CONCURRENCY_ISOLATED
 $root=dirname(__DIR__);
 require $root.'/vendor/autoload.php';
 $app=require $root.'/bootstrap/app.php';$app->make(Kernel::class)->bootstrap();
+// The console bootstrap installs a reporting handler which can return with
+// exit status zero. Standalone acceptance must fail on every uncaught error.
+set_exception_handler(static function(\Throwable $e): void {
+    fwrite(STDERR,'FINANCIAL_ACCEPTANCE_EXCEPTION='.get_class($e).' at '.basename($e->getFile()).':'.$e->getLine().PHP_EOL);
+    exit(1);
+});
 demand(app()->environment('testing') && config('database.default')==='mysql'
     && config('database.connections.mysql.host')==='127.0.0.1'
     && config('database.connections.mysql.database')==='bambodia_invoice_acceptance'
@@ -183,9 +189,14 @@ function manualAttempt(MarketplaceOrder $o,$method): CommercePayment {
 function nativeApprove(User $reviewer,MarketplaceOrder $o,CommercePayment $p): void {
     $request=Request::create('/synthetic-native-review','PATCH',['decision'=>'approve','note'=>'Isolated synthetic manual review',
         'verified_reference'=>'QA-'.Str::uuid(),'verified_amount'=>$o->total]);
-    $request->setUserResolver(fn()=>$reviewer);
     $session=app('session')->driver();$session->start();$request->setLaravelSession($session);
+    // Binding the request triggers Laravel AuthServiceProvider rebinding,
+    // which replaces a previously assigned user resolver.
     app()->instance('request',$request);app('redirect')->setSession($session);
+    app('auth')->guard()->setUser($reviewer);
+    $request->setUserResolver(fn()=>$reviewer);
+    demand($request->user()?->is($reviewer)===true && request()->user()?->is($reviewer)===true
+        && app('auth')->guard()->user()?->is($reviewer)===true,'Synthetic reviewer authentication not bound.');
     $response=app(CommercePaymentController::class)->review($request,$o->number,$p->number);
     demand($response->isRedirect(),'Native manual review did not complete.');
 }
