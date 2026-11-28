@@ -152,22 +152,6 @@ sha256sum "$VHOST" >"$WORK/evidence/vhost.sha256"
 cp "$STAGE/manifest.sha256" "$WORK/evidence/accepted-stage.sha256"
 printf '%s\n' "$HEAD" >"$WORK/evidence/candidate-commit.txt"
 printf '%s\n' "$TREE" >"$WORK/evidence/candidate-tree.txt"
-health(){
-  local code
-  code=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' https://bambodia.com/)
-  [[ "$code" == 200 ]] || fail "HOMEPAGE_HTTP_$code"
-  curl -fLsS --max-time 30 https://bambodia.com/.well-known/oauth-protected-resource/mcp -o "$WORK/resource.json"
-  python3 - "$WORK/resource.json" <<'PY'
-import json,sys
-d=json.load(open(sys.argv[1]))
-assert d['resource']=='https://bambodia.com/mcp' and d['authorization_servers']==['https://bambodia.com']
-PY
-  code=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' https://bambodia.com/mcp)
-  [[ "$code" == 401 ]] || fail "UNAUTHENTICATED_MCP_HTTP_$code"
-  echo "PUBLIC_HOME_OAUTH_METADATA_AND_UNAUTHENTICATED_GATE=PASS"
-}
-
-health
 source_gate
 protected_capture "$WORK/protected-final.sha256" "$WORK/protected-final-absent.txt"
 cmp -s "$WORK/protected-final.sha256" "$WORK/evidence/protected.sha256" || fail PROTECTED_SOURCE_DRIFT
@@ -175,14 +159,29 @@ cmp -s "$WORK/protected-final-absent.txt" "$WORK/evidence/protected-absent.txt" 
 sha256sum --check --status "$WORK/evidence/vhost.sha256" || fail VHOST_DRIFT
 rm -- "$WORK/protected-final.sha256" "$WORK/protected-final-absent.txt"
 echo "PROTECTED_SOURCE_AND_CONFIGURATION_UNCHANGED=PASS"
-# Recheck the branch tips after the preparation, without fetching a mutable source.
-repo_gate
+# Recheck only mutable refs, conserving the public API request quota.
+api_get commits/main "$WORK/github/main-final.json"
+for pr in 211 212 213; do api_get "pulls/$pr" "$WORK/github/pr-$pr-final.json"; done
+python3 - "$WORK/github" <<'PY'
+import json,pathlib,sys
+w=pathlib.Path(sys.argv[1])
+def read(name): return json.loads((w/name).read_text())
+if read('main-final.json')['sha']!=read('main.json')['sha']:
+    raise SystemExit('PHASE4D2A_BLOCKED=MAIN_DRIFT_DURING_PREPARATION')
+for n in (211,212,213):
+    a=read(f'pr-{n}.json'); b=read(f'pr-{n}-final.json')
+    def state(p): return (p['head']['sha'],p['base']['sha'],p['head']['ref'],p['base']['ref'],p['state'],p['merged'],p['draft'],p['mergeable'])
+    if state(a)!=state(b):
+        raise SystemExit('PHASE4D2A_BLOCKED=PR_DRIFT_DURING_PREPARATION_'+str(n))
+print('FINAL_BRANCH_TIPS_UNCHANGED=PASS')
+PY
 printf '%s\n' "$HEAD" >"$WORK/PREPARE_PASS"
-(cd "$WORK"; find github evidence source rollback -type f -print0 | sort -z | xargs -0 sha256sum > package.sha256; sha256sum source-blobs.txt PREPARE_PASS resource.json >> package.sha256; sha256sum --check --status package.sha256)
+(cd "$WORK"; find github evidence source rollback -type f -print0 | sort -z | xargs -0 sha256sum > package.sha256; sha256sum source-blobs.txt PREPARE_PASS >> package.sha256; sha256sum --check --status package.sha256)
 echo "RELEASE_PACKAGE_MANIFEST_SHA256=$(sha256sum "$WORK/package.sha256"|cut -d' ' -f1)"
 echo "EXACT_SOURCE_PACKAGE=PASS files=6"
 echo "PHASE4D2A_PREPARATION=PASS"
 echo "DATABASE_BACKUP=NOT_STARTED"
+echo "PUBLIC_HEALTH_PROBE=DEFERRED_TO_AUTHORIZED_PREFLIGHT"
 echo "PRODUCTION_DATABASE_ACCESSED=NO"
 echo "PRODUCTION_FILES_MODIFIED=0"
 echo "PRODUCTION_DEPLOYMENT=NOT_STARTED"
