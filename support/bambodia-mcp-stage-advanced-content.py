@@ -76,7 +76,8 @@ def self_test():
         candidate = Path(tmp) / "candidate.php"
         candidate.write_bytes(stage(fixture))
         subprocess.run(["php", "-l", str(candidate)], check=True)
-        subprocess.run(["php", str(candidate)], check=True)
+        harness = Path(__file__).with_name("bambodia-mcp-phase3-controller-harness.php")
+        subprocess.run(["php", str(harness), str(candidate)], check=True)
     print("PASS: additive registry, write lists, existing gate, duplicate and drift rejection")
 
 def main():
