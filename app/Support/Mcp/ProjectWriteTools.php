@@ -81,7 +81,9 @@ final class ProjectWriteTools
             if ($prior) {
                 if ($prior->tool!==$name || $prior->resource_reference!==$reference || !hash_equals($prior->payload_digest,$digest))
                     $this->reject('request_id','Request ID already used with different arguments.');
-                return [...json_decode($prior->result,true,512,JSON_THROW_ON_ERROR),'replayed'=>true];
+                $result=json_decode($prior->result,true,512,JSON_THROW_ON_ERROR);
+                ksort($result); // MySQL JSON normalizes object key ordering.
+                return [...$result,'replayed'=>true];
             }
             if (!hash_equals($current,$v['expected_version'])) $this->reject('expected_version','Project state changed. Read the latest version and review again.');
             // Date eligibility is checked for new writes only, so a completed request can
@@ -118,6 +120,7 @@ final class ProjectWriteTools
             $audit=AuditEvent::query()->create(['actor_id'=>$actor->id,'event'=>'mcp.phase4.'.substr($name,9),'created_at'=>now()]);
             $result=['reference'=>$reference,'request_id'=>$v['request_id'],'audit_id'=>(int)$audit->id,
                 ...$data,'version'=>$version];
+            ksort($result);
             DB::table('mcp_project_operations')->insert(['actor_id'=>$actor->id,'request_id'=>$v['request_id'],'tool'=>$name,
                 'resource_reference'=>$reference,'payload_digest'=>$digest,'audit_event_id'=>$audit->id,
                 'result'=>json_encode($result,JSON_THROW_ON_ERROR),'created_at'=>now()]);
