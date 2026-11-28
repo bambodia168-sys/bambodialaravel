@@ -27,6 +27,12 @@ if (getenv('GITHUB_ACTIONS')!=='true' || getenv('RUN_MCP_PROJECT_CONCURRENCY')!=
 require dirname(__DIR__,2).'/vendor/autoload.php';
 $app=require dirname(__DIR__,2).'/bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
+// Laravel's console exception renderer may exit zero for a standalone script.
+// Override the uncaught handler after bootstrap so parent and workers fail closed.
+set_exception_handler(static function (Throwable $e): void {
+    fwrite(STDERR,'MCP_PROJECT_CONCURRENCY=FAIL '.get_class($e).': '.$e->getMessage().PHP_EOL);
+    exit(1);
+});
 if (!$app->environment('testing') || DB::connection()->getDriverName()!=='mysql'
     || DB::connection()->getDatabaseName()!=='bambodia_acceptance'
     || config('database.connections.mysql.host')!=='127.0.0.1'
@@ -158,9 +164,11 @@ final class ConcurrentProjectAcceptance
 
     private function blocked(array $ids): void
     {
+        // SHOW PROCESSLIST truncates Info at 100 characters, which can hide
+        // FOR UPDATE on longer order/contract queries. FULL preserves it.
         awaitCondition(function()use($ids) {
             $seen=[];
-            foreach (DB::select('SHOW PROCESSLIST') as $row) {
+            foreach (DB::select('SHOW FULL PROCESSLIST') as $row) {
                 $id=(int)$row->Id;
                 if (in_array($id,$ids,true) && stripos((string)$row->Info,'for update')!==false) $seen[]=$id;
             }
