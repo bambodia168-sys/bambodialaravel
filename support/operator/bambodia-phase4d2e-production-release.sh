@@ -114,7 +114,16 @@ verify_backup(){
   python3 - "$BACKUP" <<'PY'
 from datetime import datetime,timezone
 import pathlib,sys
-p=pathlib.Path(sys.argv[1]); start=datetime.fromisoformat((p/'evidence/backup-started.txt').read_text().strip()); end=datetime.fromisoformat((p/'evidence/backup-completed.txt').read_text().strip()); now=datetime.now(timezone.utc)
+p=pathlib.Path(sys.argv[1])
+def parse_utc(name):
+    # Recovery operator emits date -u +%FT%TZ. strptime also supports Python 3.8.
+    try:
+        return datetime.strptime((p/'evidence'/name).read_text().strip(),'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+    except (ValueError,OSError):
+        raise SystemExit('PHASE4D2E_BLOCKED=BACKUP_TIMESTAMP_INVALID')
+start=parse_utc('backup-started.txt')
+end=parse_utc('backup-completed.txt')
+now=datetime.now(timezone.utc)
 if not start<=end<=now or (now-start).total_seconds()>=7200: raise SystemExit('PHASE4D2E_BLOCKED=BACKUP_EXPIRED_OR_CLOCK_DRIFT')
 PY
   echo "FRESH_RESTORE_VERIFIED_BACKUP=PASS"
