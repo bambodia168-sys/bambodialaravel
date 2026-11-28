@@ -102,7 +102,7 @@ final class McpInvoiceReadToolsTest extends TestCase
         $void=$this->invoice($b,$this->order($b,$a),'void');
         $hidden=$this->invoice($other,$this->order($other,$outsider),'issued');
         $source=$this->order($a,$b);
-        $source->listing()->update(['title'=>'Changed item','price'=>'99.00']);
+        MarketplaceListing::query()->whereKey($source->marketplace_listing_id)->update(['title'=>'Changed item','price'=>'99.00']);
         config(['invoices.draft_writes_enabled'=>false]);
         $before=$this->snapshot();
         $list=$this->callTool('invoices_list',[],$a);
@@ -164,6 +164,8 @@ final class McpInvoiceReadToolsTest extends TestCase
         $this->assertSame('paid',$get()['payment_state']);$this->assertSame('0.00',$get()['outstanding_amount']);
         $o->update(['status'=>'refunded']);
         $this->assertSame('review_required',$get()['payment_state']);
+        $o->operations()->create(['commerce_payment_id'=>$payment->id,'refund_status'=>'refunded','refund_reference'=>'SECRET-'.Str::uuid(),'refund_resolved_at'=>now()]);
+        $this->assertSame('refunded',$get()['payment_state']);$this->assertSame('0.00',$get()['outstanding_amount']);
         $o->update(['status'=>'completed']);
         $o->payments()->create(['number'=>(string)Str::uuid(),'commerce_payment_method_id'=>$method->id,
             'method_name'=>$method->name,'provider'=>'bank_transfer','status'=>'paid','live_mode'=>true,'settlement_reference'=>'SECRET-'.Str::uuid()]);
@@ -173,6 +175,14 @@ final class McpInvoiceReadToolsTest extends TestCase
             $o=$this->order($a,$b);$o->update(['status'=>$status]);
             $this->rejects(fn()=>$this->callTool('invoice_source_preview',['order_reference'=>$o->reference()],$a),'resource');
         }
+        $mismatch=$this->order($a,$b);$mi=$this->invoice($a,$mismatch);
+        $mismatch->update(['total'=>'26.00']);
+        $d=$this->callTool('invoice_get',['invoice_id'=>$mi->public_id],$a);
+        $this->assertSame('review_required',$d['payment_state']);$this->assertNull($d['outstanding_amount']);
+        $this->assertSame([],$d['items']);$this->assertArrayNotHasKey('version',$d);
+        $inactiveSource=$this->order($a,$b);$b->update(['account_status'=>'suspended']);
+        $this->rejects(fn()=>$this->callTool('invoice_source_preview',['order_reference'=>$inactiveSource->reference()],$a),'resource');
+        $b->update(['account_status'=>'active']);
         $zero=$this->order($a,$b,'0.00');
         $this->rejects(fn()=>$this->callTool('invoice_source_preview',['order_reference'=>$zero->reference()],$a),'resource');
     }

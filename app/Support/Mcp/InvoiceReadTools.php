@@ -133,7 +133,7 @@ final class InvoiceReadTools
         if ($detail) {
             // Only the canonical native line is supported in v1. An inconsistent
             // line snapshot is not presented as collectible or as a verified line.
-            $out['items']=$d['payment_state']==='review_required'?[]:array_map(
+            $out['items']=!$d['snapshot_valid']?[]:array_map(
                 fn($l)=>['description'=>$l['description'],'quantity'=>$l['quantity'],'amount'=>$l['amount']],$d['items']);
             $out['description_is_untrusted_user_content']=true;
             if ($d['revision']!==null && $d['version']!==null) {

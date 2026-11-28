@@ -266,7 +266,7 @@ final class InvoiceDraftService
         return ['id'=>$i->public_id,'number'=>$i->invoice_number,'status'=>$i->status,'reference'=>$o->public_reference,
             'currency'=>$i->currency,'total'=>$i->total,'due_on'=>$i->due_on?->format('Y-m-d'),
             'items'=>$items->map(fn($l)=>['description'=>$l->description,'quantity'=>$l->quantity,'amount'=>$l->line_total])->all(),
-            'payment_state'=>$state,'overdue'=>(bool)$overdue,'can_update'=>$draftActions && $eligible && $matches,
+            'payment_state'=>$state,'overdue'=>(bool)$overdue,'snapshot_valid'=>$matches,'can_update'=>$draftActions && $eligible && $matches,
             'can_discard'=>$draftActions,'version'=>$draftActions?$this->version($o,$payments,$i,$items):null];
     }
 }
