@@ -1,0 +1,9 @@
+# Phase 4C.1 — Project READ candidate
+
+Stacked on CI-accepted Phase 4B commit bd662887a7408698c2903f8e9baebc723e477336. Four READ-only tools preserve 30 prior definitions; expected candidate inventory 34 (25 READ, 9 WRITE), or 25 with WRITE disabled. No migrations. No changes to native controllers or existing tools.
+
+Tracking requires active super-admin, mcp.read, native commerce_orders capability, buyer/seller ownership, completed order, live paid attempt with settlement reference, service/project/freelance listing, and matching inquiry buyer/seller/listing. The predicate mirrors VerifiedTrackingOrder and enforces live mode even in isolated QA. Tracking list filters and pagination are bounded; details include checklist metadata, native progress estimate, and approved date/pending extension indicator only. No message bodies, notes, private files, attachment URLs, payment identifiers or reasons.
+
+Formal contracts use native client/freelancer visibility, independent of commerce availability and without implying marketplace payment or escrow. Unsent drafts are client-only. Milestone metadata includes title, sequence, amount, due date and status; no description, scope, terms, consent hashes, dispute details, evidence or messages. Contractual amounts are not payment records. No user IDs accepted or returned. Task/milestone IDs are only exposed within authorized parent records for future scoped operations.
+
+All new READ tools retain existing OAuth metadata through additive staging; the script starts from exact Phase 3 controller blob and composes the accepted Phase 4B patch, then adds four definitions/dispatch entries. Separate new staging file only. Synthetic registry checks compare all 30 previous definitions and nine WRITE gates; actual OAuth overlay acceptance is still required in an isolated database. No production modifications or deployment.
