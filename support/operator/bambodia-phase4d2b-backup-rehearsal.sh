@@ -36,6 +36,23 @@ RUNTIME=""
 cleanup(){
   local rc=$?
   trap - EXIT
+  # Preserve only private error logs on failure, never credentials or SQL dump
+  # contents in terminal output. A failed backup cannot have a readiness seal.
+  if [[ "$rc" != 0 ]]; then
+    local diag
+    diag=$(mktemp -d /root/bambodia-phase4d2-diagnostics.XXXXXXXX) || diag=""
+    if [[ -n "$diag" ]]; then
+      for f in config.private.log mysql.private.log dump.private.log restore.private.log; do
+        if [[ -f "$WORK/$f" && ! -L "$WORK/$f" ]]; then install -m 600 "$WORK/$f" "$diag/$f" || true; fi
+      done
+      if [[ -n "$RUNTIME" && -d "$RUNTIME" && ! -L "$RUNTIME" ]]; then
+        for f in init.log init.stdout server.log server.stdout restore.stderr; do
+          if [[ -f "$RUNTIME/$f" && ! -L "$RUNTIME/$f" ]]; then install -m 600 "$RUNTIME/$f" "$diag/$f" || true; fi
+        done
+      fi
+      echo "PRIVATE_DIAGNOSTICS=$diag" >&2
+    fi
+  fi
   if [[ -n "$RUNTIME" ]]; then
     if [[ "$RUNTIME" =~ ^/var/tmp/bambodia-phase4-mysql-rehearsal\.[A-Za-z0-9]+$ && ! -L "$RUNTIME" ]]; then
       rm -rf --one-file-system -- "$RUNTIME" || rc=1
@@ -66,6 +83,16 @@ verify_source(){
   [[ $(cat "$PACKAGE/PREPARE_PASS") == "$HEAD" ]] || fail PACKAGE_RELEASE_DRIFT
   [[ $(sha256sum "$STAGE/manifest.sha256"|cut -d' ' -f1) == "$STAGE_MANIFEST" ]] || fail STAGE_MANIFEST_DRIFT
   (cd "$STAGE"; find source candidate verified -type f -print0 | sort -z | xargs -0 sha256sum | cmp -s - manifest.sha256) || fail STAGE_CONTENT_DRIFT
+  python3 - "$SITE" "$STAGE/verified/live-source.sha256" "$PACKAGE/evidence/protected.sha256" <<'PY'
+import pathlib,sys
+root=pathlib.Path(sys.argv[1])
+for manifest in sys.argv[2:]:
+    for line in pathlib.Path(manifest).read_text().splitlines():
+        _,rel=line.split('  ',1)
+        p=root/rel
+        if not p.is_file() or any(x.is_symlink() for x in [p,*p.parents]):
+            raise SystemExit('PHASE4D2B_BLOCKED=LIVE_SOURCE_PATH_DRIFT')
+PY
   (cd "$SITE"; sha256sum --check --status "$STAGE/verified/live-source.sha256"; sha256sum --check --status "$PACKAGE/evidence/protected.sha256") || fail LIVE_SOURCE_DRIFT
   sha256sum --check --status "$PACKAGE/evidence/vhost.sha256" || fail VHOST_DRIFT
   while read -r file state; do
@@ -100,7 +127,15 @@ $raw=config('database.connections.'.$name);
 if (!is_array($raw)) exit(9);
 $cfg=(new \Illuminate\Support\ConfigurationUrlParser)->parseConfiguration($raw);
 if (($cfg['driver']??null)!=='mysql' || isset($cfg['read']) || isset($cfg['write'])) exit(10);
-echo json_encode(array_intersect_key($cfg,array_flip(['host','port','unix_socket','database','username','password'])),JSON_THROW_ON_ERROR);
+// Open the exact Laravel PDO target without booting service providers.
+// Only a read-only identity query; no model, session or application request.
+$pdo=(new \Illuminate\Database\Connectors\MySqlConnector)->connect($cfg);
+$pdo->exec('SET SESSION TRANSACTION READ ONLY');
+$identity=$pdo->query('SELECT DATABASE(), @@server_uuid, @@version, @@datadir, @@socket')->fetch(\PDO::FETCH_NUM);
+$pdo=null;
+$out=array_intersect_key($cfg,array_flip(['host','port','unix_socket','database','username','password']));
+$out['pdo_identity']=$identity;
+echo json_encode($out,JSON_THROW_ON_ERROR);
 PHP
 ) >"$WORK/config.json" 2>"$WORK/config.private.log" || fail EFFECTIVE_CONFIG_PROBE
 python3 - "$WORK" <<'PY'
@@ -115,6 +150,9 @@ require(isinstance(d.get('password'),(str,type(None))),'INVALID_DB_PASSWORD')
 require(isinstance(socket,str) and (not socket or socket.startswith('/')),'INVALID_DB_SOCKET')
 require(bool(socket) or host in ('localhost','127.0.0.1','::1'),'NONLOCAL_DB_TARGET')
 require(str(port).isdigit() and 0<int(port)<65536,'INVALID_DB_PORT')
+identity_row=d.get('pdo_identity')
+require(isinstance(identity_row,list) and len(identity_row)==5 and all(isinstance(v,str) and '\t' not in v and '\n' not in v for v in identity_row),'INVALID_PDO_IDENTITY')
+(w/'pdo-server.tsv').write_text('\t'.join(identity_row)+'\n')
 def quote(v):
     v=str(v or '')
     require(not any(ord(c)<32 or ord(c)==127 for c in v),'CONTROL_CHAR_IN_DB_OPTION')
@@ -135,6 +173,7 @@ prod_mysql(){
 # Every explicit production SQL statement is a SELECT in a read-only session.
 prod_query(){ prod_mysql --init-command='SET SESSION TRANSACTION READ ONLY' "$@"; }
 prod_query -e 'SELECT DATABASE(), @@server_uuid, @@version, @@datadir, @@socket' >"$WORK/server.tsv" 2>"$WORK/mysql.private.log" || fail DATABASE_CONNECTION
+cmp -s "$WORK/pdo-server.tsv" "$WORK/server.tsv" || fail LARAVEL_AND_CLI_DATABASE_TARGET_MISMATCH
 python3 - "$WORK" <<'PY'
 import hashlib,pathlib,re,sys
 w=pathlib.Path(sys.argv[1]); row=(w/'server.tsv').read_text().strip().split('\t')
@@ -142,10 +181,17 @@ if len(row)!=5 or row[0]!=(w/'db-name').read_text() or not re.fullmatch(r'[0-9a-
 data=pathlib.Path(row[3]).resolve()
 # Fail closed on an unfamiliar installation; never mask arbitrary host paths.
 if data not in [pathlib.Path('/www/server/data'),pathlib.Path('/www/server/mysql/data'),pathlib.Path('/var/lib/mysql')]: raise SystemExit('PHASE4D2B_BLOCKED=UNREVIEWED_MYSQL_DATADIR')
+socket=pathlib.Path(row[4])
+if not socket.is_absolute(): socket=data/socket
+socket=socket.resolve()
+masked=[pathlib.Path(x) for x in ('/tmp','/run','/www/server/data','/www/server/mysql/data','/var/lib/mysql','/www/wwwroot','/root')]
+if not any(p in socket.parents for p in masked): raise SystemExit('PHASE4D2B_BLOCKED=UNREVIEWED_MYSQL_SOCKET')
 (w/'live-datadir').write_text(str(data))
+(w/'live-socket').write_text(str(socket))
 (w/'server-version').write_text(row[2])
 (w/'server-identity.sha256').write_text(hashlib.sha256(('\t'.join(row)).encode()).hexdigest()+'\n')
 PY
+echo "LARAVEL_PDO_AND_CLI_DATABASE_IDENTITY=PASS"
 echo "LOCAL_MYSQL_TARGET_AND_MCP_CONFIG=PASS"
 # Stable metadata, excluding live cardinality, auto-increment and row estimates.
 cat >"$WORK/schema.sql" <<'SQL'
@@ -296,7 +342,7 @@ echo "=== Restore into network- and PID-isolated MySQL ==="
 gzip -dc "$BACKUP/database.sql.gz" | timeout --signal=TERM --kill-after=15s 1800 \
   unshare --mount --net --pid --fork --kill-child=SIGKILL --mount-proc bash -c '
     set -Eeuo pipefail
-    runtime=$1; base=$2; db=$3; uid=$4; live_data=$5
+    runtime=$1; base=$2; db=$3; uid=$4; live_data=$5; live_socket=$6
     mount --make-rprivate /
     for target in /www/wwwroot /www/server/data /www/server/mysql/data /var/lib/mysql /run /tmp /root; do
       if [[ -d "$target" && ! -L "$target" ]]; then
@@ -306,10 +352,11 @@ gzip -dc "$BACKUP/database.sql.gz" | timeout --signal=TERM --kill-after=15s 1800
     # Actual resolved production datadir must be masked by the above list.
     [[ "$live_data" == /www/server/data || "$live_data" == /www/server/mysql/data || "$live_data" == /var/lib/mysql ]]
     [[ $(findmnt -n -o FSTYPE --target "$live_data") == tmpfs ]]
+    [[ ! -S "$live_socket" && ! -e "$live_socket" ]]
     exec setpriv --reuid="$uid" --regid="$uid" --clear-groups --no-new-privs --bounding-set=-all --inh-caps=-all --ambient-caps=-all \
       env -i PATH=/usr/bin:/bin HOME="$runtime" TMPDIR="$runtime/tmp" LC_ALL=C \
       bash "$runtime/restore-worker.sh" "$runtime" "$base" "$db"
-  ' _ "$RUNTIME" "$MYSQLBASE" "$DB" "$uid" "$(cat "$WORK/live-datadir")" >"$WORK/restore.private.log" 2>&1 || fail ISOLATED_RESTORE_EXECUTION
+  ' _ "$RUNTIME" "$MYSQLBASE" "$DB" "$uid" "$(cat "$WORK/live-datadir")" "$(cat "$WORK/live-socket")" >"$WORK/restore.private.log" 2>&1 || fail ISOLATED_RESTORE_EXECUTION
 grep -Fxq 'ISOLATED_MYSQL_RESTORE=PASS' "$WORK/restore.private.log" || fail RESTORE_MARKER
 # Verify exact schema and every row count independently of current live activity.
 cmp -s "$WORK/schema-before.tsv" "$RUNTIME/restored-schema.tsv" || fail RESTORED_SCHEMA_MISMATCH
