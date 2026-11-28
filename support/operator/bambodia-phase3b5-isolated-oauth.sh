@@ -15,7 +15,7 @@ PATCH=support/bambodia-mcp-stage-advanced-content.py
 fail(){ echo "PHASE3B5_BLOCKED=$*" >&2; exit 1; }
 [[ $(id -u) == 0 ]] || fail ROOT_REQUIRED
 [[ -x "$PHP" ]] || fail PHP85_MISSING
-for cmd in git curl python3 sha256sum realpath stat find openssl unshare mount setpriv; do command -v "$cmd" >/dev/null || fail "MISSING_$cmd"; done
+for cmd in git curl python3 sha256sum realpath stat find openssl unshare mount setpriv getent cmp; do command -v "$cmd" >/dev/null || fail "MISSING_$cmd"; done
 check_blob(){
   local file=$1 expected=$2 got
   [[ -f "$file" && ! -L "$file" ]] || fail "MISSING_OR_SYMLINK_$file"
@@ -118,8 +118,11 @@ accept(){
   [[ "$stage" =~ ^/var/tmp/bambodia-phase3-review\.[A-Za-z0-9]+$ && -d "$stage" && ! -L "$stage" && $(stat -c '%u:%a' "$stage") == 0:700 ]] || fail UNSAFE_STAGE
   [[ "$reviewed" =~ ^[a-f0-9]{64}$ && $(sha256sum "$stage/manifest.sha256"|cut -d' ' -f1) == "$reviewed" ]] || fail REVIEWED_MANIFEST_MISMATCH
   [[ -z $(find "$stage/source" "$stage/candidate" "$stage/verified" -type l -print -quit) ]] || fail STAGED_SYMLINK
+  (cd "$stage"; find source candidate verified -type f -print0 | sort -z | xargs -0 sha256sum | cmp -s - manifest.sha256) || fail STAGED_FILE_SET_OR_CONTENT_DRIFT
   (cd "$stage"; sha256sum --check --status manifest.sha256) || fail STAGED_SOURCE_DRIFT
   verify_live
+  [[ ! -e "$stage/source/$SERVICE" && ! -e "$stage/source/$MIGRATION" ]] || fail BASELINE_ALREADY_HAS_PHASE3_FILES
+  check_blob "$stage/verified/$(basename "$PATCH")" 3576045f430e59b61e88870c33e80e3d448f1343
   check_blob "$stage/source/$CONTROLLER" "$CONTROLLER_BLOB"
   check_blob "$stage/candidate/$SERVICE" 96ba1240af97e557d9345847b3b58d1ecf2b788a
   check_blob "$stage/candidate/$MIGRATION" b96cedca6729eaf36c1d30d0a598c589410955be
@@ -155,7 +158,7 @@ accept(){
       set -Eeuo pipefail
       run=$1; uid=$2; key=$3; mode=$4; php=$5; shift 5
       mount --make-rprivate /
-      for target in /www/wwwroot /run /tmp /www/server/data; do
+      for target in /www/wwwroot /tmp /www/server/data /run/mysqld; do
         if [[ -d "$target" ]]; then mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs "$target"; fi
       done
       cd "$run"

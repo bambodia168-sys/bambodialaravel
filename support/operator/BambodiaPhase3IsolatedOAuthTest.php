@@ -333,4 +333,211 @@ final class BambodiaPhase3IsolatedOAuthTest extends TestCase
         $this->assertFalse(\Illuminate\Support\Facades\DB::table('oauth_refresh_tokens')->where('access_token_id',$id)->where('revoked',false)->exists());
         $this->deny($token);
     }
+
+    public function test_oauth_resource_indicator_is_required_on_authorization_and_token_requests(): void
+    {
+        $this->get('/oauth/authorize')->assertStatus(400)
+            ->assertJsonPath('error', 'invalid_target');
+
+        $this->get('/oauth/authorize?'.http_build_query([
+            'resource' => 'https://other.example/mcp',
+        ]))->assertStatus(400)->assertJsonPath('error', 'invalid_target');
+
+        $this->postJson('/oauth/token', [
+            'grant_type' => 'authorization_code',
+        ])->assertStatus(400)->assertJsonPath('error', 'invalid_target');
+
+        $this->postJson('/oauth/token', [
+            'grant_type' => 'refresh_token',
+            'resource' => 'https://other.example/mcp',
+        ])->assertStatus(400)->assertJsonPath('error', 'invalid_target');
+
+        $this->postJson('/oauth/token', [
+            'grant_type' => 'password',
+            'resource' => url('/mcp'),
+        ])->assertStatus(400)->assertJsonPath('error', 'unsupported_grant_type');
+
+        $this->assertTrue(\App\Support\Mcp\McpResource::matches(url('/mcp')));
+        $this->assertFalse(\App\Support\Mcp\McpResource::matches(url('/')));
+        $this->assertFalse(\App\Support\Mcp\McpResource::matches(url('/mcp').'?evil=1'));
+    }
+
+
+    public function test_pkce_s256_does_not_exchange_code_with_wrong_verifier(): void
+    {
+        $actor = $this->user();
+        $redirect = 'https://chatgpt.com/connector/oauth/qa-callback';
+        $client = $this->postJson('/oauth/register', [
+            'client_name' => 'Bambodia Negative PKCE QA',
+            'redirect_uris' => [$redirect],
+        ])->assertCreated()->json('client_id');
+
+        $verifier = \Illuminate\Support\Str::random(64);
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+        $state = \Illuminate\Support\Str::random(36);
+
+        $this->actingAs($actor, 'web')
+            ->get('/oauth/authorize?'.http_build_query([
+                'client_id' => $client,
+                'redirect_uri' => $redirect,
+                'response_type' => 'code',
+                'scope' => 'mcp:use',
+                'state' => $state,
+                'code_challenge' => $challenge,
+                'code_challenge_method' => 'S256',
+                'resource' => url('/mcp'),
+            ]))->assertOk();
+        $authToken = session('authToken');
+
+        $approval = $this->post(route('passport.authorizations.approve'), [
+            'client_id' => $client,
+            'state' => $state,
+            'auth_token' => $authToken,
+        ])->assertRedirect();
+        parse_str(parse_url($approval->headers->get('Location'), PHP_URL_QUERY) ?: '', $callback);
+        $this->assertSame($state, $callback['state'] ?? null);
+
+        $this->post('/oauth/token', [
+            'grant_type' => 'authorization_code',
+            'client_id' => $client,
+            'code' => $callback['code'],
+            'redirect_uri' => $redirect,
+            'code_verifier' => \Illuminate\Support\Str::random(64),
+            'resource' => url('/mcp'),
+        ])->assertStatus(400);
+
+        $this->assertDatabaseCount('oauth_access_tokens', 0);
+    }
+
+
+    public function test_dynamic_client_registration_accepts_chatgpt_only(): void
+    {
+        $registration = $this->postJson('/oauth/register', [
+            'client_name' => 'Bambodia Manager QA',
+            'redirect_uris' => ['https://chatgpt.com/connector/oauth/qa-callback'],
+        ])->assertCreated()
+            ->assertJsonPath('token_endpoint_auth_method', 'none')
+            ->assertJsonPath('scope', 'mcp:use');
+        $this->assertDatabaseCount('oauth_clients', 1);
+
+        $client = Passport::client()->newQuery()->findOrFail($registration->json('client_id'));
+        $this->assertContains('mcp:use', $client->scopes);
+        $this->assertContains('mcp.write', $client->scopes);
+        // The default advertised scope remains read-only; writes need extra consent.
+        $this->assertNotSame('mcp:use mcp.write', $registration->json('scope'));
+
+        $this->postJson('/oauth/register', [
+            'client_name' => 'Untrusted Integration',
+            'redirect_uris' => ['https://untrusted.example/steal'],
+        ])->assertStatus(400)->assertJsonPath('error', 'invalid_redirect_uri');
+        $this->assertDatabaseCount('oauth_clients', 1);
+    }
+
+
+    public function test_registration_fails_closed_without_exact_callback_approval(): void
+    {
+        $endpoint = '/oauth/register';
+        $valid = ['client_name' => 'Exact URI QA',
+            'redirect_uris' => ['https://chatgpt.com/connector/oauth/qa-callback']];
+        config()->set('mcp.exact_redirect_uris', []);
+        $this->postJson($endpoint, $valid)->assertStatus(400)
+            ->assertJsonPath('error', 'invalid_redirect_uri');
+        config()->set('mcp.exact_redirect_uris', [
+            'https://chatgpt.com/connector/oauth/qa-callback',
+        ]);
+        foreach ([
+            'https://chatgpt.com/connector/oauth/another-callback',
+            'https://chatgpt.com/connector/oauth/qa-callback?next=/redirect',
+            'https://chatgpt.com/connector_platform_oauth_redirect',
+            'https://chatgpt.com.evil.example/connector/oauth/qa-callback',
+        ] as $unapproved) {
+            $this->postJson($endpoint, [
+                'client_name' => 'Rejected Redirect',
+                'redirect_uris' => [$unapproved],
+            ])->assertStatus(400)->assertJsonPath('error', 'invalid_redirect_uri');
+        }
+        $this->assertDatabaseCount('oauth_clients', 0);
+    }
+
+
+    public function test_read_only_release_does_not_register_write_scopes(): void
+    {
+        config()->set('mcp.production_writes_enabled', false);
+        $registration = $this->postJson('/oauth/register', [
+            'client_name' => 'Read Only QA',
+            'redirect_uris' => ['https://chatgpt.com/connector/oauth/qa-callback'],
+        ])->assertCreated();
+        $client = Passport::client()->newQuery()
+            ->findOrFail($registration->json('client_id'));
+        $this->assertContains('mcp:use', $client->scopes);
+        $this->assertNotContains('mcp.write', $client->scopes);
+        $this->assertContains('offline_access', $client->scopes);
+    }
+
+
+    public function test_demotion_between_oauth_consent_page_and_approval_is_denied(): void
+    {
+        $actor = $this->user();
+        $callback = 'https://chatgpt.com/connector/oauth/qa-callback';
+        $client = $this->postJson('/oauth/register', [
+            'client_name' => 'Consent Role Change QA',
+            'redirect_uris' => [$callback],
+        ])->assertCreated()->json('client_id');
+        $state = \Illuminate\Support\Str::random(32);
+        $verifier = \Illuminate\Support\Str::random(64);
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+
+        $this->actingAs($actor, 'web')
+            ->get('/oauth/authorize?'.http_build_query([
+                'client_id' => $client,
+                'redirect_uri' => $callback,
+                'response_type' => 'code',
+                'scope' => 'mcp:use',
+                'state' => $state,
+                'code_challenge' => $challenge,
+                'code_challenge_method' => 'S256',
+                'resource' => url('/mcp'),
+            ]))->assertOk();
+
+        $authToken = session('authToken');
+        $actor->forceFill(['role' => 'customer'])->save();
+
+        $approvalRoutes = collect(\Illuminate\Support\Facades\Route::getRoutes()->getRoutes())
+            ->filter(fn ($r) => $r->uri() === 'oauth/authorize'
+                && in_array('POST', $r->methods(), true))->values();
+        $this->assertCount(1, $approvalRoutes, 'Unexpected Passport POST consent route count.');
+        $this->assertContains('web', $approvalRoutes->first()->gatherMiddleware(),
+            'Passport approval must use the authenticated session web middleware.');
+        $this->assertContains(
+            \App\Http\Middleware\EnsureMcpOAuthConsentAdmin::class,
+            app('router')->getMiddlewareGroups()['web'] ?? [],
+            'The web group must check the administrator role after StartSession.'
+        );
+
+        $approvalResponse = $this->post(route('passport.authorizations.approve'), [
+            'client_id' => $client,
+            'state' => $state,
+            'auth_token' => $authToken,
+        ]);
+        $destination = (string) (parse_url((string) $approvalResponse->headers->get('Location'),
+            PHP_URL_PATH) ?? '');
+        $this->assertSame(403, $approvalResponse->status(),
+            'Demoted admin was redirected to path '.$destination.' instead of being forbidden.');
+        $this->assertDatabaseCount('oauth_auth_codes', 0);
+        $this->assertDatabaseCount('oauth_access_tokens', 0);
+    }
+
+
+    public function test_write_only_grant_without_mcp_read_scope_is_denied(): void
+    {
+        $token=$this->authorizedBearer($this->user(),'mcp.write');
+        $this->deny($token);
+    }
+
+    public function test_disabled_mcp_rejects_valid_real_grant(): void
+    {
+        $token=$this->authorizedBearer($this->user(),'mcp:use');
+        config(['mcp.production_enabled'=>false]);
+        $this->requestRpc($token,'tools/list')->assertStatus(503);
+    }
 }
